@@ -9,6 +9,13 @@ No gore and no real-world guns. Tagged players pop into a shower of foam confett
 
 ## Play it
 
+**On Linux, no Godot needed:** build the game once with `./tools/export_linux.sh`. It makes
+`build/linux/DARTSTORM/` (and a `.tar.gz` of it to share). Copy that folder to any 64-bit Linux PC and double-click
+`DARTSTORM.x86_64`, or run `./install-shortcut.sh` in it once to put DARTSTORM in the applications menu.
+Building needs Godot's export templates (Godot editor: **Editor > Manage Export Templates**).
+
+**From the source, with Godot:**
+
 1. Install **Godot 4.4 or newer** (the standard build, not .NET) from <https://godotengine.org/download>.
    It's a single program with no installer to run.
 2. Open Godot, click **Import**, pick this folder's `project.godot`, then click **Import & Edit**.
@@ -61,7 +68,8 @@ From a terminal you can also run:
 ## For developers
 
 - `./tools/validate.sh` imports the project, compiles every script with warnings treated as errors, boots the menu
-  and a match headless, runs 205 automated tests, and checks for leaks at exit.
+  and a match headless, runs 211 automated tests, and checks for leaks at exit.
+- `./tools/export_linux.sh` builds the Linux release and boots it once to prove it works.
 - Start with [`CLAUDE.md`](CLAUDE.md), then read [`docs/`](docs/):
 
 | Doc | What it's for |

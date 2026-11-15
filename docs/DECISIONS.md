@@ -168,3 +168,13 @@ to make room. The camera is shifted right so the results panel doesn't cover the
 ### D-026: World signs are single-sided (v0.2.0)
 **Chosen:** `ArenaKit.sign_text()` sets `double_sided = false`.
 **Why:** from behind, Label3D text shows mirrored ("YAW YDNIW" on the menu). Signs now read only from the front.
+
+### D-027: The Linux build is one executable in a folder, with a shortcut helper (v0.2.0)
+**Chosen:** an export preset "Linux" with the game data embedded in `DARTSTORM.x86_64`; `tools/export_linux.sh`
+adds the icon, a README and `install-shortcut.sh` (an applications-menu entry plus a trusted desktop shortcut), packs a
+`.tar.gz`, and boots the exported game headless as a smoke test. Settings move to `~/.local/share/dartstorm/` via
+`config/use_custom_user_dir`.
+**Alternatives:** AppImage or Flatpak; a separate `.pck` file; the default `~/.local/share/godot/app_userdata/...` path.
+**Why:** the simplest thing a family can copy to a PC and launch. Many Linux file managers won't run a binary on
+double-click, so the shortcut script gives a reliable fallback. The custom settings folder is easy to find and delete.
+AppImage/Flatpak add tooling for no benefit at this size. The engine falls back to OpenGL on PCs without Vulkan.

@@ -75,6 +75,13 @@ UAT proves the *game* works. A release isn't done until both pass.
 | G6 | CHAINSTORM: POWER-UP, then play | No Chainstorm at the start; ~20 s in it lands on the treehouse in an orange beam with a call-out; grabbing it puts it in your hands; it's lost when you're tagged; it comes back later |
 | G7 | Let the match end | The camera cuts to the sky podium: the top three dance in their hats under confetti; awards on the right; PLAY AGAIN / MAIN MENU work with mouse and pad |
 
+### H. Linux build *(v0.2.0, on the players' PC)*
+| ID | Do this | Expect |
+|---|---|---|
+| H1 | Copy `build/DARTSTORM-<version>-linux-x86_64.tar.gz` to the PC, extract it, double-click `DARTSTORM.x86_64` | The game opens without Godot installed (if nothing happens, use H2) |
+| H2 | Run `install-shortcut.sh` in the DARTSTORM folder | DARTSTORM appears in the applications menu (and on the desktop) with the DARTSTORM icon, and launches from there |
+| H3 | Change a setting, quit, relaunch | The setting is kept (saved in `~/.local/share/dartstorm/`) |
+
 ### E. Comfort
 | ID | Do this | Expect |
 |---|---|---|

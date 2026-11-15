@@ -47,6 +47,8 @@ func _ready() -> void:
 	await _test_podium_and_awards()
 	await _test_backyard_props()
 	await _test_power_up()
+	# Linux build
+	await _test_linux_export_preset()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -1033,3 +1035,20 @@ func _test_power_up() -> void:
 	check(gun_game.get("power_up") == null, "Gun Game ignores power-up mode")
 	await end_match(gun_game, saved_mode)
 	GameSettings.chainstorm_powerup = saved_powerup
+
+
+# --- Linux build --------------------------------------------------------------
+
+func _test_linux_export_preset() -> void:
+	section("Linux build: export preset")
+	var presets := ConfigFile.new()
+	check(presets.load("res://export_presets.cfg") == OK, "export_presets.cfg exists")
+	check(presets.get_value("preset.0", "platform", "") == "Linux", "preset 0 targets Linux")
+	check(presets.get_value("preset.0", "name", "") == "Linux", "…and is called \"Linux\" (tools/export_linux.sh uses that name)")
+	var excluded := str(presets.get_value("preset.0", "exclude_filter", ""))
+	check(excluded.contains("tests/*") and excluded.contains("tools/*"), "tests and tools stay out of the game")
+	check(bool(presets.get_value("preset.0.options", "binary_format/embed_pck", false)), "one self-contained executable (data embedded)")
+	check(ProjectSettings.get_setting("application/config/use_custom_user_dir", false)
+			and ProjectSettings.get_setting("application/config/custom_user_dir_name", "") == "dartstorm",
+			"settings live in ~/.local/share/dartstorm")
+	await physics_frames(1)

@@ -36,9 +36,11 @@ things players can see, hear and laugh at.
       birdsong (GDD §5.1)
 - [x] **Chainstorm power-up mode** (optional; default stays EVERYONE as the brief says) (GDD §3.19)
 - [x] Fixes found on the way: mirrored signs seen from behind; podium framing; name typing kept spaces
+- [x] **Double-clickable Linux build:** `./tools/export_linux.sh` → `build/linux/DARTSTORM/` (one executable, icon,
+      README, `install-shortcut.sh`) and a `.tar.gz`; the exported game is booted headless as a smoke test (D-027)
 
-**Acceptance:** `./tools/validate.sh` passes (import, strict compile of 49 scripts, boots, **205/205 tests**, no leaks) ✅ ·
-UAT sections F and G in UAT.md ⏳.
+**Acceptance:** `./tools/validate.sh` passes (import, strict compile of 49 scripts, boots, **211/211 tests**, no leaks) ✅ ·
+the export builds and boots ✅ · UAT sections F, G and H in UAT.md ⏳.
 
 ## v0.1.1: hardening and docs
 
@@ -97,8 +99,7 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
 2. **Playtest-driven tuning.** Watch young players play several rounds and note what's too hard, too easy or most fun.
    Tune the `.tres` numbers ([TUNING.md](TUNING.md)), especially bot skill, tag power, Chainstorm ammo burn and
    bucket regen. Record the findings in UAT.md.
-3. **A double-clickable Linux build** *(small)*. A Linux export preset so players can launch DARTSTORM without opening
-   the Godot editor (needs Godot's export templates). Windows can follow the same way later.
+3. ✅ **A double-clickable Linux build** (done: `./tools/export_linux.sh`, D-027). Windows can follow the same way later.
 4. **Blue vs Orange team mode.** The arena is built for it and `team_id` already exists. Acceptance: a menu option,
    two teams with bots split between them, a team scoreboard, team-coloured shirts, team-coloured bucket ownership.
 5. **Remaining Gun Game rungs** (Wind Whisperer, Thunder Cannon, Rocket Dart) with simple, playful elemental dart effects.
@@ -119,7 +120,6 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
 - Windows is deferred (the target machine runs Linux).
 - The music is simple chiptune made in code; real recordings could replace it later.
 - Bots ignore wind (deliberate, see GDD §3.9) and can briefly snag on geometry before the unstick hop kicks in.
-- The font is Godot's built-in default, emboldened. It works, but isn't as chunky as the style guide wants.
 - Gun Game has 7 of the 10 planned rungs.
 
 *Resolved in v0.1.1:* the navmesh load hitch, the "ObjectDB instances leaked at exit" warning, and the integer-division

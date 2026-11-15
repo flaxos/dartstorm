@@ -14,6 +14,7 @@ tagging only, no gore, no real-firearm branding, no microtransactions.
 3. Play: `./tools/run.sh`. The main scene is `scenes/ui/main_menu.tscn`, and the match is `scenes/game/match.tscn`.
 
 Godot lives at `~/bin/godot` (4.4.1) on the dev box. **Linux is the platform that matters now**; Windows is deferred.
+Linux release: `./tools/export_linux.sh` (needs the export templates; output in `build/`, which git ignores).
 Controllers must stay plug and play: every binding uses device -1, and every screen works with A/B.
 
 ## Checking the game without a human
@@ -37,7 +38,7 @@ Controllers must stay plug and play: every binding uses device -1, and every scr
 | `docs/TUNING.md` | A data field is added or renamed |
 | `docs/UAT.md` | A release needs a hands-on check (add rows, then log results) |
 | `docs/ARCHITECTURE.md` | Systems, ownership, safeguards (§10) or budgets (§11) change |
-| `docs/DECISIONS.md` | A non-obvious choice is made (next is D-027) |
+| `docs/DECISIONS.md` | A non-obvious choice is made (next is D-028) |
 | `docs/ROADMAP.md` | Always, at the end of a piece of work |
 
 ## Conventions

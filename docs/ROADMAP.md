@@ -15,10 +15,32 @@
 | Phase 5 Game feel | ✅ First pass done, **UAT passed** |
 | Phase 6 Gun Game | ✅ Playable with a 7-rung ladder (3 planned rungs not built) |
 | **v0.1.0 release** | ✅ Merged (PR #1), **UAT passed 2026-11-15** |
-| **v0.1.1 hardening + docs** | ✅ Built and validated. ⏳ UAT re-check pending |
+| **v0.1.1 hardening + docs** | ✅ Merged (PR #2) |
+| **v0.2.0 controller + appeal pack** | ✅ Built and validated (205 tests). ⏳ UAT with young players and a real controller |
 | Phase 7 Expansion | ⏳ Not started (on purpose) |
 
-## v0.1.1: hardening and docs (this release)
+## v0.2.0: controller support and appeal pack (this release)
+
+Goal: plug-and-play controllers (the target machine runs Linux, so Windows can wait), plus the "small and medium" appeal ideas:
+things players can see, hear and laugh at.
+
+- [x] **Controller plug and play:** A/B in every menu, hot-plug notices, unplug pauses, curved stick aim, aim assist,
+      rumble, LT sprint / Y next blaster, look-speed setting, help text switches to pad buttons (GDD §3.17)
+- [x] **Chunky font:** Lilita One (OFL) everywhere
+- [x] **Music and better sounds:** procedural menu and match loops (rendered off the main thread), foam-y effects,
+      separate Music / Sound effects volumes
+- [x] **Announcer:** first tag, multi-tags, streaks, shut-downs, time warnings, STORM MODE! (GDD §3.18)
+- [x] **Your player:** name (with RANDOM), 8 colours, 7 hats, live 3D preview; bots get their own hats (GDD §3.16)
+- [x] **Podium and awards** at the end of every match (GDD §3.20)
+- [x] **Backyard life:** dog house with a barking dog, swing set, paddling pool and duck, sprinkler, gnomes, flowers,
+      birdsong (GDD §5.1)
+- [x] **Chainstorm power-up mode** (optional; default stays EVERYONE as the brief says) (GDD §3.19)
+- [x] Fixes found on the way: mirrored signs seen from behind; podium framing; name typing kept spaces
+
+**Acceptance:** `./tools/validate.sh` passes (import, strict compile of 49 scripts, boots, **205/205 tests**, no leaks) ✅ ·
+UAT sections F and G in UAT.md ⏳.
+
+## v0.1.1: hardening and docs
 
 Goal: make the UAT-approved game robust for real-world play, and turn the docs into a complete reference
 built around the original concept brief.
@@ -69,17 +91,20 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
 
 ## Next up (in priority order)
 
-1. **UAT re-check of v0.1.1** *(quick)*. Run the v0.1.1 rows in UAT.md, especially alt-tab and Reset to defaults.
+1. **UAT of v0.2.0 with young players** *(next)*. Run UAT.md (sections F with a real controller, and G), then just
+   let them play. Ask: best moment, most annoying thing, what would you add? Note especially whether POWER-UP mode beats
+   EVERYONE, and how aim assist feels.
 2. **Playtest-driven tuning.** Watch young players play several rounds and note what's too hard, too easy or most fun.
    Tune the `.tres` numbers ([TUNING.md](TUNING.md)), especially bot skill, tag power, Chainstorm ammo burn and
    bucket regen. Record the findings in UAT.md.
-3. **Windows check and a double-clickable build.** Run on a Windows PC. Add a Windows export preset so
-   players can launch a `.exe` without opening Godot (needs the Godot export templates).
+3. **A double-clickable Linux build** *(small)*. A Linux export preset so players can launch DARTSTORM without opening
+   the Godot editor (needs Godot's export templates). Windows can follow the same way later.
 4. **Blue vs Orange team mode.** The arena is built for it and `team_id` already exists. Acceptance: a menu option,
    two teams with bots split between them, a team scoreboard, team-coloured shirts, team-coloured bucket ownership.
 5. **Remaining Gun Game rungs** (Wind Whisperer, Thunder Cannon, Rocket Dart) with simple, playful elemental dart effects.
    Acceptance: a 10-rung ladder, each blaster distinct, tests updated.
-6. **Polish:** a chunkier OFL-licensed font, better blaster and kid silhouettes, music, a "tagged by" camera.
+6. **Better models** *(the big remaining appeal item)*: toy-style blasters and characters, either free CC0 packs (licence
+   checked and recorded in `assets/README.md`) or nicer hand-built primitives. Plus a "tagged by" camera.
 7. **Capturable buckets** as team objectives.
 
 ## Later (Phase 7, only once the above is solid)
@@ -90,8 +115,9 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
 - Accessibility: key remapping, a colour-blind team palette option
 
 ## Known issues
-- Gamepad bindings exist but are untested.
-- Not yet run on Windows.
+- Controller support is tested with simulated input only. A real pad (Xbox/PlayStation/generic) needs the UAT check.
+- Windows is deferred (the target machine runs Linux).
+- The music is simple chiptune made in code; real recordings could replace it later.
 - Bots ignore wind (deliberate, see GDD §3.9) and can briefly snag on geometry before the unstick hop kicks in.
 - The font is Godot's built-in default, emboldened. It works, but isn't as chunky as the style guide wants.
 - Gun Game has 7 of the 10 planned rungs.

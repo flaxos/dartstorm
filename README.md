@@ -24,20 +24,21 @@ From a terminal you can also run:
 
 ## Controls
 
-| Action | Keyboard / mouse | Gamepad (mapped, not yet tested) |
+| Action | Keyboard / mouse | Controller (plug and play) |
 |---|---|---|
 | Move | W A S D / arrow keys | Left stick |
 | Look | Mouse | Right stick |
 | Jump | Space | A |
-| Sprint | Shift (while moving forward) | Left stick click |
+| Sprint | Shift (while moving forward) | LT, or click the left stick |
 | Fire | Left mouse button | Right trigger |
 | Reload | R | X |
-| Pick blaster | 1, 2, 3, mouse wheel, Q / E | Shoulder buttons |
+| Pick blaster | 1, 2, 3, mouse wheel, Q / E | Y, LB, RB |
+| Menus | Mouse, or arrows + Enter / Esc | D-pad or stick, A to press, B to go back |
 | Scoreboard | Tab (hold) | Back |
 | Pause | Esc or P | Start |
 
-**Version 0.1.1.** v0.1.0 passed user acceptance testing on 2026-11-15; 0.1.1 is a hardening and docs release
-(see [docs/ROADMAP.md](docs/ROADMAP.md)).
+**Version 0.2.0:** controller support and an appeal pack. v0.1.0 passed user acceptance testing on 2026-11-15, and
+0.1.1 hardened it. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## What's in it right now
 
@@ -50,12 +51,17 @@ From a terminal you can also run:
 - Bullseye targets for practice (+10 points).
 - Settings for mouse sensitivity, FOV, **camera shake**, **visual effects intensity**, volume and fullscreen,
   with a **Reset to defaults** button.
-- Alt-tabbing out of a match pauses it automatically.
+- Alt-tabbing out of a match (or unplugging a controller) pauses it automatically.
+- **Plug-and-play controllers:** menus and matches, with gentle aim assist and rumble.
+- **Your player:** pick a name, one of 8 colours and a hat (the propeller spins!). Your darts fly in your colour.
+- **An announcer** ("DOUBLE TAG!", "ON A ROLL!", "SHUT DOWN!"), **music**, and a **podium with awards** at the end.
+- **Backyard life:** a dog that barks when you hit its house, swings, a paddling pool with a duck, a sprinkler, gnomes, birdsong.
+- **Optional Chainstorm power-up mode:** it lands on the treehouse, and whoever grabs it first keeps it until they're tagged.
 
 ## For developers
 
 - `./tools/validate.sh` imports the project, compiles every script with warnings treated as errors, boots the menu
-  and a match headless, runs 130 automated tests, and checks for leaks at exit.
+  and a match headless, runs 205 automated tests, and checks for leaks at exit.
 - Start with [`CLAUDE.md`](CLAUDE.md), then read [`docs/`](docs/):
 
 | Doc | What it's for |
@@ -68,5 +74,6 @@ From a terminal you can also run:
 | [ROADMAP.md](docs/ROADMAP.md) | What's done and what's next |
 | [DECISIONS.md](docs/DECISIONS.md) | Why things are the way they are |
 
-All art and sound is generated in code from Godot primitives, so there are no third-party assets and nothing to licence.
+All art, sound and music is generated in code from Godot primitives. The one third-party asset is the Lilita One font
+(SIL Open Font License).
 See [`assets/README.md`](assets/README.md).

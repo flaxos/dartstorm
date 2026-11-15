@@ -31,8 +31,16 @@ func _ready() -> void:
 	await _test_navigation()
 	await _test_bot_match()
 	await _test_gun_game_match()
+	# Hardening regressions (v0.1.1)
+	await _test_ricochet_back_to_back()
+	await _test_respawn_outside_play()
+	await _test_bot_ammo_recovery()
+	await _test_fx_budget()
+	await _test_safe_loading()
+	await _test_focus_pause()
+	await _test_settings_reset()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
-	get_tree().quit(1 if _failed > 0 else 0)
+	Sfx.quit_game(1 if _failed > 0 else 0)
 
 
 # --- Helpers ------------------------------------------------------------------
@@ -389,13 +397,21 @@ func _test_navigation() -> void:
 	var arena := (load("res://scenes/arenas/backyard_fortress.tscn") as PackedScene).instantiate() as Arena
 	add_child(arena)
 	var map := arena.geometry.get_navigation_map()
-	# The navigation map is built on a worker thread; give it a moment.
+	# The navmesh is baked on a worker thread, then the map syncs a frame or two later.
+	check(not arena.is_navigation_ready, "navmesh bake runs in the background (arena loads without waiting)")
 	var waited := 0
-	while NavigationServer3D.map_get_iteration_id(map) == 0 and waited < 600:
+	while not arena.is_navigation_ready and waited < 600:
 		await get_tree().physics_frame
 		waited += 1
-	check(NavigationServer3D.map_get_iteration_id(map) > 0, "navigation map synchronised (after %d frames)" % waited)
+	check(arena.is_navigation_ready, "background navmesh bake finished (after %d frames)" % waited)
 	check(arena.geometry.navigation_mesh.get_polygon_count() > 100, "navmesh baked (%d polygons)" % arena.geometry.navigation_mesh.get_polygon_count())
+	var probe_from := Vector3(-28.5, 2.6, 3.0)
+	var probe_to := Vector3(28.5, 2.6, 3.0)
+	waited = 0
+	while NavigationServer3D.map_get_path(map, probe_from, probe_to, true).is_empty() and waited < 300:
+		await get_tree().physics_frame
+		waited += 1
+	check(NavigationServer3D.map_get_iteration_id(map) > 0, "navigation map synchronised (after %d more frames)" % waited)
 	check(arena.spawn_points.size() >= 8, "arena has %d spawn points" % arena.spawn_points.size())
 	check(arena.buckets.size() >= 4, "arena has %d ammo buckets" % arena.buckets.size())
 	check(get_tree().get_nodes_in_group(&"reflective").size() == 2, "arena has two reflective panels")
@@ -534,3 +550,204 @@ func _test_gun_game_match() -> void:
 	game.queue_free()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	await physics_frames(2)
+
+
+# --- Hardening regressions (v0.1.1) ------------------------------------------
+
+## Runs `seconds` of game time about `speed` times faster than real time, while
+## keeping every physics tick at the normal 1/60 s so behaviour is unchanged.
+func fast_forward(seconds: float, speed: float = 8.0) -> void:
+	var normal_ticks := Engine.physics_ticks_per_second
+	var normal_steps := Engine.max_physics_steps_per_frame
+	Engine.time_scale = speed
+	Engine.physics_ticks_per_second = int(normal_ticks * speed)
+	Engine.max_physics_steps_per_frame = 64
+	for i in int(seconds * normal_ticks):
+		await get_tree().physics_frame
+	Engine.time_scale = 1.0
+	Engine.physics_ticks_per_second = normal_ticks
+	Engine.max_physics_steps_per_frame = normal_steps
+
+
+## Builds a match with the given mode. Pair with end_match().
+func start_match(mode: int) -> Node:
+	GameSettings.match_mode = mode
+	var game := (load("res://scenes/game/match.tscn") as PackedScene).instantiate()
+	add_child(game)
+	return game
+
+
+func end_match(game: Node, saved_mode: int) -> void:
+	get_tree().paused = false
+	GameSettings.match_mode = saved_mode
+	game.queue_free()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	await physics_frames(2)
+
+
+## H2: a dart between two facing mirrors bounces back and forth faster than
+## the 0.08 s re-hit guard. Each mirror must become hittable again on its own.
+func _test_ricochet_back_to_back() -> void:
+	section("Hardening: back-to-back ricochets")
+	var stage := make_stage()
+	var pool := make_pool(stage)
+	for side: float in [-1.0, 1.0]:
+		var mirror := ReflectiveSurface.new()
+		mirror.panel_size = Vector2(24, 6)
+		stage.add_child(mirror)
+		mirror.global_position = Vector3(side * 0.75, 50, -8)
+		mirror.rotation_degrees.y = -90.0 * side  # Both faces point at the gap.
+	await physics_frames(2)
+	var data := make_dart_data(40.0)
+	data.max_ricochets = 3
+	data.ricochet_speed_keep = 1.0
+	var no_exclude: Array[RID] = []
+	var dart := pool.fire(data, Vector3(0, 50, 0), Vector3(1, 0, -1), null, null, Color.WHITE, no_exclude)
+	await physics_frames(20)
+	check(dart.ricochet_count == 3, "dart bounced between two close mirrors 3 times (got %d)" % dart.ricochet_count)
+	check(absf(dart.global_position.x) < 0.75, "dart never slipped through a mirror (x = %.2f)" % dart.global_position.x)
+	stage.queue_free()
+	await physics_frames(1)
+
+
+## H3: an actor tagged out outside normal play (e.g. falling off the map during
+## the countdown) still comes back, and nobody scores for it.
+func _test_respawn_outside_play() -> void:
+	section("Hardening: tagged-out actors always respawn")
+	var saved_mode := GameSettings.match_mode
+	var game := start_match(GameSettings.MatchMode.FREE_FOR_ALL)
+	var controller := game.get("controller") as MatchController
+	var bots: Array = game.get("bots")
+	var bot := bots[0] as Bot
+	check(controller.state == MatchController.State.COUNTDOWN, "still in the countdown")
+	bot._tag_out(null, null, false)
+	check(not bot.alive, "bot tagged out during the countdown")
+	check(controller.respawn_time_left(bot) > 0.0, "a respawn was scheduled anyway")
+	await fast_forward(controller.mode.countdown_seconds + controller.mode.respawn_delay + 0.5)
+	check(bot.alive, "bot is back in play")
+	var entry := controller.board.entry_for(bot)
+	check(entry.outs == 0 and entry.score == 0, "nothing was scored for a tag-out outside play")
+	await end_match(game, saved_mode)
+
+
+## H4: bots drop an empty blaster immediately, and a bot with no darts at all
+## waits at a bucket rather than chasing people it can't tag.
+func _test_bot_ammo_recovery() -> void:
+	section("Hardening: bots never get stuck without darts")
+	var stage := make_stage()
+	ArenaKit.box(stage, Vector3(60, 1, 60), Vector3(0, -0.5, 0), Color.WHITE)
+	var arena := Arena.new()
+	arena.bake_navigation = false
+	stage.add_child(arena)
+	var east := arena.add_bucket(Vector3(6, 0, 0), Color.WHITE, 50)
+	var west := arena.add_bucket(Vector3(-20, 0, 0), Color.WHITE, 50)
+	var bot := (load("res://scenes/enemies/bot.tscn") as PackedScene).instantiate() as Bot
+	bot.arena = arena
+	bot.difficulty = load("res://resources/bots/normal.tres") as BotDifficulty
+	stage.add_child(bot)
+	bot.global_position = Vector3.ZERO
+	await physics_frames(2)
+	var loadout: Array[WeaponData] = [load(CHAINSTORM), load(POPPER)]
+	bot.arsenal.set_loadout(loadout)
+	bot.arsenal.current().reserve = 0
+	bot._weapon_lock_left = 99.0  # Even mid weapon-lock...
+	bot.controls_enabled = true
+	await physics_frames(40)
+	check(bot.arsenal.current().data.id == &"pocket_popper", "bot swapped off its empty Chainstorm straight away")
+
+	# Now empty everything: the bot and both buckets.
+	for state in bot.arsenal.weapons:
+		state.magazine = 0
+		state.reserve = 0
+	for bucket: AmmoBucket in [east, west]:
+		bucket.stock = 0
+		bucket._regen_left = 999.0
+	await physics_frames(40)
+	var nearest := east
+	if bot.global_position.distance_to(west.global_position) < bot.global_position.distance_to(east.global_position):
+		nearest = west
+	check(bot._mood == Bot.Mood.RESUPPLY, "a dry bot heads for a bucket even when every bucket is empty")
+	check(bot._goal.distance_to(nearest.global_position) < 0.1, "it waits at the nearest bucket")
+	stage.queue_free()
+	await physics_frames(2)
+
+
+## H6: ordinary impact bursts are budgeted; tag-out bursts always show.
+func _test_fx_budget() -> void:
+	section("Hardening: effects budget")
+	var saved_intensity := GameSettings.visual_intensity
+	GameSettings.visual_intensity = 1.0
+	var stage := make_stage()
+	await get_tree().process_frame
+	var before := FoamBurst.live_count()
+	var shown := 0
+	for i in 500:
+		if FoamBurst.spawn(stage, Vector3(0, 50, 0), Color.WHITE, 10):
+			shown += 1
+	check(shown <= FoamBurst.MAX_PER_FRAME, "500 impacts in one frame started only %d bursts" % shown)
+	for frame in 30:
+		for i in 20:
+			FoamBurst.spawn(stage, Vector3(0, 50, 0), Color.WHITE, 10)
+		await get_tree().process_frame
+	var live := FoamBurst.live_count() - before
+	check(live <= FoamBurst.live_cap(), "live bursts stay under the cap (%d of %d)" % [live, FoamBurst.live_cap()])
+	check(FoamBurst.spawn(stage, Vector3(0, 50, 0), Color.WHITE, 10, 4.0, Vector3.UP, true),
+			"a tag-out burst still shows when the budget is spent")
+	stage.queue_free()
+	await physics_frames(2)
+	check(FoamBurst.live_count() == before, "the live counter drops back when bursts are freed")
+	GameSettings.visual_intensity = saved_intensity
+
+
+## H7: missing or broken data files fall back to defaults instead of crashing.
+func _test_safe_loading() -> void:
+	section("Hardening: broken data never crashes a match")
+	check(MatchScene.try_load("res://does/not/exist.tres") == null, "a missing file loads as null instead of crashing")
+	check(MatchScene.load_or_fallback("res://does/not/exist.tres", FFA) is GameMode, "a missing mode falls back to free-for-all")
+	check(MatchScene.resolve_mode(99) is GameMode, "an out-of-range mode choice is still playable")
+	check(MatchScene.resolve_mode(GameSettings.MatchMode.GUN_GAME) is GunGameMode, "Gun Game resolves normally")
+	check(MatchScene.resolve_difficulty(-5) is BotDifficulty, "an out-of-range bot skill is still usable")
+	await physics_frames(1)
+
+
+## H1: alt-tab (focus lost) pauses a running match, but not a finished one.
+func _test_focus_pause() -> void:
+	section("Hardening: losing window focus pauses the match")
+	var saved_mode := GameSettings.match_mode
+	var game := start_match(GameSettings.MatchMode.FREE_FOR_ALL)
+	var controller := game.get("controller") as MatchController
+	var pause := game.get("pause_menu") as PauseMenu
+	check(not get_tree().paused, "match starts unpaused")
+	pause.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	check(get_tree().paused and pause.is_open(), "losing focus pauses the game and shows the pause menu")
+	pause.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	check(pause.is_open(), "losing focus again while paused is harmless")
+	pause.close()
+	check(not get_tree().paused and not pause.is_open(), "resume unpauses")
+	controller._finish()
+	pause.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	check(not get_tree().paused, "the results screen is not covered by a pause menu")
+	await end_match(game, saved_mode)
+
+
+## H10: "Reset to defaults" restores every preference.
+func _test_settings_reset() -> void:
+	section("Hardening: settings reset")
+	var saved := {}
+	for key: String in GameSettings.DEFAULTS:
+		saved[key] = GameSettings.get(key)
+	GameSettings.mouse_sensitivity = 2.7
+	GameSettings.camera_shake = 0.0
+	GameSettings.fov = 104.0
+	GameSettings.invert_y = true
+	check(not GameSettings.is_default(), "changed settings differ from the defaults")
+	var panel := SettingsPanel.new()
+	add_child(panel)
+	panel._reset()
+	check(GameSettings.is_default(), "the RESET TO DEFAULTS button restores every factory value")
+	check(is_equal_approx(GameSettings.fov, 85.0) and not GameSettings.invert_y, "e.g. FOV is 85 and look is not inverted")
+	panel.queue_free()
+	for key: String in saved:
+		GameSettings.set(key, saved[key])
+	GameSettings.apply()
+	await physics_frames(1)

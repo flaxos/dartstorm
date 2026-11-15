@@ -57,6 +57,27 @@ func setup(controller: MatchController) -> void:
 	_controller = controller
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		pause_for_focus_loss()
+
+
+## Alt-tab, the Windows key or a pop-up stealing focus pauses the match, so
+## nobody gets tagged while they're away and the mouse is safely released.
+func pause_for_focus_loss() -> void:
+	if _dim == null or _dim.visible or _controller == null:
+		return
+	if _controller.state != MatchController.State.COUNTDOWN and _controller.state != MatchController.State.PLAYING:
+		return
+	if OS.get_cmdline_user_args().has("--demo"):
+		return  # Unattended demo/screenshot runs shouldn't stop if focus wanders.
+	open()
+
+
+func is_open() -> bool:
+	return _dim != null and _dim.visible
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed(&"pause"):
 		return
@@ -88,3 +109,7 @@ func close() -> void:
 func _show_settings(shown: bool) -> void:
 	_settings.visible = shown
 	_menu.visible = not shown
+	if shown:
+		_settings.focus_default()
+	elif _dim.visible:
+		_resume.grab_focus()

@@ -97,7 +97,7 @@ func _process(delta: float) -> void:
 			_set_hint("RELOADING...", UiKit.SKY)
 		elif state.total() <= 0:
 			_set_hint("OUT OF DARTS - FIND A BUCKET!", UiKit.ORANGE_HOT)
-		elif not state.infinite_reserve and state.total() <= maxi(state.data.reserve_max / 8, 3):
+		elif not state.infinite_reserve and state.total() <= maxi(floori(state.data.reserve_max / 8.0), 3):
 			_set_hint("LOW AMMO", UiKit.ORANGE_HOT)
 		else:
 			_set_hint("", UiKit.CREAM)
@@ -334,7 +334,7 @@ func _on_countdown_tick(seconds_left: int) -> void:
 
 
 func _on_clock_tick(seconds_left: int) -> void:
-	_clock_label.text = "%d:%02d" % [seconds_left / 60, seconds_left % 60]
+	_clock_label.text = "%d:%02d" % [floori(seconds_left / 60.0), seconds_left % 60]
 	var urgent := seconds_left <= 10
 	_clock_label.add_theme_color_override("font_color", UiKit.ORANGE_HOT if urgent else UiKit.CREAM)
 	if urgent and seconds_left > 0 and _controller.state == MatchController.State.PLAYING:

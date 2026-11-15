@@ -113,7 +113,7 @@ func _build_menu() -> void:
 	settings.pressed.connect(_show_settings.bind(true))
 	box.add_child(settings)
 	var quit := UiKit.small_button("QUIT", Vector2(400, 48))
-	quit.pressed.connect(func() -> void: get_tree().quit())
+	quit.pressed.connect(func() -> void: Sfx.quit_game())
 	box.add_child(quit)
 
 	# How to play.
@@ -151,11 +151,13 @@ func _play(mode: int) -> void:
 
 func _change_bots(step: int) -> void:
 	GameSettings.bot_count = clampi(GameSettings.bot_count + step, MIN_BOTS, MAX_BOTS)
+	GameSettings.save_settings()  # Remembered even if no match is started.
 	_refresh_options()
 
 
 func _cycle_difficulty() -> void:
 	GameSettings.bot_difficulty = (GameSettings.bot_difficulty + 1) % DIFFICULTY_NAMES.size()
+	GameSettings.save_settings()
 	_refresh_options()
 
 
@@ -167,3 +169,5 @@ func _refresh_options() -> void:
 func _show_settings(shown: bool) -> void:
 	_settings.visible = shown
 	_menu.visible = not shown
+	if shown:
+		_settings.focus_default()

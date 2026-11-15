@@ -29,3 +29,6 @@ export/
 logs/
 tmp/
 captures/
+
+# Temporary strict-warnings override written by tools/validate.sh
+override.cfg

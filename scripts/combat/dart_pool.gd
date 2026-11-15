@@ -7,7 +7,9 @@ extends Node3D
 ## knowing about them. `kind` is a DartProjectile.Impact value.
 signal impact(kind: int, at: Vector3, normal: Vector3, color: Color)
 
-const DART_SCENE := preload("res://scenes/projectiles/dart_projectile.tscn")
+## Loaded at runtime, not preloaded: dart_projectile.gd refers back to
+## DartPool, and a preload here makes a load cycle when the editor re-imports.
+const DART_SCENE_PATH := "res://scenes/projectiles/dart_projectile.tscn"
 
 @export var max_active: int = 400
 
@@ -16,6 +18,13 @@ var wind_field: WindField
 
 var _idle: Array[DartProjectile] = []
 var _live: Array[DartProjectile] = []
+var _dart_scene: PackedScene
+
+
+func _ready() -> void:
+	_dart_scene = load(DART_SCENE_PATH) as PackedScene
+	if _dart_scene == null:
+		push_error("DartPool: could not load %s, using plain DartProjectile nodes." % DART_SCENE_PATH)
 
 
 func fire(data: DartData, origin: Vector3, direction: Vector3, shooter: Actor,
@@ -26,7 +35,7 @@ func fire(data: DartData, origin: Vector3, direction: Vector3, shooter: Actor,
 	elif not _idle.is_empty():
 		dart = _idle.pop_back()
 	else:
-		dart = DART_SCENE.instantiate() as DartProjectile
+		dart = _dart_scene.instantiate() as DartProjectile if _dart_scene != null else DartProjectile.new()
 		dart.pool = self
 		add_child(dart)
 	_live.append(dart)

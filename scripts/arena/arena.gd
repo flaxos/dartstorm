@@ -20,6 +20,11 @@ const TARGET_SCENE := preload("res://scenes/effects/wobble_target.tscn")
 ## The main menu shows the arena as a backdrop and skips the navmesh bake.
 @export var bake_navigation: bool = true
 
+## Emitted once the navmesh bake finishes. Bots steer in straight lines until
+## then, so matches can start before it's done.
+signal navigation_ready
+
+var is_navigation_ready: bool = false
 var geometry: NavigationRegion3D
 var decor: Node3D
 var wind_field: WindField
@@ -118,6 +123,7 @@ func add_target(at: Vector3, yaw_degrees: float) -> WobbleTarget:
 
 
 ## Bakes a navmesh for bots from every static collider under `geometry`.
+## The heavy part runs on a worker thread so loading a match doesn't hitch.
 func _bake_navigation() -> void:
 	var mesh := NavigationMesh.new()
 	mesh.agent_radius = 0.5
@@ -130,4 +136,10 @@ func _bake_navigation() -> void:
 	mesh.geometry_collision_mask = Layers.WORLD
 	mesh.geometry_source_geometry_mode = NavigationMesh.SOURCE_GEOMETRY_ROOT_NODE_CHILDREN
 	geometry.navigation_mesh = mesh
-	geometry.bake_navigation_mesh(false)
+	geometry.bake_finished.connect(_on_bake_finished, CONNECT_ONE_SHOT)
+	geometry.bake_navigation_mesh(true)
+
+
+func _on_bake_finished() -> void:
+	is_navigation_ready = true
+	navigation_ready.emit()

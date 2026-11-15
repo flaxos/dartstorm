@@ -35,11 +35,11 @@ func _on_impact(kind: int, at: Vector3, normal: Vector3, tint: Color) -> void:
 ## Tagged players pop into a shower of colourful foam. No one gets hurt.
 func _on_tagged_out(victim: Actor, _attacker: Actor, _weapon: WeaponData, _ricochet: bool) -> void:
 	var centre := victim.global_position + Vector3.UP
-	FoamBurst.spawn(self, centre, victim.color, 40, 7.0)
+	FoamBurst.spawn(self, centre, victim.color, 40, 7.0, Vector3.UP, true)
 	for i in 3:
-		FoamBurst.spawn(self, centre, CONFETTI[randi() % CONFETTI.size()], 14, 6.0)
+		FoamBurst.spawn(self, centre, CONFETTI[randi() % CONFETTI.size()], 14, 6.0, Vector3.UP, true)
 	Sfx.play_at(&"tag", centre, 1.0, -4.0)
 
 
 func _on_respawned(actor: Actor) -> void:
-	FoamBurst.spawn(self, actor.global_position + Vector3.UP, actor.color.lightened(0.5), 14, 3.0)
+	FoamBurst.spawn(self, actor.global_position + Vector3.UP, actor.color.lightened(0.5), 14, 3.0, Vector3.UP, true)

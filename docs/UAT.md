@@ -1,0 +1,69 @@
+# DARTSTORM — User Acceptance Testing
+
+UAT is the **hands-on check by real players** that a build is fun, works, and meets the
+brief's definition of success. Automated checks (`./tools/validate.sh`) prove the code works.
+UAT proves the *game* works. A release isn't done until both pass.
+
+## How to run a UAT session
+1. Get the build: `git pull`, then open the project in Godot 4.4+ (Import → `project.godot`) and press **F5**,
+   or run `./tools/run.sh`.
+2. Work through the script below. Tick each line, and note anything odd in the results log at the bottom.
+3. Then play for fun. The most useful feedback is "that was boring", "that was too hard", or "do that again!".
+4. Record the result (PASSED / PASSED WITH NOTES / FAILED) in the log, with the date and tester.
+
+## Test script
+
+### A. Launch and menus
+| ID | Do this | Expect |
+|---|---|---|
+| A1 | Launch the game | Main menu: big orange DARTSTORM title over the slowly turning backyard. No error pop-ups |
+| A2 | Change **BOTS** (−/+) and **BOT SKILL** | Values change (2–5 bots; Easy/Normal/Hard) and are remembered next launch |
+| A3 | **SETTINGS** → move every slider, toggle fullscreen | Each changes immediately (volume, fullscreen…) |
+| A4 | SETTINGS → **RESET TO DEFAULTS** → DONE *(v0.1.1)* | Everything returns to factory values: FOV 85, shake 1.00, volume 0.80, windowed, look not inverted |
+
+### B. Backyard Battle (the brief's definition of success)
+| ID | Do this | Expect |
+|---|---|---|
+| B1 | **PLAY: BACKYARD BATTLE** | 3-2-1-GO countdown with beeps. You can look around but not move until GO |
+| B2 | Run (WASD), sprint (Shift), jump (Space) | Smooth movement, sprint widens the view slightly, jumps clear crates |
+| B3 | Fire the **Pocket Popper** (1) at a bot | Darts visibly fly and drop at range. Hits show a white marker. Three hits tag the bot: confetti, **+100 TAG!**, tag feed entry |
+| B4 | **Dart Sprayer** (2): hold fire | Full-auto stream, magazine counts down, auto-reload when empty |
+| B5 | **Flax's Chainstorm** (3): hold fire | Barrels spin up (sound plus spin bar) for ~0.7 s, then a storm of darts. You move slowly. The belt counter drops fast |
+| B6 | Stand at an **AMMO** bucket | "REFILLING!", ammo climbs, the bucket count drops. Drain it: "EMPTY n" counts down, then it refills |
+| B7 | Shoot across **Windy Way** (south, by the giant fan) | The wind compass shows the wind; darts curve visibly north |
+| B8 | Bounce a dart off a **mirror** in Mirror Alley at a bot | White ripple on the mirror; a ricochet tag scores **+50 RICOCHET BONUS** |
+| B9 | Hit a **bullseye** | It spins and dings, **+10**, then pops back |
+| B10 | Use a **trampoline** | Bounces you onto the treehouse deck |
+| B11 | Get tagged | "TAGGED! You were tagged by …", a respawn countdown, back in 3 s, briefly protected |
+| B12 | Hold **Tab** | Live scoreboard |
+| B13 | Esc → pause → resume / settings / restart | Each works. The game is frozen while paused |
+| B14 | Alt-tab away mid-match, then click back in *(v0.1.1)* | The game is paused when you return, and the click does **not** fire a dart. Resume carries on |
+| B15 | Let the clock run out | Orange clock and beeps in the last 10 s, then the results screen with a winner. **PLAY AGAIN** and **MAIN MENU** both work |
+
+### C. Gun Game
+| ID | Do this | Expect |
+|---|---|---|
+| C1 | **PLAY: GUN GAME** | Everyone starts with the Pocket Popper and bottomless ammo ("INF") |
+| C2 | Tag a bot | "NEW BLASTER: DOUBLE TROUBLE" and a jingle; the HUD shows BLASTER 2 / 7 |
+| C3 | Climb to the Chainstorm and tag someone | Instant win, results screen |
+
+### D. Bots and difficulty
+| ID | Do this | Expect |
+|---|---|---|
+| D1 | Easy, 2 bots | A young player can win |
+| D2 | Hard, 5 bots | Chaotic and challenging, but bots don't get permanently stuck on scenery |
+| D3 | Watch bots for a minute | They roam, fight, swap blasters, visit buckets and respawn after being tagged |
+
+### E. Comfort
+| ID | Do this | Expect |
+|---|---|---|
+| E1 | Camera shake 0 | No shake at all, even with the Chainstorm |
+| E2 | Visual effects 0.2 | Far fewer particles; still readable |
+| E3 | Play 10 minutes | No dizziness complaints, no stutter or slowdown worth mentioning |
+
+## Results log
+
+| Version | Date | Tester | Result | Notes |
+|---|---|---|---|---|
+| 0.1.0 | 2026-11-15 | Project owner | ✅ **PASSED** | First playable (PR #1). UAT reported as passed with no blocking issues; no detailed notes recorded |
+| 0.1.1 | — | — | ⏳ Pending | Hardening release. Please re-run A4, B13, B14, D2 and D3, plus a normal match. Also check matches start without a hitch |

@@ -116,14 +116,18 @@ func _physics_process(delta: float) -> void:
 
 func _think() -> void:
 	_target = _pick_target()
+	_ensure_loaded_weapon()
 
-	var needs_ammo := arsenal.total_ammo() < LOW_AMMO and arsenal.total_missing() > 0
-	if _mood == Mood.RESUPPLY:
-		# Stay at the bucket until topped up or it runs dry.
-		needs_ammo = arsenal.total_missing() > 0 and _bucket != null and not _bucket.is_empty()
-	if needs_ammo:
-		if _bucket == null or _bucket.is_empty():
-			_bucket = _nearest_stocked_bucket()
+	if _wants_resupply():
+		var stocked := _nearest_bucket(true)
+		if stocked != null:
+			_bucket = stocked
+		elif arsenal.total_ammo() <= 0:
+			# Completely dry and every bucket is empty: wait at the nearest one
+			# for it to refill instead of chasing people we can't tag.
+			_bucket = _nearest_bucket(false)
+		else:
+			_bucket = null
 		if _bucket != null:
 			_mood = Mood.RESUPPLY
 			_set_goal(_bucket.global_position)
@@ -199,13 +203,35 @@ func _choose_weapon() -> void:
 		_weapon_lock_left = WEAPON_LOCK_SECONDS
 
 
-func _nearest_stocked_bucket() -> AmmoBucket:
+func _wants_resupply() -> bool:
+	if arsenal.total_missing() <= 0:
+		return false  # Full up (or bottomless, as in Gun Game).
+	if arsenal.total_ammo() < LOW_AMMO:
+		return true
+	# Already at a bucket: stay until topped up or it runs dry.
+	return _mood == Mood.RESUPPLY and _bucket != null and not _bucket.is_empty()
+
+
+## Never stand around holding an empty blaster if another one has darts,
+## even if we only just switched to it.
+func _ensure_loaded_weapon() -> void:
+	var held := arsenal.current()
+	if held == null or held.total() > 0 or arsenal.weapons.size() < 2:
+		return
+	for i in arsenal.weapons.size():
+		if arsenal.weapons[i].total() > 0:
+			arsenal.select(i)
+			_weapon_lock_left = WEAPON_LOCK_SECONDS
+			return
+
+
+func _nearest_bucket(stocked_only: bool) -> AmmoBucket:
 	if arena == null:
 		return null
 	var best: AmmoBucket = null
 	var best_distance := INF
 	for bucket in arena.buckets:
-		if bucket.is_empty():
+		if stocked_only and bucket.is_empty():
 			continue
 		var distance := global_position.distance_squared_to(bucket.global_position)
 		if distance < best_distance:
@@ -332,7 +358,9 @@ func _fight_direction(delta: float) -> Vector3:
 func _path_direction(goal: Vector3) -> Vector3:
 	var direct := goal - global_position
 	direct.y = 0.0
-	if NavigationServer3D.map_get_iteration_id(_nav.get_navigation_map()) == 0:
+	# Until the background navmesh bake lands, steer straight at the goal.
+	var nav_pending := arena != null and not arena.is_navigation_ready
+	if nav_pending or NavigationServer3D.map_get_iteration_id(_nav.get_navigation_map()) == 0:
 		return direct.normalized()
 	if _nav.target_position.distance_squared_to(goal) > 0.25:
 		_nav.target_position = goal

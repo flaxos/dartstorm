@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="GameMode" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/game_mode.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/weapons/pocket_popper.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/weapons/dart_sprayer.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/weapons/flaxs_chainstorm.tres" id="5"]
+
+[resource]
+script = ExtResource("1")
+id = &"free_for_all"
+display_name = "Backyard Battle"
+description = "Five-minute free-for-all. Everyone for themselves: most points wins."
+duration_seconds = 300.0
+countdown_seconds = 3
+respawn_delay = 3.0
+points_per_tag = 100
+ricochet_bonus = 50
+points_per_target = 10
+loadout = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5")])
+infinite_reserve = false

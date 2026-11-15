@@ -1,0 +1,31 @@
+# Godot 4 generated/cache data (never commit)
+.godot/
+.import/
+*.translation
+
+# Local/editor state
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+
+# Build and export output
+build/
+builds/
+exports/
+export/
+*.pck
+*.zip
+*.exe
+*.x86_64
+*.dmg
+*.app/
+
+# Logs and transient reports
+*.log
+logs/
+tmp/
+captures/

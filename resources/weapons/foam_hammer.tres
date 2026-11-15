@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/darts/hammer_dart.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"foam_hammer"
+dart = ExtResource("2")
+display_name = "Foam Hammer"
+description = "A big-barrelled blaster that fires a cloud of foam slugs. Devastating up close."
+fire_mode = 0
+shots_per_second = 1.5
+darts_per_shot = 8
+spread_degrees = 6.5
+magazine_size = 4
+reserve_max = 28
+reserve_start = 20
+reload_time = 1.6
+recoil_kick = 2.4
+camera_shake = 0.32
+sound = &"thump"
+sound_pitch = 1.0
+model_style = 4
+body_color = Color(0.6, 0.35, 0.95, 1)
+accent_color = Color(1, 0.85, 0.2, 1)
+view_offset = Vector3(0.24, -0.21, -0.42)
+ai_min_range = 0.0
+ai_max_range = 12.0
+ai_preference = 1.2

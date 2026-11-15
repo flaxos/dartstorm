@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="BotDifficulty" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ai/bot_difficulty.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Normal"
+aim_error_degrees = 5.5
+turn_speed_degrees = 220.0
+lead_factor = 0.6
+reaction_time = 0.6
+vision_range = 40.0
+fov_degrees = 200.0
+semi_interval = 0.5
+burst_time = 0.7
+burst_pause = 0.7
+damage_scale = 0.6
+move_speed_scale = 0.9

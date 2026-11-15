@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/darts/sprayer_dart.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"dart_sprayer"
+dart = ExtResource("2")
+display_name = "Dart Sprayer"
+description = "Fully automatic. Hold the trigger and hose the yard with mini darts."
+fire_mode = 1
+shots_per_second = 10.0
+darts_per_shot = 1
+spread_degrees = 2.6
+magazine_size = 30
+reserve_max = 150
+reserve_start = 90
+reload_time = 1.5
+recoil_kick = 0.45
+camera_shake = 0.07
+sound = &"spray"
+sound_pitch = 1.0
+model_style = 1
+body_color = Color(0.2, 0.8, 0.45, 1)
+accent_color = Color(1, 0.85, 0.2, 1)
+view_offset = Vector3(0.24, -0.2, -0.42)
+ai_min_range = 0.0
+ai_max_range = 20.0
+ai_preference = 1.3

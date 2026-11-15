@@ -20,7 +20,7 @@
 
 ## v0.1.1: hardening and docs (this release)
 
-Goal: make the UAT-approved game robust for real family play, and turn the docs into a complete reference
+Goal: make the UAT-approved game robust for real-world play, and turn the docs into a complete reference
 built around the original concept brief.
 
 **Hardening.** Each item ships with a regression test (GDD §6, ARCHITECTURE §10):
@@ -43,7 +43,8 @@ built around the original concept brief.
       style guide, accessibility, glossary
 - [x] `UAT.md`: a repeatable acceptance script and results log
 - [x] `TUNING.md`: a no-code guide to every data field, with recipes
-- [x] `ARCHITECTURE.md`: failure modes, performance budgets, validation pipeline · `DECISIONS.md` D-013 to D-018
+- [x] `ARCHITECTURE.md`: failure modes, performance budgets, validation pipeline · `DECISIONS.md` D-013 to D-019
+- [x] Personal information removed from docs and comments; the archived brief is redacted (D-019)
 
 **Acceptance:** `./tools/validate.sh` passes (import, strict compile, boots, **130/130 tests**, no leaks) ✅ ·
 UAT re-check of A4, B13, B14, D2 and D3 ⏳.
@@ -69,11 +70,11 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
 ## Next up (in priority order)
 
 1. **UAT re-check of v0.1.1** *(quick)*. Run the v0.1.1 rows in UAT.md, especially alt-tab and Reset to defaults.
-2. **Playtest-driven tuning.** Watch the kids play several rounds and note what's too hard, too easy or most fun.
+2. **Playtest-driven tuning.** Watch young players play several rounds and note what's too hard, too easy or most fun.
    Tune the `.tres` numbers ([TUNING.md](TUNING.md)), especially bot skill, tag power, Chainstorm ammo burn and
    bucket regen. Record the findings in UAT.md.
-3. **Windows check and a double-clickable build.** Run on the family Windows PC. Add a Windows export preset so the
-   kids can launch a `.exe` without opening Godot (needs the Godot export templates).
+3. **Windows check and a double-clickable build.** Run on a Windows PC. Add a Windows export preset so
+   players can launch a `.exe` without opening Godot (needs the Godot export templates).
 4. **Blue vs Orange team mode.** The arena is built for it and `team_id` already exists. Acceptance: a menu option,
    two teams with bots split between them, a team scoreboard, team-coloured shirts, team-coloured bucket ownership.
 5. **Remaining Gun Game rungs** (Wind Whisperer, Thunder Cannon, Rocket Dart) with simple, playful elemental dart effects.

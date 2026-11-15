@@ -1,8 +1,10 @@
 # DARTSTORM — Original Concept Brief (archived verbatim)
 
-> **Provenance.** This is the brief that started the project. Sam wrote it, building on ideas he and his kids
-> developed together with Flax, and gave it to Claude Code at the first development session on 2026-11-15.
-> It is kept here **word for word** as a historical record of the original vision.
+> **Provenance.** This is the brief that started the project, given to Claude Code at the first development
+> session on 2026-11-15. It is kept here **word for word** as a historical record of the original vision, except
+> that **personal details (names of real people and family relationships) have been redacted** and marked
+> `[redacted]` or replaced with a neutral role in brackets (DECISIONS D-019). "Flax's Chainstorm" is the blaster's
+> in-game name and is unchanged.
 >
 > **Authority.** The brief is the *why*. [`GDD.md`](GDD.md) is the *what*: the authoritative, current description
 > of the game. Where they differ (numbers, scope, order of work), the GDD wins. GDD §1 summarises the brief,
@@ -19,7 +21,7 @@ Your mission is to build a playable, family-friendly, 3D foam-dart arena shooter
 
 This is a real game development project, not a documentation exercise.
 
-The game is being created by a dad, Sam, for his kids, based on ideas they developed together with Flax.
+The game is being created for young players, based on their own ideas. [Personal background redacted.]
 
 Prioritise getting something fun, visually appealing and playable as quickly as possible.
 
@@ -43,7 +45,7 @@ Imagine:
 - Fire, lightning, ice and wind-themed arenas.
 - Upgradable blasters and character customisation.
 - Gun Game, team battles and free-for-all.
-- Friendly bots so the kids can play alone.
+- Friendly bots so [players] can play alone.
 - Eventually, multiplayer with friends and family.
 
 The game's personality should be playful, energetic, colourful and slightly ridiculous.
@@ -183,7 +185,7 @@ Implement:
 - End-of-round results.
 - Restart match option.
 
-**Definition of success: Sam can launch Godot, press Play, run around a colourful arena, shoot moving foam darts at bots, get tags, refill ammunition and finish a match.**
+**Definition of success: [The project owner] can launch Godot, press Play, run around a colourful arena, shoot moving foam darts at bots, get tags, refill ammunition and finish a match.**
 
 # 4. PHYSICAL DART SYSTEM
 
@@ -476,7 +478,7 @@ Requirements:
 
 Use procedural or built-in Godot geometry and original generated materials where practical.
 
-Do not require Sam to install commercial plugins or buy assets.
+Do not require [the project owner] to install commercial plugins or buy assets.
 
 If external assets are introduced, document their source and licence.
 
@@ -499,9 +501,9 @@ Aim for smooth performance on a typical mid-range gaming PC.
 
 Keep projectile counts bounded and prepare for object pooling where needed.
 
-# 14. WORKING WITH SAM
+# 14. WORKING WITH [THE PROJECT OWNER]
 
-Sam is building this for his kids.
+[Personal background redacted.]
 
 Do not assume he wants to spend weeks configuring development tooling.
 
@@ -516,7 +518,7 @@ At each milestone:
 
 Use reasonable defaults and proceed without unnecessary clarification.
 
-Ask Sam questions only when a choice would materially alter the game or its scope.
+Ask [the project owner] questions only when a choice would materially alter the game or its scope.
 
 Do not spend multiple sessions designing systems that have no playable implementation.
 

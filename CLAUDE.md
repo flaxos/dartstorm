@@ -1,7 +1,7 @@
 # CLAUDE.md: notes for future Claude Code sessions
 
 DARTSTORM: Elemental Arena is a family-friendly first-person foam-dart arena shooter in
-**Godot 4.4 / GDScript**. It's built by Sam for his kids (the ideas came from the kids and Flax).
+**Godot 4.4 / GDScript**, made for young players and built around their own ideas.
 Priority order: **fun, colourful and playable**, then everything else. Keep it kid-safe: cartoon
 tagging only, no gore, no real-firearm branding, no microtransactions.
 
@@ -13,7 +13,7 @@ tagging only, no gore, no real-firearm branding, no microtransactions.
    It fails on any GDScript **warning** (strict compile step), any test failure, or any "leaked at exit".
 3. Play: `./tools/run.sh`. The main scene is `scenes/ui/main_menu.tscn`, and the match is `scenes/game/match.tscn`.
 
-Godot lives at `~/bin/godot` (4.4.1) on Sam's dev box. The project targets Windows first and Linux second.
+Godot lives at `~/bin/godot` (4.4.1) on the dev box. The project targets Windows first and Linux second.
 
 ## Checking the game without a human
 
@@ -33,13 +33,15 @@ Godot lives at `~/bin/godot` (4.4.1) on Sam's dev box. The project targets Windo
 | `docs/TUNING.md` | A data field is added or renamed |
 | `docs/UAT.md` | A release needs a hands-on check (add rows, then log results) |
 | `docs/ARCHITECTURE.md` | Systems, ownership, safeguards (§10) or budgets (§11) change |
-| `docs/DECISIONS.md` | A non-obvious choice is made (next is D-019) |
+| `docs/DECISIONS.md` | A non-obvious choice is made (next is D-020) |
 | `docs/ROADMAP.md` | Always, at the end of a piece of work |
 
 ## Conventions
 - **Every bug fix or hardening change ships with a regression test** in `tests/test_runner.gd`.
   If you can, prove the test fails without the fix. Use the `fast_forward()`, `start_match()` and `end_match()` helpers
   for match-level tests.
+- **No personal information in the repo.** Don't name real people or describe family relationships in docs,
+  code, commits or PRs (D-019). "Flax's Chainstorm" is the blaster's in-game name and stays.
 - **Quit only via `Sfx.quit_game()`**, never `get_tree().quit()` directly, or audio objects leak.
 - **No `preload` of a scene whose script refers back to the preloading class** (load cycle, D-018).
 - `-s` tool scripts compile before autoloads exist: load game classes at runtime there (see `tools/dart_table.gd`).

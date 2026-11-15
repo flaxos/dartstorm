@@ -1,7 +1,7 @@
 # DARTSTORM — Tuning Guide (no coding needed)
 
 Almost every number in DARTSTORM lives in a small data file (`.tres`) that you can edit in the Godot editor's
-**Inspector**, with no code involved. This guide is for Sam (or anyone) who wants to make the bots easier, the
+**Inspector**, with no code involved. This guide is for anyone who wants to make the bots easier, the
 Chainstorm sillier, or add a new blaster.
 
 ## How to edit a data file

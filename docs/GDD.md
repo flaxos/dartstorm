@@ -7,7 +7,7 @@
 | **Game version** | 0.1.1 (hardening release) |
 | **Status** | v0.1.0 **passed UAT** on 2026-11-15 (see [UAT.md](UAT.md)) |
 | **Authority** | This GDD is the authoritative description of the game. Numbers mirror the `.tres` files in `resources/`. If they ever disagree, the `.tres` file is what the game uses, so fix this doc. |
-| **Source vision** | [CONCEPT_BRIEF.md](CONCEPT_BRIEF.md), the original brief, archived verbatim. §1 summarises it and §2 tracks it. |
+| **Source vision** | [CONCEPT_BRIEF.md](CONCEPT_BRIEF.md), the original brief, archived verbatim (personal details redacted). §1 summarises it and §2 tracks it. |
 | **Related** | [ARCHITECTURE.md](ARCHITECTURE.md) (how it's built) · [TUNING.md](TUNING.md) (changing numbers without code) · [ROADMAP.md](ROADMAP.md) · [DECISIONS.md](DECISIONS.md) |
 
 ---
@@ -21,11 +21,11 @@ lob arcing foam darts that bend in the wind and bounce off mirrors, raid ammo bu
 your hands on it, unleash **Flax's Chainstorm**: a ridiculous, belt-fed, six-barrel foam cannon.
 
 ### 1.2 Origin
-Sam is making DARTSTORM for his kids, based on ideas they developed together with Flax. That shapes every
-decision: the people this game must delight are kids who are excited about *their* idea. The Chainstorm
-carries Flax's name because it's Flax's idea, and it is meant to be the highlight of the game.
+DARTSTORM is a passion project for young players, built around their own ideas. That shapes every decision:
+the people this game must delight are young players who are excited about *their* idea. Flax's Chainstorm is
+the signature blaster and is meant to be the highlight of the game.
 
-### 1.3 The vision, in the kids' own list
+### 1.3 The vision list (from the brief)
 - Blue team versus orange team.
 - Massive backyard forts and obstacle courses.
 - Foam-dart weapons with orange safety tips.
@@ -36,7 +36,7 @@ carries Flax's name because it's Flax's idea, and it is meant to be the highligh
 - Fire, lightning, ice and wind-themed arenas.
 - Upgradable blasters and character customisation.
 - Gun Game, team battles and free-for-all.
-- Friendly bots so the kids can play alone.
+- Friendly bots so players can play alone.
 - Eventually, multiplayer with friends and family.
 
 Personality: **playful, energetic, colourful and slightly ridiculous.**
@@ -69,7 +69,7 @@ Every feature should strengthen at least one pillar and weaken none.
 - Avoid excessive screen shake, flashing or visual clutter. Shake and effect intensity are always user settings.
 
 ### 1.7 Definition of success (from the brief), and its status
-> *Sam can launch Godot, press Play, run around a colourful arena, shoot moving foam darts at bots, get tags,
+> *[The project owner] can launch Godot, press Play, run around a colourful arena, shoot moving foam darts at bots, get tags,
 > refill ammunition and finish a match.*
 
 ✅ **Met in v0.1.0, confirmed by UAT on 2026-11-15.**

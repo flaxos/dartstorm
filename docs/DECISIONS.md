@@ -5,7 +5,7 @@
 ### D-001: Godot 4.4 + GDScript, Forward+
 **Chosen:** Godot 4.4.1 (installed locally), typed GDScript, Forward+ renderer.
 **Alternatives:** C#/.NET (needs the Mono build and SDK); the Compatibility renderer.
-**Why:** No extra tooling for Sam; GDScript is quickest to iterate on. Forward+ gives glow and good
+**Why:** No extra tooling for the project owner; GDScript is quickest to iterate on. Forward+ gives glow and good
 shadows on any mid-range gaming PC. The game uses no Forward+-only features, so it could be switched
 to Compatibility for weaker machines.
 
@@ -31,7 +31,7 @@ hitboxes (D-006).
 Project Settings.
 **Alternatives:** define them in `project.godot`.
 **Why:** project.godot input entries are long serialized objects that are easy to corrupt by hand. One
-readable table is easy to review and extend, and Sam can still override any binding from the editor.
+readable table is easy to review and extend, and any binding can still be overridden from the editor.
 
 ### D-005: Procedural audio, no sound files
 **Chosen:** `Sfx` synthesises every effect into `AudioStreamWAV` at startup.
@@ -42,7 +42,7 @@ readable table is easy to review and extend, and Sam can still override any bind
 ### D-006: Forgiving hitboxes separate from the movement capsule
 **Chosen:** each Actor has a `Hitbox` Area3D (radius 0.6 for bots, 0.45 for the player) on its own layer.
 Darts hit the Area, not the CharacterBody.
-**Why:** kids should land hits. The movement capsule stays tight for good collision, and the hit volume
+**Why:** young players should land hits. The movement capsule stays tight for good collision, and the hit volume
 can be tuned per difficulty without touching movement.
 
 ### D-007: Free-for-all = one team per actor
@@ -54,7 +54,7 @@ can be tuned per difficulty without touching movement.
 Bot AI) separate from the *body* (Actor), centralises tag decisions in MatchController and Actor, and makes
 darts deterministic.
 **Alternatives:** build networking from day one.
-**Why:** the brief prioritises a playable game for the kids now. Expected future path: Godot high-level
+**Why:** the brief prioritises a playable game now. Expected future path: Godot high-level
 multiplayer (ENet), with the server authoritative for tags and scores, clients sending input, and the server spawning darts.
 
 ### D-009: Two autoloads only
@@ -80,7 +80,7 @@ capture the bucket) won't need to touch MatchController.
 **Chosen:** `PauseMenu` listens for `NOTIFICATION_APPLICATION_FOCUS_OUT` and opens itself during the countdown or play.
 The click that re-captures the mouse afterwards is swallowed (`Player._fire_blocked_until_release`).
 **Alternatives:** keep playing in the background; only release the mouse.
-**Why:** kids alt-tab, press the Windows key, or get a pop-up. Coming back to find you were tagged five times, or
+**Why:** players alt-tab, press the Windows key, or get a pop-up. Coming back to find you were tagged five times, or
 firing a surprise dart, feels unfair. Unattended `--demo` runs are exempt so screenshots don't stall.
 
 ### D-014: Bake the navmesh on a worker thread (v0.1.1)
@@ -101,18 +101,17 @@ losing the moments that matter. Pooling can come later if profiling asks for it.
 **Chosen:** `tools/check_scripts.gd` asks Godot which warnings are at "Warn" and writes them at "Error" into a
 temporary `override.cfg`, then recompiles every script. `validate.sh` removes the file with a trap.
 **Alternatives:** a single `debug/gdscript/warnings/treat_warnings_as_errors` switch (it had no effect when tested on
-4.4.1); setting the levels permanently in `project.godot` (one stray warning would stop Sam's game from running at all).
-**Why:** Sam opens the editor and sees zero yellow warnings, and new ones are caught by automation, not by
-him. The game itself still runs normally with warnings.
+4.4.1); setting the levels permanently in `project.godot` (one stray warning would stop the game from running at all).
+**Why:** opening the editor shows zero yellow warnings, and new ones are caught by automation, not by
+a person. The game itself still runs normally with warnings.
 
 ### D-017: Archive the concept brief verbatim; the GDD is authoritative (v0.1.1)
-**Chosen:** `docs/CONCEPT_BRIEF.md` keeps the original brief word for word. GDD §1 summarises it and GDD §2 traces
+**Chosen:** `docs/CONCEPT_BRIEF.md` keeps the original brief word for word (personal details redacted, D-019). GDD §1 summarises it and GDD §2 traces
 every requirement to its status.
 **Alternatives:** paste the whole brief into the GDD; summary only.
-**Why:** the brief is the family's original vision and worth keeping exactly. But the GDD must be free to
+**Why:** the brief is the original vision and worth keeping exactly. But the GDD must be free to
 evolve (numbers, scope), so it is the single source of truth. The project owner chose this option on 2026-11-16.
-The repo is public, so the brief's mention of Sam, Flax and the kids is public too, as are the existing README and
-blaster names.
+The repo is public, so personal details are redacted from the archived copy (D-019).
 
 ### D-018: No preload cycles; quit through Sfx (v0.1.1)
 **Chosen:** `DartPool` loads `dart_projectile.tscn` at runtime instead of `preload`, because the dart script refers
@@ -120,3 +119,12 @@ back to `DartPool`. Every quit goes through `Sfx.quit_game()`, which stops all s
 and then quits (re-entrant calls are ignored).
 **Why:** the preload produced a "Busy" load error when the editor re-imported `dart_projectile.gd`. Quitting
 mid-sound leaked audio playback objects (a 0.15 s wait still leaked in about 1 run in 4; 0.4 s was clean in 6 of 6), and a per-frame quit call leaked timers. validate.sh now fails on either.
+
+### D-019: No personal information in the repo (v0.1.1)
+**Chosen:** the docs, code comments, commits and PR descriptions don't name real people or describe family
+relationships. The archived concept brief keeps its wording but redacts those details, marked in brackets.
+"Flax's Chainstorm" stays as the blaster's in-game name.
+**Why:** the repository is public, and the project owner asked for personal details to be removed (2026-11-16).
+Neutral roles ("the project owner", "young players") say everything the docs need.
+**Note:** this cleans the current files. Earlier commits on `main` (from PR #1) still contain the old wording in
+git history until that history is rewritten.

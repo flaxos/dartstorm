@@ -2,7 +2,7 @@ class_name InputSetup
 extends RefCounted
 ## Registers the game's input actions in code so the bindings live in one readable
 ## table (see docs/DECISIONS.md, D-004). Actions already defined in Project Settings
-## are left alone, so Sam can still override any of them from the editor.
+## are left alone, so any of them can still be overridden from the editor.
 
 static func ensure_actions() -> void:
 	_add(&"move_forward", [_key(KEY_W), _key(KEY_UP), _axis(JOY_AXIS_LEFT_Y, -1.0)])

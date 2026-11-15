@@ -1,6 +1,6 @@
 # DARTSTORM — User Acceptance Testing
 
-UAT is the **hands-on check by a real player** (Sam and the kids) that a build is fun, works, and meets the
+UAT is the **hands-on check by real players** that a build is fun, works, and meets the
 brief's definition of success. Automated checks (`./tools/validate.sh`) prove the code works.
 UAT proves the *game* works. A release isn't done until both pass.
 

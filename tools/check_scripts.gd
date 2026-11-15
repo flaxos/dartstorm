@@ -7,7 +7,7 @@ extends SceneTree
 ##    "treat warnings as errors" switch; each warning has its own level.)
 ## 2. With that written to a temporary override.cfg, running this script again
 ##    recompiles every GDScript in the project. A warning that would show up
-##    yellow in Sam's editor now fails validation. It exits 1 if any script fails.
+##    yellow in the editor now fails validation. It exits 1 if any script fails.
 
 const ROOTS := ["res://scripts", "res://tests", "res://tools"]
 const WARNING_PREFIX := "debug/gdscript/warnings/"

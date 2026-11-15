@@ -7,6 +7,11 @@ const MIX_RATE := 22050
 const FLAT_VOICES := 12
 const SPATIAL_VOICES := 16
 const MIN_REPEAT_MSEC := 22
+## How long quit_game() waits for stopped sounds to be released. A stopped sound
+## is only freed after the audio thread has done a couple of mixing passes, and
+## the headless (dummy) audio driver mixes in ~46 ms chunks. 0.15 s leaked about
+## one run in four; 0.4 s is invisible to a player clicking Quit.
+const QUIT_DRAIN_SECONDS := 0.4
 
 enum Wave { SINE, SQUARE, SAW, TRIANGLE }
 
@@ -17,10 +22,13 @@ var _flat_index := 0
 var _spatial_index := 0
 var _last_played: Dictionary = {}
 var _spin: AudioStreamPlayer
+var _quitting: bool = false
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# The window's close button goes through quit_game() too.
+	get_tree().auto_accept_quit = false
 	_build_bank()
 	for i in FLAT_VOICES:
 		var voice := AudioStreamPlayer.new()
@@ -38,13 +46,36 @@ func _ready() -> void:
 	add_child(_spin)
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		quit_game()
+
+
 func _exit_tree() -> void:
-	# Stop every voice so no playback objects outlive the engine at quit.
+	stop_all()
+
+
+func stop_all() -> void:
 	for voice in _flat:
 		voice.stop()
 	for voice3d in _spatial:
 		voice3d.stop()
-	_spin.stop()
+	if _spin != null:
+		_spin.stop()
+
+
+## The one way the game should quit: silence everything, give the audio thread
+## a moment (real time, not frames: headless runs frames far faster) to release
+## the stopped sounds, then exit. Quitting while a sound is still fading out
+## leaks its playback object, and Godot warns about it at exit.
+## Safe to call more than once: only the first call counts.
+func quit_game(exit_code: int = 0) -> void:
+	if _quitting:
+		return
+	_quitting = true
+	stop_all()
+	await get_tree().create_timer(QUIT_DRAIN_SECONDS, true, false, true).timeout
+	get_tree().quit(exit_code)
 
 
 ## Plays a non-positional sound (the player's own actions and UI).

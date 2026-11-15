@@ -5,6 +5,18 @@ extends Node
 signal changed
 
 const SAVE_PATH := "user://settings.cfg"
+## Bump when the meaning of a saved value changes, then migrate in load_settings().
+const SETTINGS_VERSION := 1
+## Factory values for every preference. "Reset to defaults" restores these.
+const DEFAULTS := {
+	"mouse_sensitivity": 1.0,
+	"invert_y": false,
+	"fov": 85.0,
+	"camera_shake": 1.0,
+	"visual_intensity": 1.0,
+	"master_volume": 0.8,
+	"fullscreen": false,
+}
 
 enum MatchMode { FREE_FOR_ALL, GUN_GAME }
 
@@ -46,10 +58,27 @@ func apply() -> void:
 	changed.emit()
 
 
+## Puts every preference (not the match options) back to its factory value.
+## Call apply() afterwards; saving happens when the settings screen closes.
+func reset_to_defaults() -> void:
+	for key: String in DEFAULTS:
+		set(key, DEFAULTS[key])
+
+
+## True when every preference equals its factory value.
+func is_default() -> bool:
+	for key: String in DEFAULTS:
+		if get(key) != DEFAULTS[key]:
+			return false
+	return true
+
+
 func load_settings() -> void:
 	var file := ConfigFile.new()
 	if file.load(SAVE_PATH) != OK:
-		return
+		return  # First run, or an unreadable file: keep the defaults.
+	if int(file.get_value("meta", "version", SETTINGS_VERSION)) > SETTINGS_VERSION:
+		push_warning("Settings were saved by a newer DARTSTORM; loading what we understand.")
 	mouse_sensitivity = clampf(float(file.get_value("controls", "mouse_sensitivity", mouse_sensitivity)), 0.1, 4.0)
 	invert_y = bool(file.get_value("controls", "invert_y", invert_y))
 	fov = clampf(float(file.get_value("video", "fov", fov)), 60.0, 110.0)
@@ -64,6 +93,7 @@ func load_settings() -> void:
 
 func save_settings() -> void:
 	var file := ConfigFile.new()
+	file.set_value("meta", "version", SETTINGS_VERSION)
 	file.set_value("controls", "mouse_sensitivity", mouse_sensitivity)
 	file.set_value("controls", "invert_y", invert_y)
 	file.set_value("video", "fov", fov)

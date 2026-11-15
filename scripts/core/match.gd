@@ -1,7 +1,12 @@
+class_name MatchScene
 extends Node3D
 ## The match scene: builds one round out of an arena, the player, some bots and
 ## the UI, then hands control to the MatchController. This is the only place
 ## that knows how those pieces are wired together.
+##
+## Hardened against broken data: if a mode or difficulty file is missing or
+## corrupt it falls back to the defaults (with a warning) rather than crashing,
+## and if the arena itself can't load it returns to the main menu.
 
 const MAIN_MENU := "res://scenes/ui/main_menu.tscn"
 const ARENA_SCENE := "res://scenes/arenas/backyard_fortress.tscn"
@@ -36,13 +41,56 @@ var dart_pool: DartPool
 var player: Player
 var bots: Array[Bot] = []
 var hud: Hud
+var pause_menu: PauseMenu
+
+
+## Loads a resource without ever crashing: returns null if the file is missing
+## or can't be parsed.
+static func try_load(path: String) -> Resource:
+	if path.is_empty() or not ResourceLoader.exists(path):
+		return null
+	return load(path)
+
+
+## Loads `path`, or `fallback` if that fails, so a broken file never stops a match.
+static func load_or_fallback(path: String, fallback: String) -> Resource:
+	var resource := try_load(path)
+	if resource == null:
+		push_warning("Could not load %s, using %s instead." % [path, fallback])
+		resource = try_load(fallback)
+	return resource
+
+
+## The GameMode for a menu index. Always returns something playable.
+static func resolve_mode(index: int) -> GameMode:
+	var path: String = MODE_PATHS[clampi(index, 0, MODE_PATHS.size() - 1)]
+	var mode := load_or_fallback(path, MODE_PATHS[0]) as GameMode
+	if mode == null:
+		push_error("No usable game mode found, using built-in free-for-all rules.")
+		mode = GameMode.new()
+	return mode
+
+
+## The BotDifficulty for a menu index. Always returns something usable.
+static func resolve_difficulty(index: int) -> BotDifficulty:
+	var path: String = DIFFICULTY_PATHS[clampi(index, 0, DIFFICULTY_PATHS.size() - 1)]
+	var difficulty := load_or_fallback(path, DIFFICULTY_PATHS[1]) as BotDifficulty
+	if difficulty == null:
+		push_error("No usable bot difficulty found, using built-in Normal.")
+		difficulty = BotDifficulty.new()
+	return difficulty
 
 
 func _ready() -> void:
-	var mode := load(MODE_PATHS[clampi(GameSettings.match_mode, 0, MODE_PATHS.size() - 1)]) as GameMode
-	var difficulty := load(DIFFICULTY_PATHS[clampi(GameSettings.bot_difficulty, 0, DIFFICULTY_PATHS.size() - 1)]) as BotDifficulty
+	var mode := resolve_mode(GameSettings.match_mode)
+	var difficulty := resolve_difficulty(GameSettings.bot_difficulty)
 
-	arena = (load(ARENA_SCENE) as PackedScene).instantiate() as Arena
+	var arena_scene := try_load(ARENA_SCENE) as PackedScene
+	arena = arena_scene.instantiate() as Arena if arena_scene != null else null
+	if arena == null:
+		push_error("Could not load the arena %s, returning to the menu." % ARENA_SCENE)
+		quit_to_menu.call_deferred()
+		return
 	add_child(arena)
 
 	dart_pool = DartPool.new()
@@ -98,11 +146,11 @@ func _ready() -> void:
 	hud.restart_requested.connect(restart)
 	hud.menu_requested.connect(quit_to_menu)
 
-	var pause := PAUSE_SCENE.instantiate() as PauseMenu
-	add_child(pause)
-	pause.setup(controller)
-	pause.restart_requested.connect(restart)
-	pause.menu_requested.connect(quit_to_menu)
+	pause_menu = PAUSE_SCENE.instantiate() as PauseMenu
+	add_child(pause_menu)
+	pause_menu.setup(controller)
+	pause_menu.restart_requested.connect(restart)
+	pause_menu.menu_requested.connect(quit_to_menu)
 
 	controller.match_ended.connect(_on_match_ended)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED

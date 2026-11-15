@@ -33,6 +33,8 @@ var _bob_phase: float = 0.0
 var _sway: Vector2 = Vector2.ZERO
 var _time: float = 0.0
 var _aim_query: PhysicsRayQueryParameters3D
+## Set when a click was used to re-capture the mouse, so that click never fires.
+var _fire_blocked_until_release: bool = false
 
 
 func _ready() -> void:
@@ -76,6 +78,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		_look(-motion.relative.x * scale_factor, -motion.relative.y * scale_factor)
 		_sway = (_sway + motion.relative * 0.00012).limit_length(0.03)
 		return
+	# Clicking back into the window after alt-tab grabs the mouse again
+	# instead of firing a surprise shot.
+	if event is InputEventMouseButton and event.is_action_pressed(&"fire") \
+			and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and controls_enabled \
+			and not get_tree().paused:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		_fire_blocked_until_release = true
+		get_viewport().set_input_as_handled()
+		return
 	if not alive or not controls_enabled:
 		return
 	if event.is_action_pressed(&"weapon_next"):
@@ -111,7 +122,13 @@ func _physics_process(delta: float) -> void:
 		_sprinting = Input.is_action_pressed(&"sprint") and input.y < -0.1
 		if Input.is_action_just_pressed(&"jump"):
 			_jump_buffer_left = JUMP_BUFFER
-		arsenal.set_trigger(Input.is_action_pressed(&"fire"))
+		var fire_held := Input.is_action_pressed(&"fire")
+		if _fire_blocked_until_release:
+			if fire_held:
+				fire_held = false
+			else:
+				_fire_blocked_until_release = false
+		arsenal.set_trigger(fire_held)
 	else:
 		arsenal.set_trigger(false)
 

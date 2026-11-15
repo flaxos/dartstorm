@@ -43,8 +43,10 @@ var _resting: bool = false
 var _rest_left: float = 0.0
 var _spent_left: float = 0.0
 var _exclude: Array[RID] = []
-var _ricochet_rid: RID = RID()
-var _ricochet_ignore_left: float = 0.0
+## Surfaces this dart just bounced off, mapped to seconds left before they can
+## be hit again. One entry per surface, so quick back-to-back ricochets
+## (two mirrors facing each other) each expire on their own.
+var _ricochet_ignore: Dictionary = {}
 var _query: PhysicsRayQueryParameters3D
 var _visual: Node3D
 var _foam: MeshInstance3D
@@ -94,8 +96,7 @@ func launch(p_data: DartData, origin: Vector3, direction: Vector3, p_shooter: Ac
 	_spent = false
 	_resting = false
 	_exclude.assign(exclude)
-	_ricochet_rid = RID()
-	_ricochet_ignore_left = 0.0
+	_ricochet_ignore.clear()
 	scale = Vector3.ONE
 	_visual.rotation = Vector3.ZERO
 	_visual.scale = Vector3.ONE * data.visual_scale
@@ -137,10 +138,8 @@ func _physics_process(delta: float) -> void:
 		retire()
 		return
 
-	if _ricochet_ignore_left > 0.0:
-		_ricochet_ignore_left -= delta
-		if _ricochet_ignore_left <= 0.0:
-			_exclude.erase(_ricochet_rid)
+	if not _ricochet_ignore.is_empty():
+		_expire_ricochet_ignores(delta)
 
 	var acceleration := Vector3.DOWN * GRAVITY * (1.0 if _spent else data.gravity_multiplier)
 	if not _spent and pool != null and pool.wind_field != null:
@@ -217,12 +216,22 @@ func _ricochet(collider: Object, rid: RID, point: Vector3, normal: Vector3) -> v
 	ricochet_count += 1
 	global_position = point + normal * 0.03
 	# Never re-hit the surface we just left on the very next sweep.
-	_ricochet_rid = rid
-	_ricochet_ignore_left = RICOCHET_IGNORE_SECONDS
-	_exclude.append(rid)
+	if not _ricochet_ignore.has(rid):
+		_exclude.append(rid)
+	_ricochet_ignore[rid] = RICOCHET_IGNORE_SECONDS
 	if collider != null and collider.has_method(&"on_dart_ricochet"):
 		collider.call(&"on_dart_ricochet", point, normal)
 	_report(Impact.RICOCHET, point, normal)
+
+
+func _expire_ricochet_ignores(delta: float) -> void:
+	for rid: RID in _ricochet_ignore.keys():
+		var left: float = _ricochet_ignore[rid] - delta
+		if left <= 0.0:
+			_ricochet_ignore.erase(rid)
+			_exclude.erase(rid)
+		else:
+			_ricochet_ignore[rid] = left
 
 
 func _become_spent(point: Vector3, normal: Vector3) -> void:

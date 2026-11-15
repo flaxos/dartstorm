@@ -5,35 +5,63 @@ extends PanelContainer
 
 signal closed
 
+var _box: VBoxContainer
+var _done: Button
+
 
 func _ready() -> void:
 	add_theme_stylebox_override("panel", UiKit.panel_style(UiKit.NAVY, 0.96, 22, 4, UiKit.ORANGE, 24))
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 10)
-	add_child(box)
+	_build()
+
+
+## Grabs keyboard/gamepad focus so the panel works without a mouse.
+func focus_default() -> void:
+	if _done != null:
+		_done.grab_focus()
+
+
+func _build() -> void:
+	if _box != null:
+		_box.queue_free()
+	_box = VBoxContainer.new()
+	_box.add_theme_constant_override("separation", 10)
+	add_child(_box)
 	var title := UiKit.label("SETTINGS", 40, UiKit.ORANGE_HOT, 10)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(title)
+	_box.add_child(title)
 
-	_slider(box, "Mouse sensitivity", 0.2, 3.0, 0.05, GameSettings.mouse_sensitivity,
+	_slider(_box, "Mouse sensitivity", 0.2, 3.0, 0.05, GameSettings.mouse_sensitivity,
 			func(value: float) -> void: GameSettings.mouse_sensitivity = value)
-	_slider(box, "Field of view", 60.0, 110.0, 1.0, GameSettings.fov,
+	_slider(_box, "Field of view", 60.0, 110.0, 1.0, GameSettings.fov,
 			func(value: float) -> void: GameSettings.fov = value)
-	_slider(box, "Camera shake", 0.0, 1.5, 0.05, GameSettings.camera_shake,
+	_slider(_box, "Camera shake", 0.0, 1.5, 0.05, GameSettings.camera_shake,
 			func(value: float) -> void: GameSettings.camera_shake = value)
-	_slider(box, "Visual effects", 0.2, 1.5, 0.05, GameSettings.visual_intensity,
+	_slider(_box, "Visual effects", 0.2, 1.5, 0.05, GameSettings.visual_intensity,
 			func(value: float) -> void: GameSettings.visual_intensity = value)
-	_slider(box, "Volume", 0.0, 1.0, 0.05, GameSettings.master_volume,
+	_slider(_box, "Volume", 0.0, 1.0, 0.05, GameSettings.master_volume,
 			func(value: float) -> void: GameSettings.master_volume = value)
-	_toggle(box, "Fullscreen", GameSettings.fullscreen,
+	_toggle(_box, "Fullscreen", GameSettings.fullscreen,
 			func(on: bool) -> void: GameSettings.fullscreen = on)
-	_toggle(box, "Invert look up/down", GameSettings.invert_y,
+	_toggle(_box, "Invert look up/down", GameSettings.invert_y,
 			func(on: bool) -> void: GameSettings.invert_y = on)
 
-	var done := UiKit.button("DONE", 24, Vector2(220, 52))
-	done.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	done.pressed.connect(_close)
-	box.add_child(done)
+	var buttons := HBoxContainer.new()
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons.add_theme_constant_override("separation", 14)
+	_box.add_child(buttons)
+	var reset := UiKit.small_button("RESET TO DEFAULTS", Vector2(260, 52))
+	reset.pressed.connect(_reset)
+	buttons.add_child(reset)
+	_done = UiKit.button("DONE", 24, Vector2(200, 52))
+	_done.pressed.connect(_close)
+	buttons.add_child(_done)
+
+
+func _reset() -> void:
+	GameSettings.reset_to_defaults()
+	GameSettings.apply()
+	_build()
+	focus_default()
 
 
 func _close() -> void:

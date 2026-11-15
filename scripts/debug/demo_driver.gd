@@ -21,6 +21,9 @@ func _ready() -> void:
 	_player = get_parent().get("player") as Player
 	if _player != null and _player.arsenal.weapons.size() > 2:
 		_player.arsenal.select(2, true)  # Start on the Chainstorm.
+	# `-- --demo --open-settings` on the main menu shows the settings panel.
+	if OS.get_cmdline_user_args().has("--open-settings") and get_parent().has_method(&"_show_settings"):
+		get_parent().call(&"_show_settings", true)
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--shots="):
 			_shot_dir = argument.trim_prefix("--shots=")
@@ -48,7 +51,7 @@ func _physics_process(delta: float) -> void:
 		_save_shot()
 		_next_shot += 1
 	if _quit_after > 0.0 and _time >= _quit_after:
-		get_tree().quit()
+		Sfx.quit_game()
 
 
 func _exit_tree() -> void:

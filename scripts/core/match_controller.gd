@@ -68,6 +68,7 @@ func award_target_hit(shooter: Actor) -> void:
 func _physics_process(delta: float) -> void:
 	match state:
 		State.COUNTDOWN:
+			_tick_respawns(delta)
 			_countdown_left -= delta
 			var whole := int(ceilf(_countdown_left))
 			if whole != _last_whole_second and whole > 0:
@@ -121,9 +122,13 @@ func _tick_respawns(delta: float) -> void:
 
 
 func _on_tagged_out(victim: Actor, attacker: Actor, weapon: WeaponData, ricochet: bool) -> void:
+	if state == State.ENDED:
+		return
+	# Anyone tagged out comes back, whenever it happens (even a fall off the
+	# map during the countdown). Points are only awarded while playing.
+	_respawns[victim] = mode.respawn_delay
 	if state != State.PLAYING:
 		return
-	_respawns[victim] = mode.respawn_delay
 	var victim_entry := board.entry_for(victim)
 	if victim_entry != null:
 		victim_entry.outs += 1

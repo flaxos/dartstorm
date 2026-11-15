@@ -7,7 +7,10 @@ signal shot_fired(state: WeaponState)
 
 const HEAD_HEIGHT := 1.62
 const MOUSE_RADIANS_PER_PIXEL := 0.0022
+## Right-stick turn speed at full tilt, radians per second (× the player's setting).
 const PAD_LOOK_SPEED := 2.8
+## Controller aim assist: turning slows to this fraction while over a rival.
+const AIM_ASSIST_SLOWDOWN := 0.5
 const COYOTE_TIME := 0.12
 const JUMP_BUFFER := 0.12
 const SPRINT_FOV_BOOST := 6.0
@@ -35,6 +38,9 @@ var _time: float = 0.0
 var _aim_query: PhysicsRayQueryParameters3D
 ## Set when a click was used to re-capture the mouse, so that click never fires.
 var _fire_blocked_until_release: bool = false
+var _assist_query: PhysicsRayQueryParameters3D
+## Shown once per life when the Chainstorm reaches full spin.
+var storm_mode_announced: bool = false
 
 
 func _ready() -> void:
@@ -58,6 +64,9 @@ func _ready() -> void:
 	camera.add_child(_view_root)
 
 	_aim_query = PhysicsRayQueryParameters3D.new()
+	_assist_query = PhysicsRayQueryParameters3D.new()
+	_assist_query.collision_mask = Layers.WORLD | Layers.HITBOX
+	_assist_query.collide_with_areas = true
 
 	arsenal.weapon_changed.connect(_on_weapon_changed)
 	arsenal.dry_fired.connect(func(_state: WeaponState) -> void: Sfx.play(&"dry"))
@@ -65,6 +74,7 @@ func _ready() -> void:
 	arsenal.reload_finished.connect(func(_state: WeaponState) -> void: Sfx.play(&"reload", 1.2))
 	landed_hit.connect(_on_landed_hit)
 	ammo_collected.connect(func(_amount: int) -> void: Sfx.play(&"ammo", 1.0, -6.0, 0.1))
+	respawned.connect(func(_actor: Actor) -> void: storm_mode_announced = false)
 
 
 func _exit_tree() -> void:
@@ -111,7 +121,8 @@ func _physics_process(delta: float) -> void:
 
 	var pad_look := Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
 	if pad_look.length_squared() > 0.0:
-		_look(-pad_look.x * PAD_LOOK_SPEED * delta, -pad_look.y * PAD_LOOK_SPEED * delta)
+		var turn := pad_look_step(pad_look, delta)
+		_look(turn.x, turn.y)
 
 	var wish := Vector3.ZERO
 	var jump := false
@@ -216,6 +227,29 @@ func get_aim_direction(origin: Vector3) -> Vector3:
 	return (aim_point - origin).normalized()
 
 
+## Converts right-stick input into a yaw/pitch step (radians) for this frame.
+## The response is curved (stick² in magnitude) so small nudges aim finely and
+## full tilt still turns fast. With aim assist on, turning slows while the
+## crosshair is over a rival, which makes controller aim far friendlier.
+func pad_look_step(stick: Vector2, delta: float) -> Vector2:
+	var curved := stick * stick.length()
+	var speed := PAD_LOOK_SPEED * GameSettings.controller_look_speed
+	if GameSettings.aim_assist and crosshair_on_rival():
+		speed *= AIM_ASSIST_SLOWDOWN
+	return Vector2(-curved.x, -curved.y) * speed * delta
+
+
+## True when the crosshair is over a rival who can be tagged.
+func crosshair_on_rival() -> bool:
+	var eye := head.global_transform
+	_assist_query.from = eye.origin
+	_assist_query.to = eye.origin - eye.basis.z * AIM_DISTANCE
+	_assist_query.exclude = [get_rid(), hitbox.get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(_assist_query)
+	var box := hit.get("collider") as Hitbox
+	return box != null and box.actor != null and box.actor != self and box.actor.accepts_dart_from(team_id)
+
+
 func _look(yaw: float, pitch: float) -> void:
 	rotate_y(yaw)
 	_pitch = clampf(_pitch + (-pitch if GameSettings.invert_y else pitch), -1.5, 1.5)
@@ -250,17 +284,22 @@ func _on_shot_feedback(state: WeaponState) -> void:
 	add_trauma(weapon.camera_shake)
 	if _view_model != null:
 		_view_model.flash()
+	GameSettings.vibrate(0.12 * weapon.recoil_kick + 0.05, 0.0, 0.06)
 	shot_fired.emit(state)
 
 
 func _on_landed_hit(_victim: Actor, was_tag: bool, _was_ricochet: bool) -> void:
 	Sfx.play(&"tag" if was_tag else &"hit_confirm", 1.0, -2.0 if was_tag else -6.0, 0.05)
+	if was_tag:
+		GameSettings.vibrate(0.5, 0.2, 0.15)
 
 
 func _on_hit_received(_attacker: Actor) -> void:
 	add_trauma(0.25)
+	GameSettings.vibrate(0.3, 0.45, 0.16)
 
 
 func _tag_out(attacker: Actor, weapon: WeaponData, ricochet: bool) -> void:
 	super._tag_out(attacker, weapon, ricochet)
 	Sfx.play(&"tagged")
+	GameSettings.vibrate(0.8, 0.8, 0.4)

@@ -146,6 +146,8 @@ static func sign_text(parent: Node, text: String, pos: Vector3, rot_deg: Vector3
 	label.outline_modulate = Color(0.03, 0.07, 0.19)
 	label.position = pos
 	label.rotation_degrees = rot_deg
+	# Signs read from the front only; from behind they'd show mirrored text.
+	label.double_sided = false
 	parent.add_child(label)
 	return label
 

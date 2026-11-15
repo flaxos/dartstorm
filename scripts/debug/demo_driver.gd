@@ -15,6 +15,10 @@ var _shot_times: Array[float] = [1.0, 4.5, 6.0, 8.0, 10.0, 11.5]
 var _next_shot: int = 0
 var _quit_after: float = 0.0
 var _weapon_clock: float = 0.0
+## `--end-after=N`: end the match after N seconds (to see the podium).
+var _end_after: float = 0.0
+## `--powerup`: drop the Chainstorm power-up at 4 seconds (match.gd turns the mode on).
+var _drop_powerup: bool = false
 
 
 func _ready() -> void:
@@ -30,6 +34,10 @@ func _ready() -> void:
 			DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(_shot_dir))
 		elif argument.begins_with("--quit-after="):
 			_quit_after = float(argument.trim_prefix("--quit-after="))
+		elif argument.begins_with("--end-after="):
+			_end_after = float(argument.trim_prefix("--end-after="))
+		elif argument == "--powerup":
+			_drop_powerup = true
 
 
 func _physics_process(delta: float) -> void:
@@ -47,6 +55,16 @@ func _physics_process(delta: float) -> void:
 		if _weapon_clock > 2.6:
 			_weapon_clock = 0.0
 			_player.arsenal.cycle(1)
+	if _drop_powerup and _time >= 4.0:
+		_drop_powerup = false
+		var pickup := get_parent().get("power_up") as PowerUpPickup
+		if pickup != null:
+			pickup.make_available()
+	if _end_after > 0.0 and _time >= _end_after:
+		_end_after = 0.0
+		var controller := get_parent().get("controller") as MatchController
+		if controller != null:
+			controller.time_left = 0.05
 	if not _shot_dir.is_empty() and _next_shot < _shot_times.size() and _time >= _shot_times[_next_shot]:
 		_save_shot()
 		_next_shot += 1

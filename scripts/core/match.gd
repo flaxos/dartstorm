@@ -26,14 +26,15 @@ const DIFFICULTY_PATHS := [
 	"res://resources/bots/normal.tres",
 	"res://resources/bots/hard.tres",
 ]
-const PLAYER_COLOR := Color(0.15, 0.5, 1.0)
 const BOT_ROSTER := [
-	{"name": "Blaze", "color": Color(1.0, 0.5, 0.1)},
-	{"name": "Pickle", "color": Color(0.55, 0.85, 0.15)},
-	{"name": "Zoom", "color": Color(0.7, 0.4, 1.0)},
-	{"name": "Sprinkles", "color": Color(1.0, 0.4, 0.7)},
-	{"name": "Noodle", "color": Color(1.0, 0.85, 0.2)},
+	{"name": "Blaze", "color": Color(1.0, 0.5, 0.1), "hat": &"cap"},
+	{"name": "Pickle", "color": Color(0.55, 0.85, 0.15), "hat": &"beanie"},
+	{"name": "Zoom", "color": Color(0.7, 0.4, 1.0), "hat": &"propeller"},
+	{"name": "Sprinkles", "color": Color(1.0, 0.4, 0.7), "hat": &"party"},
+	{"name": "Noodle", "color": Color(1.0, 0.85, 0.2), "hat": &"cowboy"},
 ]
+## Seconds of podium celebration before the relaxed music returns.
+const RESULTS_MUSIC_DELAY := 3.0
 
 var arena: Arena
 var controller: MatchController
@@ -42,6 +43,8 @@ var player: Player
 var bots: Array[Bot] = []
 var hud: Hud
 var pause_menu: PauseMenu
+var podium: Podium
+var power_up: PowerUpPickup
 
 
 ## Loads a resource without ever crashing: returns null if the file is missing
@@ -71,6 +74,29 @@ static func resolve_mode(index: int) -> GameMode:
 	return mode
 
 
+## Colours for the bots: their usual colour, unless it's too close to the
+## player's. Then they borrow an unused one from the palette.
+static func bot_colors(player_color: Color, count: int) -> Array[Color]:
+	var taken: Array[Color] = [player_color]
+	var out: Array[Color] = []
+	for i in count:
+		var wanted: Color = BOT_ROSTER[i]["color"]
+		if Cosmetics.too_similar(wanted, player_color):
+			for option in Cosmetics.COLORS:
+				var candidate: Color = option["color"]
+				var free := true
+				for used in taken:
+					free = free and not Cosmetics.too_similar(candidate, used)
+				for roster_entry: Dictionary in BOT_ROSTER:
+					free = free and not Cosmetics.too_similar(candidate, roster_entry["color"])
+				if free:
+					wanted = candidate
+					break
+		taken.append(wanted)
+		out.append(wanted)
+	return out
+
+
 ## The BotDifficulty for a menu index. Always returns something usable.
 static func resolve_difficulty(index: int) -> BotDifficulty:
 	var path: String = DIFFICULTY_PATHS[clampi(index, 0, DIFFICULTY_PATHS.size() - 1)]
@@ -82,7 +108,10 @@ static func resolve_difficulty(index: int) -> BotDifficulty:
 
 
 func _ready() -> void:
-	var mode := resolve_mode(GameSettings.match_mode)
+	# A private copy, so per-match switches never leak into the shared .tres.
+	var mode := resolve_mode(GameSettings.match_mode).duplicate() as GameMode
+	var demo_powerup := OS.get_cmdline_user_args().has("--powerup")  # Screenshot runs only.
+	mode.power_up_mode = (GameSettings.chainstorm_powerup or demo_powerup) and not mode is GunGameMode
 	var difficulty := resolve_difficulty(GameSettings.bot_difficulty)
 
 	var arena_scene := try_load(ARENA_SCENE) as PackedScene
@@ -109,8 +138,9 @@ func _ready() -> void:
 	add_child(controller)
 
 	player = PLAYER_SCENE.instantiate() as Player
-	player.display_name = "You"
-	player.color = PLAYER_COLOR
+	player.display_name = GameSettings.display_name()
+	player.color = GameSettings.color()
+	player.hat_id = GameSettings.player_hat
 	player.team_id = 0
 	player.dart_pool = dart_pool
 	add_child(player)
@@ -118,10 +148,12 @@ func _ready() -> void:
 	controller.register(player)
 
 	var bot_count := clampi(GameSettings.bot_count, 1, BOT_ROSTER.size())
+	var colors := bot_colors(player.color, bot_count)
 	for i in bot_count:
 		var bot := BOT_SCENE.instantiate() as Bot
 		bot.display_name = BOT_ROSTER[i]["name"]
-		bot.color = BOT_ROSTER[i]["color"]
+		bot.color = colors[i]
+		bot.hat_id = BOT_ROSTER[i]["hat"]
 		bot.team_id = i + 1
 		bot.difficulty = difficulty
 		bot.arena = arena
@@ -134,6 +166,9 @@ func _ready() -> void:
 		for actor in controller.actors:
 			if actor != bot:
 				bot.rivals.append(actor)
+
+	if mode.uses_power_up() and not arena.power_up_spots.is_empty():
+		_create_power_up(mode)
 
 	for node in get_tree().get_nodes_in_group(&"wobble_targets"):
 		var target := node as WobbleTarget
@@ -154,6 +189,7 @@ func _ready() -> void:
 
 	controller.match_ended.connect(_on_match_ended)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	Sfx.play_music(&"match")
 	controller.begin()
 
 	if OS.get_cmdline_user_args().has("--demo"):
@@ -171,5 +207,32 @@ func quit_to_menu() -> void:
 	get_tree().change_scene_to_file(MAIN_MENU)
 
 
-func _on_match_ended(_ranking: Array[ScoreEntry]) -> void:
+func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	Sfx.stop_music()
+	if power_up != null:
+		power_up.active = false
+	podium = Podium.new()
+	podium.name = "Podium"
+	add_child(podium)
+	podium.show_ranking(ranking)
+	get_tree().create_timer(RESULTS_MUSIC_DELAY).timeout.connect(func() -> void: Sfx.play_music(&"menu"))
+
+
+func _create_power_up(mode: GameMode) -> void:
+	power_up = PowerUpPickup.new()
+	power_up.name = "PowerUp"
+	power_up.setup(mode.power_weapon, mode.power_weapon_belt, mode.power_weapon_first_delay, mode.power_weapon_respawn)
+	arena.add_child(power_up)
+	power_up.global_position = arena.power_up_spots[0]
+	for bot in bots:
+		bot.power_up = power_up
+	controller.state_changed.connect(func(state: MatchController.State) -> void:
+		power_up.active = state == MatchController.State.PLAYING)
+	power_up.spawned.connect(func() -> void:
+		controller.announce(null, "%s HAS LANDED!" % mode.power_weapon.display_name.to_upper(), UiKit.ORANGE_HOT, &"powerup"))
+	power_up.collected.connect(func(actor: Actor) -> void:
+		var entry := controller.board.entry_for(actor)
+		var prize := mode.power_weapon.display_name.to_upper()
+		var text := "YOU GRABBED %s!" % prize if actor.is_human else "%s GRABBED %s!" % [actor.display_name.to_upper(), prize]
+		controller.announce(entry, text, MatchController.color_for(entry), &"announce"))

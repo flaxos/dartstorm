@@ -30,20 +30,35 @@ func _build() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_box.add_child(title)
 
-	_slider(_box, "Mouse sensitivity", 0.2, 3.0, 0.05, GameSettings.mouse_sensitivity,
+	var columns := HBoxContainer.new()
+	columns.add_theme_constant_override("separation", 40)
+	_box.add_child(columns)
+	var controls := _column(columns, "CONTROLS")
+	_slider(controls, "Mouse sensitivity", 0.2, 3.0, 0.05, GameSettings.mouse_sensitivity,
 			func(value: float) -> void: GameSettings.mouse_sensitivity = value)
-	_slider(_box, "Field of view", 60.0, 110.0, 1.0, GameSettings.fov,
-			func(value: float) -> void: GameSettings.fov = value)
-	_slider(_box, "Camera shake", 0.0, 1.5, 0.05, GameSettings.camera_shake,
-			func(value: float) -> void: GameSettings.camera_shake = value)
-	_slider(_box, "Visual effects", 0.2, 1.5, 0.05, GameSettings.visual_intensity,
-			func(value: float) -> void: GameSettings.visual_intensity = value)
-	_slider(_box, "Volume", 0.0, 1.0, 0.05, GameSettings.master_volume,
-			func(value: float) -> void: GameSettings.master_volume = value)
-	_toggle(_box, "Fullscreen", GameSettings.fullscreen,
-			func(on: bool) -> void: GameSettings.fullscreen = on)
-	_toggle(_box, "Invert look up/down", GameSettings.invert_y,
+	_slider(controls, "Controller look speed", 0.4, 2.0, 0.05, GameSettings.controller_look_speed,
+			func(value: float) -> void: GameSettings.controller_look_speed = value)
+	_toggle(controls, "Invert look up/down", GameSettings.invert_y,
 			func(on: bool) -> void: GameSettings.invert_y = on)
+	_toggle(controls, "Controller aim assist", GameSettings.aim_assist,
+			func(on: bool) -> void: GameSettings.aim_assist = on)
+	_toggle(controls, "Controller rumble", GameSettings.vibration,
+			func(on: bool) -> void: GameSettings.vibration = on)
+	var video := _column(columns, "VIDEO & SOUND")
+	_slider(video, "Field of view", 60.0, 110.0, 1.0, GameSettings.fov,
+			func(value: float) -> void: GameSettings.fov = value)
+	_slider(video, "Camera shake", 0.0, 1.5, 0.05, GameSettings.camera_shake,
+			func(value: float) -> void: GameSettings.camera_shake = value)
+	_slider(video, "Visual effects", 0.2, 1.5, 0.05, GameSettings.visual_intensity,
+			func(value: float) -> void: GameSettings.visual_intensity = value)
+	_toggle(video, "Fullscreen", GameSettings.fullscreen,
+			func(on: bool) -> void: GameSettings.fullscreen = on)
+	_slider(video, "Volume", 0.0, 1.0, 0.05, GameSettings.master_volume,
+			func(value: float) -> void: GameSettings.master_volume = value)
+	_slider(video, "Music", 0.0, 1.0, 0.05, GameSettings.music_volume,
+			func(value: float) -> void: GameSettings.music_volume = value)
+	_slider(video, "Sound effects", 0.0, 1.0, 0.05, GameSettings.sfx_volume,
+			func(value: float) -> void: GameSettings.sfx_volume = value)
 
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -53,7 +68,7 @@ func _build() -> void:
 	reset.pressed.connect(_reset)
 	buttons.add_child(reset)
 	_done = UiKit.button("DONE", 24, Vector2(200, 52))
-	_done.pressed.connect(_close)
+	_done.pressed.connect(close)
 	buttons.add_child(_done)
 
 
@@ -64,9 +79,24 @@ func _reset() -> void:
 	focus_default()
 
 
-func _close() -> void:
+## Saves and leaves the panel (DONE button, or B / Esc).
+func close() -> void:
 	GameSettings.save_settings()
 	closed.emit()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if is_visible_in_tree() and event.is_action_pressed(&"ui_cancel"):
+		close()
+		get_viewport().set_input_as_handled()
+
+
+func _column(parent: Control, title: String) -> VBoxContainer:
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 8)
+	parent.add_child(column)
+	column.add_child(UiKit.label(title, 22, UiKit.SKY, 6))
+	return column
 
 
 func _slider(parent: Control, text: String, low: float, high: float, step: float, value: float,
@@ -75,14 +105,14 @@ func _slider(parent: Control, text: String, low: float, high: float, step: float
 	row.add_theme_constant_override("separation", 16)
 	parent.add_child(row)
 	var name_label := UiKit.label(text, 20, UiKit.CREAM, 4)
-	name_label.custom_minimum_size.x = 250
+	name_label.custom_minimum_size.x = 220
 	row.add_child(name_label)
 	var slider := HSlider.new()
 	slider.min_value = low
 	slider.max_value = high
 	slider.step = step
 	slider.value = value
-	slider.custom_minimum_size = Vector2(260, 28)
+	slider.custom_minimum_size = Vector2(190, 28)
 	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(slider)
 	var value_label := UiKit.label(_format(value, step), 20, UiKit.SKY, 4)
@@ -99,7 +129,7 @@ func _toggle(parent: Control, text: String, value: bool, setter: Callable) -> vo
 	row.add_theme_constant_override("separation", 16)
 	parent.add_child(row)
 	var name_label := UiKit.label(text, 20, UiKit.CREAM, 4)
-	name_label.custom_minimum_size.x = 250
+	name_label.custom_minimum_size.x = 220
 	row.add_child(name_label)
 	var button := UiKit.small_button("ON" if value else "OFF", Vector2(110, 40))
 	row.add_child(button)

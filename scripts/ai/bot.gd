@@ -16,11 +16,15 @@ const GRUDGE_SECONDS := 4.0
 const WEAPON_LOCK_SECONDS := 2.5
 const GOAL_REACHED_DISTANCE := 2.0
 const GOAL_TIMEOUT := 14.0
+## Bots in a fight still detour for the power-up if it's this close.
+const POWER_UP_DETOUR := 22.0
 
 var difficulty: BotDifficulty
 var arena: Arena
 ## Everyone else in the match. Set by the match scene.
 var rivals: Array[Actor] = []
+## Power-up mode: the Chainstorm pickup to race for (null otherwise).
+var power_up: PowerUpPickup
 
 var _nav: NavigationAgent3D
 var _model: CharacterModel
@@ -134,6 +138,11 @@ func _think() -> void:
 			return
 	_bucket = null
 
+	if _wants_power_up():
+		_mood = Mood.ROAM  # Keeps shooting at any target while it runs.
+		_set_goal(power_up.global_position)
+		return
+
 	if _target != null:
 		_mood = Mood.FIGHT
 		_choose_weapon()
@@ -201,6 +210,16 @@ func _choose_weapon() -> void:
 	if best_index != arsenal.current_index:
 		arsenal.select(best_index)
 		_weapon_lock_left = WEAPON_LOCK_SECONDS
+
+
+## Go for the power-up when it's out, we don't have it, and it's close or
+## there's nobody to fight.
+func _wants_power_up() -> bool:
+	if power_up == null or not power_up.is_available() or power_up.weapon == null:
+		return false
+	if arsenal.has_weapon(power_up.weapon.id):
+		return false
+	return _target == null or global_position.distance_to(power_up.global_position) < POWER_UP_DETOUR
 
 
 func _wants_resupply() -> bool:

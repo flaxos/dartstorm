@@ -33,6 +33,8 @@ const KILL_PLANE_Y := -25.0
 ## In free-for-all every actor is its own team.
 var team_id: int = 0
 var color: Color = Color(0.15, 0.45, 1.0)
+## Which hat this actor wears (see Cosmetics.HATS); shown on bots and the podium.
+var hat_id: StringName = &"cap"
 var alive: bool = true
 ## False during the countdown and after the match ends.
 var controls_enabled: bool = false

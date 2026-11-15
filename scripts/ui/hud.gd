@@ -9,6 +9,9 @@ signal menu_requested
 
 const FEED_LIMIT := 5
 const FEED_SECONDS := 5.0
+## How long each announcer call-out stays up, and how many can wait in line.
+const ANNOUNCE_SECONDS := 1.6
+const ANNOUNCE_QUEUE_MAX := 3
 
 var _player: Player
 var _controller: MatchController
@@ -40,6 +43,11 @@ var _banner_tween: Tween
 var _refill_left: float = 0.0
 var _popup_slot: int = 0
 var _match_over: bool = false
+var _announce_label: Label
+var _announce_queue: Array[Dictionary] = []
+var _announce_left: float = 0.0
+var _awards_panel: PanelContainer
+var _awards_count: int = 0
 
 
 func setup(player: Player, controller: MatchController) -> void:
@@ -61,6 +69,7 @@ func setup(player: Player, controller: MatchController) -> void:
 	controller.tag_scored.connect(_on_tag_scored)
 	controller.popup.connect(_on_popup)
 	controller.match_ended.connect(_on_match_ended)
+	controller.announcement.connect(_on_announcement)
 	controller.board.changed.connect(_refresh_score)
 
 	_mode_label.text = controller.mode.display_name.to_upper()
@@ -91,6 +100,9 @@ func _process(delta: float) -> void:
 		_spin_bar.visible = spinner
 		if spinner:
 			_spin_bar.value = _player.arsenal.spin
+			if _player.arsenal.spin >= 1.0 and not _player.storm_mode_announced:
+				_player.storm_mode_announced = true
+				_on_popup(_player, "STORM MODE!", UiKit.LIME)
 		if _refill_left > 0.0:
 			_set_hint("REFILLING!", UiKit.LIME)
 		elif _player.arsenal.is_reloading():
@@ -101,6 +113,8 @@ func _process(delta: float) -> void:
 			_set_hint("LOW AMMO", UiKit.ORANGE_HOT)
 		else:
 			_set_hint("", UiKit.CREAM)
+
+	_tick_announcer(delta)
 
 	# Respawn countdown while tagged out.
 	if not _player.alive and not _match_over:
@@ -221,6 +235,12 @@ func _build() -> void:
 	_banner_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	banner_box.add_child(_banner_sub)
 
+	# Announcer call-outs sit just under the clock.
+	_announce_label = UiKit.label("", 40, UiKit.ORANGE_HOT, 12)
+	_announce_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_root.add_child(_announce_label)
+	UiKit.pin(_announce_label, Vector2(0.5, 0.0), Vector2(0, 128), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
+
 	_popups = Control.new()
 	_popups.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_popups.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -257,8 +277,9 @@ func _build_board() -> void:
 	_board_buttons.add_child(menu)
 
 
-func _rebuild_board(title: String) -> void:
+func _rebuild_board(title: String, compact: bool = false) -> void:
 	_board_title.text = title
+	_board_grid.add_theme_constant_override("h_separation", 20 if compact else 34)
 	for child in _board_grid.get_children():
 		child.queue_free()
 	var mode := _controller.mode
@@ -268,17 +289,17 @@ func _rebuild_board(title: String) -> void:
 		headers.append("BLASTER")
 	_board_grid.columns = headers.size()
 	for header: String in headers:
-		_board_grid.add_child(UiKit.label(header, 16, UiKit.SKY, 4))
+		_board_grid.add_child(UiKit.label(header, 14 if compact else 16, UiKit.SKY, 4))
 	var ranking := mode.rank(_controller.board)
 	for i in ranking.size():
 		var entry := ranking[i]
 		var tint := entry.color.lightened(0.3)
-		var name_text := entry.display_name + ("  (you)" if entry.is_human else "")
+		var name_text := entry.display_name + ("  (you)" if entry.is_human and entry.display_name != "You" else "")
 		var cells := [str(i + 1), name_text, str(entry.tags), str(entry.outs), str(entry.score)]
 		if gun_game:
 			cells.append(mode.describe_progress(entry).trim_prefix("BLASTER "))
 		for cell: String in cells:
-			_board_grid.add_child(UiKit.label(cell, 24, tint if cell == name_text else UiKit.CREAM, 6))
+			_board_grid.add_child(UiKit.label(cell, 20 if compact else 24, tint if cell == name_text else UiKit.CREAM, 6))
 
 
 # --- Reacting -----------------------------------------------------------------
@@ -387,18 +408,86 @@ func _on_popup(actor: Actor, text: String, tint: Color) -> void:
 func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 	_match_over = true
 	_hide_banner()
+	_announce_queue.clear()
+	# Clear the gameplay HUD so the podium (in 3D behind us) is the star.
+	for child in _root.get_children():
+		if child != _board_panel:
+			(child as CanvasItem).visible = false
 	var winner := ranking[0] if not ranking.is_empty() else null
 	var title := "MATCH OVER"
 	if winner != null:
 		title = "YOU WIN!" if winner.is_human else "%s WINS!" % winner.display_name.to_upper()
 		Sfx.play(&"win" if winner.is_human else &"lose")
-	_rebuild_board(title)
+	_rebuild_board(title, true)
+	UiKit.pin(_board_panel, Vector2(1.0, 0.5), Vector2(-24, 0), Control.GROW_DIRECTION_BEGIN, Control.GROW_DIRECTION_BOTH)
 	_board_buttons.visible = true
 	_board_panel.visible = true
-	_crosshair.visible = false
+	_build_awards(Awards.compute(ranking))
 	var first := _board_buttons.get_child(0) as Button
 	if first != null:
 		first.grab_focus()
+
+
+func _build_awards(awards: Array[Dictionary]) -> void:
+	_awards_count = awards.size()
+	if awards.is_empty():
+		return
+	# Awards sit inside the results panel, between the table and the buttons,
+	# so the podium on the left stays in full view.
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	var panel_box := _board_buttons.get_parent()
+	panel_box.add_child(box)
+	panel_box.move_child(box, _board_buttons.get_index())
+	box.add_child(UiKit.label("AWARDS", 24, UiKit.SKY, 6))
+	for award in awards:
+		var entry: ScoreEntry = award["entry"]
+		var line := HBoxContainer.new()
+		line.add_theme_constant_override("separation", 10)
+		box.add_child(line)
+		line.add_child(UiKit.label(String(award["title"]).to_upper(), 18, UiKit.ORANGE_HOT, 5))
+		var who := "You" if entry.is_human else entry.display_name
+		line.add_child(UiKit.label("%s - %s" % [who, award["detail"]], 16, entry.color.lightened(0.35), 4))
+	_awards_panel = null
+
+
+func awards_shown() -> int:
+	return _awards_count
+
+
+func _on_announcement(_entry: ScoreEntry, text: String, color: Color, sound: StringName) -> void:
+	if _match_over:
+		return
+	_announce_queue.append({"text": text, "color": color, "sound": sound})
+	while _announce_queue.size() > ANNOUNCE_QUEUE_MAX:
+		_announce_queue.pop_front()
+
+
+## The text currently being announced ("" when quiet). Used by tests.
+func current_announcement() -> String:
+	return _announce_label.text if _announce_left > 0.0 else ""
+
+
+func _tick_announcer(delta: float) -> void:
+	_announce_left -= delta
+	if _announce_left > 0.0:
+		return
+	if _announce_queue.is_empty():
+		_announce_label.text = ""
+		return
+	var next: Dictionary = _announce_queue.pop_front()
+	_announce_label.text = next["text"]
+	_announce_label.add_theme_color_override("font_color", next["color"])
+	_announce_label.reset_size()
+	_announce_label.pivot_offset = _announce_label.size * 0.5
+	_announce_label.scale = Vector2(0.5, 0.5)
+	_announce_label.modulate.a = 1.0
+	_announce_left = ANNOUNCE_SECONDS
+	var tween := _announce_label.create_tween()
+	tween.tween_property(_announce_label, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_interval(ANNOUNCE_SECONDS - 0.5)
+	tween.tween_property(_announce_label, "modulate:a", 0.0, 0.3)
+	Sfx.play(next["sound"], 1.0, -3.0)
 
 
 func _refresh_score() -> void:

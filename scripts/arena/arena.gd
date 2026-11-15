@@ -30,6 +30,8 @@ var decor: Node3D
 var wind_field: WindField
 var spawn_points: Array[Marker3D] = []
 var roam_points: Array[Vector3] = []
+## Where a power-up blaster (the Chainstorm in power-up mode) appears.
+var power_up_spots: Array[Vector3] = []
 var buckets: Array[AmmoBucket] = []
 
 var _spawn_root: Node3D
@@ -72,6 +74,10 @@ func add_spawn(at: Vector3, facing: Vector3) -> Marker3D:
 
 func add_roam_point(at: Vector3) -> void:
 	roam_points.append(at)
+
+
+func add_power_up_spot(at: Vector3) -> void:
+	power_up_spots.append(at)
 
 
 func add_bucket(at: Vector3, tint: Color, capacity: int = 150) -> AmmoBucket:

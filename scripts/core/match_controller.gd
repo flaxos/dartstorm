@@ -1,6 +1,8 @@
 class_name MatchController
 extends Node
 ## Runs one round: countdown, clock, scoring, respawns and the final result.
+## It is also the announcer (first tag, multi-tags, streaks, shut-downs, time
+## warnings) and keeps the fun stats used for end-of-match awards.
 ## It knows nothing about the HUD: it just emits signals.
 
 signal state_changed(state: State)
@@ -10,6 +12,16 @@ signal tag_scored(attacker: ScoreEntry, victim: ScoreEntry, weapon: WeaponData, 
 ## A message for one actor's screen, e.g. "+100 TAG!".
 signal popup(actor: Actor, text: String, color: Color)
 signal match_ended(ranking: Array[ScoreEntry])
+## A big call-out for everyone's screen. `entry` is who it's about (or null).
+signal announcement(entry: ScoreEntry, text: String, color: Color, sound: StringName)
+
+## Tags this close together (seconds of play) count as a DOUBLE/TRIPLE TAG.
+const MULTI_TAG_WINDOW := 4.0
+## A streak at least this long earns a "SHUT DOWN!" when it's ended.
+const SHUTDOWN_STREAK := 3
+const MULTI_TAG_TEXT := {2: "DOUBLE TAG!", 3: "TRIPLE TAG!"}
+const MULTI_TAG_MAX_TEXT := "FOAM FRENZY!"
+const STREAK_TEXT := {3: "ON A ROLL!", 5: "UNSTOPPABLE!", 8: "DARTSTORM!!"}
 
 enum State { WAITING, COUNTDOWN, PLAYING, ENDED }
 
@@ -19,6 +31,9 @@ var board: Scoreboard = Scoreboard.new()
 var actors: Array[Actor] = []
 var state: State = State.WAITING
 var time_left: float = 0.0
+## Seconds of actual play so far.
+var play_time: float = 0.0
+var total_tags: int = 0
 
 var _countdown_left: float = 0.0
 var _last_whole_second: int = -1
@@ -36,6 +51,9 @@ func register(actor: Actor) -> void:
 	board.add_actor(actor)
 	actor.controls_enabled = false
 	actor.tagged_out.connect(_on_tagged_out)
+	actor.arsenal.fired.connect(_on_fired.bind(actor))
+	actor.landed_hit.connect(_on_landed_hit.bind(actor))
+	actor.ammo_collected.connect(_on_ammo_collected.bind(actor))
 
 
 ## Places everyone and starts the countdown.
@@ -61,8 +79,27 @@ func award_target_hit(shooter: Actor) -> void:
 	if entry == null:
 		return
 	entry.score += mode.points_per_target
+	entry.targets_hit += 1
 	board.notify_changed()
 	popup.emit(shooter, "+%d BULLSEYE!" % mode.points_per_target, UiKit.LIME)
+
+
+## Sends a call-out to everyone's screen (also used by power-ups).
+func announce(entry: ScoreEntry, text: String, color: Color = UiKit.ORANGE_HOT, sound: StringName = &"announce") -> void:
+	announcement.emit(entry, text, color, sound)
+
+
+## "DOUBLE TAG!" for you, "PICKLE: DOUBLE TAG!" for anyone else.
+static func call_out(entry: ScoreEntry, text: String) -> String:
+	if entry == null or entry.is_human:
+		return text
+	return "%s: %s" % [entry.display_name.to_upper(), text]
+
+
+static func color_for(entry: ScoreEntry) -> Color:
+	if entry == null or entry.is_human:
+		return UiKit.ORANGE_HOT
+	return entry.color.lightened(0.35)
 
 
 func _physics_process(delta: float) -> void:
@@ -78,10 +115,15 @@ func _physics_process(delta: float) -> void:
 				_start_play()
 		State.PLAYING:
 			time_left = maxf(time_left - delta, 0.0)
+			play_time += delta
 			var whole := int(ceilf(time_left))
 			if whole != _last_whole_second:
 				_last_whole_second = whole
 				clock_tick.emit(whole)
+				if whole == 60 and mode.duration_seconds > 60.0:
+					announce(null, "1 MINUTE LEFT!", UiKit.SKY, &"announce")
+				elif whole == 10:
+					announce(null, "10 SECONDS!", UiKit.ORANGE_HOT, &"announce")
 			_tick_respawns(delta)
 			if time_left <= 0.0:
 				_finish()
@@ -130,8 +172,12 @@ func _on_tagged_out(victim: Actor, attacker: Actor, weapon: WeaponData, ricochet
 	if state != State.PLAYING:
 		return
 	var victim_entry := board.entry_for(victim)
+	var ended_streak := 0
 	if victim_entry != null:
 		victim_entry.outs += 1
+		ended_streak = victim_entry.streak
+		victim_entry.streak = 0
+		victim_entry.recent_tags.clear()
 	var attacker_entry: ScoreEntry = null
 	if attacker != null:
 		attacker_entry = board.entry_for(attacker)
@@ -149,6 +195,7 @@ func _on_tagged_out(victim: Actor, attacker: Actor, weapon: WeaponData, ricochet
 		popup.emit(attacker, "+%d RICOCHET BONUS!" % mode.ricochet_bonus, UiKit.SKY)
 	tag_scored.emit(attacker_entry, victim_entry, weapon, ricochet)
 	board.notify_changed()
+	_announce_tag(attacker_entry, victim_entry, ended_streak)
 
 	var winner := mode.get_early_winner(board)
 	if winner != null:
@@ -159,6 +206,59 @@ func _on_tagged_out(victim: Actor, attacker: Actor, weapon: WeaponData, ricochet
 		var held := attacker.arsenal.current()
 		if held != null:
 			popup.emit(attacker, "NEW BLASTER: %s" % held.data.display_name.to_upper(), UiKit.LIME)
+
+
+func _announce_tag(attacker: ScoreEntry, victim: ScoreEntry, ended_streak: int) -> void:
+	total_tags += 1
+	attacker.streak += 1
+	attacker.best_streak = maxi(attacker.best_streak, attacker.streak)
+	var recent: Array[float] = []
+	for time in attacker.recent_tags:
+		if play_time - time <= MULTI_TAG_WINDOW:
+			recent.append(time)
+	recent.append(play_time)
+	attacker.recent_tags = recent
+
+	var color := color_for(attacker)
+	if total_tags == 1:
+		announce(attacker, call_out(attacker, "FIRST TAG!"), color, &"announce")
+	if ended_streak >= SHUTDOWN_STREAK and victim != null:
+		var whose := "YOUR" if victim.is_human else "%s'S" % victim.display_name.to_upper()
+		var text := "SHUT DOWN! %s STREAK IS OVER" % whose if attacker.is_human \
+				else call_out(attacker, "SHUT DOWN %s!" % ("YOU" if victim.is_human else victim.display_name.to_upper()))
+		announce(attacker, text, color, &"shutdown")
+	if recent.size() >= 2:
+		var multi: String = MULTI_TAG_TEXT.get(recent.size(), MULTI_TAG_MAX_TEXT)
+		announce(attacker, call_out(attacker, multi), color, &"streak")
+	if STREAK_TEXT.has(attacker.streak):
+		announce(attacker, call_out(attacker, STREAK_TEXT[attacker.streak]), color, &"streak")
+
+
+func _on_fired(state_fired: WeaponState, actor: Actor) -> void:
+	if state != State.PLAYING:
+		return
+	var entry := board.entry_for(actor)
+	if entry == null:
+		return
+	entry.darts_fired += state_fired.data.darts_per_shot
+	if state_fired.data.fire_mode == WeaponData.FireMode.SPIN_UP:
+		entry.storm_darts += state_fired.data.darts_per_shot
+
+
+func _on_landed_hit(_victim: Actor, _was_tag: bool, _was_ricochet: bool, actor: Actor) -> void:
+	if state != State.PLAYING:
+		return
+	var entry := board.entry_for(actor)
+	if entry != null:
+		entry.hits_landed += 1
+
+
+func _on_ammo_collected(amount: int, actor: Actor) -> void:
+	if state != State.PLAYING:
+		return
+	var entry := board.entry_for(actor)
+	if entry != null:
+		entry.darts_collected += amount
 
 
 func _spawn(actor: Actor) -> void:

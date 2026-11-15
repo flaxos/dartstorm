@@ -1,10 +1,13 @@
 class_name CharacterModel
 extends Node3D
-## A chunky cartoon kid built from primitives: used for bots (and later for
-## other players in multiplayer). Forward is -Z, origin at the feet.
+## A chunky cartoon kid built from primitives: used for bots, the menu's
+## "your player" preview and the podium. Forward is -Z, origin at the feet.
+## Hats come from Cosmetics.HATS; the propeller hat really spins.
 
 const SKIN := Color(1.0, 0.82, 0.66)
 const NAVY := Color(0.1, 0.14, 0.3)
+const GOLD := Color(1.0, 0.8, 0.15)
+const HAT_Y := 1.86
 
 var _tint: Color = Color.WHITE
 var _upper: Node3D
@@ -14,15 +17,43 @@ var _weapon: BlasterModel
 var _backpack: Node3D
 var _name_label: Label3D
 var _meter_fill: MeshInstance3D
+var _meter_back: MeshInstance3D
 var _walk_phase: float = 0.0
 var _flinch: float = 0.0
+var _hat_root: Node3D
+var _propeller: Node3D
+var _hat_id: StringName = &"cap"
 
 
-func setup(display_name: String, tint: Color) -> void:
+func setup(display_name: String, tint: Color, hat: StringName = &"cap") -> void:
 	_tint = tint
+	_hat_id = hat
 	_build()
 	_name_label.text = display_name
 	_name_label.modulate = tint.lightened(0.35)
+
+
+## Swaps the hat (used by the customise screen's live preview).
+func set_hat(hat: StringName) -> void:
+	_hat_id = hat
+	_build_hat()
+
+
+func hat_id() -> StringName:
+	return _hat_id
+
+
+## Hides the floating name and tag meter (menu preview, podium).
+func show_overhead(shown: bool) -> void:
+	_name_label.visible = shown
+	_meter_back.visible = shown
+	if not shown:
+		_meter_fill.visible = false
+
+
+func _process(delta: float) -> void:
+	if _propeller != null and is_instance_valid(_propeller):
+		_propeller.rotate_y(delta * 14.0)
 
 
 func set_weapon(data: WeaponData) -> void:
@@ -81,9 +112,9 @@ func _build() -> void:
 		ArenaKit.deco_sphere(_upper, 0.034, Vector3(side * 0.095, 1.7, -0.265), Color(0.05, 0.05, 0.1))
 		var arm := _capsule(_upper, 0.085, 0.52, Vector3(side * 0.3, 1.18, -0.24), shirt)
 		arm.rotation_degrees = Vector3(80.0, side * -18.0, 0.0)
-	# Cap with a brim, in the actor's colour.
-	ArenaKit.deco_cylinder(_upper, 0.27, 0.13, Vector3(0.0, 1.86, 0.0), _tint.darkened(0.2))
-	ArenaKit.deco_box(_upper, Vector3(0.34, 0.035, 0.24), Vector3(0.0, 1.81, -0.3), _tint.darkened(0.2))
+	_hat_root = Node3D.new()
+	_upper.add_child(_hat_root)
+	_build_hat()
 
 	_weapon_mount = Node3D.new()
 	_weapon_mount.position = Vector3(0.2, 1.2, -0.52)
@@ -107,14 +138,55 @@ func _build() -> void:
 	add_child(_name_label)
 
 	# Tag meter above the head: shows how close this kid is to being tagged out.
-	var back := _billboard_quad(Vector2(0.9, 0.11), Color(0.03, 0.07, 0.19, 0.8))
-	back.position.y = 2.16
-	add_child(back)
+	_meter_back = _billboard_quad(Vector2(0.9, 0.11), Color(0.03, 0.07, 0.19, 0.8))
+	_meter_back.position.y = 2.16
+	add_child(_meter_back)
 	_meter_fill = _billboard_quad(Vector2(0.86, 0.075), Color(1.0, 0.48, 0.1))
 	_meter_fill.position.y = 2.16
 	_meter_fill.sorting_offset = 1.0
 	_meter_fill.visible = false
 	add_child(_meter_fill)
+
+
+func _build_hat() -> void:
+	for child in _hat_root.get_children():
+		child.queue_free()
+	_propeller = null
+	var main := _tint.darkened(0.2)
+	match _hat_id:
+		&"cap":
+			ArenaKit.deco_cylinder(_hat_root, 0.27, 0.13, Vector3(0.0, HAT_Y, 0.0), main)
+			ArenaKit.deco_box(_hat_root, Vector3(0.34, 0.035, 0.24), Vector3(0.0, HAT_Y - 0.05, -0.3), main)
+		&"beanie":
+			ArenaKit.deco_sphere(_hat_root, 0.285, Vector3(0.0, HAT_Y - 0.04, 0.0), main, 0.75)
+			ArenaKit.deco_cylinder(_hat_root, 0.29, 0.08, Vector3(0.0, HAT_Y - 0.08, 0.0), _tint.lightened(0.3))
+			ArenaKit.deco_sphere(_hat_root, 0.08, Vector3(0.0, HAT_Y + 0.18, 0.0), Color.WHITE)
+		&"propeller":
+			ArenaKit.deco_sphere(_hat_root, 0.28, Vector3(0.0, HAT_Y - 0.04, 0.0), main, 0.65)
+			ArenaKit.deco_cylinder(_hat_root, 0.02, 0.14, Vector3(0.0, HAT_Y + 0.17, 0.0), Color(0.3, 0.3, 0.35))
+			_propeller = Node3D.new()
+			_propeller.position = Vector3(0.0, HAT_Y + 0.24, 0.0)
+			_hat_root.add_child(_propeller)
+			ArenaKit.deco_box(_propeller, Vector3(0.52, 0.02, 0.08), Vector3.ZERO, Color(1.0, 0.3, 0.3))
+			ArenaKit.deco_box(_propeller, Vector3(0.08, 0.021, 0.52), Vector3.ZERO, Color(1.0, 0.85, 0.2))
+		&"party":
+			ArenaKit.deco_cylinder(_hat_root, 0.17, 0.42, Vector3(0.0, HAT_Y + 0.17, 0.0), _tint.lightened(0.25), Vector3.ZERO, 0.0)
+			ArenaKit.deco_sphere(_hat_root, 0.07, Vector3(0.0, HAT_Y + 0.4, 0.0), Color(1.0, 0.85, 0.2))
+		&"cowboy":
+			var leather := Color(0.55, 0.36, 0.2)
+			ArenaKit.deco_cylinder(_hat_root, 0.46, 0.04, Vector3(0.0, HAT_Y - 0.02, 0.0), leather)
+			ArenaKit.deco_cylinder(_hat_root, 0.22, 0.24, Vector3(0.0, HAT_Y + 0.1, 0.0), leather, Vector3.ZERO, 0.19)
+			ArenaKit.deco_cylinder(_hat_root, 0.225, 0.05, Vector3(0.0, HAT_Y + 0.02, 0.0), main)
+		&"crown":
+			ArenaKit.deco_cylinder(_hat_root, 0.23, 0.12, Vector3(0.0, HAT_Y + 0.02, 0.0), GOLD)
+			for i in 5:
+				var angle := TAU * float(i) / 5.0
+				var spot := Vector3(cos(angle) * 0.19, HAT_Y + 0.13, sin(angle) * 0.19)
+				ArenaKit.deco_cylinder(_hat_root, 0.06, 0.13, spot, GOLD, Vector3.ZERO, 0.0)
+			ArenaKit.deco_sphere(_hat_root, 0.04, Vector3(0.0, HAT_Y + 0.03, -0.235), Color(0.9, 0.15, 0.3))
+		_:
+			# No hat: a cheerful tuft of hair.
+			ArenaKit.deco_sphere(_hat_root, 0.2, Vector3(0.0, HAT_Y - 0.06, 0.02), Color(0.4, 0.25, 0.12), 0.6)
 
 
 func _capsule(parent: Node3D, radius: float, height: float, pos: Vector3, material: Material) -> MeshInstance3D:

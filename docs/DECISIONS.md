@@ -128,3 +128,43 @@ relationships. The archived concept brief keeps its wording but redacts those de
 Neutral roles ("the project owner", "young players") say everything the docs need.
 **Note:** this cleans the current files. Earlier commits on `main` (from PR #1) still contain the old wording in
 git history until that history is rewritten.
+
+### D-020: Lilita One, applied through the root window theme (v0.2.0)
+**Chosen:** the OFL-licensed Lilita One font in `assets/fonts/`, used by `UiKit.font()` and set as the root window
+theme's default font at startup by `GameSettings`.
+**Alternatives:** keep the emboldened engine font; set `gui/theme/custom_font` in `project.godot`.
+**Why:** the brief asks for chunky readable fonts. The project setting made a fresh checkout log an error on its very
+first import (the font isn't imported yet), which would fail validation. The runtime theme avoids that.
+
+### D-021: Procedural music rendered on worker threads (v0.2.0)
+**Chosen:** two chiptune loops composed as data and rendered by `WorkerThreadPool` at startup.
+**Alternatives:** CC0 music files; rendering on the main thread.
+**Why:** it keeps the zero-audio-files rule (D-005) with no licensing. Rendering takes a moment, so it runs off the main
+thread and the game never stalls. Every render is waited for before quitting.
+
+### D-022: Chainstorm power-up mode is an option; the brief's default stays (v0.2.0)
+**Chosen:** a menu toggle CHAINSTORM: EVERYONE / POWER-UP, defaulting to EVERYONE. Data lives on `GameMode`
+(`power_weapon`, delays, belt); the switch is set on a per-match `duplicate()` of the mode.
+**Why:** the brief lists the Chainstorm as a starting blaster, but making it a contested power-up may be more fun.
+Let the players decide in UAT rather than changing the default unasked.
+
+### D-023: Controller support design (v0.2.0)
+**Chosen:** any-device bindings; A/B added to the UI actions; a curved right stick; aim assist that only *slows*
+turning over a rival (never steers); rumble only while a pad is the active device; unplugging pauses.
+**Why:** plug and play for young players on the couch, while keeping aim honest and avoiding surprise rumble for
+keyboard players. No physical pad is available on the dev box, so it's tested with simulated input events.
+
+### D-024: GameSettings shows device notices (no new autoload) (v0.2.0)
+**Chosen:** `GameSettings` owns a small CanvasLayer for toasts like "controller connected".
+**Alternatives:** a third autoload; per-scene toasts.
+**Why:** notices must work on every screen. D-009 limits autoloads, and device state already lives in GameSettings.
+
+### D-025: The podium floats in the sky above the arena (v0.2.0)
+**Chosen:** a `top_level` Podium node at y=150, with its own camera, built when the match ends.
+**Alternatives:** a separate results scene; podium props inside the yard.
+**Why:** the arena's sky, sun and environment come for free, there's no scene change, and nothing in the yard needs
+to make room. The camera is shifted right so the results panel doesn't cover the stage.
+
+### D-026: World signs are single-sided (v0.2.0)
+**Chosen:** `ArenaKit.sign_text()` sets `double_sided = false`.
+**Why:** from behind, Label3D text shows mirrored ("YAW YDNIW" on the menu). Signs now read only from the front.

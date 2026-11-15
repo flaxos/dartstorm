@@ -14,17 +14,25 @@ const CREAM := Color("fff4e0")
 const LIME := Color("9be22d")
 const PINK := Color("ff5fa2")
 const GREY := Color("8d9ab8")
+const FONT_PATH := "res://assets/fonts/LilitaOne-Regular.ttf"
 
 static var _font: FontVariation
 
 
-## The engine's built-in font, emboldened so it reads as chunky arcade type.
+## Lilita One (SIL Open Font License, assets/fonts/OFL.txt): the chunky,
+## rounded arcade type the style guide asks for. Falls back to the engine's
+## built-in font, emboldened, if the file is ever missing.
 static func font() -> FontVariation:
 	if _font == null:
 		_font = FontVariation.new()
-		_font.base_font = ThemeDB.fallback_font
-		_font.variation_embolden = 0.9
-		_font.spacing_glyph = 1
+		var chunky := load(FONT_PATH) as FontFile if ResourceLoader.exists(FONT_PATH) else null
+		if chunky != null:
+			_font.base_font = chunky
+			_font.spacing_glyph = 1
+		else:
+			_font.base_font = ThemeDB.fallback_font
+			_font.variation_embolden = 0.9
+			_font.spacing_glyph = 1
 	return _font
 
 

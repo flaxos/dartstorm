@@ -85,6 +85,19 @@ After changing a dart, regenerate the GDD's flight table:
 | `infinite_reserve` | Bottomless ammo (Gun Game uses this) |
 | `ladder` (Gun Game) | The blaster sequence; the last one wins |
 | `tags_per_tier` (Gun Game) | Tags needed per rung (1 = every tag promotes) |
+| `power_weapon` | The blaster that becomes the map power-up when the menu's CHAINSTORM option is POWER-UP |
+| `power_weapon_first_delay` / `power_weapon_respawn` | Seconds of play before it first lands (20) / before it returns after each grab (45) |
+| `power_weapon_belt` | Darts on its belt when grabbed (300) |
+
+## Other things that are easy to change (tiny code edits)
+These live in short lists at the top of a script. Change the values and keep the format.
+| What | Where |
+|---|---|
+| Player colours, hats and RANDOM names | `scripts/core/cosmetics.gd` (`COLORS`, `HATS`, `RANDOM_NAMES`). A new hat also needs a shape in `CharacterModel._build_hat()` |
+| Bot names, colours and hats | `BOT_ROSTER` in `scripts/core/match.gd` |
+| Award names and minimums | `RULES` in `scripts/core/awards.gd` |
+| Announcer words and timing | `MULTI_TAG_TEXT`, `STREAK_TEXT`, `MULTI_TAG_WINDOW` in `scripts/core/match_controller.gd` |
+| Music tempo, chords and tunes | `_match_style()` / `_menu_style()` in `scripts/core/sfx.gd` (notes are MIDI numbers: 60 = middle C) |
 
 ## Recipes
 
@@ -98,6 +111,8 @@ and `reserve_start` (e.g. 300), or lower `shots_per_second` (25 is still ridicul
 The dart pool (400) and effects budget keep it safe.
 
 **Make tags take fewer hits.** Raise `tag_power` on the darts (e.g. `standard_dart.tres` 34 → 50 makes the Popper a two-hit tag).
+
+**Make the Chainstorm power-up come back sooner.** `free_for_all.tres` → `power_weapon_respawn` 45 → 25.
 
 **Shorter rounds for bedtime.** `resources/modes/free_for_all.tres` → `duration_seconds` 180.
 

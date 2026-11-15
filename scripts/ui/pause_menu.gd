@@ -55,6 +55,13 @@ func _ready() -> void:
 
 func setup(controller: MatchController) -> void:
 	_controller = controller
+	GameSettings.controller_changed.connect(_on_controller_changed)
+
+
+## Unplugging a controller mid-match pauses, like on a console.
+func _on_controller_changed(_device: int, connected: bool, _pad_name: String) -> void:
+	if not connected:
+		pause_for_focus_loss()
 
 
 func _notification(what: int) -> void:
@@ -79,6 +86,14 @@ func is_open() -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# B / Esc-style "back": leave settings first, then resume.
+	if _dim.visible and event.is_action_pressed(&"ui_cancel") and not event.is_action_pressed(&"pause"):
+		if _settings.visible:
+			_settings.close()
+		else:
+			close()
+		get_viewport().set_input_as_handled()
+		return
 	if not event.is_action_pressed(&"pause"):
 		return
 	if _controller != null and _controller.state == MatchController.State.ENDED:
@@ -95,6 +110,7 @@ func open() -> void:
 	_show_settings(false)
 	get_tree().paused = true
 	Sfx.set_spin(0.0)
+	Sfx.duck_music(true)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_resume.grab_focus()
 
@@ -103,6 +119,7 @@ func close() -> void:
 	GameSettings.save_settings()
 	_dim.visible = false
 	get_tree().paused = false
+	Sfx.duck_music(false)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 

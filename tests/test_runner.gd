@@ -39,6 +39,14 @@ func _ready() -> void:
 	await _test_safe_loading()
 	await _test_focus_pause()
 	await _test_settings_reset()
+	# Appeal pack and controller support (v0.2.0)
+	await _test_controller_support()
+	await _test_font_and_audio()
+	await _test_announcer()
+	await _test_customisation()
+	await _test_podium_and_awards()
+	await _test_backyard_props()
+	await _test_power_up()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -623,10 +631,11 @@ func _test_respawn_outside_play() -> void:
 	bot._tag_out(null, null, false)
 	check(not bot.alive, "bot tagged out during the countdown")
 	check(controller.respawn_time_left(bot) > 0.0, "a respawn was scheduled anyway")
-	await fast_forward(controller.mode.countdown_seconds + controller.mode.respawn_delay + 0.5)
-	check(bot.alive, "bot is back in play")
+	# Checked straight away: once play starts, bots may legitimately tag each other.
 	var entry := controller.board.entry_for(bot)
 	check(entry.outs == 0 and entry.score == 0, "nothing was scored for a tag-out outside play")
+	await fast_forward(controller.mode.countdown_seconds + controller.mode.respawn_delay + 0.5)
+	check(bot.alive, "bot is back in play")
 	await end_match(game, saved_mode)
 
 
@@ -751,3 +760,276 @@ func _test_settings_reset() -> void:
 		GameSettings.set(key, saved[key])
 	GameSettings.apply()
 	await physics_frames(1)
+
+
+# --- Appeal pack and controller support (v0.2.0) ------------------------------
+
+func _has_pad_event(action: StringName) -> bool:
+	for event in InputMap.action_get_events(action):
+		if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+			return true
+	return false
+
+
+func _pad_axis(axis: JoyAxis, value: float) -> void:
+	var event := InputEventJoypadMotion.new()
+	event.device = 0
+	event.axis = axis
+	event.axis_value = value
+	Input.parse_input_event(event)
+
+
+func _test_controller_support() -> void:
+	section("Controller: plug and play")
+	for action in [&"ui_accept", &"ui_cancel", &"move_forward", &"move_left", &"look_left", &"look_up",
+			&"jump", &"sprint", &"fire", &"reload", &"weapon_next", &"weapon_prev", &"pause", &"scoreboard"]:
+		check(_has_pad_event(action), "'%s' works on a controller" % action)
+	var saved_mode := GameSettings.match_mode
+	var saved_assist := GameSettings.aim_assist
+	var game := start_match(GameSettings.MatchMode.FREE_FOR_ALL)
+	var controller := game.get("controller") as MatchController
+	var player := game.get("player") as Player
+	var pause := game.get("pause_menu") as PauseMenu
+	await physics_frames(2)
+
+	# Right stick turns the view (looking is allowed even during the countdown).
+	var yaw_before := player.rotation.y
+	_pad_axis(JOY_AXIS_RIGHT_X, 1.0)
+	await physics_frames(10)
+	_pad_axis(JOY_AXIS_RIGHT_X, 0.0)
+	await physics_frames(1)
+	check(absf(player.rotation.y - yaw_before) > 0.2, "right stick turns the player (%.2f rad)" % absf(player.rotation.y - yaw_before))
+	check(player.pad_look_step(Vector2(0.3, 0.0), 1.0).length() < player.pad_look_step(Vector2(1.0, 0.0), 1.0).length() * 0.2,
+			"small stick nudges turn much slower than full tilt (fine aim)")
+
+	# Right trigger fires once play starts.
+	await fast_forward(controller.mode.countdown_seconds + 0.3)
+	var shots: Array[int] = [0]
+	player.arsenal.fired.connect(func(_state: WeaponState) -> void: shots[0] += 1)
+	player.arsenal.select(0, true)
+	_pad_axis(JOY_AXIS_TRIGGER_RIGHT, 1.0)
+	await physics_frames(6)
+	_pad_axis(JOY_AXIS_TRIGGER_RIGHT, 0.0)
+	await physics_frames(2)
+	check(shots[0] >= 1, "right trigger fires the blaster")
+
+	# Aim assist: turning slows while the crosshair is over a rival.
+	var bots: Array = game.get("bots")
+	var rival := bots[0] as Bot
+	var eye := player.head.global_transform
+	rival.global_position = Vector3(eye.origin.x, player.global_position.y, eye.origin.z) - eye.basis.z * 6.0
+	rival.velocity = Vector3.ZERO
+	await physics_frames(2)
+	GameSettings.aim_assist = true
+	var assisted := player.pad_look_step(Vector2(1.0, 0.0), 1.0).length()
+	GameSettings.aim_assist = false
+	var free := player.pad_look_step(Vector2(1.0, 0.0), 1.0).length()
+	check(player.crosshair_on_rival(), "crosshair detects a rival straight ahead")
+	check(assisted < free * 0.75, "aim assist slows turning over a rival (%.2f vs %.2f)" % [assisted, free])
+	GameSettings.aim_assist = saved_assist
+
+	# Hot-plug: a notice on connect, and a pause when the pad is unplugged mid-match.
+	var notices := GameSettings.notice_count()
+	GameSettings._on_joy_connection_changed(0, true)
+	check(GameSettings.notice_count() > notices, "plugging in a controller shows a notice")
+	check(GameSettings.using_controller, "the game switches to controller mode")
+	GameSettings._on_joy_connection_changed(0, false)
+	check(get_tree().paused and pause.is_open(), "unplugging the controller mid-match pauses the game")
+	pause.close()
+	GameSettings.vibrate(0.5, 0.5, 0.1)  # No pad connected: must simply do nothing.
+	check(true, "rumble with no controller connected is harmless")
+	GameSettings.using_controller = false
+	await end_match(game, saved_mode)
+
+
+func _test_font_and_audio() -> void:
+	section("Chunky font, music and sounds")
+	var font_file := UiKit.font().base_font
+	check(font_file != null and font_file.resource_path.ends_with("LilitaOne-Regular.ttf"), "UI uses the Lilita One font")
+	check(get_tree().root.theme != null and get_tree().root.theme.default_font == UiKit.font(), "every Control defaults to the chunky font")
+	check(AudioServer.get_bus_index(&"Music") >= 0 and AudioServer.get_bus_index(&"SFX") >= 0, "Music and SFX audio buses exist")
+	var waited := 0
+	while (not Sfx.is_music_ready(&"menu") or not Sfx.is_music_ready(&"match")) and waited < 900:
+		await get_tree().process_frame
+		waited += 1
+	check(Sfx.is_music_ready(&"menu") and Sfx.is_music_ready(&"match"), "both music loops rendered in the background (%d frames)" % waited)
+	check(Sfx.music_length(&"match") > 10.0 and Sfx.music_length(&"menu") > 8.0,
+			"music loops are a decent length (%.1f s / %.1f s)" % [Sfx.music_length(&"match"), Sfx.music_length(&"menu")])
+	Sfx.play_music(&"match")
+	check(Sfx.current_music() == &"match", "play_music switches tracks")
+	Sfx.stop_music()
+	for sound in [&"woof", &"chirp", &"announce", &"streak", &"shutdown", &"powerup", &"cheer", &"connect", &"disconnect"]:
+		check(Sfx.has_sound(sound), "sound '%s' exists" % sound)
+	var saved := GameSettings.music_volume
+	GameSettings.music_volume = 0.0
+	GameSettings.apply()
+	check(AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Music")), "music volume 0 mutes the music bus")
+	GameSettings.music_volume = saved
+	GameSettings.apply()
+	await physics_frames(1)
+
+
+func _test_announcer() -> void:
+	section("Announcer call-outs")
+	var saved_mode := GameSettings.match_mode
+	var saved_bots := GameSettings.bot_count
+	GameSettings.bot_count = 3
+	var game := start_match(GameSettings.MatchMode.FREE_FOR_ALL)
+	var controller := game.get("controller") as MatchController
+	var player := game.get("player") as Player
+	var hud := game.get("hud") as Hud
+	var bots: Array = game.get("bots")
+	var heard: Array[String] = []
+	controller.announcement.connect(func(_e: ScoreEntry, text: String, _c: Color, _s: StringName) -> void: heard.append(text))
+	await fast_forward(controller.mode.countdown_seconds + 0.3)
+	var popper := load(POPPER) as WeaponData
+	for i in 3:
+		(bots[i] as Bot)._tag_out(player, popper, false)
+	check(heard.has("FIRST TAG!"), "the first tag of the match is announced")
+	check(heard.has("DOUBLE TAG!") and heard.has("TRIPLE TAG!"), "quick tags are DOUBLE and TRIPLE TAGs")
+	check(heard.has("ON A ROLL!"), "three tags in a row is ON A ROLL!")
+	player._tag_out(bots[0] as Bot, popper, false)
+	var shut := false
+	for text in heard:
+		shut = shut or (text.contains("SHUT DOWN") and text.contains((bots[0] as Bot).display_name.to_upper()))
+	check(shut, "ending a 3-tag streak is a SHUT DOWN by the bot who did it")
+	await physics_frames(3)
+	check(not hud.current_announcement().is_empty(), "the HUD shows the call-out (%s)" % hud.current_announcement())
+	GameSettings.bot_count = saved_bots
+	await end_match(game, saved_mode)
+
+
+func _test_customisation() -> void:
+	section("Your player: name, colour, hat")
+	check(Cosmetics.sanitize_name("  Ab   Cd  ") == "Ab Cd", "names are trimmed and spaces tidied")
+	check(Cosmetics.sanitize_name("<b>!!</b>") == "bb", "odd characters are removed")
+	check(Cosmetics.sanitize_name("Supercalifragilistic").length() == Cosmetics.NAME_MAX_LENGTH, "names are capped at %d letters" % Cosmetics.NAME_MAX_LENGTH)
+	var saved_name := GameSettings.player_name
+	var saved_color := GameSettings.player_color
+	var saved_hat := GameSettings.player_hat
+	var saved_mode := GameSettings.match_mode
+	GameSettings.player_name = ""
+	check(GameSettings.display_name() == "You", "no name shows as 'You'")
+	GameSettings.player_name = "Tester"
+	GameSettings.player_color = 1
+	GameSettings.player_hat = &"crown"
+	var game := start_match(GameSettings.MatchMode.FREE_FOR_ALL)
+	var player := game.get("player") as Player
+	var controller := game.get("controller") as MatchController
+	check(player.display_name == "Tester", "the player uses their chosen name")
+	check(player.color.is_equal_approx(Cosmetics.color_at(1)), "…their chosen colour (their darts are that colour too)")
+	check(controller.board.entry_for(player).hat == &"crown", "…and their hat")
+	await end_match(game, saved_mode)
+	GameSettings.player_name = saved_name
+	GameSettings.player_color = saved_color
+	GameSettings.player_hat = saved_hat
+
+	var orange := Cosmetics.color_at(6)
+	var colors := MatchScene.bot_colors(orange, 5)
+	var clash := false
+	for i in colors.size():
+		clash = clash or Cosmetics.too_similar(colors[i], orange)
+		for j in i:
+			clash = clash or Cosmetics.too_similar(colors[i], colors[j])
+	check(not clash, "bots never share (or nearly share) the player's colour or each other's")
+
+	var stage := make_stage()
+	var all_hats := true
+	for hat in Cosmetics.HATS:
+		var model := CharacterModel.new()
+		stage.add_child(model)
+		model.setup("Hat test", Color.RED, hat["id"])
+		all_hats = all_hats and model.hat_id() == hat["id"]
+	check(all_hats, "every hat (%d) builds on a character" % Cosmetics.HATS.size())
+	stage.queue_free()
+	await physics_frames(1)
+
+
+func _test_podium_and_awards() -> void:
+	section("End-of-match podium and awards")
+	var a := ScoreEntry.new()
+	a.display_name = "A"
+	a.ricochet_tags = 2
+	a.darts_fired = 40
+	a.hits_landed = 20
+	var b := ScoreEntry.new()
+	b.display_name = "B"
+	b.darts_fired = 30
+	b.hits_landed = 5
+	b.outs = 4
+	b.darts_collected = 200
+	var ranked: Array[ScoreEntry] = [a, b]
+	var titles := {}
+	for award in Awards.compute(ranked):
+		titles[award["title"]] = (award["entry"] as ScoreEntry).display_name
+	check(titles.get("Ricochet King") == "A", "Ricochet King goes to the ricochet tagger")
+	check(titles.get("Sharpshooter") == "A", "Sharpshooter goes to the best hit rate")
+	check(titles.get("Foam Magnet") == "B" and titles.get("Bucket Hog") == "B", "Foam Magnet and Bucket Hog go to B")
+	check(not titles.has("Bullseye Boss"), "no award without reaching its minimum")
+
+	var saved_mode := GameSettings.match_mode
+	var game := start_match(GameSettings.MatchMode.FREE_FOR_ALL)
+	var controller := game.get("controller") as MatchController
+	await fast_forward(controller.mode.countdown_seconds + 0.5)
+	controller._finish()
+	await physics_frames(2)
+	var podium := game.get("podium") as Podium
+	check(podium != null, "a podium appears when the match ends")
+	check(podium != null and podium.dancers.size() == mini(3, controller.actors.size()), "the top three stand on it")
+	check(podium != null and get_viewport().get_camera_3d() == podium.camera, "the camera cuts to the podium")
+	await end_match(game, saved_mode)
+
+
+func _test_backyard_props() -> void:
+	section("Backyard props")
+	var arena := (load("res://scenes/arenas/backyard_fortress.tscn") as PackedScene).instantiate() as Arena
+	arena.bake_navigation = false
+	add_child(arena)
+	await physics_frames(1)
+	var dog: DogHouse = arena.get("dog_house")
+	check(dog != null and dog.get_parent() == arena.geometry, "the dog house is solid scenery bots can path around")
+	var barks: Array[int] = [0]
+	dog.barked.connect(func() -> void: barks[0] += 1)
+	dog.on_dart_hit(null, Vector3.ZERO)
+	check(barks[0] == 1, "a dart on the dog house makes the dog bark")
+	dog.on_dart_hit(null, Vector3.ZERO)
+	check(barks[0] == 1, "…but not twice in a row (cooldown)")
+	check(arena.power_up_spots.size() == 1, "the arena has a power-up spot on the treehouse deck")
+	arena.queue_free()
+	await physics_frames(2)
+
+
+func _test_power_up() -> void:
+	section("Chainstorm power-up mode")
+	var saved_mode := GameSettings.match_mode
+	var saved_powerup := GameSettings.chainstorm_powerup
+	GameSettings.chainstorm_powerup = true
+	var game := start_match(GameSettings.MatchMode.FREE_FOR_ALL)
+	var controller := game.get("controller") as MatchController
+	var player := game.get("player") as Player
+	var pickup := game.get("power_up") as PowerUpPickup
+	var heard: Array[String] = []
+	controller.announcement.connect(func(_e: ScoreEntry, text: String, _c: Color, _s: StringName) -> void: heard.append(text))
+	check(controller.mode.uses_power_up(), "power-up mode is on for Backyard Battle")
+	check(not player.arsenal.has_weapon(&"flaxs_chainstorm"), "nobody starts with the Chainstorm")
+	check(pickup != null and not pickup.is_available(), "the Chainstorm hasn't landed during the countdown")
+	check(not (load(FFA) as GameMode).power_up_mode, "the shared mode file is untouched")
+	await fast_forward(controller.mode.countdown_seconds + 0.5)
+	pickup.make_available()
+	check(heard.any(func(t: String) -> bool: return t.contains("HAS LANDED")), "its landing is announced")
+	player.global_position = pickup.global_position + Vector3.UP * 0.2
+	player.velocity = Vector3.ZERO
+	await physics_frames(4)
+	check(player.arsenal.has_weapon(&"flaxs_chainstorm"), "touching it gives you the Chainstorm")
+	check(player.arsenal.current().data.id == &"flaxs_chainstorm", "…in your hands straight away")
+	check(not pickup.is_available() and pickup.seconds_until_ready() > 30.0, "then it's gone until it respawns")
+	check(heard.any(func(t: String) -> bool: return t.contains("GRABBED")), "the grab is announced")
+	player._tag_out(null, null, false)
+	await fast_forward(controller.mode.respawn_delay + 0.5)
+	check(player.alive and not player.arsenal.has_weapon(&"flaxs_chainstorm"), "being tagged out loses it")
+	await end_match(game, saved_mode)
+
+	var gun_game := start_match(GameSettings.MatchMode.GUN_GAME)
+	check(gun_game.get("power_up") == null, "Gun Game ignores power-up mode")
+	await end_match(gun_game, saved_mode)
+	GameSettings.chainstorm_powerup = saved_powerup

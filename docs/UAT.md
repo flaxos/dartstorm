@@ -54,6 +54,27 @@ UAT proves the *game* works. A release isn't done until both pass.
 | D2 | Hard, 5 bots | Chaotic and challenging, but bots don't get permanently stuck on scenery |
 | D3 | Watch bots for a minute | They roam, fight, swap blasters, visit buckets and respawn after being tagged |
 
+### F. Controller *(v0.2.0, needs a real pad)*
+| ID | Do this | Expect |
+|---|---|---|
+| F1 | Plug a controller in at the main menu | A "… connected - ready to play!" notice; HOW TO PLAY switches to controller buttons |
+| F2 | Use only the pad: D-pad/stick to move around the menu, A to press, B to go back (Settings, YOUR PLAYER) | Every button reachable; B leaves sub-screens |
+| F3 | Play a match on the pad | Sticks move and look smoothly; small nudges aim finely; RT fires; A jumps; LT sprints; Y/LB/RB switch blasters; X reloads; Start pauses; Back shows the scoreboard |
+| F4 | Aim across a bot | Turning slows slightly over the bot (aim assist), never yanks your aim |
+| F5 | Fire, get hit, tag someone | Light rumble per shot, thump when hit, kick on a tag (turn rumble off in Settings and it stops) |
+| F6 | Unplug the pad mid-match | The game pauses with a "Controller disconnected" notice; plug back in and resume |
+
+### G. Appeal pack *(v0.2.0)*
+| ID | Do this | Expect |
+|---|---|---|
+| G1 | Main menu → YOUR PLAYER: type a name, try RANDOM, pick a colour and every hat | A live 3D preview; the propeller spins; your choices are remembered next launch |
+| G2 | Play a match | Your darts are your colour; your name is in the tag feed; no bot wears your colour |
+| G3 | Listen | Menu tune on the menu, a faster tune in the match, quieter when paused; Music and Sound effects sliders work separately |
+| G4 | Tag 2–3 bots quickly | "FIRST TAG!", "DOUBLE TAG!", "ON A ROLL!" call-outs under the clock |
+| G5 | Shoot the dog house (orange half) | The dog jumps and barks. Spot the swings, paddling pool and duck, sprinkler, gnomes and flowers; hear birds |
+| G6 | CHAINSTORM: POWER-UP, then play | No Chainstorm at the start; ~20 s in it lands on the treehouse in an orange beam with a call-out; grabbing it puts it in your hands; it's lost when you're tagged; it comes back later |
+| G7 | Let the match end | The camera cuts to the sky podium: the top three dance in their hats under confetti; awards on the right; PLAY AGAIN / MAIN MENU work with mouse and pad |
+
 ### E. Comfort
 | ID | Do this | Expect |
 |---|---|---|
@@ -66,4 +87,5 @@ UAT proves the *game* works. A release isn't done until both pass.
 | Version | Date | Tester | Result | Notes |
 |---|---|---|---|---|
 | 0.1.0 | 2026-11-15 | Project owner | ✅ **PASSED** | First playable (PR #1). UAT reported as passed with no blocking issues; no detailed notes recorded |
-| 0.1.1 | — | — | ⏳ Pending | Hardening release. Please re-run A4, B13, B14, D2 and D3, plus a normal match. Also check matches start without a hitch |
+| 0.1.1 | — | — | ↪ Folded into 0.2.0 | Hardening release (merged). Its re-checks (A4, B13, B14, D2, D3) are part of the 0.2.0 run |
+| 0.2.0 | — | — | ⏳ Pending | Controller support and appeal pack. Run everything, especially sections F (with a real pad) and G, and ask the players what they'd change |

@@ -19,3 +19,7 @@ ricochet_bonus = 50
 points_per_target = 10
 loadout = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5")])
 infinite_reserve = false
+power_weapon = ExtResource("5")
+power_weapon_first_delay = 20.0
+power_weapon_respawn = 45.0
+power_weapon_belt = 300

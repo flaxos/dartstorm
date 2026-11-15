@@ -4,8 +4,9 @@
 
 | | |
 |---|---|
-| **Game version** | 0.1.1 (hardening release) |
-| **Status** | v0.1.0 **passed UAT** on 2026-11-15 (see [UAT.md](UAT.md)) |
+| **Game version** | 0.2.0 (controller support and appeal pack) |
+| **Status** | v0.1.0 **passed UAT** on 2026-11-15; v0.1.1 hardening merged; v0.2.0 awaiting UAT with young players (see [UAT.md](UAT.md)) |
+| **Platform** | Linux first (the target machine runs Linux). Windows is deferred until needed. |
 | **Authority** | This GDD is the authoritative description of the game. Numbers mirror the `.tres` files in `resources/`. If they ever disagree, the `.tres` file is what the game uses, so fix this doc. |
 | **Source vision** | [CONCEPT_BRIEF.md](CONCEPT_BRIEF.md), the original brief, archived verbatim (personal details redacted). §1 summarises it and §2 tracks it. |
 | **Related** | [ARCHITECTURE.md](ARCHITECTURE.md) (how it's built) · [TUNING.md](TUNING.md) (changing numbers without code) · [ROADMAP.md](ROADMAP.md) · [DECISIONS.md](DECISIONS.md) |
@@ -90,10 +91,10 @@ Status key: ✅ done · 🟡 partly done or untested · ⏳ planned, not started
 |---|---|---|
 | Godot 4 (latest local stable), GDScript | ✅ | Godot 4.4.1, typed GDScript |
 | 3D first-person shooter | ✅ | `scripts/player/player.gd` |
-| Windows primary target | 🟡 | Nothing Windows-specific, but not yet run on Windows |
-| Linux secondary target | ✅ | Developed and UAT'd on Linux |
+| Windows primary target | ⏳ | Deferred: the target machine runs Linux. Nothing Windows-specific in the code |
+| Linux secondary target | ✅ | Developed and UAT'd on Linux; now the primary platform |
 | Keyboard and mouse | ✅ | `scripts/core/input_setup.gd` |
-| Gamepad (planned) | 🟡 | Mapped (sticks, triggers, buttons) but untested |
+| Gamepad (planned) | 🟡 | **Built in v0.2.0**: plug and play for menus and play, hot-plug, aim assist, rumble (§3.17). Tested with simulated input; a real pad still needs trying |
 | Multiplayer architected, bots first | 🟡 | Brain/body split, central tag authority (ARCHITECTURE §9, DECISIONS D-008). No networking yet |
 | Stylised low-poly look | ✅ | Primitives, flat colours, lawn shader |
 | Godot 3D physics, Git, vertical slices | ✅ | |
@@ -151,10 +152,11 @@ Status key: ✅ done · 🟡 partly done or untested · ⏳ planned, not started
 | Chainstorm's high ammo use makes buckets strategic | ✅ | A full bucket is ≈5 s of Chainstorm fire |
 | Capturable team buckets | ⏳ | Roadmap |
 | Weapons as Resources; config, presentation and runtime separate | ✅ | `WeaponData` / `BlasterModel` / `Arsenal` |
+| Character customisation (vision list) | 🟡 | v0.2.0: name, 8 colours, 7 hats (§3.16). Outfits and blaster skins later |
 | XP, mastery, upgrades, skins, alternate and elemental darts | ⏳ | Deliberately deferred until combat is proven fun (§10) |
 | No microtransactions | ✅ | And never |
 | HUD: crosshair, weapon name, ammo, tag meter, timer, score, wind, hit confirmation, ricochet notice | ✅ | §8 |
-| Deep blue, vibrant orange, rounded, chunky fonts | ✅ / 🟡 | Font is the engine default, emboldened. A chunkier OFL font is on the roadmap |
+| Deep blue, vibrant orange, rounded, chunky fonts | ✅ | Lilita One (SIL Open Font License) everywhere since v0.2.0 |
 | Main menu, settings, pause | ✅ | Plus **Reset to defaults** in v0.1.1 |
 
 ### 2.5 Engineering and process (brief §11–§16)
@@ -163,7 +165,7 @@ Status key: ✅ done · 🟡 partly done or untested · ⏳ planned, not started
 | Suggested project layout | ✅ | ARCHITECTURE §1 |
 | Typed GDScript, signals, Resources, few singletons (2), error handling | ✅ | Hardened loading in v0.1.1 |
 | No placeholder/TODO core features, no fabricated assets | ✅ | All assets generated in code (`assets/README.md`) |
-| Headless validation and automated tests | ✅ | `tools/validate.sh`: import, strict compile (zero warnings), boots, 130 tests, leak check |
+| Headless validation and automated tests | ✅ | `tools/validate.sh`: import, strict compile (zero warnings), boots, 205 tests, leak check |
 | Bounded projectiles, pooling | ✅ | 400-dart pool; effect budget |
 | Four living docs + CLAUDE.md | ✅ | Plus CONCEPT_BRIEF, UAT, TUNING |
 
@@ -203,7 +205,7 @@ earned. Then someone across the yard picks up the Chainstorm, and the whole back
 | Countdown | 3 s | Big 3-2-1 with beeps. Everyone frozen, looking allowed, pause allowed. Anyone tagged out now (e.g. falling) still respawns (v0.1.1) |
 | Play | 5:00 | Clock counts down. At 0:10 it turns orange and beeps each second |
 | Early finish | — | Gun Game only: a tag while holding the last blaster wins instantly |
-| Results | Until a choice | Everyone frozen. Winner banner ("YOU WIN!" / "PICKLE WINS!"), full table, **PLAY AGAIN** / **MAIN MENU** |
+| Results | Until a choice | Everyone frozen. The camera cuts to the **podium** (§3.20): the top three dance under confetti, with a results panel ("YOU WIN!" / "PICKLE WINS!", table, awards, **PLAY AGAIN** / **MAIN MENU**) |
 
 ### 3.5 Movement and traversal
 | Move | Numbers | Notes |
@@ -319,8 +321,9 @@ gives 4×100 + 50 + 30 = **480**.
 
 ### 3.14 Bots, from the player's point of view
 Five named kids: **Blaze** (orange), **Pickle** (green), **Zoom** (purple), **Sprinkles** (pink), **Noodle** (yellow).
-You're blue. Each bot wears a cap in its colour and carries its blaster (the Chainstorm comes with a backpack), with a name
-tag and a tag meter floating above.
+You pick your own colour and hat (§3.16). Each bot has its own hat (Blaze a cap, Pickle a beanie, Zoom a propeller hat,
+Sprinkles a party hat, Noodle a cowboy hat) and carries its blaster (the Chainstorm comes with a backpack), with a name
+tag and a tag meter floating above. If your colour is close to a bot's, that bot switches to a spare colour.
 
 | They… | How |
 |---|---|
@@ -348,6 +351,83 @@ tag and a tag meter floating above.
 - Got hit? Duck out of sight for 4 seconds and your tag meter drains.
 - Trampolines launch you onto the **treehouse**, the best view in the yard.
 
+### 3.16 Your player: name, colour, hat *(v0.2.0)*
+Main menu → **YOUR PLAYER**, with a live 3D preview of your kid beside the panel.
+- **Name:** up to 12 letters, numbers, spaces, `-` or `_`. Blank shows as "You". **RANDOM** picks a fun name
+  (Captain Foam, Sir Splat, Ricochet Rex, …) so a controller player never needs to type.
+- **Colour:** 8 choices (blue, red, green, purple, pink, yellow, orange, teal). **Your darts fly in your colour**,
+  and your name shows in it in the tag feed and scoreboard.
+- **Hat:** cap, beanie, propeller (it spins!), party hat, cowboy hat, crown, or no hat. You see it on the podium.
+- Saved on this computer only (`user://settings.cfg`). **Reset to defaults** in Settings doesn't touch your look.
+
+### 3.17 Playing with a controller *(v0.2.0)*
+Plug a pad in at any time, even mid-match: a notice pops up ("… connected - ready to play!") and it just works.
+
+| Action | Controller |
+|---|---|
+| Move / look | Left stick / right stick |
+| Jump | A |
+| Sprint | LT, or click the left stick |
+| Fire | RT |
+| Reload | X |
+| Switch blaster | Y or RB (next), LB (previous) |
+| Scoreboard / pause | Back / Start |
+| Menus | D-pad or left stick to move, **A** to press, **B** to go back |
+
+- **Fine aim:** the right stick is curved (stick² response), so small nudges aim precisely and full tilt still turns fast.
+  Its speed is adjustable (Settings → *Controller look speed*, 0.4–2.0).
+- **Aim assist** (on by default, Settings toggle): turning slows to half while your crosshair is over a rival. It never
+  moves your aim for you.
+- **Rumble** (Settings toggle): a light buzz per shot, a thump when you're hit, a kick when you tag someone, a big rumble when
+  you're tagged. Only while a controller is the device you're using.
+- **Unplugging** a controller mid-match pauses the game, as on a console.
+- The main menu's HOW TO PLAY box switches to controller buttons as soon as you touch the pad.
+
+### 3.18 The announcer *(v0.2.0)*
+Big call-outs under the clock, each with its own jingle. A bot's call-outs carry its name ("PICKLE: DOUBLE TAG!").
+
+| Call-out | When |
+|---|---|
+| FIRST TAG! | The first tag of the match |
+| DOUBLE TAG! / TRIPLE TAG! / FOAM FRENZY! | 2 / 3 / 4+ tags within 4 seconds |
+| ON A ROLL! / UNSTOPPABLE! / DARTSTORM!! | 3 / 5 / 8 tags without being tagged out |
+| SHUT DOWN! | Ending someone's streak of 3 or more |
+| 1 MINUTE LEFT! / 10 SECONDS! | Time warnings |
+| …HAS LANDED! / …GRABBED… | Power-up mode (§3.19) |
+| STORM MODE! | A popup for you the first time your Chainstorm reaches full spin in each life |
+
+Up to 3 call-outs queue; each shows for 1.6 s.
+
+### 3.19 Chainstorm power-up mode *(v0.2.0, optional)*
+Main menu → **CHAINSTORM: EVERYONE / POWER-UP**. The default is EVERYONE, as the brief specifies.
+In **POWER-UP** (Backyard Battle only; Gun Game ignores it):
+- Everyone starts with the Pocket Popper and the Dart Sprayer only.
+- **Flax's Chainstorm** lands on the **treehouse deck** 20 s into play, as a giant spinning Chainstorm in a tall orange beam you can
+  see from anywhere. The announcer shouts "FLAX'S CHAINSTORM HAS LANDED!".
+- First to touch it gets it in their hands with a **300-dart belt**, and keeps it until they're tagged out. Buckets refill it.
+- It returns **45 s** after each grab ("CHAINSTORM IN 12" counts down over the deck).
+- Bots race for it when nobody's in sight or it's within 22 m.
+- Design intent: make the Chainstorm the thing everyone fights over. Whether it beats "everyone has it" is a question for
+  the players' playtest.
+
+### 3.20 End of match: podium and awards *(v0.2.0)*
+When the round ends the camera cuts to a little **stage floating in the sky**: the top three on gold, silver and bronze steps,
+wearing their hats, bouncing and spinning (the winner highest) under a shower of confetti with a crowd cheer.
+On the right, the results panel shows the winner, the table, the **awards** and **PLAY AGAIN** / **MAIN MENU**.
+The menu music returns after 3 seconds.
+
+**Awards** (up to 5; each needs a minimum, so none are handed out for zero):
+
+| Award | Goes to | Minimum |
+|---|---|---|
+| Sharpshooter | Best hit rate | 20 darts fired, 25% hits |
+| Ricochet King | Most ricochet tags | 1 |
+| Storm Bringer | Most Chainstorm darts fired | 60 |
+| Bucket Hog | Most darts scooped from buckets | 60 |
+| Bullseye Boss | Most bullseyes | 1 |
+| Hot Streak | Longest streak | 3 |
+| Foam Magnet | Tagged the most | 3 |
+
 ---
 
 ## 4. Blasters
@@ -363,7 +443,8 @@ tag and a tag meter floating above.
 | Ricochet Ranger | Semi | 3/s | 1 | 0.5° | 6 / 36 (24) | 1.2 s | 100% | Bounces off everything |
 | Longshot | Semi | 1.1/s | 1 | 0.1° | 4 / 24 (16) | 1.8 s | 100% | Fast, flat, two-hit tags |
 
-Keys `1 2 3`, the mouse wheel or `Q`/`E` switch blasters (0.3 s swap). In free-for-all you carry the Popper, the Sprayer and the Chainstorm.
+Keys `1 2 3`, the mouse wheel or `Q`/`E` (controller: Y, LB, RB) switch blasters (0.3 s swap). In free-for-all you carry the
+Popper, the Sprayer and the Chainstorm, unless power-up mode is on (§3.19).
 
 ### 4.2 Spotlight: FLAX'S CHAINSTORM
 Brief: *"This weapon should feel hilariously overpowered and be a highlight of the game."*
@@ -422,6 +503,20 @@ north lane except by mirror.
 spread fights across the map.
 **Landmarks:** the giant treehouse canopy, the team flags, the BLUE FORT / ORANGE FORT signs, the yellow slide, the spinning fan,
 the glowing mirror frames, and the neighbourhood houses beyond the fence.
+
+**Backyard life** *(v0.2.0)*:
+
+| Prop | Where (x, z) | What it does |
+|---|---|---|
+| Dog house and dog | (29.5, −15.5), orange half | Solid cover. Hit it with a dart and the dog **jumps up and barks** (no points, 0.8 s cooldown). Its tail wags |
+| Swing set | (−29.5, 15), blue half | Solid legs (bots path around them); the two swings sway |
+| Paddling pool and rubber duck | (−28.5, −15.5) | Wade through it; the duck bobs and turns |
+| Sprinkler | (−31.5, −20) | Sweeps a water arc back and forth |
+| Garden gnomes ×3 | By the hedge, the trunk, the orange fort | Little decorations to spot |
+| Flower beds | Along the north and south fences | Colour |
+| Birdsong | The trees around the yard | A tweet every few seconds |
+
+The treehouse deck also hosts the power-up spot (§3.19).
 
 ### 5.2 Future elemental arenas (designed, not built)
 | Arena | Signature mechanic | Reuses | Needs |
@@ -516,9 +611,10 @@ to that (sections of `tests/test_runner.gd`). Items marked *(v0.1.1)* were added
   It doesn't cover the results screen. Unattended demo runs are exempt.
 - **Tests:** *Hardening: losing window focus pauses the match*.
 
-### 6.13 Settings *(v0.1.1 additions)*
-- **Rules:** mouse sensitivity 0.2–3, FOV 60–110, camera shake 0–1.5, visual effects 0.2–1.5, volume 0–1, fullscreen, invert Y.
-  Saved to `user://settings.cfg` when the panel closes.
+### 6.13 Settings *(v0.1.1; extended in v0.2.0)*
+- **Rules:** two columns. **Controls:** mouse sensitivity 0.2–3, controller look speed 0.4–2, invert look, controller aim assist,
+  controller rumble. **Video & sound:** FOV 60–110, camera shake 0–1.5, visual effects 0.2–1.5, fullscreen, volume, music and
+  sound effects 0–1. Saved to `user://settings.cfg` when the panel closes (DONE, or B / Esc).
 - **Guarantees:** **Reset to defaults** restores every preference. Out-of-range or garbled saved values are clamped.
   The file carries a version number for future migrations.
 - **Tests:** *Hardening: settings reset*.
@@ -533,6 +629,43 @@ to that (sections of `tests/test_runner.gd`). Items marked *(v0.1.1)* were added
 ### 6.15 HUD
 - **Rules:** §8.
 - **Guarantees:** the HUD only listens and never changes game state. The scoreboard (Tab) refreshes live. The tag feed keeps 5 rows.
+
+### 6.16 Controller support *(v0.2.0)*
+- **Rules:** §3.17. Every binding uses "any device", so whichever pad is plugged in works.
+- **Guarantees:** every gameplay action and every menu works with a pad (A presses, B goes back). Hot-plug shows a notice.
+  Unplugging mid-match pauses. Rumble does nothing (safely) without a pad. Aim assist only slows turning, never steers.
+- **Tests:** *Controller: plug and play* (bindings, simulated right stick turns, simulated trigger fires, aim assist slows
+  over a rival, hot-plug notice, unplug pauses).
+
+### 6.17 Your player *(v0.2.0)*
+- **Rules:** §3.16.
+- **Guarantees:** names are cleaned (trimmed, odd characters removed, capped at 12). Bots never share or nearly share your
+  colour, or each other's. Every hat builds.
+- **Tests:** *Your player: name, colour, hat*.
+
+### 6.18 Announcer *(v0.2.0)*
+- **Rules:** §3.18. The MatchController decides the call-outs; the HUD queues and shows them.
+- **Tests:** *Announcer call-outs*.
+
+### 6.19 Chainstorm power-up mode *(v0.2.0)*
+- **Rules:** §3.19.
+- **Guarantees:** the per-match switch is set on a private copy of the mode, so the shared `.tres` never changes. The countdown
+  only runs during play. Being tagged out loses the Chainstorm. Gun Game ignores the mode.
+- **Tests:** *Chainstorm power-up mode*.
+
+### 6.20 Podium and awards *(v0.2.0)*
+- **Rules:** §3.20. Award stats (darts fired, hits, darts collected, bullseyes, Chainstorm darts, streaks) only count during play.
+- **Tests:** *End-of-match podium and awards*.
+
+### 6.21 Music and audio *(v0.2.0)*
+- **Rules:** §7. Separate Music and SFX volume, both under the master volume.
+- **Guarantees:** the music renders on a worker thread (startup never waits for it). Quitting waits for any render still
+  running. Music is quieter (−9 dB) while paused.
+- **Tests:** *Chunky font, music and sounds*.
+
+### 6.22 Backyard props *(v0.2.0)*
+- **Rules:** §5.1 Backyard life. Solid props live under the arena's geometry, so bots path around them.
+- **Tests:** *Backyard props*; *Backyard Fortress navigation* (every roam point still reachable with the props in place).
 
 ---
 
@@ -551,10 +684,16 @@ to that (sections of `tests/test_runner.gd`). Items marked *(v0.1.1)* were added
 | Being hit | Gentle camera shake and a soft orange screen tint (≤16% opacity, fades in 0.35 s) |
 | Chainstorm | Rising motor whine, visible barrel spin, spin bar, rattle, belt advance |
 
-**Audio** is synthesised at startup (`scripts/core/sfx.gd`, DECISIONS D-005): `pop`, `spray`, `chain`, `thump`, `zip` (launches);
-`hit`, `hit_confirm`, `tag`, `tagged`, `ricochet`, `ding`, `boing` (impacts); `reload`, `dry`, `ammo`, `swap` (handling);
-`beep`, `go`, `ui_click`, `level_up`, `win`, `lose` (flow); `spin` (Chainstorm loop). Any of them can be replaced by a real
-recording later; the IDs stay the same.
+**Audio** is all generated in code (`scripts/core/sfx.gd`, DECISIONS D-005), so there are no sound files.
+- **Sound effects** (SFX bus): launches `pop`, `spray`, `chain`, `thump`, `zip` (a tone plus a breathy "fwip" of air);
+  impacts `hit` (a foam "thwap"), `hit_confirm`, `tag`, `tagged`, `ricochet`, `ding`, `boing`; handling `reload`, `dry`,
+  `ammo`, `swap`; flow `beep`, `go`, `ui_click`, `level_up`, `win`, `lose`; announcer `announce`, `streak`, `shutdown`,
+  `powerup`; podium `cheer`; controller `connect`, `disconnect`; backyard `woof`, `chirp`; the `spin` Chainstorm loop.
+- **Music** (Music bus, *v0.2.0*): two chiptune loops rendered on a worker thread at startup. **Menu:** 108 BPM, soft pads,
+  a gentle triangle-wave tune, 4 bars (≈8.9 s). **Match:** 140 BPM, C–G–Am–F, a pulse-wave lead, bass, chord stabs and drums,
+  8 bars (≈13.7 s). It crossfades between tracks, gets quieter on pause, and stops at the final whistle for the win/lose
+  sting and cheer before the menu tune returns.
+- Any sound can be replaced by a real recording later; the IDs stay the same.
 
 ## 8. UI and visual style
 
@@ -569,27 +708,33 @@ recording later; the IDs stay the same.
 | CREAM | `#fff4e0` | Main text |
 | LIME / PINK / GREY | `#9be22d` / `#ff5fa2` / `#8d9ab8` | Spin bar and "refilling", accents, disabled and empty |
 
-**Shapes and type:** rounded panels (radius 12–22), chunky emboldened type with dark outlines everywhere.
-Actor colours: you are blue; the bots are Blaze orange, Pickle green, Zoom purple, Sprinkles pink and Noodle yellow.
+**Shapes and type:** rounded panels (radius 12–22) and **Lilita One**, a chunky rounded display font (SIL Open Font
+License, `assets/fonts/`), with dark outlines everywhere.
+Actor colours: you choose (default blue); the bots are Blaze orange, Pickle green, Zoom purple, Sprinkles pink and Noodle
+yellow, and swap to a spare colour if yours is close to theirs.
 
 **HUD layout:** top left: score, tags, place and Gun Game rung, plus the wind compass · top centre: clock and mode ·
 top right: tag feed · centre: crosshair, hit marker, popups, banners · bottom left: tag meter ("DANGER!" at 70%) ·
 bottom right: blaster name, ammo (`mag | reserve`, `BELT n`, or `INF`), hints (REFILLING!, RELOADING..., LOW AMMO,
-OUT OF DARTS - FIND A BUCKET!), and the Chainstorm spin bar · hold Tab: scoreboard.
+OUT OF DARTS - FIND A BUCKET!), and the Chainstorm spin bar · under the clock: announcer call-outs · hold Tab: scoreboard ·
+bottom centre (any screen): device notices such as "controller connected".
 
-**Screens:** main menu (live orbiting arena, both modes, bot count 2–5, bot skill, settings, quit, how to play) →
-match → pause (resume, restart, settings, main menu) → results (play again, main menu). Every menu works with keyboard
-or gamepad focus as well as the mouse.
+**Screens:** main menu (live orbiting arena, both modes, bot count 2–5, bot skill, Chainstorm rule, YOUR PLAYER, settings,
+quit, and how to play that switches between keyboard and controller) → match → pause (resume, restart, settings, main menu) →
+podium and results (play again, main menu). Every menu works with keyboard, controller (A/B) or mouse.
 
 ## 9. Accessibility and comfort
 - **Camera shake** 0–1.5; **0 turns it off entirely**.
 - **Visual effects** 0.2–1.5: scales particle counts, the effects budget, muzzle-flash size and the hit tint.
 - **No strobing.** The hit tint is soft and short, and there are no full-screen flashes.
 - **Field of view** 60–110 (85 default) for players who feel motion-sick.
-- **Mouse sensitivity** and **invert look**.
+- **Mouse sensitivity**, **controller look speed** and **invert look**.
+- **Controller aim assist** and **rumble**, both switchable; the main menu's help shows controller buttons when a pad is in use.
+- **Separate music and sound-effect volumes**.
 - **Pause anywhere** in a match. Losing focus pauses automatically.
 - **Generous design:** bigger bot hitboxes, weaker bot darts, spawn protection, meter regen, auto-reload.
-- **Planned:** remappable keys, a colour-blind-safe team palette option, subtitles or icons for important sounds.
+- **Readable signs:** world signs only show from the front, so nothing reads mirrored.
+- **Planned:** remappable keys and buttons, a colour-blind-safe team palette option, subtitles or icons for important sounds.
 
 ## 10. Progression (planned, not built)
 Weapon XP and mastery, magazine/accuracy/rate/speed upgrades, cosmetic skins, alternate and elemental darts, barrel
@@ -607,5 +752,8 @@ until playtests show the core combat is fun.** No paid advantages, ever.
 | **Belt-fed** | Fires straight from the reserve; no magazine, no reloads |
 | **Rung** | A step on the Gun Game ladder |
 | **Wind response** | How strongly a dart type is pushed by wind |
+| **Call-out** | A big announcer message under the clock ("DOUBLE TAG!") |
+| **Power-up mode** | The optional rule where the Chainstorm lands on the map instead of being in everyone's hands |
+| **Aim assist** | Controller-only: turning slows while your crosshair is over a rival |
 | **Bucket** | An ammo refill station that drains and regenerates |
 | **Roam point** | A spot bots like to wander to |

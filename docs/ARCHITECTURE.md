@@ -6,23 +6,25 @@
 
 ```
 project.godot           main scene, autoloads, physics layer names
+default_bus_layout.tres audio buses: Master → Music, SFX
 scenes/                 thin .tscn wrappers (one root node + script)
   ui/main_menu.tscn     MAIN SCENE
   game/match.tscn       one round: arena + actors + HUD
   arenas/  player/  enemies/  projectiles/  pickups/  effects/  ui/
 scripts/
-  core/      settings, sfx, input, match flow, modes, scoring, UI kit, physics layers
+  core/      settings, sfx (+ music), input, match flow and announcer, modes, scoring, awards, cosmetics, UI kit, layers
   combat/    DartData, WeaponData, WeaponState, Arsenal, Actor, Hitbox, DartProjectile, DartPool
   ai/        Bot, BotDifficulty
   player/    Player
   arena/     Arena (base), ArenaKit (primitive builders), BackyardFortress
-  systems/   WindField, WindZone, ReflectiveSurface, AmmoBucket, JumpPad, WobbleTarget
-  effects/   BlasterModel, CharacterModel, FoamBurst, CombatFx
+  systems/   WindField, WindZone, ReflectiveSurface, AmmoBucket, JumpPad, WobbleTarget, PowerUpPickup, DogHouse
+  effects/   BlasterModel, CharacterModel (with hats), FoamBurst, CombatFx, Podium
   ui/        Hud, Crosshair, WindGauge, PauseMenu, SettingsPanel, main_menu
   debug/     DemoDriver (only active with `-- --demo`)
 resources/
   weapons/*.tres  darts/*.tres  modes/*.tres  bots/*.tres
 assets/materials/lawn.gdshader
+assets/fonts/LilitaOne-Regular.ttf (+ OFL.txt)
 tests/test_runner.tscn  headless test suite (tests/test_runner.gd)
 tools/
   validate.sh           import → strict compile → boots → tests → leak check
@@ -42,31 +44,39 @@ Match (scripts/core/match.gd)              wires everything, owns restart/quit
 │  │   ├─ StaticBody3D …, ReflectiveSurface ×2, AmmoBucket ×5
 │  ├─ Decor                                visual only (no collision, not in the navmesh)
 │  ├─ Spawns (Marker3D …)
+│  │   ├─ DogHouse, swing-set legs
 │  ├─ WindZone, JumpPad ×2, WobbleTarget ×6, WorldEnvironment, Sun
+│  └─ PowerUp (PowerUpPickup)              power-up mode only, on the treehouse deck
 ├─ DartPool                                owns and recycles every dart (cap 400)
 ├─ CombatFx                                turns impact/tag signals into particles and sound
 ├─ MatchController                         countdown, clock, scoring, respawns, end
 ├─ Player (Actor)  → Head → Camera → ViewModel(BlasterModel)
 ├─ Bot (Actor) ×N  → NavigationAgent3D, CharacterModel(BlasterModel)
 ├─ Hud (CanvasLayer)
-└─ PauseMenu (CanvasLayer, PROCESS_MODE_ALWAYS)
+├─ PauseMenu (CanvasLayer, PROCESS_MODE_ALWAYS)
+└─ Podium (top_level, floats at y=150)     added when the match ends; owns its own camera
 ```
 
 ## 3. Major systems and data ownership
 
 | System | Owns | Talks via |
 |---|---|---|
-| **GameSettings** (autoload) | Preferences and last menu choices; saved to `user://settings.cfg` | `changed` signal; read directly |
-| **Sfx** (autoload) | Procedurally synthesised sound bank, pooled 2D/3D voices, Chainstorm spin loop, **clean quitting** | `play(id)`, `play_at(id, pos)`, `set_spin(ratio)`, `quit_game(code)` |
+| **GameSettings** (autoload) | Preferences, your look (name/colour/hat), last menu choices, saved to `user://settings.cfg`. **Input-device awareness**: controller hot-plug, which device is in use, rumble, on-screen notices. Applies the default font to the root window's theme | `changed`, `controller_changed`, `input_device_changed` signals; `vibrate()`, `notify()` |
+| **Sfx** (autoload) | Synthesised sound bank on pooled voices (SFX bus), Chainstorm spin loop, **two music loops rendered on worker threads** (Music bus), **clean quitting** | `play(id)`, `play_at(id, pos)`, `set_spin(ratio)`, `play_music(id)`, `stop_music()`, `duck_music()`, `quit_game(code)` |
 | **PauseMenu** | Pause state, the settings panel in a match, **auto-pause on focus loss** | `open()`, `close()`, `pause_for_focus_loss()`, `is_open()` |
-| **MatchController** | Match state, clock, Scoreboard, respawn timers | Signals: `countdown_tick`, `clock_tick`, `tag_scored`, `popup`, `match_ended` |
+| **MatchController** | Match state, clock, Scoreboard, respawn timers, **announcer** (streaks, multi-tags, time warnings) and **award stats** | Signals: `countdown_tick`, `clock_tick`, `tag_scored`, `popup`, `announcement`, `match_ended`; `announce()` |
+| **Cosmetics** (static data) | Player colours, hats, random names, name cleaning | `sanitize_name()`, `color_at()`, `too_similar()` |
+| **Awards** (static logic) | Turns ScoreEntry stats into end-of-match awards | `Awards.compute(ranked)` |
+| **Podium** | The end-of-match sky stage, dancers, confetti, camera | `show_ranking(ranking)` |
+| **PowerUpPickup** | Power-up mode: availability, countdown, handing over the blaster | `spawned`, `collected(actor)` signals; `active`, `make_available()`, `give_to()` |
+| **DogHouse** | Solid prop; barks when a dart hits it | `barked` signal; `on_dart_hit()` |
 | **GameMode** (Resource) | The rules: duration, points, loadout. `GunGameMode` adds the ladder | Hooks: `get_loadout`, `apply_tag`, `get_early_winner`, `rank`, `describe_progress` |
 | **Actor** | Movement, tag meter, alive state, Arsenal, Hitbox, dart launching | Signals: `tagged_out`, `landed_hit`, `meter_changed`, `respawned`, `ammo_collected` |
 | **Arsenal** | Held WeaponStates, fire timing, spin-up, reloads | Signals: `fired`, `ammo_changed`, `weapon_changed`, `reload_*`, `dry_fired` |
 | **DartPool / DartProjectile** | Every dart's flight, collision, ricochets, lifetime | Pool `impact(kind, at, normal, color)` signal; calls `Actor.receive_dart`, `on_dart_hit`, `on_dart_ricochet` |
 | **WindField / WindZone** | Wind at any point in the arena | `get_wind_at(point)`; zones auto-register via the `wind_zones` group |
 | **Arena** | Geometry, navmesh, spawns, roam points, buckets | Public arrays + `add_*` builder helpers |
-| **Hud** | Purely presentational | Listens to Player, Arsenal, MatchController. Never mutates game state |
+| **Hud** | Purely presentational: HUD, announcer queue, results panel with awards | Listens to Player, Arsenal, MatchController. Never mutates game state |
 
 The dependency direction is **data → logic → presentation**. WeaponData/DartData never reference nodes.
 The Arsenal never knows where darts go. Darts don't know about effects or scoring.
@@ -169,6 +179,10 @@ Restart reloads `match.tscn`.
 | Quitting while sounds play leaks objects | Every quit goes through `Sfx.quit_game()`: stop all, wait 0.4 s real time (the headless audio driver needs a couple of ~46 ms mixing passes to free stopped sounds), quit. Re-entrant calls are ignored; the window close button is routed there too (`auto_accept_quit = false`) | `sfx.gd` | validate.sh fails on "leaked at exit" |
 | Script warnings creep in | Strict compile step: every warning that's at "Warn" is raised to "Error" via a temporary `override.cfg` | `tools/check_scripts.gd`, `tools/validate.sh` | validate step |
 | Load cycle between scripts and scenes | No `preload` of a scene whose script refers back to the preloader (D-018) | `dart_pool.gd` | import step |
+| A fresh checkout imports before the font is imported | The default font is applied at runtime through the root window theme, not `project.godot` (D-020) | `game_settings.gd` | import step |
+| Quitting while a music loop is still rendering | `quit_game()` and `_exit_tree()` wait for every render task | `sfx.gd` | leak check |
+| Controller unplugged mid-match | Pause, with a notice | `game_settings.gd`, `pause_menu.gd` | *Controller: plug and play* |
+| A per-match rule (power-up mode) leaking into the shared `.tres` | The match works on `mode.duplicate()` | `match.gd` | *Chainstorm power-up mode* |
 
 ## 11. Performance budgets
 
@@ -180,6 +194,8 @@ Restart reloads `match.tscn`.
 | Sound voices | 12 non-positional + 16 positional, same sound ≥ 22 ms apart | `Sfx` |
 | Bot thinking | Every 0.25 s (+ jitter); steering and aiming every tick | `Bot.THINK_INTERVAL` |
 | Wind-zone streak particles | 12–140 (× Visual effects) | `WindZone._build_visuals` |
+| Music | Two loops (≈9 s and ≈14 s, 22 kHz mono) rendered once at startup on worker threads | `Sfx._start_music_job` |
+| Podium confetti / sprinkler | 20–220 / 10–90 particles (× Visual effects) | `Podium`, `BackyardFortress` |
 
 Measured during the automated 3-bot Hard match: a peak of about 140 darts in the air, well under the cap.
 
@@ -189,6 +205,24 @@ Measured during the automated 3-bot Hard match: a peak of about 140 darts in the
    writes it at "Error" into a temporary `override.cfg` (removed by a trap). Then every `.gd` under `scripts/`,
    `tests/` and `tools/` is recompiled. Zero warnings is the bar.
 3. **Boots:** the main menu (120 frames) and a match (300 frames), headless.
-4. **Tests:** `tests/test_runner.tscn`, 130 checks in 19 sections. Includes a fast-forwarded bot match
+4. **Tests:** `tests/test_runner.tscn`, 205 checks in 26 sections. Includes a fast-forwarded bot match
    (8× ticks at 8× time scale, so each tick is still 1/60 s).
 5. **Leak check:** the test run must exit without "ObjectDB instances leaked".
+
+## 13. Input and controllers (v0.2.0)
+- **Bindings** are registered in `InputSetup.ensure_actions()` with device -1 (any pad), so hot-plugged pads work at
+  once. Godot's `ui_accept` / `ui_cancel` get A / B added, which makes every menu pad-driven.
+- **Which device is in use:** `GameSettings._input` flips `using_controller` on pad or keyboard/mouse activity and emits
+  `input_device_changed` (the main menu's help text listens).
+- **Hot-plug:** `Input.joy_connection_changed` → `GameSettings` shows a notice and emits `controller_changed`. The
+  PauseMenu pauses on a disconnect during play.
+- **Aiming:** `Player.pad_look_step()` curves the right stick (stick²) and, with aim assist on, halves the turn speed
+  while `crosshair_on_rival()` (a ray against hitboxes) is true. It never rotates the view by itself.
+- **Rumble:** `GameSettings.vibrate()` only fires when rumble is on and a pad is the active device.
+- **"Back":** SettingsPanel, the YOUR PLAYER panel and PauseMenu all close on `ui_cancel` (B / Esc).
+
+## 14. Music
+`Sfx` describes each loop as a small style dictionary (tempo, chord list, bass pattern, drum steps, melody as MIDI notes)
+and renders it with `WorkerThreadPool` into a looping `AudioStreamWAV`. Notes that run past the end wrap to the start,
+so the loop is seamless. `_process` picks up finished renders on the main thread. `play_music()` before a loop is ready
+just remembers the request. Crossfades and pause-ducking are tweens on the Music player.

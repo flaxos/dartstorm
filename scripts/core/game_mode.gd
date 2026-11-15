@@ -23,10 +23,34 @@ extends Resource
 @export var loadout: Array[WeaponData] = []
 @export var infinite_reserve: bool = false
 
+@export_group("Power-up")
+## The blaster that becomes a map power-up when power-up mode is on (the
+## Chainstorm). It's taken out of everyone's loadout and spawns on the map.
+@export var power_weapon: WeaponData
+## Seconds of play before it first appears, and between pick-ups.
+@export var power_weapon_first_delay: float = 20.0
+@export var power_weapon_respawn: float = 45.0
+## Darts on its belt when you grab it.
+@export var power_weapon_belt: int = 300
 
-## Blasters this player should be holding right now.
+## Set per match (on a duplicate of this resource) from the menu option.
+var power_up_mode: bool = false
+
+
+## Blasters this player should be holding right now. In power-up mode the
+## power weapon is left out: you have to grab it from the map.
 func get_loadout(_entry: ScoreEntry) -> Array[WeaponData]:
-	return loadout
+	if not power_up_mode or power_weapon == null:
+		return loadout
+	var held: Array[WeaponData] = []
+	for weapon in loadout:
+		if weapon != power_weapon and weapon.id != power_weapon.id:
+			held.append(weapon)
+	return held
+
+
+func uses_power_up() -> bool:
+	return power_up_mode and power_weapon != null
 
 
 ## Updates the attacker's entry for a tag and returns the points awarded.

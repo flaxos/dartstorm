@@ -13,7 +13,8 @@ tagging only, no gore, no real-firearm branding, no microtransactions.
    It fails on any GDScript **warning** (strict compile step), any test failure, or any "leaked at exit".
 3. Play: `./tools/run.sh`. The main scene is `scenes/ui/main_menu.tscn`, and the match is `scenes/game/match.tscn`.
 
-Godot lives at `~/bin/godot` (4.4.1) on the dev box. The project targets Windows first and Linux second.
+Godot lives at `~/bin/godot` (4.4.1) on the dev box. **Linux is the platform that matters now**; Windows is deferred.
+Controllers must stay plug and play: every binding uses device -1, and every screen works with A/B.
 
 ## Checking the game without a human
 
@@ -22,8 +23,11 @@ Godot lives at `~/bin/godot` (4.4.1) on the dev box. The project targets Windows
 - Screenshots: with a display available,
   `godot --path . res://scenes/game/match.tscn -- --demo --shots=<abs dir> --quit-after=12`
   plays the match automatically (turns, fires, cycles blasters) and saves PNGs you can inspect.
-  Running the menu with `-- --demo --shots=...` captures the title screen; add `--open-settings` to capture the
-  settings panel. See `scripts/debug/demo_driver.gd`.
+  Running the menu with `-- --demo --shots=...` captures the title screen; add `--open-settings` or `--open-customise`
+  for those panels. In a match, `--powerup` turns on power-up mode and drops the Chainstorm at 4 s, and `--end-after=N`
+  ends the round after N seconds (to see the podium). See `scripts/debug/demo_driver.gd`.
+- There's no physical controller on the dev box: test pads with `Input.parse_input_event(InputEventJoypadMotion/Button)`
+  (see `_test_controller_support`).
 - Automated checks can't tell you whether the game *feels* good. Say what still needs a human playtest.
 
 ## Doc map
@@ -33,7 +37,7 @@ Godot lives at `~/bin/godot` (4.4.1) on the dev box. The project targets Windows
 | `docs/TUNING.md` | A data field is added or renamed |
 | `docs/UAT.md` | A release needs a hands-on check (add rows, then log results) |
 | `docs/ARCHITECTURE.md` | Systems, ownership, safeguards (§10) or budgets (§11) change |
-| `docs/DECISIONS.md` | A non-obvious choice is made (next is D-020) |
+| `docs/DECISIONS.md` | A non-obvious choice is made (next is D-027) |
 | `docs/ROADMAP.md` | Always, at the end of a piece of work |
 
 ## Conventions

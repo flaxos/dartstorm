@@ -40,6 +40,30 @@ func set_loadout(list: Array[WeaponData], infinite_reserve: bool = false) -> voi
 		select(0, true)
 
 
+## Hands over an extra blaster mid-match (the Chainstorm power-up) and switches
+## to it. If it is already held, its reserve is topped up instead.
+func add_weapon(data: WeaponData, reserve: int) -> WeaponState:
+	for i in weapons.size():
+		if weapons[i].data.id == data.id:
+			weapons[i].reserve = mini(weapons[i].reserve + reserve, data.reserve_max)
+			select(i)
+			ammo_changed.emit(weapons[i])
+			return weapons[i]
+	var state := WeaponState.new(data)
+	state.reserve = mini(reserve, data.reserve_max)
+	weapons.append(state)
+	select(weapons.size() - 1)
+	return state
+
+
+## True if a blaster with this id is being carried.
+func has_weapon(id: StringName) -> bool:
+	for state in weapons:
+		if state.data.id == id:
+			return true
+	return false
+
+
 func current() -> WeaponState:
 	if current_index < 0 or current_index >= weapons.size():
 		return null

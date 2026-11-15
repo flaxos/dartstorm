@@ -8,7 +8,9 @@ tagging only, no gore, no real-firearm branding, no microtransactions.
 ## Start here
 
 1. Read `docs/ROADMAP.md` (current status and next task), then `docs/ARCHITECTURE.md`.
-2. Validate before and after changes: `./tools/validate.sh` (about 1–2 minutes; `--quick` skips the tests).
+   `docs/GDD.md` is the authoritative design; `docs/CONCEPT_BRIEF.md` is the original brief (archived verbatim, don't edit it).
+2. Validate before and after changes: `./tools/validate.sh` (about 2 minutes; `--quick` skips the tests).
+   It fails on any GDScript **warning** (strict compile step), any test failure, or any "leaked at exit".
 3. Play: `./tools/run.sh`. The main scene is `scenes/ui/main_menu.tscn`, and the match is `scenes/game/match.tscn`.
 
 Godot lives at `~/bin/godot` (4.4.1) on Sam's dev box. The project targets Windows first and Linux second.
@@ -20,11 +22,28 @@ Godot lives at `~/bin/godot` (4.4.1) on Sam's dev box. The project targets Windo
 - Screenshots: with a display available,
   `godot --path . res://scenes/game/match.tscn -- --demo --shots=<abs dir> --quit-after=12`
   plays the match automatically (turns, fires, cycles blasters) and saves PNGs you can inspect.
-  Running the menu with `-- --demo --shots=...` captures the title screen. See `scripts/debug/demo_driver.gd`.
+  Running the menu with `-- --demo --shots=...` captures the title screen; add `--open-settings` to capture the
+  settings panel. See `scripts/debug/demo_driver.gd`.
 - Automated checks can't tell you whether the game *feels* good. Say what still needs a human playtest.
 
-## Conventions
+## Doc map
+| Doc | Update it when |
+|---|---|
+| `docs/GDD.md` | Gameplay, numbers, or a feature's rules/guarantees change (§6 feature specs list the covering tests) |
+| `docs/TUNING.md` | A data field is added or renamed |
+| `docs/UAT.md` | A release needs a hands-on check (add rows, then log results) |
+| `docs/ARCHITECTURE.md` | Systems, ownership, safeguards (§10) or budgets (§11) change |
+| `docs/DECISIONS.md` | A non-obvious choice is made (next is D-019) |
+| `docs/ROADMAP.md` | Always, at the end of a piece of work |
 
+## Conventions
+- **Every bug fix or hardening change ships with a regression test** in `tests/test_runner.gd`.
+  If you can, prove the test fails without the fix. Use the `fast_forward()`, `start_match()` and `end_match()` helpers
+  for match-level tests.
+- **Quit only via `Sfx.quit_game()`**, never `get_tree().quit()` directly, or audio objects leak.
+- **No `preload` of a scene whose script refers back to the preloading class** (load cycle, D-018).
+- `-s` tool scripts compile before autoloads exist: load game classes at runtime there (see `tools/dart_table.gd`).
+- After changing a dart, regenerate the GDD flight table: `godot --headless --path . -s res://tools/dart_table.gd`.
 - Typed GDScript, `class_name` on reusable scripts, signals for decoupling, tabs for indentation.
 - **Data lives in Resources**: blasters in `resources/weapons/*.tres` (WeaponData), darts in `resources/darts/`
   (DartData), modes in `resources/modes/` (GameMode / GunGameMode), bot skill in `resources/bots/` (BotDifficulty).

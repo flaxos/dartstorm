@@ -62,7 +62,7 @@ multiplayer (ENet), with the server authoritative for tags and scores, clients s
 **Why:** the brief asks to avoid unnecessary singletons, and match state belonging to the scene makes restart trivial
 (reload the scene).
 
-### D-010: Runtime navmesh bake
+### D-010: Runtime navmesh bake *(refined by D-014)*
 **Chosen:** `Arena._bake_navigation()` bakes from static colliders when the arena loads.
 **Alternatives:** pre-bake in the editor and save a `.res`.
 **Why:** the arena is generated in code (D-002), so the navmesh always matches the geometry with no manual
@@ -75,3 +75,48 @@ capture the bucket) won't need to touch MatchController.
 
 ### D-012: Bot dart power scales with difficulty; the player's hitbox is smaller
 **Why:** a family game should be winnable. Easy bots need 8 Pocket Popper hits to tag you, Hard bots need 3, same as you.
+
+### D-013: Losing window focus pauses the match (v0.1.1)
+**Chosen:** `PauseMenu` listens for `NOTIFICATION_APPLICATION_FOCUS_OUT` and opens itself during the countdown or play.
+The click that re-captures the mouse afterwards is swallowed (`Player._fire_blocked_until_release`).
+**Alternatives:** keep playing in the background; only release the mouse.
+**Why:** kids alt-tab, press the Windows key, or get a pop-up. Coming back to find you were tagged five times, or
+firing a surprise dart, feels unfair. Unattended `--demo` runs are exempt so screenshots don't stall.
+
+### D-014: Bake the navmesh on a worker thread (v0.1.1)
+**Chosen:** `bake_navigation_mesh(true)` plus an `Arena.is_navigation_ready` flag / `navigation_ready` signal.
+Bots steer straight at their goal until it's ready.
+**Alternatives:** keep the synchronous bake (a visible hitch on slower PCs); pre-bake and save a `.res`
+(goes stale whenever the code-built arena changes, see D-002).
+**Why:** no hitch and no manual step. The bake and sync take about 20 frames, hidden by the 3 s countdown.
+
+### D-015: Budget ordinary impact effects (v0.1.1)
+**Chosen:** `FoamBurst` caps ordinary bursts at 6 started per frame and 48 alive, both scaled by the Visual effects
+setting. Tag-out and respawn bursts are "important" and always shown.
+**Alternatives:** pool CPUParticles3D nodes; GPU particles with one emitter per colour.
+**Why:** the simplest change that bounds the worst case (five Chainstorms at a wall was about 450 nodes/s) without
+losing the moments that matter. Pooling can come later if profiling asks for it.
+
+### D-016: Validation treats GDScript warnings as errors (v0.1.1)
+**Chosen:** `tools/check_scripts.gd` asks Godot which warnings are at "Warn" and writes them at "Error" into a
+temporary `override.cfg`, then recompiles every script. `validate.sh` removes the file with a trap.
+**Alternatives:** a single `debug/gdscript/warnings/treat_warnings_as_errors` switch (it had no effect when tested on
+4.4.1); setting the levels permanently in `project.godot` (one stray warning would stop Sam's game from running at all).
+**Why:** Sam opens the editor and sees zero yellow warnings, and new ones are caught by automation, not by
+him. The game itself still runs normally with warnings.
+
+### D-017: Archive the concept brief verbatim; the GDD is authoritative (v0.1.1)
+**Chosen:** `docs/CONCEPT_BRIEF.md` keeps the original brief word for word. GDD §1 summarises it and GDD §2 traces
+every requirement to its status.
+**Alternatives:** paste the whole brief into the GDD; summary only.
+**Why:** the brief is the family's original vision and worth keeping exactly. But the GDD must be free to
+evolve (numbers, scope), so it is the single source of truth. The project owner chose this option on 2026-11-16.
+The repo is public, so the brief's mention of Sam, Flax and the kids is public too, as are the existing README and
+blaster names.
+
+### D-018: No preload cycles; quit through Sfx (v0.1.1)
+**Chosen:** `DartPool` loads `dart_projectile.tscn` at runtime instead of `preload`, because the dart script refers
+back to `DartPool`. Every quit goes through `Sfx.quit_game()`, which stops all sounds, waits 0.4 s of real time
+and then quits (re-entrant calls are ignored).
+**Why:** the preload produced a "Busy" load error when the editor re-imported `dart_projectile.gd`. Quitting
+mid-sound leaked audio playback objects (a 0.15 s wait still leaked in about 1 run in 4; 0.4 s was clean in 6 of 6), and a per-frame quit call leaked timers. validate.sh now fails on either.

@@ -36,6 +36,9 @@ From a terminal you can also run:
 | Scoreboard | Tab (hold) | Back |
 | Pause | Esc or P | Start |
 
+**Version 0.1.1.** v0.1.0 passed user acceptance testing on 2026-11-15; 0.1.1 is a hardening and docs release
+(see [docs/ROADMAP.md](docs/ROADMAP.md)).
+
 ## What's in it right now
 
 - **Backyard Battle**: a five-minute free-for-all against 2–5 bots (Easy, Normal or Hard).
@@ -45,16 +48,25 @@ From a terminal you can also run:
 - Real foam-dart physics: darts drop, slow down, curve in the wind and ricochet off mirrors (+50 bonus for a ricochet tag).
 - Ammo buckets that drain and refill themselves. The Chainstorm empties them fast.
 - Bullseye targets for practice (+10 points).
-- Settings for mouse sensitivity, FOV, **camera shake**, **visual effects intensity**, volume and fullscreen.
+- Settings for mouse sensitivity, FOV, **camera shake**, **visual effects intensity**, volume and fullscreen,
+  with a **Reset to defaults** button.
+- Alt-tabbing out of a match pauses it automatically.
 
 ## For developers
 
-- `./tools/validate.sh` imports the project, boots the menu and a match headless, and runs 101 automated tests.
+- `./tools/validate.sh` imports the project, compiles every script with warnings treated as errors, boots the menu
+  and a match headless, runs 130 automated tests, and checks for leaks at exit.
 - Start with [`CLAUDE.md`](CLAUDE.md), then read [`docs/`](docs/):
-  - [GDD.md](docs/GDD.md): gameplay, weapons, maps, modes
-  - [ARCHITECTURE.md](docs/ARCHITECTURE.md): how the code fits together
-  - [ROADMAP.md](docs/ROADMAP.md): what's done and what's next
-  - [DECISIONS.md](docs/DECISIONS.md): why things are the way they are
+
+| Doc | What it's for |
+|---|---|
+| [GDD.md](docs/GDD.md) | **The** game design: concept, brief traceability, gameplay, blasters, arena, feature specs |
+| [CONCEPT_BRIEF.md](docs/CONCEPT_BRIEF.md) | The original brief that started it all, archived word for word |
+| [TUNING.md](docs/TUNING.md) | Change blasters, darts, bots and modes in the Godot inspector, no code needed |
+| [UAT.md](docs/UAT.md) | The hands-on acceptance test script and results log |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code fits together, safeguards, performance budgets |
+| [ROADMAP.md](docs/ROADMAP.md) | What's done and what's next |
+| [DECISIONS.md](docs/DECISIONS.md) | Why things are the way they are |
 
 All art and sound is generated in code from Godot primitives, so there are no third-party assets and nothing to licence.
 See [`assets/README.md`](assets/README.md).

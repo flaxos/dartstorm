@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="DartData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/dart_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Bouncy Dart"
+initial_speed = 40.0
+gravity_multiplier = 0.5
+air_drag = 0.15
+tag_power = 34.0
+max_ricochets = 4
+ricochet_speed_keep = 0.9
+ricochet_any_surface = true
+max_lifetime = 5.0

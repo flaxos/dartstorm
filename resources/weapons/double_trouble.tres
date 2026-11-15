@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/darts/standard_dart.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"double_trouble"
+dart = ExtResource("2")
+display_name = "Double Trouble"
+description = "Two barrels, two darts, every pull of the trigger."
+fire_mode = 0
+shots_per_second = 3.2
+darts_per_shot = 2
+spread_degrees = 1.6
+magazine_size = 8
+reserve_max = 48
+reserve_start = 32
+reload_time = 1.0
+recoil_kick = 1.4
+camera_shake = 0.16
+sound = &"pop"
+sound_pitch = 0.8
+model_style = 3
+body_color = Color(0.95, 0.3, 0.45, 1)
+accent_color = Color(1, 1, 1, 1)
+view_offset = Vector3(0.26, -0.22, -0.56)
+ai_min_range = 3.0
+ai_max_range = 30.0
+ai_preference = 1.0

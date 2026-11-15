@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="DartData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/dart_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Mega Dart"
+initial_speed = 78.0
+gravity_multiplier = 0.35
+air_drag = 0.1
+tag_power = 70.0
+max_ricochets = 1
+visual_scale = 1.3

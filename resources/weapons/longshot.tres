@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/darts/long_dart.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"longshot"
+dart = ExtResource("2")
+display_name = "Longshot"
+description = "A long-barrelled blaster that fires fast, flat mega darts. Slow to fire, so make it count."
+fire_mode = 0
+shots_per_second = 1.1
+darts_per_shot = 1
+spread_degrees = 0.1
+magazine_size = 4
+reserve_max = 24
+reserve_start = 16
+reload_time = 1.8
+recoil_kick = 2.2
+camera_shake = 0.28
+sound = &"zip"
+sound_pitch = 1.0
+model_style = 5
+body_color = Color(0.95, 0.75, 0.15, 1)
+accent_color = Color(0.15, 0.2, 0.35, 1)
+view_offset = Vector3(0.22, -0.19, -0.36)
+ai_min_range = 10.0
+ai_max_range = 60.0
+ai_preference = 1.0

@@ -1,0 +1,47 @@
+class_name DartPool
+extends Node3D
+## Owns every dart in a match. Darts are created once and recycled, and the total
+## number alive is capped so the Chainstorm cannot melt the frame rate.
+
+## Emitted for every dart impact so effects/audio can react without darts
+## knowing about them. `kind` is a DartProjectile.Impact value.
+signal impact(kind: int, at: Vector3, normal: Vector3, color: Color)
+
+const DART_SCENE := preload("res://scenes/projectiles/dart_projectile.tscn")
+
+@export var max_active: int = 400
+
+## Set by the match so darts can ask what the wind is doing.
+var wind_field: WindField
+
+var _idle: Array[DartProjectile] = []
+var _live: Array[DartProjectile] = []
+
+
+func fire(data: DartData, origin: Vector3, direction: Vector3, shooter: Actor,
+		weapon: WeaponData, color: Color, exclude: Array[RID]) -> DartProjectile:
+	var dart: DartProjectile
+	if _live.size() >= max_active:
+		dart = _live.pop_front()  # Recycle the oldest dart still flying.
+	elif not _idle.is_empty():
+		dart = _idle.pop_back()
+	else:
+		dart = DART_SCENE.instantiate() as DartProjectile
+		dart.pool = self
+		add_child(dart)
+	_live.append(dart)
+	dart.launch(data, origin, direction, shooter, weapon, color, exclude)
+	return dart
+
+
+func release(dart: DartProjectile) -> void:
+	_live.erase(dart)
+	_idle.append(dart)
+
+
+func report_impact(kind: int, at: Vector3, normal: Vector3, color: Color) -> void:
+	impact.emit(kind, at, normal, color)
+
+
+func live_count() -> int:
+	return _live.size()

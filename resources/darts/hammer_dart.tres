@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="DartData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/dart_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Foam Slug"
+initial_speed = 36.0
+gravity_multiplier = 0.9
+air_drag = 0.9
+tag_power = 15.0
+max_ricochets = 1
+max_lifetime = 2.0
+visual_scale = 0.8

@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/darts/standard_dart.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"pocket_popper"
+dart = ExtResource("2")
+display_name = "Pocket Popper"
+description = "A trusty semi-automatic pistol. Accurate, quick to reload, and never lets you down."
+fire_mode = 0
+shots_per_second = 5.0
+darts_per_shot = 1
+spread_degrees = 0.4
+magazine_size = 8
+reserve_max = 48
+reserve_start = 32
+reload_time = 0.8
+recoil_kick = 1.0
+camera_shake = 0.12
+sound = &"pop"
+sound_pitch = 1.0
+model_style = 0
+body_color = Color(0.15, 0.5, 1, 1)
+accent_color = Color(1, 0.85, 0.2, 1)
+view_offset = Vector3(0.26, -0.22, -0.56)
+ai_min_range = 6.0
+ai_max_range = 45.0
+ai_preference = 1.0

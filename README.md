@@ -44,7 +44,7 @@ From a terminal you can also run:
 | Scoreboard | Tab (hold) | Back |
 | Pause | Esc or P | Start |
 
-**Version 0.3.0:** the young players drew their own DARTSTORM, and the main menu and team modes are now built from it.
+**Version 0.4.0:** a second arena, Home Turf. 0.3.0 built the main menu and team modes from the young players' drawing.
 0.2.0 added controller support and an appeal pack. v0.1.0 passed user acceptance testing on 2026-11-15. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## What's in it right now
@@ -54,6 +54,8 @@ From a terminal you can also run:
 - **DUOS** (you and a bot buddy against other pairs) and **TEAMS** (Blue vs Orange, up to 4 v 4): team colours,
   no friendly fire, team scores and a team podium.
 - **Gun Game**: every tag swaps your blaster for the next one on the ladder. Score a tag with the Chainstorm to win.
+- **Home Turf** arena: a whole house, and you're toy-sized. Chairs are steps, beds are trampolines, the kitchen has a
+  giant fan, and a toy race-track ramp leads onto the patio roof.
 - **Backyard Fortress** arena: blue and orange forts, a treehouse with walkways, a slide and trampolines,
   Mirror Alley (two ricochet mirrors) and Windy Way (a giant fan that bends darts sideways).
 - Real foam-dart physics: darts drop, slow down, curve in the wind and ricochet off mirrors (+50 bonus for a ricochet tag).
@@ -72,7 +74,7 @@ From a terminal you can also run:
 ## For developers
 
 - `./tools/validate.sh` imports the project, compiles every script with warnings treated as errors, boots the menu
-  and a match headless, runs 251 automated tests, and checks for leaks at exit.
+  and a match headless, runs 276 automated tests, and checks for leaks at exit.
 - `./tools/export_linux.sh` builds the Linux release and boots it once to prove it works.
 - Start with [`CLAUDE.md`](CLAUDE.md), then read [`docs/`](docs/):
 

@@ -26,8 +26,11 @@ Controllers must stay plug and play: every binding uses device -1, and every scr
   plays the match automatically (turns, fires, cycles blasters) and saves PNGs you can inspect.
   Running the menu with `-- --demo --shots=...` captures the title screen; add `--open-settings` or `--open-customise`
   for those panels. `--mode=N` (GameSettings.MatchMode: 0 SOLO, 1 GUN GAME, 2 DUOS, 3 TEAMS) and `--bots=N` pick the
-  mode and bot count for that run, in the lobby or a match. In a match, `--powerup` turns on power-up mode and drops the Chainstorm at 4 s, and `--end-after=N`
+  mode and bot count for that run, and `--arena=N` (0 BACKYARD, 1 HOME TURF) the arena, in the lobby or a match.
+  In a match, `--powerup` turns on power-up mode and drops the Chainstorm at 4 s, and `--end-after=N`
   ends the round after N seconds (to see the podium). See `scripts/debug/demo_driver.gd`.
+- Arena layouts: `godot --path . -s res://tools/arena_shots.gd -- --arena=1 --shots=<abs dir>` saves views from above
+  and from each corner.
 - There's no physical controller on the dev box: test pads with `Input.parse_input_event(InputEventJoypadMotion/Button)`
   (see `_test_controller_support`).
 - Automated checks can't tell you whether the game *feels* good. Say what still needs a human playtest.
@@ -39,7 +42,7 @@ Controllers must stay plug and play: every binding uses device -1, and every scr
 | `docs/TUNING.md` | A data field is added or renamed |
 | `docs/UAT.md` | A release needs a hands-on check (add rows, then log results) |
 | `docs/ARCHITECTURE.md` | Systems, ownership, safeguards (§10) or budgets (§11) change |
-| `docs/DECISIONS.md` | A non-obvious choice is made (next is D-032) |
+| `docs/DECISIONS.md` | A non-obvious choice is made (next is D-033) |
 | `docs/ROADMAP.md` | Always, at the end of a piece of work |
 
 ## Conventions

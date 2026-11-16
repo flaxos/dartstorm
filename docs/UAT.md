@@ -93,6 +93,16 @@ UAT proves the *game* works. A release isn't done until both pass.
 | I6 | Play DUOS with 4 bots | 3 pairs (blue, orange, green); you and your buddy share a colour and a score |
 | I7 | Use only a controller in the lobby | Every card and button is reachable; A on PLAY starts; B leaves CHARACTER and HOW TO PLAY |
 
+### J. Home Turf *(v0.4.0)*
+| ID | Do this | Expect |
+|---|---|---|
+| J1 | Lobby → ARENA: HOME TURF → PLAY (SOLO) | A big toy-sized house with no roof, sunny rooms, floor labels (KITCHEN, LOUNGE, ...) |
+| J2 | Explore | Chairs are steps onto tables; you can crawl under tables; beds bounce you; the kids' room trampoline gets you onto the loft bed; the big fan's wind bends darts in the kitchen |
+| J3 | Run up the orange race-track ramp on the east lawn | You reach the patio roof; ball, frisbee and paper plane up there as cover |
+| J4 | Ricochet off the bathroom and wardrobe mirrors | +50 ricochet bonus works indoors too |
+| J5 | Play TEAMS on Home Turf | Blue starts at the front (driveway, garage), orange in the backyard; nobody starts on top of anyone |
+| J6 | Watch bots for a minute | They go room to room, round the side paths, and up the ramp |
+
 ### E. Comfort
 | ID | Do this | Expect |
 |---|---|---|
@@ -108,3 +118,4 @@ UAT proves the *game* works. A release isn't done until both pass.
 | 0.1.1 | — | — | ↪ Folded into 0.2.0 | Hardening release (merged). Its re-checks (A4, B13, B14, D2, D3) are part of the 0.2.0 run |
 | 0.2.0 | — | — | ⏳ Pending | Controller support and appeal pack. Run everything, especially sections F (with a real pad) and G, and ask the players what they'd change |
 | 0.3.0 | — | — | ⏳ Pending | Their lobby, team modes, Linux build: sections H and I. Can be run together with 0.2.0 |
+| 0.4.0 | — | — | ⏳ Pending | Home Turf: section J. Can be run with the others |

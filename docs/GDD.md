@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Game version** | 0.3.0 (the young players' lobby, team modes and a Linux build) |
+| **Game version** | 0.4.0 (Home Turf: a toy-sized house arena) |
 | **Status** | v0.1.0 **passed UAT** on 2026-11-15; v0.1.1 hardening merged; v0.2.0 and v0.3.0 awaiting UAT with young players (see [UAT.md](UAT.md)) |
 | **Platform** | Linux first (the target machine runs Linux). Windows is deferred until needed. |
 | **Authority** | This GDD is the authoritative description of the game. Numbers mirror the `.tres` files in `resources/`. If they ever disagree, the `.tres` file is what the game uses, so fix this doc. |
@@ -164,7 +164,7 @@ Status key: ✅ done · 🟡 partly done or untested · ⏳ planned, not started
 | Gun Game: start weakest, advance per tag, ladder stored in data | ✅ | `resources/modes/gun_game.tres` |
 | Full 10-rung ladder | 🟡 | 7 of 10. Missing: Wind Whisperer, Thunder Cannon, Rocket Dart |
 | Elemental arenas: architecture documented | ✅ | §5.2, ARCHITECTURE §9 |
-| Elemental arenas built | ⏳ | Only Backyard Fortress (as the brief instructs) |
+| Elemental arenas built | ⏳ | Not yet. Playable arenas: Backyard Fortress and Home Turf (§5.3, v0.4.0) |
 | Buckets: configurable amount, team or neutral colour, detect players, refill weapons, empty state, regen delay | ✅ | `AmmoBucket` (§6.7) |
 | Chainstorm's high ammo use makes buckets strategic | ✅ | A full bucket is ≈5 s of Chainstorm fire |
 | Capturable team buckets | ⏳ | Roadmap |
@@ -587,7 +587,7 @@ The treehouse deck also hosts the power-up spot (§3.19).
 
 Tempest Treehouse is the cheapest next arena because almost all of its systems already exist.
 
-### 5.3 Home Turf (planned): a family home, toy-sized *(added 2026-11-16)*
+### 5.3 Home Turf: a family home, toy-sized *(v0.4.0)*
 A fictional suburban family home and the streets around it: battle through the rooms and out into the street.
 
 > **Fictional world (D-031):** every DARTSTORM place is made up. No real addresses, street, suburb, park or shop names,
@@ -618,12 +618,33 @@ at home" fantasy.
 stream, a playing field (**Foam Field**) and footpaths. It suits ZOMBIES and big TEAMS games, and the pond is perfect
 for the planned **Water** darts.
 
-**Build plan:** (1) house interior + patio + garage as one arena, `scripts/arenas/home_turf.gd` built from `ArenaKit`
-like Backyard Fortress, with team bases in the garage and the patio; (2) front yard and street; (3) the park and pond as a
-separate large map. Each step must keep 60 fps and bots navigating (the navmesh handles doorways if they're
-at least 2 m wide at game scale).
+**Built in v0.4.0** (`scripts/arena/home_turf.gd`), house, patio, garage, yards and street as one arena. Pick it in
+the lobby: **ARENA: HOME TURF**.
 
----
+| Callout | Where | What's there |
+|---|---|---|
+| **Kitchen / family room** | Back middle | Kitchen island (2.7 m fort), bench, fridge, a meals table you can crawl under or climb (chair → table), and a **giant pedestal fan** blowing across the room toward the patio (the house's wind zone) |
+| **Lounge** | Middle | Couch, coffee table (a jump-up step), TV. **The Chainstorm power-up lands here** |
+| **Hall** | Long corridor west of the kitchen | Doors to bedroom 3, the laundry, the bathroom and bedroom 2; an archway into the kitchen |
+| **Bedroom 3** | Back corner | A loft bed with a **trampoline** beside it to bounce up there; a toy-box ammo bucket |
+| **Laundry** | Off the hall | Laundry-basket ammo bucket; a door out to the **west side path** |
+| **Bathroom / ensuite / wardrobe** | West side | Three **mirrors** for ricochet shots |
+| **Bedroom 2 / main bedroom** | West side | **Beds are trampolines** |
+| **Dining** | Middle west | A long table with a chair step at each end |
+| **Study** | Front west | Desk (chair step), bookshelf, a dartboard |
+| **Entry** | Front middle | Front door to the porch; doors to the lounge, study, main bedroom and garage |
+| **Garage** | Front east | Two toy cars (huge cover), a workbench and dartboard, roller door to the driveway, side doors to the patio and east lawn |
+| **Patio** | Back east | Covered decking with a barbecue, an outdoor table and pot plants. **Its roof is a platform**: run up the **orange toy race-track ramp** from the east lawn. Up there: a ball, a frisbee and a paper plane as cover |
+| **Backyard** | North | Shed, sandpit with a toy truck, a big tree, a dartboard on the fence |
+| **Front yard and street** | South | Driveway, letterbox (no number), a front tree, the footpath, the street with a parked car |
+
+- **Toy scale:** walls are 9 m tall (nobody gets on top of them), doors 3.6 m wide, chair seats 1.2 m (one jump), tables
+  2.25 m (chair, then table). Trampolines launch at 12–14 m/s.
+- **Dollhouse:** no roof, so the sun reaches every room. A high sun and warm fill light keep the shaded rooms sunny.
+  The fan's wind zone hides its tinted box indoors (`WindZone.show_volume`).
+- **Teams:** blue's end is the front (driveway and garage), orange's is the backyard; 8 home spawns each.
+- **Loops:** the west side path and the east lawn both join the front and back yards, so there's always a way round.
+- **Later:** the suburb map (Splash Pond park, Foam Field) as a separate, bigger arena.
 
 ## 6. Feature specifications (hardened)
 
@@ -776,6 +797,15 @@ to that (sections of `tests/test_runner.gd`). Items marked *(v0.1.1)* were added
   CHARACTER and HOW TO PLAY. Bots in matches wear their own hats (a v0.2.0 bug where they all wore caps is fixed).
 - **Tests:** *Lobby (the players' own menu design)*, *Bots wear their own hats*.
 
+### 6.26 Home Turf *(v0.4.0)*
+- **Rules:** §5.3. Chosen in the lobby (`GameSettings.arena`, `MatchScene.ARENAS`).
+- **Guarantees:** every spawn point is clear of walls and furniture; every room, both side paths and the patio roof
+  are on the bots' navmesh; each team has at least 6 home spawns; everyone stays inside the lot (fences and invisible
+  walls). Nobody ever spawns on top of anyone (all arenas; a v0.3.0 TEAMS bug fixed here).
+- **Tests:** *Home Turf: a toy-sized house*, *Home Turf: a whole bot match*, *Nobody spawns on top of anyone*.
+- **Layout check by eye:** `godot --path . -s res://tools/arena_shots.gd -- --arena=1 --shots=<abs dir>` saves views
+  from above and from each corner (add `--look=x,y,z:tx,ty,tz` for more).
+
 ### 6.25 Linux build *(v0.2.0)*
 - **Rules:** `./tools/export_linux.sh` → one executable plus icon, README and `install-shortcut.sh`; settings in
   `~/.local/share/dartstorm/` (D-027).
@@ -882,5 +912,5 @@ brief's "don't build an economy until combat is fun" condition is met. The rules
 | **Duo** | A pair: you and a bot buddy (DUOS mode) |
 | **Team chip** | A team's name and score under the clock in team modes |
 | **Bunker / lobby** | The main menu island where your squad stands (the players' design) |
-| **Home Turf** | The planned arena: a fictional family home at toy size |
+| **Home Turf** | The house arena: a fictional family home at toy size (§5.3) |
 | **Roam point** | A spot bots like to wander to |

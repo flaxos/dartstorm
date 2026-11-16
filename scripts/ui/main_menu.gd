@@ -85,6 +85,7 @@ var _mode_blurb: Label
 var _bots_value: Label
 var _teams_info: Label
 var _difficulty_button: Button
+var _arena_button: Button
 var _storm_row: HBoxContainer
 var _storm_button: Button
 var _name_edit: LineEdit
@@ -398,6 +399,12 @@ func _build_mode_picker() -> void:
 	_teams_info = UiKit.label("", 16, UiKit.SKY, 4)
 	box.add_child(_teams_info)
 
+	var arena_row := _option_row(box, "ARENA")
+	_arena_button = UiKit.small_button("", Vector2(180, 44))
+	_arena_button.tooltip_text = "BACKYARD: the forts, the treehouse and Windy Way.\nHOME TURF: a whole house, and you're toy-sized!"
+	_arena_button.pressed.connect(_cycle_arena)
+	arena_row.add_child(_arena_button)
+
 	var difficulty_row := _option_row(box, "BOT SKILL")
 	_difficulty_button = UiKit.small_button("", Vector2(180, 44))
 	_difficulty_button.pressed.connect(_cycle_difficulty)
@@ -482,7 +489,8 @@ func _refresh_options() -> void:
 		_mode_buttons[i].add_theme_stylebox_override("normal",
 				UiKit.panel_style(UiKit.ORANGE if chosen else UiKit.BLUE, 1.0, 12, 3 if chosen else 0, UiKit.CREAM, 8))
 	_mode_blurb.text = mode.description
-	_play_mode_label.text = mode.display_name.to_upper()
+	_play_mode_label.text = "%s  -  %s" % [mode.display_name.to_upper(),
+			MatchScene.ARENAS[clampi(GameSettings.arena, 0, MatchScene.ARENAS.size() - 1)]["name"]]
 	_bots_value.text = str(GameSettings.bot_count)
 	var bots := MatchScene.team_bot_count(mode, GameSettings.bot_count)
 	var players := bots + 1
@@ -497,6 +505,7 @@ func _refresh_options() -> void:
 	if bots > GameSettings.bot_count:
 		info += "  (+1 BOT TO EVEN THE TEAMS)"
 	_teams_info.text = info
+	_arena_button.text = MatchScene.ARENAS[clampi(GameSettings.arena, 0, MatchScene.ARENAS.size() - 1)]["name"]
 	_difficulty_button.text = DIFFICULTY_NAMES[clampi(GameSettings.bot_difficulty, 0, DIFFICULTY_NAMES.size() - 1)]
 	_storm_row.visible = not mode is GunGameMode
 	_storm_button.text = "POWER-UP" if GameSettings.chainstorm_powerup else "EVERYONE"
@@ -519,6 +528,12 @@ func _change_bots(step: int) -> void:
 	GameSettings.save_settings()
 	_refresh_options()
 	_rebuild_squad()
+
+
+func _cycle_arena() -> void:
+	GameSettings.arena = (clampi(GameSettings.arena, 0, MatchScene.ARENAS.size() - 1) + 1) % MatchScene.ARENAS.size()
+	GameSettings.save_settings()
+	_refresh_options()
 
 
 func _cycle_difficulty() -> void:

@@ -209,3 +209,12 @@ No real addresses, street, suburb, park or shop names, people's names or referen
 PRs, even when a real place inspired the design.
 **Why:** the repository is public and the players are children. A real name or an exact floor plan could point
 strangers to a real home. This extends D-019.
+
+### D-032: Home Turf is a toy-scale dollhouse (v0.4.0)
+**Chosen:** build the house about ×3 real size with 9 m walls, 3.6 m doors and no roof; furniture is solid cover with
+heights picked for one-jump steps (seats 1.2 m, tables 2.25 m); beds are trampolines; the patio roof is the one high
+platform, reached by a ramp.
+**Alternatives:** real scale; a roofed house with indoor lights; walls you can walk along.
+**Why:** real rooms are too small for running and dart arcs. No roof keeps rooms sunlit and cheap to render, and lets
+the overview camera see in. Walls too tall to climb keep fights inside the rooms. Furniture pushed against walls can
+box in corners for bots, so walkways are at least 1.5 m (the dining chairs moved to the table ends for this reason).

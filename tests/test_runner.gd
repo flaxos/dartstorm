@@ -54,7 +54,11 @@ func _ready() -> void:
 	await _test_blue_vs_orange_match()
 	await _test_duos_match()
 	await _test_bot_hats()
+	await _test_no_stacked_spawns()
 	await _test_lobby()
+	# Home Turf: the toy-sized house arena
+	await _test_home_turf()
+	await _test_home_turf_match()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -1230,3 +1234,132 @@ func _test_lobby() -> void:
 	GameSettings.bot_count = saved_bots
 	GameSettings.save_settings()
 	await physics_frames(2)
+
+
+# --- Home Turf (the toy-sized house) ---------------------------------------------
+
+func _test_home_turf() -> void:
+	section("Home Turf: a toy-sized house")
+	var arena := (load(MatchScene.arena_path(1)) as PackedScene).instantiate() as Arena
+	add_child(arena)
+	await physics_frames(2)
+	check(arena.arena_name == "Home Turf", "the lobby's second arena is Home Turf")
+	check(arena.spawn_points.size() >= 12, "%d spawn points" % arena.spawn_points.size())
+	check(arena.buckets.size() >= 5, "%d ammo buckets (toy box, laundry basket, ...)" % arena.buckets.size())
+	check(arena.power_up_spots.size() == 1, "one power-up spot (the lounge)")
+	check(arena.find_children("*", "ReflectiveSurface", true, false).size() >= 3, "bathroom and wardrobe mirrors for ricochets")
+	check(arena.find_children("*", "JumpPad", true, false).size() >= 3, "beds are trampolines")
+	check(arena.find_children("*", "WobbleTarget", true, false).size() >= 3, "dartboards to practise on")
+	check(arena.wind_field.get_wind_at(Vector3(-6.0, 2.0, -32.0)).length() > 10.0, "the big fan makes the family room windy")
+	check(arena.wind_field.get_wind_at(Vector3(-19.0, 2.0, 22.0)).is_zero_approx(), "…and the main bedroom is calm")
+
+	# Nobody spawns inside a wall, a car or the furniture.
+	var space := arena.get_world_3d().direct_space_state
+	var capsule := CapsuleShape3D.new()
+	capsule.radius = Actor.BODY_RADIUS
+	capsule.height = Actor.BODY_HEIGHT
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = capsule
+	query.collision_mask = Layers.WORLD
+	var clear := 0
+	for marker in arena.spawn_points:
+		query.transform = Transform3D(Basis.IDENTITY, marker.global_position + Vector3.UP * (Actor.BODY_HEIGHT * 0.5 + 0.05))
+		if space.intersect_shape(query, 1).is_empty():
+			clear += 1
+	check(clear == arena.spawn_points.size(), "every spawn point is clear of walls and furniture (%d/%d)" % [clear, arena.spawn_points.size()])
+
+	# Blue vs Orange: both ends have plenty of home spawns.
+	check(arena.team_bases.size() == 2, "blue's end (front) and orange's end (backyard)")
+	var home := [0, 0]
+	for marker in arena.spawn_points:
+		var spot := marker.global_position
+		home[0 if spot.distance_to(arena.team_bases[0]) < spot.distance_to(arena.team_bases[1]) else 1] += 1
+	check(home[0] >= 6 and home[1] >= 6, "each team has at least 6 home spawns (blue %d, orange %d)" % [home[0], home[1]])
+
+	# Bots can get everywhere: every room, round both sides, and up the ramp onto the patio roof.
+	var waited := 0
+	while not arena.is_navigation_ready and waited < 900:
+		await get_tree().physics_frame
+		waited += 1
+	check(arena.is_navigation_ready, "navmesh baked (after %d frames)" % waited)
+	var map := arena.geometry.get_navigation_map()
+	var start := arena.spawn_points[0].global_position
+	waited = 0
+	while NavigationServer3D.map_get_path(map, start, arena.team_bases[1], true).is_empty() and waited < 300:
+		await get_tree().physics_frame
+		waited += 1
+	var reachable := 0
+	var missing: Array[String] = []
+	for point in arena.roam_points:
+		var path := NavigationServer3D.map_get_path(map, start, point, true)
+		if path.size() >= 2 and path[-1].distance_to(point) < 2.0:
+			reachable += 1
+		else:
+			missing.append(str(point))
+	check(reachable == arena.roam_points.size(), "every room and yard is reachable from the driveway (%d/%d) %s" % [reachable, arena.roam_points.size(), ", ".join(missing)])
+	var roof := NavigationServer3D.map_get_path(map, start, Vector3(7.5, HomeTurf.PATIO_ROOF_TOP, -22.5), true)
+	check(roof.size() >= 2 and roof[-1].y > HomeTurf.PATIO_ROOF_TOP - 0.5, "bots can walk up the race-track ramp onto the patio roof")
+	arena.queue_free()
+	await physics_frames(2)
+
+
+func _test_home_turf_match() -> void:
+	section("Home Turf: a whole bot match")
+	var saved_mode := GameSettings.match_mode
+	var saved_arena := GameSettings.arena
+	var saved_bots := GameSettings.bot_count
+	GameSettings.arena = 1
+	GameSettings.bot_count = 3
+	var game := start_match(GameSettings.MatchMode.TEAMS)
+	var controller := game.get("controller") as MatchController
+	check(controller.arena is HomeTurf, "picking HOME TURF in the lobby loads the house")
+	var player := game.get("player") as Player
+	player.controls_enabled = false
+	var bots: Array = game.get("bots")
+	var starts: Array[Vector3] = []
+	for bot: Bot in bots:
+		starts.append(bot.global_position)
+	await fast_forward(controller.mode.countdown_seconds + 60.0)
+	player.controls_enabled = false
+	var moved := 0
+	for i in bots.size():
+		if (bots[i] as Bot).global_position.distance_to(starts[i]) > 4.0:
+			moved += 1
+	check(moved >= 2, "bots find their way round the house (%d of %d moved)" % [moved, bots.size()])
+	var tags := 0
+	for entry in controller.board.entries:
+		tags += entry.tags
+	check(tags > 0, "and tag each other within a minute (%d tags)" % tags)
+	var inside := true
+	for actor in controller.actors:
+		var spot := actor.global_position
+		inside = inside and spot.x > HomeTurf.LOT_WEST and spot.x < HomeTurf.LOT_EAST \
+				and spot.z > HomeTurf.LOT_NORTH and spot.z < HomeTurf.LOT_SOUTH and spot.y > -1.0
+	check(inside, "everyone stays inside the lot")
+	GameSettings.arena = saved_arena
+	GameSettings.bot_count = saved_bots
+	await end_match(game, saved_mode)
+
+
+## Regression: in team modes team-mates ignored each other when picking a spawn,
+## so two could land on the same marker and the physics flung them into the sky.
+func _test_no_stacked_spawns() -> void:
+	section("Nobody spawns on top of anyone")
+	var saved_mode := GameSettings.match_mode
+	var saved_bots := GameSettings.bot_count
+	var saved_arena := GameSettings.arena
+	GameSettings.bot_count = GameSettings.MAX_BOTS
+	for arena_index in MatchScene.ARENAS.size():
+		GameSettings.arena = arena_index
+		for attempt in 3:
+			var game := start_match(GameSettings.MatchMode.TEAMS)
+			var controller := game.get("controller") as MatchController
+			var closest := INF
+			for i in controller.actors.size():
+				for j in i:
+					closest = minf(closest, controller.actors[i].global_position.distance_to(controller.actors[j].global_position))
+			check(closest >= MatchController.SPAWN_CLEARANCE, "%s, 4 v 4, start %d: everyone on their own spot (closest %.1f m)"
+					% [MatchScene.ARENAS[arena_index]["name"], attempt + 1, closest])
+			await end_match(game, saved_mode)
+	GameSettings.bot_count = saved_bots
+	GameSettings.arena = saved_arena

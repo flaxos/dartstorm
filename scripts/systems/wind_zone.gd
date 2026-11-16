@@ -12,6 +12,9 @@ extends Node3D
 @export var size: Vector3 = Vector3(20.0, 5.0, 12.0)
 @export var tint: Color = Color(0.75, 0.95, 1.0)
 @export var show_fan: bool = true
+## The faint tinted box that shows the zone's edges. Indoors (where the zone
+## fills a whole room) it just tints everything, so it can be turned off.
+@export var show_volume: bool = true
 ## 0 = steady wind. Above 0 the strength pulses, ready for stormy arenas.
 @export_range(0.0, 1.0) var gust_amount: float = 0.0
 @export var gust_period: float = 4.0
@@ -96,6 +99,7 @@ func _build_visuals() -> void:
 	volume_material.albedo_color = Color(tint, 0.07)
 	volume.material_override = volume_material
 	volume.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	volume.visible = show_volume
 	add_child(volume)
 
 	# Streaks of air racing downwind.

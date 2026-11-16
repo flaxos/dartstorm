@@ -19,6 +19,8 @@ signal announcement(entry: ScoreEntry, text: String, color: Color, sound: String
 const MULTI_TAG_WINDOW := 4.0
 ## A streak at least this long earns a "SHUT DOWN!" when it's ended.
 const SHUTDOWN_STREAK := 3
+## A spawn point this close to someone counts as taken.
+const SPAWN_CLEARANCE := 2.5
 const MULTI_TAG_TEXT := {2: "DOUBLE TAG!", 3: "TRIPLE TAG!"}
 const MULTI_TAG_MAX_TEXT := "FOAM FRENZY!"
 const STREAK_TEXT := {3: "ON A ROLL!", 5: "UNSTOPPABLE!", 8: "DARTSTORM!!"}
@@ -312,12 +314,24 @@ func _choose_spawn(actor: Actor) -> Transform3D:
 	if markers.is_empty():
 		markers = arena.spawn_points
 	var scored: Array = []
+	var free := 0
 	for marker in markers:
 		var nearest := 999.0
+		var taken := false
 		for other in actors:
-			if other != actor and other.alive and other.team_id != actor.team_id:
-				nearest = minf(nearest, marker.global_position.distance_to(other.global_position))
+			if other == actor or not other.alive:
+				continue
+			var distance := marker.global_position.distance_to(other.global_position)
+			# Never on top of anyone, team-mates included: overlapping bodies get
+			# pushed apart by the physics, which can fling them into the sky.
+			taken = taken or distance < SPAWN_CLEARANCE
+			if other.team_id != actor.team_id:
+				nearest = minf(nearest, distance)
+		if taken:
+			nearest = -1.0  # Only if every spot is taken.
+		else:
+			free += 1
 		scored.append([nearest, marker])
 	scored.sort_custom(func(a: Array, b: Array) -> bool: return a[0] > b[0])
-	var pick: Marker3D = scored[randi() % mini(3, scored.size())][1]
+	var pick: Marker3D = scored[randi() % clampi(free, 1, 3)][1]
 	return pick.global_transform

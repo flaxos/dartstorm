@@ -16,7 +16,7 @@ scripts/
   combat/    DartData, WeaponData, WeaponState, Arsenal, Actor, Hitbox, DartProjectile, DartPool
   ai/        Bot, BotDifficulty
   player/    Player
-  arena/     Arena (base), ArenaKit (primitive builders), BackyardFortress
+  arena/     Arena (base: shared sky, sun and clouds), ArenaKit (primitive builders, houses, trees), BackyardFortress, HomeTurf
   systems/   WindField, WindZone, ReflectiveSurface, AmmoBucket, JumpPad, WobbleTarget, PowerUpPickup, DogHouse
   effects/   BlasterModel, CharacterModel (with hats), FoamBurst, CombatFx, Podium
   ui/        Hud, Crosshair, WindGauge, PauseMenu, SettingsPanel, main_menu (the lobby)
@@ -32,6 +32,7 @@ tools/
   run.sh                play / editor / demo
   check_scripts.gd      strict compile (every warning is an error)
   dart_table.gd         prints the GDD dart-flight table from the real dart code
+  arena_shots.gd        overview screenshots of an arena (needs a display)
 docs/                   GDD, ARCHITECTURE, ROADMAP, DECISIONS, CONCEPT_BRIEF, UAT, TUNING
 ```
 
@@ -250,3 +251,11 @@ depth-of-field far blur on the camera. Name tags use `ALPHA_CUT_OPAQUE_PREPASS` 
 blurred. The squad is rebuilt whenever the mode or bot count changes, using the same `MatchScene.team_bot_count()` and
 `bot_colors()` as the match, so the lobby always shows exactly who you'll play with. Each squad member lives under one
 "slot" node so CHARACTER can hide everyone but you, and the camera tweens to a close-up.
+
+## 17. Arenas (v0.4.0)
+`MatchScene.ARENAS` lists the playable arenas (name for the lobby, scene path); `GameSettings.arena` picks one.
+An arena is a script extending `Arena` that builds itself in `_build()`: call `_build_sky_and_sun(sun_pitch, warm_fill)`,
+put everything solid under `geometry` (so the navmesh sees it), looks under `decor`, and use the `add_*` helpers for
+spawns, buckets, mirrors, wind zones, targets and the power-up spot. Set `team_bases` (blue, then orange) for TEAMS.
+To add one: write the script and a thin `.tscn`, add it to `ARENAS`, and copy the *Home Turf* tests (spawns clear,
+every roam point reachable, a bot match). Check the layout with `tools/arena_shots.gd`.

@@ -17,10 +17,27 @@
 | **v0.1.0 release** | ✅ Merged (PR #1), **UAT passed 2026-11-15** |
 | **v0.1.1 hardening + docs** | ✅ Merged (PR #2) |
 | **v0.2.0 controller + appeal pack** | ✅ Built and validated. PR #3. ⏳ UAT with young players and a real controller |
-| **v0.3.0 the players' design: lobby, team modes, Linux build** | ✅ Built and validated (251 tests). ⏳ UAT |
+| **v0.3.0 the players' design: lobby, team modes, Linux build** | ✅ Built and validated. PR #5 to main. ⏳ UAT |
+| **v0.4.0 Home Turf arena** | ✅ Built and validated (276 tests). ⏳ UAT |
 | Phase 7 Expansion | ⏳ Not started (on purpose) |
 
-## v0.3.0: the young players' design (this release)
+## v0.4.0: Home Turf (this release)
+
+Goal: the house arena, built now at the owner's request (it was item 5 below).
+
+- [x] **Home Turf** (GDD §5.3): a fictional family home at toy scale. A dollhouse with no roof; every room furnished as
+      cover; beds and a kids'-room trampoline; three mirrors; a giant fan in the kitchen; a climbable patio roof up a toy
+      race-track ramp; a garage with two cars; front yard, driveway, footpath and street; side paths for flanking
+- [x] **ARENA** option in the lobby (BACKYARD / HOME TURF), remembered; `--arena=N` for screenshot runs
+- [x] Shared arena pieces: sky/sun/clouds in `Arena` (with sun height and warm fill options), houses and trees in
+      `ArenaKit`; `WindZone.show_volume` for indoor wind
+- [x] `tools/arena_shots.gd`: overview screenshots of any arena
+- [x] **Fix:** in team modes two team-mates could spawn on the same spot and get flung into the sky (since v0.3.0)
+- [x] TEAMS description no longer mentions forts (it fits any arena)
+
+**Acceptance:** `./tools/validate.sh` passes (**276/276 tests**) ✅ · UAT section J ⏳.
+
+## v0.3.0: the young players' design
 
 Goal: the young players drew their own DARTSTORM before seeing it (GDD §1.9). Build what they drew first.
 
@@ -127,8 +144,7 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
    ladder, each element visibly distinct, tests.
 4. **Rewards (D-028):** XP and **levels** on the lobby card, **missions**, **coins** (earned only), a **shop** for hats,
    colours and blaster skins, and a free reward track. No gems, no real money, no power for sale.
-5. **Home Turf arena** (GDD §5.3): a fictional family home at toy scale (×3), house + patio + garage first, then the
-   front yard and street, then Splash Pond park as a big map. Everything fictional (D-031).
+5. ✅ **Home Turf arena** (v0.4.0). Next for it: the suburb map (Splash Pond park, Foam Field) as a bigger arena.
 6. **Playtest-driven tuning** of the `.tres` numbers ([TUNING.md](TUNING.md)) as feedback arrives.
 7. **Better models** *(the big remaining look item)*: toy-style blasters and characters (CC0 packs with licences
    recorded, or nicer primitives). Plus a "tagged by" camera.

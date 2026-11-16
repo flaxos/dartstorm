@@ -331,6 +331,7 @@ func _build_targets() -> void:
 
 func _build_spawns() -> void:
 	var centre := Vector3.ZERO
+	team_bases = [Vector3(-28.0, FORT_HEIGHT, 0.0), Vector3(28.0, FORT_HEIGHT, 0.0)]
 	for side: float in [-1.0, 1.0]:
 		add_spawn(Vector3(side * 28.5, FORT_HEIGHT, -3.0), centre)
 		add_spawn(Vector3(side * 28.5, FORT_HEIGHT, 3.0), centre)

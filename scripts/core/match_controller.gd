@@ -38,6 +38,8 @@ var total_tags: int = 0
 var _countdown_left: float = 0.0
 var _last_whole_second: int = -1
 var _respawns: Dictionary = {}
+## Team modes: the team currently in front (-1 before anyone scores or when level).
+var _leading_team: int = -1
 
 
 func setup(p_mode: GameMode, p_arena: Arena) -> void:
@@ -232,6 +234,21 @@ func _announce_tag(attacker: ScoreEntry, victim: ScoreEntry, ended_streak: int) 
 		announce(attacker, call_out(attacker, multi), color, &"streak")
 	if STREAK_TEXT.has(attacker.streak):
 		announce(attacker, call_out(attacker, STREAK_TEXT[attacker.streak]), color, &"streak")
+	if mode.is_team_mode():
+		_announce_team_lead()
+
+
+## "BLUE TEAM TAKES THE LEAD!" whenever a different team goes out in front.
+func _announce_team_lead() -> void:
+	var leader := mode.winning_team(board)
+	if leader < 0 or leader == _leading_team:
+		return
+	_leading_team = leader
+	var mine := false
+	for entry in board.entries:
+		mine = mine or (entry.is_human and entry.team == leader)
+	var text := "YOUR TEAM TAKES THE LEAD!" if mine else "%s TEAM TAKES THE LEAD!" % GameMode.team_name(leader)
+	announce(null, text, GameMode.team_color(leader).lightened(0.3), &"announce")
 
 
 func _on_fired(state_fired: WeaponState, actor: Actor) -> void:
@@ -261,6 +278,16 @@ func _on_ammo_collected(amount: int, actor: Actor) -> void:
 		entry.darts_collected += amount
 
 
+## True if `point` is on this team's side of the yard (Blue vs Orange only;
+## every point counts as home in other modes).
+func is_home_spawn(team: int, point: Vector3) -> bool:
+	if mode.teams != GameMode.Teams.BLUE_VS_ORANGE or arena.team_bases.size() < 2:
+		return true
+	var home := arena.team_bases[team % arena.team_bases.size()]
+	var away := arena.team_bases[(team + 1) % arena.team_bases.size()]
+	return point.distance_to(home) < point.distance_to(away)
+
+
 func _spawn(actor: Actor) -> void:
 	actor.respawn(_choose_spawn(actor))
 	_equip(actor)
@@ -273,15 +300,22 @@ func _equip(actor: Actor) -> void:
 	actor.arsenal.set_loadout(mode.get_loadout(entry), mode.infinite_reserve)
 
 
-## Picks a spawn point far from everyone else, with a little randomness.
+## Picks a spawn point far from rivals, with a little randomness. In Blue vs
+## Orange you always come back at your own end of the yard.
 func _choose_spawn(actor: Actor) -> Transform3D:
 	if arena == null or arena.spawn_points.is_empty():
 		return actor.global_transform
-	var scored: Array = []
+	var markers: Array[Marker3D] = []
 	for marker in arena.spawn_points:
+		if is_home_spawn(actor.team_id, marker.global_position):
+			markers.append(marker)
+	if markers.is_empty():
+		markers = arena.spawn_points
+	var scored: Array = []
+	for marker in markers:
 		var nearest := 999.0
 		for other in actors:
-			if other != actor and other.alive:
+			if other != actor and other.alive and other.team_id != actor.team_id:
 				nearest = minf(nearest, marker.global_position.distance_to(other.global_position))
 		scored.append([nearest, marker])
 	scored.sort_custom(func(a: Array, b: Array) -> bool: return a[0] > b[0])

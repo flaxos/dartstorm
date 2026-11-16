@@ -14,6 +14,7 @@
 script = ExtResource("1")
 id = &"gun_game"
 display_name = "Gun Game"
+short_name = "GUN GAME"
 description = "Every tag swaps your blaster for the next one on the ladder. Score a tag with the Chainstorm to win!"
 duration_seconds = 300.0
 countdown_seconds = 3

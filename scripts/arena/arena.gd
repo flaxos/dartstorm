@@ -33,6 +33,9 @@ var roam_points: Array[Vector3] = []
 ## Where a power-up blaster (the Chainstorm in power-up mode) appears.
 var power_up_spots: Array[Vector3] = []
 var buckets: Array[AmmoBucket] = []
+## Each team's home end, by team number (0 blue, 1 orange). Team modes respawn
+## players at the end nearest their own base.
+var team_bases: Array[Vector3] = []
 
 var _spawn_root: Node3D
 

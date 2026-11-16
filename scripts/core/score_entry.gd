@@ -7,6 +7,8 @@ var display_name: String = ""
 var color: Color = Color.WHITE
 var hat: StringName = &"cap"
 var is_human: bool = false
+## The actor's team number (in solo modes everyone has their own).
+var team: int = 0
 ## Times this actor tagged someone out.
 var tags: int = 0
 ## Times this actor was tagged out.

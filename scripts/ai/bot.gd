@@ -65,7 +65,7 @@ func _ready() -> void:
 	_model = CharacterModel.new()
 	_model.name = "Model"
 	add_child(_model)
-	_model.setup(display_name, color)
+	_model.setup(display_name, color, hat_id)
 
 	_sight_query = PhysicsRayQueryParameters3D.new()
 	_sight_query.collision_mask = Layers.WORLD

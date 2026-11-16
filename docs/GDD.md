@@ -4,11 +4,11 @@
 
 | | |
 |---|---|
-| **Game version** | 0.2.0 (controller support and appeal pack) |
-| **Status** | v0.1.0 **passed UAT** on 2026-11-15; v0.1.1 hardening merged; v0.2.0 awaiting UAT with young players (see [UAT.md](UAT.md)) |
+| **Game version** | 0.3.0 (the young players' lobby, team modes and a Linux build) |
+| **Status** | v0.1.0 **passed UAT** on 2026-11-15; v0.1.1 hardening merged; v0.2.0 and v0.3.0 awaiting UAT with young players (see [UAT.md](UAT.md)) |
 | **Platform** | Linux first (the target machine runs Linux). Windows is deferred until needed. |
 | **Authority** | This GDD is the authoritative description of the game. Numbers mirror the `.tres` files in `resources/`. If they ever disagree, the `.tres` file is what the game uses, so fix this doc. |
-| **Source vision** | [CONCEPT_BRIEF.md](CONCEPT_BRIEF.md), the original brief, archived verbatim (personal details redacted). §1 summarises it and §2 tracks it. |
+| **Source vision** | [CONCEPT_BRIEF.md](CONCEPT_BRIEF.md), the original brief, archived verbatim (personal details redacted). §1 summarises it and §2 tracks it. §1.9 records the young players' own design sketch. |
 | **Related** | [ARCHITECTURE.md](ARCHITECTURE.md) (how it's built) · [TUNING.md](TUNING.md) (changing numbers without code) · [ROADMAP.md](ROADMAP.md) · [DECISIONS.md](DECISIONS.md) |
 
 ---
@@ -81,6 +81,23 @@ Every feature should strengthen at least one pillar and weaken none.
 
 ---
 
+### 1.9 The young players' own design *(2026-11-16)*
+Before they had seen the game, the young players drew their own DARTSTORM: a home screen and a page of ideas.
+The photo isn't kept in the repo (it has their names on it). This is what it asked for, and what we're doing about it:
+
+| Their idea | Status | Notes |
+|---|---|---|
+| **A lobby:** your character in the middle on a round platform, your squad on platforms beside you, a player card top left, a column of buttons on the left, modes top right, the logo bottom middle, a big PLAY bottom right | ✅ v0.3.0 | §3.22, built to their layout |
+| **Solo, Duo and Team modes** | ✅ v0.3.0 | SOLO, DUOS, TEAMS (Blue vs Orange), §3.21 |
+| **Zombie mode** | ⏳ Next | Goofy green foam zombies: tagged players join the horde (§3.21 note) |
+| **Fire, Water and Electric** (lightning bolts everywhere) | ⏳ Planned | Elemental darts and the missing Gun Game rungs (§2.4); lightning bolts already crackle over the lobby |
+| **Goggles, bunny ears, horns, spiky hair** (their characters) | ✅ v0.3.0 | New hats (§3.16) |
+| **Shield** | ⏳ Planned | A foam shield power-up |
+| **Missions, Level, Coins, Shop, Upgrade, Pass** | ⏳ Planned | Earned by playing only, cosmetics only, one currency (coins), no gems, no real money (§10, D-028) |
+| **Gems** | ✗ Not doing | A second currency is a pattern built to sell things |
+| **Chat, Clan, 32 players, League, Private** | ✗ Not now | Needs online play; chat isn't safe for young players. Couch/LAN play may come later (D-008) |
+| **Phone controls** (LEFT/RIGHT sticks, SHOOT button) | ✅ by controller | The PC version does this with a gamepad (§3.17) |
+
 ## 2. Brief traceability
 
 Status key: ✅ done · 🟡 partly done or untested · ⏳ planned, not started. Brief section numbers refer to
@@ -115,7 +132,7 @@ Status key: ✅ done · 🟡 partly done or untested · ⏳ planned, not started
 | Dart Sprayer: full-auto, fast, moderate spread, larger magazine | ✅ | 10/s, 2.6°, 30-dart mag |
 | Flax's Chainstorm: oversized belt-fed rotary, backpack, visible belt, rotating barrels, spin-up, very high rate, strong feedback, large capacity, move penalty | ✅ | §4.2 |
 | Arena: blue and orange bases, elevations, ramps, platforms, foam barriers, crates, treehouse, walkways, 2 mirrors, 1 wind zone, buckets, landmarks | ✅ | §5.1 |
-| ≥2 bots that move, find, aim, fire, react, respawn, navigate, configurable difficulty | ✅ | 2–5 bots, Easy/Normal/Hard, navmesh (§3.14) |
+| ≥2 bots that move, find, aim, fire, react, respawn, navigate, configurable difficulty | ✅ | 2–7 bots, Easy/Normal/Hard, navmesh (§3.14) |
 | 5-minute round, FFA scoring, scoreboard, tag feed, countdown, respawn timer, results, restart | ✅ | `MatchController`, `Hud` |
 
 ### 2.3 Physical dart system (brief §4)
@@ -152,12 +169,13 @@ Status key: ✅ done · 🟡 partly done or untested · ⏳ planned, not started
 | Chainstorm's high ammo use makes buckets strategic | ✅ | A full bucket is ≈5 s of Chainstorm fire |
 | Capturable team buckets | ⏳ | Roadmap |
 | Weapons as Resources; config, presentation and runtime separate | ✅ | `WeaponData` / `BlasterModel` / `Arsenal` |
-| Character customisation (vision list) | 🟡 | v0.2.0: name, 8 colours, 7 hats (§3.16). Outfits and blaster skins later |
+| Character customisation (vision list) | 🟡 | Name, 8 colours, 11 hats (§3.16). Outfits and blaster skins later |
+| Blue team versus orange team; team battles (vision list) | ✅ | v0.3.0: TEAMS (Blue vs Orange) and DUOS (§3.21) |
 | XP, mastery, upgrades, skins, alternate and elemental darts | ⏳ | Deliberately deferred until combat is proven fun (§10) |
 | No microtransactions | ✅ | And never |
 | HUD: crosshair, weapon name, ammo, tag meter, timer, score, wind, hit confirmation, ricochet notice | ✅ | §8 |
 | Deep blue, vibrant orange, rounded, chunky fonts | ✅ | Lilita One (SIL Open Font License) everywhere since v0.2.0 |
-| Main menu, settings, pause | ✅ | Plus **Reset to defaults** in v0.1.1 |
+| Main menu, settings, pause | ✅ | Plus **Reset to defaults** in v0.1.1. The main menu became the players' own lobby design in v0.3.0 (§3.22) |
 
 ### 2.5 Engineering and process (brief §11–§16)
 | Requirement | Status | Where / notes |
@@ -165,7 +183,7 @@ Status key: ✅ done · 🟡 partly done or untested · ⏳ planned, not started
 | Suggested project layout | ✅ | ARCHITECTURE §1 |
 | Typed GDScript, signals, Resources, few singletons (2), error handling | ✅ | Hardened loading in v0.1.1 |
 | No placeholder/TODO core features, no fabricated assets | ✅ | All assets generated in code (`assets/README.md`) |
-| Headless validation and automated tests | ✅ | `tools/validate.sh`: import, strict compile (zero warnings), boots, 205 tests, leak check |
+| Headless validation and automated tests | ✅ | `tools/validate.sh`: import, strict compile (zero warnings), boots, 251 tests, leak check |
 | Bounded projectiles, pooling | ✅ | 400-dart pool; effect budget |
 | Four living docs + CLAUDE.md | ✅ | Plus CONCEPT_BRIEF, UAT, TUNING |
 
@@ -352,13 +370,15 @@ tag and a tag meter floating above. If your colour is close to a bot's, that bot
 - Trampolines launch you onto the **treehouse**, the best view in the yard.
 
 ### 3.16 Your player: name, colour, hat *(v0.2.0)*
-Main menu → **YOUR PLAYER**, with a live 3D preview of your kid beside the panel.
+Lobby → **CHARACTER** (called YOUR PLAYER before v0.3.0). The camera zooms in on you while you choose.
 - **Name:** up to 12 letters, numbers, spaces, `-` or `_`. Blank shows as "You". **RANDOM** picks a fun name
   (Captain Foam, Sir Splat, Ricochet Rex, …) so a controller player never needs to type.
 - **Colour:** 8 choices (blue, red, green, purple, pink, yellow, orange, teal). **Your darts fly in your colour**,
   and your name shows in it in the tag feed and scoreboard.
-- **Hat:** cap, beanie, propeller (it spins!), party hat, cowboy hat, crown, or no hat. You see it on the podium.
-- Saved on this computer only (`user://settings.cfg`). **Reset to defaults** in Settings doesn't touch your look.
+- **Hat:** cap, beanie, propeller (it spins!), party hat, cowboy hat, crown, goggles, bunny ears, horns, spiky hair, or
+  no hat. The last four came from the young players' drawing (§1.9). Bots wear hats too.
+- **Team modes:** your shirt and darts switch to your team's colour (your hat stays), so friends are easy to spot.
+- Saved on this computer only (`~/.local/share/dartstorm/settings.cfg`). **Reset to defaults** in Settings doesn't touch your look.
 
 ### 3.17 Playing with a controller *(v0.2.0)*
 Plug a pad in at any time, even mid-match: a notice pops up ("… connected - ready to play!") and it just works.
@@ -427,6 +447,44 @@ The menu music returns after 3 seconds.
 | Bullseye Boss | Most bullseyes | 1 |
 | Hot Streak | Longest streak | 3 |
 | Foam Magnet | Tagged the most | 3 |
+
+### 3.21 Team modes: SOLO, DUOS and TEAMS *(v0.3.0)*
+| Mode | Who's on your side | Bots | Wins |
+|---|---|---|---|
+| **SOLO** (Backyard Battle) | Nobody: everyone for themselves | 2–7 | Most points |
+| **DUOS** | You and one bot buddy, against other pairs (blue, orange, green, purple) | Rounded up to make pairs: 3 → 3 (2 pairs), 4 → 5 (3 pairs), 7 → 7 (4 pairs) | The pair with the most points added together |
+| **TEAMS** (Blue vs Orange) | Half the players. You're always **blue** | Rounded up to make even teams: 2 → 3 (2 v 2), 5 → 5 (3 v 3), 7 → 7 (4 v 4) | The team with the most points added together |
+| **GUN GAME** | Nobody | 2–7 | First to tag with the last blaster |
+
+- **No friendly fire:** your darts fly straight through team-mates. Bots never aim at team-mates, and aim assist ignores them.
+- **Team colours:** everyone on a team wears the team colour (shirt, darts, name), and keeps their own hat.
+- **Home ends (TEAMS):** blue starts and respawns at the **Blue Fort** end, orange at the **Orange Fort** end. DUOS uses the
+  normal "far from rivals" spawns (ignoring your buddy).
+- **Scoring:** the usual points (§3.12) for each player. The team score is everyone's points added up.
+- **HUD:** coloured team chips under the clock (`BLUE 1200  ORANGE 900`), your team outlined. The score panel says
+  `TEAM PLACE 1/2`. The scoreboard groups players under their team's total.
+- **Announcer:** "YOUR TEAM TAKES THE LEAD!" / "ORANGE TEAM TAKES THE LEAD!" whenever a different team goes in front.
+- **End:** "YOUR TEAM WINS!", "ORANGE TEAM WINS!" or "IT'S A DRAW!" (level points and tags). On the podium each **step holds a
+  whole team**, winners on top, with the banner in the winning team's colour. Awards are still for individual players.
+- **Next: ZOMBIES** (from the drawing). Planned rules: one or two players start as goofy green foam zombies with no
+  blaster. A zombie touch turns a survivor into a zombie. Darts knock zombies back for a moment, and they get up again.
+  Survivors win if anyone's left at the end; zombies win if everyone turns.
+
+### 3.22 The lobby (the young players' design) *(v0.3.0)*
+The main menu is the players' own drawing (§1.9), built in 3D:
+- **The bunker:** a floating grass island just south of the yard, with the backyard softly blurred behind. **You** stand
+  in the middle on a big white platform with a gold ring, holding the Chainstorm. Your bots stand on platforms around you.
+  Back rows stand higher, like a team photo. Each has a name tag over their head (the speech bubbles in the drawing), a
+  ring in their colour, and a blaster. In DUOS and TEAMS everyone wears their match colour and team-mates stand nearest.
+  Now and then someone does a little hop. Two yellow lightning bolts crackle overhead.
+- **Top left:** the player card, "*NAME*'S BUNKER" (or "YOUR BUNKER" with a "SET YOUR NAME!" hint), with **CHARACTER**,
+  **HOW TO PLAY**, **SETTINGS** and **QUIT** under it.
+- **Top right:** **PICK A MODE**: four cards (SOLO, DUOS, TEAMS, GUN GAME), a one-line description, **BOTS − n +** with
+  what it means ("3 v 3", "3 PAIRS", "+1 BOT TO EVEN THE TEAMS"), **BOT SKILL** and **CHAINSTORM** (EVERYONE / POWER-UP;
+  hidden for Gun Game). Everything is remembered.
+- **Bottom middle:** the DARTSTORM logo with three blue swooshes. **Bottom right:** a huge **PLAY** button with the
+  mode's name over it. PLAY has focus, so a controller player just presses A.
+- Planned from the drawing: a level and coins on the card, and MISSIONS / SHOP buttons in the column (§10).
 
 ---
 
@@ -528,6 +586,44 @@ The treehouse deck also hosts the power-up spot (§3.19).
 | **Frost Factory** | Ice slides, slippery floors, frozen darts, moving obstacles | Actor movement | Per-surface friction, ICE darts, conveyor obstacles |
 
 Tempest Treehouse is the cheapest next arena because almost all of its systems already exist.
+
+### 5.3 Home Turf (planned): a real home, toy-sized *(requested 2026-11-16)*
+A map built from the players' **own house and neighbourhood**: battle through your own rooms and out into the street.
+The source was a house floor plan and a street-map screenshot.
+
+> **Privacy rule (D-031):** the repo is public. The real address, street, suburb, park, creek and shop names, people's names
+> and the screenshots themselves never go in the repo, commits or PRs. Everything gets a made-up name. The layout below
+> is a generic single-storey family home and can't be traced to anyone.
+
+**The house:** a single-storey family home: an open family/kitchen area at the back, a covered patio beside it, a
+lounge and dining area in the middle, four bedrooms (one with its own bathroom), a bathroom and laundry, an entry with
+a small porch, and a double garage. Sizes below are **game sizes** (already scaled up, rounded) so the real plan
+can't be matched to a listing:
+
+| Zone | Game size (m) | Game idea |
+|---|---|---|
+| Family room and kitchen (back of the house) | ~24 × 12 | Central battleground: kitchen island and bench as cover, fridge, big back windows |
+| Covered patio (beside the family room) | ~27 × 15 | Outdoor fight under a roof: BBQ, outdoor table |
+| Lounge and dining | ~24 × 12 | Couch fort, TV wall, a table to duck under |
+| Kids' bedrooms ×2 | ~10 × 10 each | Bunk beds, toy boxes, built-in wardrobes as hiding spots |
+| Study | ~10 × 9 | Desk, bookshelves |
+| Main bedroom with walk-in wardrobe and bathroom | ~11 × 11 | Bed as a trampoline |
+| Bathroom, laundry, hallway | narrow | Tight corridors linking the wings: ambush routes |
+| Entry and front porch | small | Front-door spawn |
+| Double garage (beside the patio) | ~17 × 17 | Two parked cars as cover, a workbench, the roller door out to the driveway |
+
+**Scale:** real rooms are far too small for a shooter at our running speed (7 m/s), so players are **toy-sized**: the
+house is built about **×3** (a 4 m room becomes 12 m), as in the table. Furniture becomes giant cover. Chairs are climbable platforms,
+the kitchen island is a fort, and beds are trampolines (JumpPad). This is the "shrunk in your own house" fantasy.
+
+**The neighbourhood** (later, bigger map): a curving suburban street with a roundabout, front yards, a park with a
+**lake** and a **creek** running out of it, a playing field (oval) and footpaths. It suits ZOMBIES and big TEAMS games.
+The lake and creek are perfect for the planned **Water** darts.
+
+**Build plan:** (1) house interior + alfresco + garage as one arena, `scripts/arenas/home_turf.gd` built from `ArenaKit`
+like Backyard Fortress, with team bases in the garage and the alfresco; (2) front yard and street; (3) the park, lake and
+creek as a separate large map. Each step must keep 60 fps and bots navigating (the navmesh handles doorways if they're
+at least 2 m wide at game scale).
 
 ---
 
@@ -667,6 +763,28 @@ to that (sections of `tests/test_runner.gd`). Items marked *(v0.1.1)* were added
 - **Rules:** §5.1 Backyard life. Solid props live under the arena's geometry, so bots path around them.
 - **Tests:** *Backyard props*; *Backyard Fortress navigation* (every roam point still reachable with the props in place).
 
+### 6.23 Team modes *(v0.3.0)*
+- **Rules:** §3.21. Data: `GameMode.teams` (SOLO, DUOS, BLUE_VS_ORANGE) in `resources/modes/duos.tres` and
+  `blue_vs_orange.tres`; `team_for()`, `bots_for()`, `rank_teams()`, `winning_team()`, `podium_places()`.
+- **Guarantees:** teams are always even (an extra bot is added, never more than the 7-bot roster). Team-mates can't tag
+  each other (darts pass through). TEAMS respawns are always at your own end. Level team scores are a draw, never a
+  random winner. Solo modes behave exactly as before (each player is a "team" of one).
+- **Tests:** *Team modes: rules*, *Team modes: Blue vs Orange match*, *Team modes: Duos match*.
+
+### 6.24 Lobby *(v0.3.0)*
+- **Rules:** §3.22.
+- **Guarantees:** the squad shown is exactly the bots the next match will bring (same count and colours, from
+  `MatchScene.team_bot_count()` and `bot_colors()`). PLAY has focus on arrival. Up to 7 bots fit on the island. B closes
+  CHARACTER and HOW TO PLAY. Bots in matches wear their own hats (a v0.2.0 bug where they all wore caps is fixed).
+- **Tests:** *Lobby (the players' own menu design)*, *Bots wear their own hats*.
+
+### 6.25 Linux build *(v0.2.0)*
+- **Rules:** `./tools/export_linux.sh` → one executable plus icon, README and `install-shortcut.sh`; settings in
+  `~/.local/share/dartstorm/` (D-027).
+- **Guarantees:** the script refuses to run without matching export templates, and fails if the exported game doesn't
+  boot headless and quit cleanly.
+- **Tests:** *Linux build: export preset*, plus the script's own smoke test.
+
 ---
 
 ## 7. Game feel and audio
@@ -736,10 +854,17 @@ podium and results (play again, main menu). Every menu works with keyboard, cont
 - **Readable signs:** world signs only show from the front, so nothing reads mirrored.
 - **Planned:** remappable keys and buttons, a colour-blind-safe team palette option, subtitles or icons for important sounds.
 
-## 10. Progression (planned, not built)
-Weapon XP and mastery, magazine/accuracy/rate/speed upgrades, cosmetic skins, alternate and elemental darts, barrel
-customisation. Upgrades must modify a *duplicated* WeaponData at runtime, never the shared `.tres`. **Don't start this
-until playtests show the core combat is fun.** No paid advantages, ever.
+## 10. Progression and rewards (planned, not built)
+The young players asked for levels, coins, missions, a shop, a pass and upgrades (§1.9). Combat passed UAT, so the
+brief's "don't build an economy until combat is fun" condition is met. The rules (D-028):
+- **One currency: coins.** Earned only by playing (points, wins, awards) and by **missions** ("tag 5 rivals with the
+  Pocket Popper", "score a ricochet tag", "hit 3 bullseyes"). No gems, no timers, no real money, nothing to buy.
+- **Spend on looks only:** hats, colours, blaster skins, dart colours, lobby decorations. **No paid or bought power**, so a
+  match against a friend stays fair. Weapon "upgrades" are cosmetic or sidegrades (trade-offs), never straight power.
+- **Level:** from XP (points earned), shown on the lobby card ("LEVEL 18" in the drawing). A free reward track (the
+  "pass") gives a cosmetic every few levels. Nothing expires.
+- Weapon XP and mastery, alternate and elemental darts and barrel customisation stay planned. Upgrades must modify a
+  *duplicated* WeaponData at runtime, never the shared `.tres`.
 
 ## 11. Glossary
 | Term | Meaning |
@@ -756,4 +881,8 @@ until playtests show the core combat is fun.** No paid advantages, ever.
 | **Power-up mode** | The optional rule where the Chainstorm lands on the map instead of being in everyone's hands |
 | **Aim assist** | Controller-only: turning slows while your crosshair is over a rival |
 | **Bucket** | An ammo refill station that drains and regenerates |
+| **Duo** | A pair: you and a bot buddy (DUOS mode) |
+| **Team chip** | A team's name and score under the clock in team modes |
+| **Bunker / lobby** | The main menu island where your squad stands (the players' design) |
+| **Home Turf** | The planned arena built from a real home, at toy size |
 | **Roam point** | A spot bots like to wander to |

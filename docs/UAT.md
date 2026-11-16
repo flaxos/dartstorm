@@ -82,6 +82,17 @@ UAT proves the *game* works. A release isn't done until both pass.
 | H2 | Run `install-shortcut.sh` in the DARTSTORM folder | DARTSTORM appears in the applications menu (and on the desktop) with the DARTSTORM icon, and launches from there |
 | H3 | Change a setting, quit, relaunch | The setting is kept (saved in `~/.local/share/dartstorm/`) |
 
+### I. The players' lobby and team modes *(v0.3.0)*
+| ID | Do this | Expect |
+|---|---|---|
+| I1 | Launch the game and show the players the main menu | **Their own drawing:** you on a gold-ringed platform with the Chainstorm, bots on platforms around you with name tags, lightning bolts, "YOUR BUNKER" card top left with buttons under it, mode cards top right, logo bottom middle, big PLAY bottom right |
+| I2 | CHARACTER: set a name, try the new hats (goggles, bunny ears, horns, spiky hair) | The camera zooms in on you, the others step away; DONE brings them back; the card now says "*NAME*'S BUNKER" |
+| I3 | Pick TEAMS, set BOTS to 2, then 7 | The island shows blue team-mates next to you and orange rivals behind; the panel says "2 v 2 (+1 BOT TO EVEN THE TEAMS)", then "4 v 4" |
+| I4 | Play TEAMS | Everyone on your team is blue (hats stay); your darts pass through team-mates; blue respawns at the Blue Fort end; team chips under the clock; "YOUR TEAM TAKES THE LEAD!"; scoreboard grouped by team |
+| I5 | Finish a TEAMS round | "YOUR TEAM WINS!" (or ORANGE / DRAW); each team dances together on one podium step |
+| I6 | Play DUOS with 4 bots | 3 pairs (blue, orange, green); you and your buddy share a colour and a score |
+| I7 | Use only a controller in the lobby | Every card and button is reachable; A on PLAY starts; B leaves CHARACTER and HOW TO PLAY |
+
 ### E. Comfort
 | ID | Do this | Expect |
 |---|---|---|
@@ -96,3 +107,4 @@ UAT proves the *game* works. A release isn't done until both pass.
 | 0.1.0 | 2026-11-15 | Project owner | ✅ **PASSED** | First playable (PR #1). UAT reported as passed with no blocking issues; no detailed notes recorded |
 | 0.1.1 | — | — | ↪ Folded into 0.2.0 | Hardening release (merged). Its re-checks (A4, B13, B14, D2, D3) are part of the 0.2.0 run |
 | 0.2.0 | — | — | ⏳ Pending | Controller support and appeal pack. Run everything, especially sections F (with a real pad) and G, and ask the players what they'd change |
+| 0.3.0 | — | — | ⏳ Pending | Their lobby, team modes, Linux build: sections H and I. Can be run together with 0.2.0 |

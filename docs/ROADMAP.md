@@ -36,7 +36,7 @@ Goal: the young players drew their own DARTSTORM before seeing it (GDD §1.9). B
 - [x] Fix: a flaky announcer test (it waited for physics frames, not HUD frames)
 - [x] Screenshot flags `--mode=N --bots=N` for demo runs
 - [x] Planned and written up: Zombie mode (§3.21), rewards with coins only (§10, D-028), the **Home Turf** arena built
-      from a real home at toy scale (§5.3, privacy rule D-031)
+      as a fictional family home at toy scale (§5.3, D-031)
 
 **Acceptance:** `./tools/validate.sh` passes (import, strict compile, boots, **251/251 tests**, leak check) ✅ ·
 UAT section I in UAT.md ⏳.
@@ -127,8 +127,8 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
    ladder, each element visibly distinct, tests.
 4. **Rewards (D-028):** XP and **levels** on the lobby card, **missions**, **coins** (earned only), a **shop** for hats,
    colours and blaster skins, and a free reward track. No gems, no real money, no power for sale.
-5. **Home Turf arena** (GDD §5.3): the players' own house at toy scale (×3), house + patio + garage first, then the
-   front yard and street, then the park with the lake and creek as a big map. Privacy rule D-031: no real names.
+5. **Home Turf arena** (GDD §5.3): a fictional family home at toy scale (×3), house + patio + garage first, then the
+   front yard and street, then Splash Pond park as a big map. Everything fictional (D-031).
 6. **Playtest-driven tuning** of the `.tres` numbers ([TUNING.md](TUNING.md)) as feedback arrives.
 7. **Better models** *(the big remaining look item)*: toy-style blasters and characters (CC0 packs with licences
    recorded, or nicer primitives). Plus a "tagged by" camera.

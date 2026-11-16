@@ -48,7 +48,7 @@ Controllers must stay plug and play: every binding uses device -1, and every scr
   for match-level tests.
 - **No personal information in the repo.** Don't name real people or describe family relationships in docs,
   code, commits or PRs (D-019). "Flax's Chainstorm" is the blaster's in-game name and stays. The repo is public:
-  arenas based on real places use made-up names and rounded sizes, never an address or real street/park names (D-031).
+  every place in the game is fictional, with no real addresses, street, park or shop names, and no reference photos (D-031).
 - **The lobby is the young players' own design** (GDD §1.9, §3.22). Keep their layout when adding to it.
 - **Quit only via `Sfx.quit_game()`**, never `get_tree().quit()` directly, or audio objects leak.
 - **No `preload` of a scene whose script refers back to the preloading class** (load cycle, D-018).

@@ -587,42 +587,40 @@ The treehouse deck also hosts the power-up spot (§3.19).
 
 Tempest Treehouse is the cheapest next arena because almost all of its systems already exist.
 
-### 5.3 Home Turf (planned): a real home, toy-sized *(requested 2026-11-16)*
-A map built from the players' **own house and neighbourhood**: battle through your own rooms and out into the street.
-The source was a house floor plan and a street-map screenshot.
+### 5.3 Home Turf (planned): a family home, toy-sized *(added 2026-11-16)*
+A fictional suburban family home and the streets around it: battle through the rooms and out into the street.
 
-> **Privacy rule (D-031):** the repo is public. The real address, street, suburb, park, creek and shop names, people's names
-> and the screenshots themselves never go in the repo, commits or PRs. Everything gets a made-up name. The layout below
-> is a generic single-storey family home and can't be traced to anyone.
+> **Fictional world (D-031):** every DARTSTORM place is made up. No real addresses, street, suburb, park or shop names,
+> people's names or reference photos go in the repo, commits or PRs. Sizes are rounded game sizes.
 
-**The house:** a single-storey family home: an open family/kitchen area at the back, a covered patio beside it, a
-lounge and dining area in the middle, four bedrooms (one with its own bathroom), a bathroom and laundry, an entry with
-a small porch, and a double garage. Sizes below are **game sizes** (already scaled up, rounded) so the real plan
-can't be matched to a listing:
+**The house:** a single-storey home: an open family room and kitchen at the back, a covered patio beside it, a lounge
+and dining area in the middle, four bedrooms (one with its own bathroom), a bathroom and laundry, an entry with a small
+porch, and a double garage.
 
 | Zone | Game size (m) | Game idea |
 |---|---|---|
 | Family room and kitchen (back of the house) | ~24 × 12 | Central battleground: kitchen island and bench as cover, fridge, big back windows |
 | Covered patio (beside the family room) | ~27 × 15 | Outdoor fight under a roof: BBQ, outdoor table |
 | Lounge and dining | ~24 × 12 | Couch fort, TV wall, a table to duck under |
-| Kids' bedrooms ×2 | ~10 × 10 each | Bunk beds, toy boxes, built-in wardrobes as hiding spots |
+| Two small bedrooms | ~10 × 10 each | Bunk beds, toy boxes, built-in wardrobes as hiding spots |
 | Study | ~10 × 9 | Desk, bookshelves |
 | Main bedroom with walk-in wardrobe and bathroom | ~11 × 11 | Bed as a trampoline |
 | Bathroom, laundry, hallway | narrow | Tight corridors linking the wings: ambush routes |
 | Entry and front porch | small | Front-door spawn |
 | Double garage (beside the patio) | ~17 × 17 | Two parked cars as cover, a workbench, the roller door out to the driveway |
 
-**Scale:** real rooms are far too small for a shooter at our running speed (7 m/s), so players are **toy-sized**: the
-house is built about **×3** (a 4 m room becomes 12 m), as in the table. Furniture becomes giant cover. Chairs are climbable platforms,
-the kitchen island is a fort, and beds are trampolines (JumpPad). This is the "shrunk in your own house" fantasy.
+**Scale:** players are **toy-sized**. Real rooms are far too small for a shooter at our running speed (7 m/s), so the
+house is built about **×3** (a 4 m room becomes 12 m), as in the table. Furniture becomes giant cover. Chairs are
+climbable platforms, the kitchen island is a fort, and beds are trampolines (JumpPad). This is the "shrunk to toy size
+at home" fantasy.
 
-**The neighbourhood** (later, bigger map): a curving suburban street with a roundabout, front yards, a park with a
-**lake** and a **creek** running out of it, a playing field (oval) and footpaths. It suits ZOMBIES and big TEAMS games.
-The lake and creek are perfect for the planned **Water** darts.
+**The suburb** (later, bigger map): a curving street with a roundabout, front yards, **Splash Pond** park with a little
+stream, a playing field (**Foam Field**) and footpaths. It suits ZOMBIES and big TEAMS games, and the pond is perfect
+for the planned **Water** darts.
 
-**Build plan:** (1) house interior + alfresco + garage as one arena, `scripts/arenas/home_turf.gd` built from `ArenaKit`
-like Backyard Fortress, with team bases in the garage and the alfresco; (2) front yard and street; (3) the park, lake and
-creek as a separate large map. Each step must keep 60 fps and bots navigating (the navmesh handles doorways if they're
+**Build plan:** (1) house interior + patio + garage as one arena, `scripts/arenas/home_turf.gd` built from `ArenaKit`
+like Backyard Fortress, with team bases in the garage and the patio; (2) front yard and street; (3) the park and pond as a
+separate large map. Each step must keep 60 fps and bots navigating (the navmesh handles doorways if they're
 at least 2 m wide at game scale).
 
 ---
@@ -884,5 +882,5 @@ brief's "don't build an economy until combat is fun" condition is met. The rules
 | **Duo** | A pair: you and a bot buddy (DUOS mode) |
 | **Team chip** | A team's name and score under the clock in team modes |
 | **Bunker / lobby** | The main menu island where your squad stands (the players' design) |
-| **Home Turf** | The planned arena built from a real home, at toy size |
+| **Home Turf** | The planned arena: a fictional family home at toy size |
 | **Roam point** | A spot bots like to wander to |

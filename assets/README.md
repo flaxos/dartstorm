@@ -7,7 +7,7 @@ Everything in DARTSTORM is **original and generated in code**, except one font:
 | 3D models (blasters, kids, arena, props) | Built from Godot primitive meshes in `scripts/effects/blaster_model.gd`, `scripts/effects/character_model.gd`, `scripts/arena/*.gd` |
 | Materials | Flat colours (`ArenaKit.mat`) and one original shader (`assets/materials/lawn.gdshader`) |
 | Sound effects | Synthesised at startup in `scripts/core/sfx.gd` (sine/square/saw tones and noise) |
-| Font | **Lilita One** by Juan Montoreano, **SIL Open Font License 1.1** (licence in `assets/fonts/OFL.txt`), from the Google Fonts repository (github.com/google/fonts, `ofl/lilitaone`). Used unmodified. Fallback: Godot's built-in font |
+| Font | **Lilita One**, **SIL Open Font License 1.1**, from the Google Fonts repository (github.com/google/fonts, `ofl/lilitaone`). Used unmodified. The designer's copyright notice and the licence are in `assets/fonts/OFL.txt` (the licence requires them to travel with the font). Fallback: Godot's built-in font |
 | Music | Generated in code: two chiptune loops in `scripts/core/sfx.gd` |
 | Icon | `icon.svg`, original |
 

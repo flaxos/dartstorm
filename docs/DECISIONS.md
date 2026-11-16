@@ -203,9 +203,9 @@ bottom right).
 **Why:** seeing their own design in the game is the biggest appeal win available. Reusing the arena as the
 backdrop keeps the sky, sun and backyard with no extra assets.
 
-### D-031: Arenas from real places use made-up names (v0.3.0)
-**Chosen:** the planned Home Turf arena (a real home and its neighbourhood) uses invented names and rounded,
-game-scale sizes. The address, real street/park/creek/shop names, people's names and the source screenshots never go
-in the repo, commits or PRs.
-**Why:** the repository is public. Real names or an exact floor plan could show strangers where the young players live.
-This extends D-019.
+### D-031: Every place in DARTSTORM is fictional (v0.3.0)
+**Chosen:** arenas (including the planned Home Turf) use invented names, generic layouts and rounded game-scale sizes.
+No real addresses, street, suburb, park or shop names, people's names or reference photos go in the repo, commits or
+PRs, even when a real place inspired the design.
+**Why:** the repository is public and the players are children. A real name or an exact floor plan could point
+strangers to a real home. This extends D-019.

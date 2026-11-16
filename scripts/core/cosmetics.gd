@@ -34,7 +34,7 @@ const HATS: Array[Dictionary] = [
 const RANDOM_NAMES: Array[String] = [
 	"Captain Foam", "Sir Splat", "Blaster Bean", "Tag Master", "Zippy", "Bounce Boss",
 	"Captain Fizz", "Dart Wizard", "Foam Ninja", "Turbo Toast", "Mega Muffin", "Ricochet Rex",
-	"Windy Wendy", "Bucket Bandit", "Storm Chaser", "Professor Pop",
+	"Breezy Blaster", "Bucket Bandit", "Storm Chaser", "Professor Pop",
 ]
 
 

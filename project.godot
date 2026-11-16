@@ -12,10 +12,12 @@ config_version=5
 
 config/name="DARTSTORM: Elemental Arena"
 config/description="A colourful, family-friendly foam-dart arena shooter."
-config/version="0.2.0"
+config/version="0.3.0"
 run/main_scene="res://scenes/ui/main_menu.tscn"
 config/features=PackedStringArray("4.4", "Forward Plus")
 config/icon="res://icon.svg"
+config/use_custom_user_dir=true
+config/custom_user_dir_name="dartstorm"
 
 [autoload]
 

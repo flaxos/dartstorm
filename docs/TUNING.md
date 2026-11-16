@@ -77,11 +77,13 @@ After changing a dart, regenerate the GDD's flight table:
 ## GameMode / GunGameMode
 | Field | Meaning |
 |---|---|
+| `short_name` | The word on the lobby's mode card (SOLO, DUOS, TEAMS, GUN GAME) |
+| `teams` | SOLO (everyone alone), DUOS (pairs) or BLUE_VS_ORANGE (two teams). Team modes add one bot when needed to even the teams |
 | `duration_seconds` | Round length (300 = 5:00) |
 | `countdown_seconds` | 3-2-1 length |
 | `respawn_delay` | Seconds out after being tagged |
 | `points_per_tag`, `ricochet_bonus`, `points_per_target` | Scoring |
-| `loadout` | Free-for-all: the blasters everyone carries, in key order 1, 2, 3 … |
+| `loadout` | SOLO/DUOS/TEAMS: the blasters everyone carries, in key order 1, 2, 3 … |
 | `infinite_reserve` | Bottomless ammo (Gun Game uses this) |
 | `ladder` (Gun Game) | The blaster sequence; the last one wins |
 | `tags_per_tier` (Gun Game) | Tags needed per rung (1 = every tag promotes) |

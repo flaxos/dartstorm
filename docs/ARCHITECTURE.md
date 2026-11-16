@@ -19,7 +19,7 @@ scripts/
   arena/     Arena (base), ArenaKit (primitive builders), BackyardFortress
   systems/   WindField, WindZone, ReflectiveSurface, AmmoBucket, JumpPad, WobbleTarget, PowerUpPickup, DogHouse
   effects/   BlasterModel, CharacterModel (with hats), FoamBurst, CombatFx, Podium
-  ui/        Hud, Crosshair, WindGauge, PauseMenu, SettingsPanel, main_menu
+  ui/        Hud, Crosshair, WindGauge, PauseMenu, SettingsPanel, main_menu (the lobby)
   debug/     DemoDriver (only active with `-- --demo`)
 resources/
   weapons/*.tres  darts/*.tres  modes/*.tres  bots/*.tres
@@ -28,6 +28,7 @@ assets/fonts/LilitaOne-Regular.ttf (+ OFL.txt)
 tests/test_runner.tscn  headless test suite (tests/test_runner.gd)
 tools/
   validate.sh           import → strict compile → boots → tests → leak check
+  export_linux.sh       Linux release build + headless smoke test (linux/: README and shortcut helper)
   run.sh                play / editor / demo
   check_scripts.gd      strict compile (every warning is an error)
   dart_table.gd         prints the GDD dart-flight table from the real dart code
@@ -219,10 +220,33 @@ Measured during the automated 3-bot Hard match: a peak of about 140 darts in the
 - **Aiming:** `Player.pad_look_step()` curves the right stick (stick²) and, with aim assist on, halves the turn speed
   while `crosshair_on_rival()` (a ray against hitboxes) is true. It never rotates the view by itself.
 - **Rumble:** `GameSettings.vibrate()` only fires when rumble is on and a pad is the active device.
-- **"Back":** SettingsPanel, the YOUR PLAYER panel and PauseMenu all close on `ui_cancel` (B / Esc).
+- **"Back":** SettingsPanel, the lobby's CHARACTER and HOW TO PLAY panels and PauseMenu all close on `ui_cancel` (B / Esc).
 
 ## 14. Music
 `Sfx` describes each loop as a small style dictionary (tempo, chord list, bass pattern, drum steps, melody as MIDI notes)
 and renders it with `WorkerThreadPool` into a looping `AudioStreamWAV`. Notes that run past the end wrap to the start,
 so the loop is seamless. `_process` picks up finished renders on the main thread. `play_music()` before a loop is ready
 just remembers the request. Crossfades and pause-ducking are tweens on the Music player.
+
+## 15. Teams (v0.3.0)
+Teams are data on the mode, not a separate code path:
+- `GameMode.teams` (SOLO, DUOS, BLUE_VS_ORANGE). `team_for(index)` gives each player's team (the human is index 0, so
+  always team 0, which is blue). In SOLO everyone gets their own number, so all the team code below also works there.
+- `MatchScene` asks `team_bot_count()` (the menu's number, plus one to even the teams, capped by the 7-bot roster), sets
+  `Actor.team_id`, and in team modes overrides `Actor.color` with `GameMode.team_color()`.
+- **No friendly fire** comes from code that was already there: `Actor.accepts_dart_from(team)` makes darts pass
+  through team-mates, bots skip team-mates in `_pick_target`, and aim assist uses the same check.
+- `ScoreEntry.team` copies the actor's team. `GameMode.rank_teams()` sums scores per team; `rank()` lists the best
+  team's players first; `winning_team()` returns -1 for a draw; `podium_places()` gives the Podium one group per step.
+- `MatchController.is_home_spawn()` keeps TEAMS respawns at the team's end (`Arena.team_bases`: blue, then orange).
+  `_announce_team_lead()` calls lead changes.
+- `Hud` builds the team chips, the grouped scoreboard and `result_title()`. `Podium.show_places()` widens steps
+  to fit a team and pulls the camera back for wide stages.
+
+## 16. Lobby (v0.3.0)
+`scripts/ui/main_menu.gd` builds the young players' layout (GDD §3.22). The 3D part is a floating island at
+`STAGE` (just south of the yard, so the Backyard Fortress, loaded without a navmesh, is the backdrop) with
+depth-of-field far blur on the camera. Name tags use `ALPHA_CUT_OPAQUE_PREPASS` so they write depth and aren't
+blurred. The squad is rebuilt whenever the mode or bot count changes, using the same `MatchScene.team_bot_count()` and
+`bot_colors()` as the match, so the lobby always shows exactly who you'll play with. Each squad member lives under one
+"slot" node so CHARACTER can hide everyone but you, and the camera tweens to a close-up.

@@ -14,6 +14,7 @@ tagging only, no gore, no real-firearm branding, no microtransactions.
 3. Play: `./tools/run.sh`. The main scene is `scenes/ui/main_menu.tscn`, and the match is `scenes/game/match.tscn`.
 
 Godot lives at `~/bin/godot` (4.4.1) on the dev box. **Linux is the platform that matters now**; Windows is deferred.
+Linux release: `./tools/export_linux.sh` (needs the export templates; output in `build/`, which git ignores).
 Controllers must stay plug and play: every binding uses device -1, and every screen works with A/B.
 
 ## Checking the game without a human
@@ -24,7 +25,8 @@ Controllers must stay plug and play: every binding uses device -1, and every scr
   `godot --path . res://scenes/game/match.tscn -- --demo --shots=<abs dir> --quit-after=12`
   plays the match automatically (turns, fires, cycles blasters) and saves PNGs you can inspect.
   Running the menu with `-- --demo --shots=...` captures the title screen; add `--open-settings` or `--open-customise`
-  for those panels. In a match, `--powerup` turns on power-up mode and drops the Chainstorm at 4 s, and `--end-after=N`
+  for those panels. `--mode=N` (GameSettings.MatchMode: 0 SOLO, 1 GUN GAME, 2 DUOS, 3 TEAMS) and `--bots=N` pick the
+  mode and bot count for that run, in the lobby or a match. In a match, `--powerup` turns on power-up mode and drops the Chainstorm at 4 s, and `--end-after=N`
   ends the round after N seconds (to see the podium). See `scripts/debug/demo_driver.gd`.
 - There's no physical controller on the dev box: test pads with `Input.parse_input_event(InputEventJoypadMotion/Button)`
   (see `_test_controller_support`).
@@ -37,7 +39,7 @@ Controllers must stay plug and play: every binding uses device -1, and every scr
 | `docs/TUNING.md` | A data field is added or renamed |
 | `docs/UAT.md` | A release needs a hands-on check (add rows, then log results) |
 | `docs/ARCHITECTURE.md` | Systems, ownership, safeguards (§10) or budgets (§11) change |
-| `docs/DECISIONS.md` | A non-obvious choice is made (next is D-027) |
+| `docs/DECISIONS.md` | A non-obvious choice is made (next is D-032) |
 | `docs/ROADMAP.md` | Always, at the end of a piece of work |
 
 ## Conventions
@@ -45,7 +47,9 @@ Controllers must stay plug and play: every binding uses device -1, and every scr
   If you can, prove the test fails without the fix. Use the `fast_forward()`, `start_match()` and `end_match()` helpers
   for match-level tests.
 - **No personal information in the repo.** Don't name real people or describe family relationships in docs,
-  code, commits or PRs (D-019). "Flax's Chainstorm" is the blaster's in-game name and stays.
+  code, commits or PRs (D-019). "Flax's Chainstorm" is the blaster's in-game name and stays. The repo is public:
+  arenas based on real places use made-up names and rounded sizes, never an address or real street/park names (D-031).
+- **The lobby is the young players' own design** (GDD §1.9, §3.22). Keep their layout when adding to it.
 - **Quit only via `Sfx.quit_game()`**, never `get_tree().quit()` directly, or audio objects leak.
 - **No `preload` of a scene whose script refers back to the preloading class** (load cycle, D-018).
 - `-s` tool scripts compile before autoloads exist: load game classes at runtime there (see `tools/dart_table.gd`).

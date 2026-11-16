@@ -16,10 +16,32 @@
 | Phase 6 Gun Game | ✅ Playable with a 7-rung ladder (3 planned rungs not built) |
 | **v0.1.0 release** | ✅ Merged (PR #1), **UAT passed 2026-11-15** |
 | **v0.1.1 hardening + docs** | ✅ Merged (PR #2) |
-| **v0.2.0 controller + appeal pack** | ✅ Built and validated (205 tests). ⏳ UAT with young players and a real controller |
+| **v0.2.0 controller + appeal pack** | ✅ Built and validated. PR #3. ⏳ UAT with young players and a real controller |
+| **v0.3.0 the players' design: lobby, team modes, Linux build** | ✅ Built and validated (251 tests). ⏳ UAT |
 | Phase 7 Expansion | ⏳ Not started (on purpose) |
 
-## v0.2.0: controller support and appeal pack (this release)
+## v0.3.0: the young players' design (this release)
+
+Goal: the young players drew their own DARTSTORM before seeing it (GDD §1.9). Build what they drew first.
+
+- [x] **Their lobby:** a floating "bunker" island with you in the middle and your squad on platforms around you
+      (team-mates nearest, back rows higher), the player card and button column top left, mode cards top right, the logo
+      bottom middle and a big PLAY bottom right (GDD §3.22)
+- [x] **SOLO / DUOS / TEAMS:** Blue vs Orange and pairs, with even teams (an extra bot when needed), no friendly fire,
+      team colours, home-end respawns, team chips on the HUD, a grouped scoreboard, lead-change call-outs, team results
+      and a team podium (GDD §3.21)
+- [x] Up to **7 bots** (4 v 4); two new bots, Comet and Biscuit
+- [x] **New hats from their characters:** goggles, bunny ears, horns, spiky hair
+- [x] Fix: bots now wear their own hats in matches (they all wore caps)
+- [x] Fix: a flaky announcer test (it waited for physics frames, not HUD frames)
+- [x] Screenshot flags `--mode=N --bots=N` for demo runs
+- [x] Planned and written up: Zombie mode (§3.21), rewards with coins only (§10, D-028), the **Home Turf** arena built
+      from a real home at toy scale (§5.3, privacy rule D-031)
+
+**Acceptance:** `./tools/validate.sh` passes (import, strict compile, boots, **251/251 tests**, leak check) ✅ ·
+UAT section I in UAT.md ⏳.
+
+## v0.2.0: controller support and appeal pack
 
 Goal: plug-and-play controllers (the target machine runs Linux, so Windows can wait), plus the "small and medium" appeal ideas:
 things players can see, hear and laugh at.
@@ -36,9 +58,11 @@ things players can see, hear and laugh at.
       birdsong (GDD §5.1)
 - [x] **Chainstorm power-up mode** (optional; default stays EVERYONE as the brief says) (GDD §3.19)
 - [x] Fixes found on the way: mirrored signs seen from behind; podium framing; name typing kept spaces
+- [x] **Double-clickable Linux build:** `./tools/export_linux.sh` → `build/linux/DARTSTORM/` (one executable, icon,
+      README, `install-shortcut.sh`) and a `.tar.gz`; the exported game is booted headless as a smoke test (D-027)
 
-**Acceptance:** `./tools/validate.sh` passes (import, strict compile of 49 scripts, boots, **205/205 tests**, no leaks) ✅ ·
-UAT sections F and G in UAT.md ⏳.
+**Acceptance:** `./tools/validate.sh` passes (import, strict compile of 49 scripts, boots, **211/211 tests**, no leaks) ✅ ·
+the export builds and boots ✅ · UAT sections F, G and H in UAT.md ⏳.
 
 ## v0.1.1: hardening and docs
 
@@ -91,25 +115,28 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
 
 ## Next up (in priority order)
 
-1. **UAT of v0.2.0 with young players** *(next)*. Run UAT.md (sections F with a real controller, and G), then just
-   let them play. Ask: best moment, most annoying thing, what would you add? Note especially whether POWER-UP mode beats
-   EVERYONE, and how aim assist feels.
-2. **Playtest-driven tuning.** Watch young players play several rounds and note what's too hard, too easy or most fun.
-   Tune the `.tres` numbers ([TUNING.md](TUNING.md)), especially bot skill, tag power, Chainstorm ammo burn and
-   bucket regen. Record the findings in UAT.md.
-3. **A double-clickable Linux build** *(small)*. A Linux export preset so players can launch DARTSTORM without opening
-   the Godot editor (needs Godot's export templates). Windows can follow the same way later.
-4. **Blue vs Orange team mode.** The arena is built for it and `team_id` already exists. Acceptance: a menu option,
-   two teams with bots split between them, a team scoreboard, team-coloured shirts, team-coloured bucket ownership.
-5. **Remaining Gun Game rungs** (Wind Whisperer, Thunder Cannon, Rocket Dart) with simple, playful elemental dart effects.
-   Acceptance: a 10-rung ladder, each blaster distinct, tests updated.
-6. **Better models** *(the big remaining appeal item)*: toy-style blasters and characters, either free CC0 packs (licence
-   checked and recorded in `assets/README.md`) or nicer hand-built primitives. Plus a "tagged by" camera.
-7. **Capturable buckets** as team objectives.
+1. **UAT of v0.2.0 and v0.3.0 with young players** *(next, for the humans)*. Show them their lobby first! Run UAT.md
+   (F with a real controller, G, H on their PC, I for the lobby and teams), then just let them play. Ask: best moment,
+   most annoying thing, what would you add? Does TEAMS or DUOS beat SOLO? POWER-UP or EVERYONE?
+2. **ZOMBIES mode** (from their drawing). Goofy green foam zombies with no blasters. A zombie touch turns a survivor.
+   Darts knock zombies back for a moment. Survivors win if anyone's left. Needs a zombie bot brain (chase and touch), a
+   zombie look, and a mode card in the lobby. Acceptance: a full bot-only zombie round ends correctly; tests.
+3. **Elements: Fire, Water, Electric (+ Ice)** (their drawing and the brief): playful elemental darts (fire = sparkly
+   splash, water = splash knock-back, electric = a zap that chains to a nearby rival, ice = brief slow), the missing
+   Gun Game rungs (Wind Whisperer, Thunder Cannon, Rocket Dart), and a **foam Shield** power-up. Acceptance: a 10-rung
+   ladder, each element visibly distinct, tests.
+4. **Rewards (D-028):** XP and **levels** on the lobby card, **missions**, **coins** (earned only), a **shop** for hats,
+   colours and blaster skins, and a free reward track. No gems, no real money, no power for sale.
+5. **Home Turf arena** (GDD §5.3): the players' own house at toy scale (×3), house + patio + garage first, then the
+   front yard and street, then the park with the lake and creek as a big map. Privacy rule D-031: no real names.
+6. **Playtest-driven tuning** of the `.tres` numbers ([TUNING.md](TUNING.md)) as feedback arrives.
+7. **Better models** *(the big remaining look item)*: toy-style blasters and characters (CC0 packs with licences
+   recorded, or nicer primitives). Plus a "tagged by" camera.
+8. **Capturable buckets** as team objectives (now that teams exist).
 
 ## Later (Phase 7, only once the above is solid)
 - Second arena: **Tempest Treehouse** is cheapest (it reuses WindZone gusts and JumpPads)
-- Weapon customisation and mastery (no economy, no paid anything)
+- Weapon customisation and mastery (cosmetic or sidegrades only, D-028)
 - Smarter bots (cover, wind awareness, team play)
 - Local split-screen or online multiplayer (DECISIONS D-008)
 - Accessibility: key remapping, a colour-blind team palette option
@@ -119,8 +146,9 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
 - Windows is deferred (the target machine runs Linux).
 - The music is simple chiptune made in code; real recordings could replace it later.
 - Bots ignore wind (deliberate, see GDD §3.9) and can briefly snag on geometry before the unstick hop kicks in.
-- The font is Godot's built-in default, emboldened. It works, but isn't as chunky as the style guide wants.
 - Gun Game has 7 of the 10 planned rungs.
+- The lobby shows no level or coins yet (they arrive with rewards, item 4).
+- In DUOS, spawns don't put buddies together; you'll often start apart from your buddy.
 
 *Resolved in v0.1.1:* the navmesh load hitch, the "ObjectDB instances leaked at exit" warning, and the integer-division
 warnings in the HUD.

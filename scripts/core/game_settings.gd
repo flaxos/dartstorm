@@ -30,8 +30,12 @@ const DEFAULTS := {
 	"fullscreen": false,
 }
 const NOTICE_SECONDS := 3.0
+## The bots slider on the menu. Team modes may add one more to even the teams.
+const MIN_BOTS := 2
+const MAX_BOTS := 7
 
-enum MatchMode { FREE_FOR_ALL, GUN_GAME }
+## Saved as numbers, so only ever add to the end.
+enum MatchMode { FREE_FOR_ALL, GUN_GAME, DUOS, TEAMS }
 
 # --- Preferences ---
 var mouse_sensitivity: float = 1.0
@@ -77,6 +81,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	InputSetup.ensure_actions()
 	load_settings()
+	_apply_demo_overrides()
 	apply()
 	Input.joy_connection_changed.connect(_on_joy_connection_changed)
 	using_controller = not Input.get_connected_joypads().is_empty()
@@ -85,6 +90,19 @@ func _ready() -> void:
 	var theme := Theme.new()
 	theme.default_font = UiKit.font()
 	get_tree().root.theme = theme
+
+
+## Screenshot runs only (`-- --demo --mode=3 --bots=5`): pick the mode and bot
+## count from the command line.
+func _apply_demo_overrides() -> void:
+	var args := OS.get_cmdline_user_args()
+	if not args.has("--demo"):
+		return
+	for argument in args:
+		if argument.begins_with("--mode="):
+			match_mode = clampi(int(argument.trim_prefix("--mode=")), 0, MatchMode.size() - 1)
+		elif argument.begins_with("--bots="):
+			bot_count = clampi(int(argument.trim_prefix("--bots=")), MIN_BOTS, MAX_BOTS)
 
 
 func _input(event: InputEvent) -> void:
@@ -219,8 +237,8 @@ func load_settings() -> void:
 	player_color = clampi(int(file.get_value("player", "color", player_color)), 0, Cosmetics.COLORS.size() - 1)
 	var hat := StringName(str(file.get_value("player", "hat", player_hat)))
 	player_hat = hat if Cosmetics.has_hat(hat) else &"cap"
-	match_mode = clampi(int(file.get_value("match", "mode", match_mode)), 0, 1)
-	bot_count = clampi(int(file.get_value("match", "bot_count", bot_count)), 2, 5)
+	match_mode = clampi(int(file.get_value("match", "mode", match_mode)), 0, MatchMode.size() - 1)
+	bot_count = clampi(int(file.get_value("match", "bot_count", bot_count)), MIN_BOTS, MAX_BOTS)
 	bot_difficulty = clampi(int(file.get_value("match", "bot_difficulty", bot_difficulty)), 0, 2)
 	chainstorm_powerup = bool(file.get_value("match", "chainstorm_powerup", chainstorm_powerup))
 

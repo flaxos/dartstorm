@@ -19,6 +19,8 @@ const PAUSE_SCENE := preload("res://scenes/ui/pause_menu.tscn")
 const MODE_PATHS := [
 	"res://resources/modes/free_for_all.tres",
 	"res://resources/modes/gun_game.tres",
+	"res://resources/modes/duos.tres",
+	"res://resources/modes/blue_vs_orange.tres",
 ]
 ## Indexed by GameSettings.bot_difficulty.
 const DIFFICULTY_PATHS := [
@@ -32,6 +34,8 @@ const BOT_ROSTER := [
 	{"name": "Zoom", "color": Color(0.7, 0.4, 1.0), "hat": &"propeller"},
 	{"name": "Sprinkles", "color": Color(1.0, 0.4, 0.7), "hat": &"party"},
 	{"name": "Noodle", "color": Color(1.0, 0.85, 0.2), "hat": &"cowboy"},
+	{"name": "Comet", "color": Color(0.1, 0.8, 0.78), "hat": &"goggles"},
+	{"name": "Biscuit", "color": Color(0.95, 0.25, 0.3), "hat": &"bunny"},
 ]
 ## Seconds of podium celebration before the relaxed music returns.
 const RESULTS_MUSIC_DELAY := 3.0
@@ -97,6 +101,13 @@ static func bot_colors(player_color: Color, count: int) -> Array[Color]:
 	return out
 
 
+## How many bots a match brings: the menu's number, plus one in team modes if
+## the teams would otherwise be uneven (never more than the roster).
+static func team_bot_count(mode: GameMode, requested: int) -> int:
+	var wanted := clampi(requested, 1, BOT_ROSTER.size())
+	return mini(mode.bots_for(wanted), BOT_ROSTER.size())
+
+
 ## The BotDifficulty for a menu index. Always returns something usable.
 static func resolve_difficulty(index: int) -> BotDifficulty:
 	var path: String = DIFFICULTY_PATHS[clampi(index, 0, DIFFICULTY_PATHS.size() - 1)]
@@ -139,22 +150,23 @@ func _ready() -> void:
 
 	player = PLAYER_SCENE.instantiate() as Player
 	player.display_name = GameSettings.display_name()
-	player.color = GameSettings.color()
 	player.hat_id = GameSettings.player_hat
-	player.team_id = 0
+	player.team_id = mode.team_for(0)
+	# In team modes everyone wears their team's colour, so friends are easy to spot.
+	player.color = GameMode.team_color(player.team_id) if mode.is_team_mode() else GameSettings.color()
 	player.dart_pool = dart_pool
 	add_child(player)
 	fx.watch_actor(player)
 	controller.register(player)
 
-	var bot_count := clampi(GameSettings.bot_count, 1, BOT_ROSTER.size())
+	var bot_count := team_bot_count(mode, GameSettings.bot_count)
 	var colors := bot_colors(player.color, bot_count)
 	for i in bot_count:
 		var bot := BOT_SCENE.instantiate() as Bot
 		bot.display_name = BOT_ROSTER[i]["name"]
-		bot.color = colors[i]
 		bot.hat_id = BOT_ROSTER[i]["hat"]
-		bot.team_id = i + 1
+		bot.team_id = mode.team_for(i + 1)
+		bot.color = GameMode.team_color(bot.team_id) if mode.is_team_mode() else colors[i]
 		bot.difficulty = difficulty
 		bot.arena = arena
 		bot.dart_pool = dart_pool
@@ -215,7 +227,16 @@ func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 	podium = Podium.new()
 	podium.name = "Podium"
 	add_child(podium)
-	podium.show_ranking(ranking)
+	var mode := controller.mode
+	if ranking.is_empty():
+		podium.show_places([], "MATCH\nOVER", UiKit.ORANGE_HOT)
+	elif not mode.is_team_mode():
+		podium.show_places(mode.podium_places(controller.board), "DARTSTORM\nCHAMPIONS", UiKit.ORANGE_HOT)
+	else:
+		var team := mode.winning_team(controller.board)
+		var banner := "IT'S A\nDRAW!" if team < 0 else "%s TEAM\nWINS!" % GameMode.team_name(team)
+		var tint := UiKit.CREAM if team < 0 else GameMode.team_color(team).lightened(0.25)
+		podium.show_places(mode.podium_places(controller.board), banner, tint)
 	get_tree().create_timer(RESULTS_MUSIC_DELAY).timeout.connect(func() -> void: Sfx.play_music(&"menu"))
 
 

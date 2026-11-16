@@ -9,7 +9,11 @@ extends Node3D
 ## and if the arena itself can't load it returns to the main menu.
 
 const MAIN_MENU := "res://scenes/ui/main_menu.tscn"
-const ARENA_SCENE := "res://scenes/arenas/backyard_fortress.tscn"
+## Indexed by GameSettings.arena. "name" is what the lobby shows.
+const ARENAS: Array[Dictionary] = [
+	{"name": "BACKYARD", "path": "res://scenes/arenas/backyard_fortress.tscn"},
+	{"name": "HOME TURF", "path": "res://scenes/arenas/home_turf.tscn"},
+]
 const PLAYER_SCENE := preload("res://scenes/player/player.tscn")
 const BOT_SCENE := preload("res://scenes/enemies/bot.tscn")
 const HUD_SCENE := preload("res://scenes/ui/hud.tscn")
@@ -101,6 +105,11 @@ static func bot_colors(player_color: Color, count: int) -> Array[Color]:
 	return out
 
 
+## The arena scene path for a lobby index (out-of-range picks the Backyard).
+static func arena_path(index: int) -> String:
+	return ARENAS[clampi(index, 0, ARENAS.size() - 1)]["path"]
+
+
 ## How many bots a match brings: the menu's number, plus one in team modes if
 ## the teams would otherwise be uneven (never more than the roster).
 static func team_bot_count(mode: GameMode, requested: int) -> int:
@@ -125,10 +134,11 @@ func _ready() -> void:
 	mode.power_up_mode = (GameSettings.chainstorm_powerup or demo_powerup) and not mode is GunGameMode
 	var difficulty := resolve_difficulty(GameSettings.bot_difficulty)
 
-	var arena_scene := try_load(ARENA_SCENE) as PackedScene
+	var arena_file := arena_path(GameSettings.arena)
+	var arena_scene := try_load(arena_file) as PackedScene
 	arena = arena_scene.instantiate() as Arena if arena_scene != null else null
 	if arena == null:
-		push_error("Could not load the arena %s, returning to the menu." % ARENA_SCENE)
+		push_error("Could not load the arena %s, returning to the menu." % arena_file)
 		quit_to_menu.call_deferred()
 		return
 	add_child(arena)

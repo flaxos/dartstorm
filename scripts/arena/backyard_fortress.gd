@@ -36,7 +36,6 @@ const HEDGE := Color(0.18, 0.52, 0.24)
 const SLIDE := Color(1.0, 0.85, 0.15)
 const FOAM := [Color(1.0, 0.45, 0.7), Color(1.0, 0.85, 0.2), Color(0.3, 0.85, 0.95), Color(0.6, 0.9, 0.2)]
 
-var _clouds: Node3D
 var _swings: Array[Node3D] = []
 var _sprinkler_arm: Node3D
 var _duck: Node3D
@@ -63,12 +62,8 @@ func _build() -> void:
 
 
 func _process(delta: float) -> void:
+	super(delta)
 	_time += delta
-	if _clouds != null:
-		for cloud: Node3D in _clouds.get_children():
-			cloud.position.x += delta * 0.8
-			if cloud.position.x > 150.0:
-				cloud.position.x = -150.0
 	for i in _swings.size():
 		_swings[i].rotation.x = sin(_time * 1.9 + i * 1.3) * 0.45
 	if _sprinkler_arm != null:
@@ -86,52 +81,6 @@ func _process(delta: float) -> void:
 
 
 # --- Mood -------------------------------------------------------------------
-
-func _build_sky_and_sun() -> void:
-	var sky_material := ProceduralSkyMaterial.new()
-	sky_material.sky_top_color = Color(0.18, 0.47, 0.95)
-	sky_material.sky_horizon_color = Color(0.66, 0.86, 1.0)
-	sky_material.ground_horizon_color = Color(0.66, 0.86, 1.0)
-	sky_material.ground_bottom_color = Color(0.3, 0.55, 0.3)
-	sky_material.sun_angle_max = 30.0
-	var sky := Sky.new()
-	sky.sky_material = sky_material
-	var environment := Environment.new()
-	environment.background_mode = Environment.BG_SKY
-	environment.sky = sky
-	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	environment.ambient_light_energy = 1.0
-	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	environment.glow_enabled = true
-	environment.glow_intensity = 0.4
-	environment.glow_bloom = 0.05
-	var world := WorldEnvironment.new()
-	world.environment = environment
-	add_child(world)
-
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-52.0, 38.0, 0.0)
-	sun.light_energy = 1.25
-	sun.light_color = Color(1.0, 0.97, 0.9)
-	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 110.0
-	add_child(sun)
-
-	_clouds = Node3D.new()
-	_clouds.name = "Clouds"
-	decor.add_child(_clouds)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 2026
-	for i in 10:
-		var cloud := Node3D.new()
-		cloud.position = Vector3(rng.randf_range(-150.0, 150.0), rng.randf_range(42.0, 60.0), rng.randf_range(-120.0, 120.0))
-		_clouds.add_child(cloud)
-		for puff in 4:
-			var radius := rng.randf_range(4.0, 7.5)
-			var offset := Vector3(rng.randf_range(-8.0, 8.0), rng.randf_range(-1.0, 1.5), rng.randf_range(-4.0, 4.0))
-			var ball := ArenaKit.deco_sphere(cloud, radius, offset, Color(1.0, 1.0, 1.0), 0.6, 0.35)
-			ball.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-
 
 # --- Yard -------------------------------------------------------------------
 
@@ -472,13 +421,8 @@ func _build_neighbourhood() -> void:
 
 
 func _house(at: Vector3, size: Vector3, wall: Color, roof: Color) -> void:
-	ArenaKit.deco_box(decor, size, at + Vector3(0.0, size.y * 0.5, 0.0), wall)
-	var prism := PrismMesh.new()
-	prism.size = Vector3(size.x + 1.5, size.y * 0.55, size.z + 1.5)
-	ArenaKit.deco(decor, prism, at + Vector3(0.0, size.y + size.y * 0.275, 0.0), roof)
+	ArenaKit.house(decor, at, size, wall, roof)
 
 
 func _tree(at: Vector3, tree_scale: float) -> void:
-	ArenaKit.deco_cylinder(decor, 0.5 * tree_scale, 5.0 * tree_scale, at + Vector3(0.0, 2.5 * tree_scale, 0.0), TRUNK)
-	ArenaKit.deco_sphere(decor, 3.2 * tree_scale, at + Vector3(0.0, 6.5 * tree_scale, 0.0), LEAF)
-	ArenaKit.deco_sphere(decor, 2.3 * tree_scale, at + Vector3(1.2, 8.3, -0.6) * tree_scale, LEAF_LIGHT)
+	ArenaKit.tree(decor, at, tree_scale)

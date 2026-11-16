@@ -38,6 +38,7 @@ var buckets: Array[AmmoBucket] = []
 var team_bases: Array[Vector3] = []
 
 var _spawn_root: Node3D
+var _clouds: Node3D
 
 
 func _ready() -> void:
@@ -61,6 +62,70 @@ func _ready() -> void:
 ## Override to construct the arena.
 func _build() -> void:
 	pass
+
+
+## Clouds drift slowly across the sky. Subclasses that override _process call super(delta).
+func _process(delta: float) -> void:
+	if _clouds == null:
+		return
+	for cloud: Node3D in _clouds.get_children():
+		cloud.position.x += delta * 0.8
+		if cloud.position.x > 150.0:
+			cloud.position.x = -150.0
+
+
+## The shared sunny sky: procedural sky, a warm sun with shadows, gentle glow, and puffy clouds.
+## `sun_pitch` is the sun's angle below the horizon line (more negative = higher
+## sun, shorter shadows). `warm_fill` (0..1) swaps some of the sky's blue fill
+## light for warm light, so shaded areas (indoors) don't look cold.
+func _build_sky_and_sun(sun_pitch: float = -52.0, warm_fill: float = 0.0) -> void:
+	var sky_material := ProceduralSkyMaterial.new()
+	sky_material.sky_top_color = Color(0.18, 0.47, 0.95)
+	sky_material.sky_horizon_color = Color(0.66, 0.86, 1.0)
+	sky_material.ground_horizon_color = Color(0.66, 0.86, 1.0)
+	sky_material.ground_bottom_color = Color(0.3, 0.55, 0.3)
+	sky_material.sun_angle_max = 30.0
+	var sky := Sky.new()
+	sky.sky_material = sky_material
+	var environment := Environment.new()
+	environment.background_mode = Environment.BG_SKY
+	environment.sky = sky
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	environment.ambient_light_energy = 1.0
+	if warm_fill > 0.0:
+		environment.ambient_light_color = Color(1.0, 0.9, 0.78)
+		environment.ambient_light_sky_contribution = 1.0 - warm_fill
+		environment.ambient_light_energy = 1.0 + warm_fill * 0.3
+	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	environment.glow_enabled = true
+	environment.glow_intensity = 0.4
+	environment.glow_bloom = 0.05
+	var world := WorldEnvironment.new()
+	world.environment = environment
+	add_child(world)
+
+	var sun := DirectionalLight3D.new()
+	sun.rotation_degrees = Vector3(sun_pitch, 38.0, 0.0)
+	sun.light_energy = 1.25
+	sun.light_color = Color(1.0, 0.97, 0.9)
+	sun.shadow_enabled = true
+	sun.directional_shadow_max_distance = 110.0
+	add_child(sun)
+
+	_clouds = Node3D.new()
+	_clouds.name = "Clouds"
+	decor.add_child(_clouds)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2026
+	for i in 10:
+		var cloud := Node3D.new()
+		cloud.position = Vector3(rng.randf_range(-150.0, 150.0), rng.randf_range(42.0, 60.0), rng.randf_range(-120.0, 120.0))
+		_clouds.add_child(cloud)
+		for puff in 4:
+			var radius := rng.randf_range(4.0, 7.5)
+			var offset := Vector3(rng.randf_range(-8.0, 8.0), rng.randf_range(-1.0, 1.5), rng.randf_range(-4.0, 4.0))
+			var ball := ArenaKit.deco_sphere(cloud, radius, offset, Color(1.0, 1.0, 1.0), 0.6, 0.35)
+			ball.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 func add_spawn(at: Vector3, facing: Vector3) -> Marker3D:
@@ -94,8 +159,10 @@ func add_bucket(at: Vector3, tint: Color, capacity: int = 150) -> AmmoBucket:
 	return bucket
 
 
-func add_wind_zone(centre: Vector3, zone_size: Vector3, direction: Vector3, strength: float) -> WindZone:
+func add_wind_zone(centre: Vector3, zone_size: Vector3, direction: Vector3, strength: float,
+		show_volume: bool = true) -> WindZone:
 	var zone := WIND_ZONE_SCENE.instantiate() as WindZone
+	zone.show_volume = show_volume
 	zone.position = centre
 	zone.size = zone_size
 	zone.direction = direction

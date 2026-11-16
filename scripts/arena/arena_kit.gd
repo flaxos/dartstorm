@@ -4,6 +4,10 @@ extends RefCounted
 ## Everything collidable goes on the WORLD layer so darts, actors and the
 ## navigation bake all see the same geometry.
 
+const TRUNK := Color(0.45, 0.3, 0.18)
+const LEAF := Color(0.25, 0.65, 0.25)
+const LEAF_LIGHT := Color(0.38, 0.78, 0.3)
+
 static var _materials: Dictionary = {}
 
 
@@ -150,6 +154,21 @@ static func sign_text(parent: Node, text: String, pos: Vector3, rot_deg: Vector3
 	label.double_sided = false
 	parent.add_child(label)
 	return label
+
+
+## A simple neighbour's house for the skyline (looks only): walls and a pitched roof.
+static func house(parent: Node, at: Vector3, size: Vector3, wall: Color, roof: Color) -> void:
+	deco_box(parent, size, at + Vector3(0.0, size.y * 0.5, 0.0), wall)
+	var prism := PrismMesh.new()
+	prism.size = Vector3(size.x + 1.5, size.y * 0.55, size.z + 1.5)
+	deco(parent, prism, at + Vector3(0.0, size.y + size.y * 0.275, 0.0), roof)
+
+
+## A round cartoon tree (looks only).
+static func tree(parent: Node, at: Vector3, tree_scale: float) -> void:
+	deco_cylinder(parent, 0.5 * tree_scale, 5.0 * tree_scale, at + Vector3(0.0, 2.5 * tree_scale, 0.0), TRUNK)
+	deco_sphere(parent, 3.2 * tree_scale, at + Vector3(0.0, 6.5 * tree_scale, 0.0), LEAF)
+	deco_sphere(parent, 2.3 * tree_scale, at + Vector3(1.2, 8.3, -0.6) * tree_scale, LEAF_LIGHT)
 
 
 static func _body(pos: Vector3, rot_deg: Vector3) -> StaticBody3D:

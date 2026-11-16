@@ -69,6 +69,8 @@ var bot_count: int = 3
 var bot_difficulty: int = 1
 ## Backyard Battle only: the Chainstorm is a map power-up instead of a starting blaster.
 var chainstorm_powerup: bool = false
+## Index into MatchScene.ARENAS: 0 Backyard Fortress, 1 Home Turf.
+var arena: int = 0
 
 ## True while the last input came from a controller.
 var using_controller: bool = false
@@ -92,8 +94,8 @@ func _ready() -> void:
 	get_tree().root.theme = theme
 
 
-## Screenshot runs only (`-- --demo --mode=3 --bots=5`): pick the mode and bot
-## count from the command line.
+## Screenshot runs only (`-- --demo --mode=3 --bots=5 --arena=1`): pick the mode,
+## bot count and arena from the command line.
 func _apply_demo_overrides() -> void:
 	var args := OS.get_cmdline_user_args()
 	if not args.has("--demo"):
@@ -103,6 +105,8 @@ func _apply_demo_overrides() -> void:
 			match_mode = clampi(int(argument.trim_prefix("--mode=")), 0, MatchMode.size() - 1)
 		elif argument.begins_with("--bots="):
 			bot_count = clampi(int(argument.trim_prefix("--bots=")), MIN_BOTS, MAX_BOTS)
+		elif argument.begins_with("--arena="):
+			arena = maxi(int(argument.trim_prefix("--arena=")), 0)
 
 
 func _input(event: InputEvent) -> void:
@@ -241,6 +245,7 @@ func load_settings() -> void:
 	bot_count = clampi(int(file.get_value("match", "bot_count", bot_count)), MIN_BOTS, MAX_BOTS)
 	bot_difficulty = clampi(int(file.get_value("match", "bot_difficulty", bot_difficulty)), 0, 2)
 	chainstorm_powerup = bool(file.get_value("match", "chainstorm_powerup", chainstorm_powerup))
+	arena = maxi(int(file.get_value("match", "arena", arena)), 0)  # MatchScene clamps it to the arenas that exist.
 
 
 func save_settings() -> void:
@@ -265,6 +270,7 @@ func save_settings() -> void:
 	file.set_value("match", "bot_count", bot_count)
 	file.set_value("match", "bot_difficulty", bot_difficulty)
 	file.set_value("match", "chainstorm_powerup", chainstorm_powerup)
+	file.set_value("match", "arena", arena)
 	var err := file.save(SAVE_PATH)
 	if err != OK:
 		push_warning("Could not save settings (error %d)" % err)

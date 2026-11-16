@@ -168,3 +168,44 @@ to make room. The camera is shifted right so the results panel doesn't cover the
 ### D-026: World signs are single-sided (v0.2.0)
 **Chosen:** `ArenaKit.sign_text()` sets `double_sided = false`.
 **Why:** from behind, Label3D text shows mirrored ("YAW YDNIW" on the menu). Signs now read only from the front.
+
+### D-027: The Linux build is one executable in a folder, with a shortcut helper (v0.2.0)
+**Chosen:** an export preset "Linux" with the game data embedded in `DARTSTORM.x86_64`; `tools/export_linux.sh`
+adds the icon, a README and `install-shortcut.sh` (an applications-menu entry plus a trusted desktop shortcut), packs a
+`.tar.gz`, and boots the exported game headless as a smoke test. Settings move to `~/.local/share/dartstorm/` via
+`config/use_custom_user_dir`.
+**Alternatives:** AppImage or Flatpak; a separate `.pck` file; the default `~/.local/share/godot/app_userdata/...` path.
+**Why:** the simplest thing a family can copy to a PC and launch. Many Linux file managers won't run a binary on
+double-click, so the shortcut script gives a reliable fallback. The custom settings folder is easy to find and delete.
+AppImage/Flatpak add tooling for no benefit at this size. The engine falls back to OpenGL on PCs without Vulkan.
+
+### D-028: Rewards: earned coins, cosmetics only (v0.3.0, planned)
+**Chosen:** one currency (coins) earned by playing and missions, spent only on looks. Levels from XP and a free reward
+track are fine. No gems, no timers, no real money, no power for sale; weapon "upgrades" are cosmetic or sidegrades.
+**Alternatives:** coins plus gems (as the players drew); no currency, levelling unlocks everything.
+**Why:** the players asked for a shop, coins and a pass, and the brief allows progression once combat is fun. But a
+second currency and paid-feeling systems copy mobile monetisation, and power upgrades would make games against
+friends unfair. Chosen by the project owner on 2026-11-16.
+
+### D-029: Team play reuses the free-for-all machinery (v0.3.0)
+**Chosen:** a `teams` enum on GameMode plus `team_for()`. Solo modes give everyone their own team number, so scoring,
+ranking and the podium have one code path. Team modes even the teams by adding a bot, override shirt colours with the
+team colour, and let darts pass through team-mates (no friendly fire).
+**Alternatives:** a separate TeamMatchController; friendly fire on; keeping personal colours in team games.
+**Why:** much less code to keep in sync, and SOLO behaviour is unchanged (all earlier tests still pass). Young players
+tagging a team-mate by accident is frustrating, and personal colours would make teams unreadable at a distance.
+
+### D-030: The lobby is the players' drawing, on a floating island (v0.3.0)
+**Chosen:** rebuild the main menu to the young players' sketch: a 3D island south of the yard with the squad on
+platforms, the yard blurred behind, and their 2D layout (card + buttons left, modes right, logo bottom middle, PLAY
+bottom right).
+**Alternatives:** keep the orbiting overview menu; a separate lobby scene.
+**Why:** seeing their own design in the game is the biggest appeal win available. Reusing the arena as the
+backdrop keeps the sky, sun and backyard with no extra assets.
+
+### D-031: Every place in DARTSTORM is fictional (v0.3.0)
+**Chosen:** arenas (including the planned Home Turf) use invented names, generic layouts and rounded game-scale sizes.
+No real addresses, street, suburb, park or shop names, people's names or reference photos go in the repo, commits or
+PRs, even when a real place inspired the design.
+**Why:** the repository is public and the players are children. A real name or an exact floor plan could point
+strangers to a real home. This extends D-019.

@@ -14,6 +14,7 @@ func add_actor(actor: Actor) -> ScoreEntry:
 	entry.color = actor.color
 	entry.hat = actor.hat_id
 	entry.is_human = actor.is_human
+	entry.team = actor.team_id
 	entries.append(entry)
 	changed.emit()
 	return entry

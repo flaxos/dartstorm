@@ -10,6 +10,7 @@
 script = ExtResource("1")
 id = &"free_for_all"
 display_name = "Backyard Battle"
+short_name = "SOLO"
 description = "Five-minute free-for-all. Everyone for themselves: most points wins."
 duration_seconds = 300.0
 countdown_seconds = 3

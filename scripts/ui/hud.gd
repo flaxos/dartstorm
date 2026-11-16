@@ -46,8 +46,8 @@ var _match_over: bool = false
 var _announce_label: Label
 var _announce_queue: Array[Dictionary] = []
 var _announce_left: float = 0.0
-var _awards_panel: PanelContainer
 var _awards_count: int = 0
+var _team_strip: HBoxContainer
 
 
 func setup(player: Player, controller: MatchController) -> void:
@@ -235,11 +235,20 @@ func _build() -> void:
 	_banner_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	banner_box.add_child(_banner_sub)
 
-	# Announcer call-outs sit just under the clock.
+	# Team modes: every team's score in a row of coloured chips under the clock.
+	var teams := _controller.mode.is_team_mode()
+	_team_strip = HBoxContainer.new()
+	_team_strip.add_theme_constant_override("separation", 8)
+	_team_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_team_strip.visible = teams
+	_root.add_child(_team_strip)
+	UiKit.pin(_team_strip, Vector2(0.5, 0.0), Vector2(0, 108), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
+
+	# Announcer call-outs sit just under the clock (and the team scores).
 	_announce_label = UiKit.label("", 40, UiKit.ORANGE_HOT, 12)
 	_announce_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_root.add_child(_announce_label)
-	UiKit.pin(_announce_label, Vector2(0.5, 0.0), Vector2(0, 128), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
+	UiKit.pin(_announce_label, Vector2(0.5, 0.0), Vector2(0, 160 if teams else 128), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
 
 	_popups = Control.new()
 	_popups.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -290,16 +299,37 @@ func _rebuild_board(title: String, compact: bool = false) -> void:
 	_board_grid.columns = headers.size()
 	for header: String in headers:
 		_board_grid.add_child(UiKit.label(header, 14 if compact else 16, UiKit.SKY, 4))
+	var row_size := 20 if compact else 24
+	if mode.is_team_mode():
+		# One block per team, best team first: a header with the team total, then its players.
+		var place := 0
+		for team in mode.rank_teams(_controller.board):
+			place += 1
+			var tint := GameMode.team_color(team["team"]).lightened(0.35)
+			var header := [str(place), "%s TEAM" % GameMode.team_name(team["team"]), str(team["tags"]), "", str(team["score"])]
+			for cell: String in header:
+				_board_grid.add_child(UiKit.label(cell, row_size, tint, 6))
+			for entry: ScoreEntry in team["members"]:
+				_add_board_row(["", "  " + _board_name(entry), str(entry.tags), str(entry.outs), str(entry.score)],
+						entry.color.lightened(0.3), row_size - 2)
+		return
 	var ranking := mode.rank(_controller.board)
 	for i in ranking.size():
 		var entry := ranking[i]
-		var tint := entry.color.lightened(0.3)
-		var name_text := entry.display_name + ("  (you)" if entry.is_human and entry.display_name != "You" else "")
-		var cells := [str(i + 1), name_text, str(entry.tags), str(entry.outs), str(entry.score)]
+		var cells := [str(i + 1), _board_name(entry), str(entry.tags), str(entry.outs), str(entry.score)]
 		if gun_game:
 			cells.append(mode.describe_progress(entry).trim_prefix("BLASTER "))
-		for cell: String in cells:
-			_board_grid.add_child(UiKit.label(cell, 20 if compact else 24, tint if cell == name_text else UiKit.CREAM, 6))
+		_add_board_row(cells, entry.color.lightened(0.3), row_size)
+
+
+func _board_name(entry: ScoreEntry) -> String:
+	return entry.display_name + ("  (you)" if entry.is_human and entry.display_name != "You" else "")
+
+
+## A scoreboard row: the name (second cell) in the player's colour, the rest in cream.
+func _add_board_row(cells: Array, name_tint: Color, font_size: int) -> void:
+	for i in cells.size():
+		_board_grid.add_child(UiKit.label(cells[i], font_size, name_tint if i == 1 else UiKit.CREAM, 6))
 
 
 # --- Reacting -----------------------------------------------------------------
@@ -413,11 +443,9 @@ func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 	for child in _root.get_children():
 		if child != _board_panel:
 			(child as CanvasItem).visible = false
-	var winner := ranking[0] if not ranking.is_empty() else null
-	var title := "MATCH OVER"
-	if winner != null:
-		title = "YOU WIN!" if winner.is_human else "%s WINS!" % winner.display_name.to_upper()
-		Sfx.play(&"win" if winner.is_human else &"lose")
+	var title := result_title(ranking)
+	if not ranking.is_empty():
+		Sfx.play(&"win" if title.begins_with("YOU") else &"lose")
 	_rebuild_board(title, true)
 	UiKit.pin(_board_panel, Vector2(1.0, 0.5), Vector2(-24, 0), Control.GROW_DIRECTION_BEGIN, Control.GROW_DIRECTION_BOTH)
 	_board_buttons.visible = true
@@ -426,6 +454,20 @@ func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 	var first := _board_buttons.get_child(0) as Button
 	if first != null:
 		first.grab_focus()
+
+
+## "YOU WIN!", "BLAZE WINS!", "YOUR TEAM WINS!", "ORANGE TEAM WINS!" or "IT'S A DRAW!".
+func result_title(ranking: Array[ScoreEntry]) -> String:
+	if ranking.is_empty():
+		return "MATCH OVER"
+	var mode := _controller.mode
+	if not mode.is_team_mode():
+		var winner := ranking[0]
+		return "YOU WIN!" if winner.is_human else "%s WINS!" % winner.display_name.to_upper()
+	var team := mode.winning_team(_controller.board)
+	if team < 0:
+		return "IT'S A DRAW!"
+	return "YOUR TEAM WINS!" if team == _player.team_id else "%s TEAM WINS!" % GameMode.team_name(team)
 
 
 func _build_awards(awards: Array[Dictionary]) -> void:
@@ -448,7 +490,6 @@ func _build_awards(awards: Array[Dictionary]) -> void:
 		line.add_child(UiKit.label(String(award["title"]).to_upper(), 18, UiKit.ORANGE_HOT, 5))
 		var who := "You" if entry.is_human else entry.display_name
 		line.add_child(UiKit.label("%s - %s" % [who, award["detail"]], 16, entry.color.lightened(0.35), 4))
-	_awards_panel = null
 
 
 func awards_shown() -> int:
@@ -495,15 +536,48 @@ func _refresh_score() -> void:
 	if entry == null:
 		return
 	_score_label.text = "SCORE %d" % entry.score
-	var ranking := _controller.mode.rank(_controller.board)
-	var place := ranking.find(entry) + 1
-	var progress := _controller.mode.describe_progress(entry)
-	var text := "TAGS %d   PLACE %d/%d" % [entry.tags, place, ranking.size()]
+	var mode := _controller.mode
+	var progress := mode.describe_progress(entry)
+	var text := ""
+	if mode.is_team_mode():
+		var teams := mode.rank_teams(_controller.board)
+		var team_place := 1
+		for i in teams.size():
+			if teams[i]["team"] == entry.team:
+				team_place = i + 1
+		text = "TAGS %d   TEAM PLACE %d/%d" % [entry.tags, team_place, teams.size()]
+		_refresh_team_strip(teams, entry.team)
+	else:
+		var ranking := mode.rank(_controller.board)
+		text = "TAGS %d   PLACE %d/%d" % [entry.tags, ranking.find(entry) + 1, ranking.size()]
 	if not progress.is_empty():
 		text += "\n" + progress
 	_rank_label.text = text
 	if _board_panel.visible and not _match_over:
 		_rebuild_board("SCOREBOARD")
+
+
+## One chip per team, always in team order (so they don't jump about); your
+## team's chip has a white border.
+func _refresh_team_strip(teams: Array[Dictionary], mine: int) -> void:
+	for child in _team_strip.get_children():
+		child.queue_free()
+	var ordered := teams.duplicate()
+	ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["team"] < b["team"])
+	for team: Dictionary in ordered:
+		var id: int = team["team"]
+		var chip := UiKit.panel(GameMode.team_color(id).darkened(0.25), 0.92, 14, 3 if id == mine else 0, UiKit.CREAM, 8)
+		chip.add_child(UiKit.label("%s %d" % [GameMode.team_name(id), team["score"]], 22, UiKit.CREAM, 5))
+		_team_strip.add_child(chip)
+
+
+## Team chips currently shown under the clock (tests use this).
+func team_chip_count() -> int:
+	var count := 0
+	for child in _team_strip.get_children():
+		if not child.is_queued_for_deletion():
+			count += 1
+	return count
 
 
 func _set_hint(text: String, tint: Color) -> void:

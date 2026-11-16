@@ -47,6 +47,14 @@ func _ready() -> void:
 	await _test_podium_and_awards()
 	await _test_backyard_props()
 	await _test_power_up()
+	# Linux build
+	await _test_linux_export_preset()
+	# The young players' design: team modes and their lobby
+	await _test_team_rules()
+	await _test_blue_vs_orange_match()
+	await _test_duos_match()
+	await _test_bot_hats()
+	await _test_lobby()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -893,7 +901,9 @@ func _test_announcer() -> void:
 	for text in heard:
 		shut = shut or (text.contains("SHUT DOWN") and text.contains((bots[0] as Bot).display_name.to_upper()))
 	check(shut, "ending a 3-tag streak is a SHUT DOWN by the bot who did it")
-	await physics_frames(3)
+	# The HUD updates in _process; several physics steps can pass in one idle frame.
+	for i in 3:
+		await get_tree().process_frame
 	check(not hud.current_announcement().is_empty(), "the HUD shows the call-out (%s)" % hud.current_announcement())
 	GameSettings.bot_count = saved_bots
 	await end_match(game, saved_mode)
@@ -1033,3 +1043,190 @@ func _test_power_up() -> void:
 	check(gun_game.get("power_up") == null, "Gun Game ignores power-up mode")
 	await end_match(gun_game, saved_mode)
 	GameSettings.chainstorm_powerup = saved_powerup
+
+
+# --- Linux build --------------------------------------------------------------
+
+func _test_linux_export_preset() -> void:
+	section("Linux build: export preset")
+	var presets := ConfigFile.new()
+	check(presets.load("res://export_presets.cfg") == OK, "export_presets.cfg exists")
+	check(presets.get_value("preset.0", "platform", "") == "Linux", "preset 0 targets Linux")
+	check(presets.get_value("preset.0", "name", "") == "Linux", "…and is called \"Linux\" (tools/export_linux.sh uses that name)")
+	var excluded := str(presets.get_value("preset.0", "exclude_filter", ""))
+	check(excluded.contains("tests/*") and excluded.contains("tools/*"), "tests and tools stay out of the game")
+	check(bool(presets.get_value("preset.0.options", "binary_format/embed_pck", false)), "one self-contained executable (data embedded)")
+	check(ProjectSettings.get_setting("application/config/use_custom_user_dir", false)
+			and ProjectSettings.get_setting("application/config/custom_user_dir_name", "") == "dartstorm",
+			"settings live in ~/.local/share/dartstorm")
+	await physics_frames(1)
+
+
+# --- Team modes and the lobby (the young players' design) ---------------------
+
+func _entry(team: int, score: int, tags: int) -> ScoreEntry:
+	var entry := ScoreEntry.new()
+	entry.team = team
+	entry.score = score
+	entry.tags = tags
+	return entry
+
+
+func _test_team_rules() -> void:
+	section("Team modes: rules")
+	var duos := MatchScene.resolve_mode(GameSettings.MatchMode.DUOS)
+	var teams := MatchScene.resolve_mode(GameSettings.MatchMode.TEAMS)
+	check(duos.teams == GameMode.Teams.DUOS and duos.short_name == "DUOS", "DUOS loads from its mode file")
+	check(teams.teams == GameMode.Teams.BLUE_VS_ORANGE and teams.short_name == "TEAMS", "TEAMS (Blue vs Orange) loads from its mode file")
+	check(not MatchScene.resolve_mode(GameSettings.MatchMode.FREE_FOR_ALL).is_team_mode(), "SOLO is everyone for themselves")
+	check(teams.bots_for(2) == 3 and teams.bots_for(3) == 3, "an odd team gets one extra bot (2 bots become 3, so 2 v 2)")
+	check(duos.bots_for(4) == 5 and duos.bots_for(7) == 7, "every duo gets a partner (4 bots become 5)")
+	check(MatchScene.team_bot_count(teams, 7) == 7, "7 bots make 4 v 4, the biggest match")
+	var blue_orange: Array[int] = []
+	var pairs: Array[int] = []
+	for i in 6:
+		blue_orange.append(teams.team_for(i))
+		pairs.append(duos.team_for(i))
+	check(blue_orange == [0, 1, 0, 1, 0, 1], "Blue vs Orange alternates players between blue and orange")
+	check(pairs == [0, 0, 1, 1, 2, 2], "Duos pairs players up (you and the first bot are a pair)")
+	check(GameMode.team_name(0) == "BLUE" and GameMode.team_name(1) == "ORANGE", "team 0 is blue and team 1 is orange, like the forts")
+
+	var board := Scoreboard.new()
+	board.entries.assign([_entry(0, 300, 3), _entry(1, 200, 2), _entry(0, 0, 0), _entry(1, 200, 2)])
+	var ranked := teams.rank_teams(board)
+	check(ranked.size() == 2 and ranked[0]["team"] == 1 and ranked[0]["score"] == 400, "team score is everyone's points added up (orange 400 beats blue 300)")
+	check(teams.winning_team(board) == 1, "the higher team total wins")
+	check(teams.rank(board)[0].team == 1 and teams.rank(board)[2].team == 0, "the ranking lists the winning team's players first")
+	var places := teams.podium_places(board)
+	check(places.size() == 2 and (places[0] as Array).size() == 2, "the whole winning team shares the top step of the podium")
+	var level := Scoreboard.new()
+	level.entries.assign([_entry(0, 100, 1), _entry(1, 100, 1)])
+	check(teams.winning_team(level) == -1, "level scores are a draw")
+	await physics_frames(1)
+
+
+func _test_blue_vs_orange_match() -> void:
+	section("Team modes: Blue vs Orange match")
+	var saved_mode := GameSettings.match_mode
+	var saved_bots := GameSettings.bot_count
+	GameSettings.bot_count = 2
+	var game := start_match(GameSettings.MatchMode.TEAMS)
+	var controller := game.get("controller") as MatchController
+	var player := game.get("player") as Player
+	var hud := game.get("hud") as Hud
+	var bots: Array = game.get("bots")
+	check(bots.size() == 3, "2 bots asked for, 3 brought: 2 v 2")
+	check(player.team_id == 0 and player.color.is_equal_approx(GameMode.team_color(0)), "you're on blue, wearing blue")
+	var blue_mate := bots[1] as Bot
+	var orange := bots[0] as Bot
+	check(blue_mate.team_id == 0 and orange.team_id == 1 and orange.color.is_equal_approx(GameMode.team_color(1)),
+			"bots wear their team's colour")
+	check(not blue_mate.accepts_dart_from(player.team_id) and orange.accepts_dart_from(player.team_id),
+			"your darts fly straight through team-mates and tag rivals")
+	var home := true
+	for actor in controller.actors:
+		home = home and controller.is_home_spawn(actor.team_id, actor.global_position)
+	check(home, "everyone starts at their own team's end of the yard")
+	check(hud.team_chip_count() == 2, "the HUD shows both team scores under the clock")
+
+	var heard: Array[String] = []
+	controller.announcement.connect(func(_e: ScoreEntry, text: String, _c: Color, _s: StringName) -> void: heard.append(text))
+	await fast_forward(controller.mode.countdown_seconds + 0.5)
+	for bot: Bot in bots:
+		bot.controls_enabled = false  # Keep the score predictable.
+	orange._protect_left = 0.0
+	orange._tag_out(blue_mate, blue_mate.arsenal.current().data, false)
+	await physics_frames(2)
+	var ranked := controller.mode.rank_teams(controller.board)
+	check(ranked[0]["team"] == 0 and ranked[0]["score"] == controller.mode.points_per_tag, "a blue tag scores for the blue team")
+	check(heard.has("YOUR TEAM TAKES THE LEAD!"), "the announcer calls the lead change")
+	await fast_forward(controller.mode.respawn_delay + 0.5)
+	check(orange.alive and controller.is_home_spawn(orange.team_id, orange.global_position), "tagged players respawn at their own end")
+
+	controller._finish()
+	await physics_frames(2)
+	check(hud.result_title(controller.mode.rank(controller.board)) == "YOUR TEAM WINS!", "the results say YOUR TEAM WINS!")
+	var podium := game.get("podium") as Podium
+	check(podium != null and podium.dancers.size() == 4 and podium.dancer_places.count(0) == 2,
+			"both teams dance on the podium, the winners together on the top step")
+	GameSettings.bot_count = saved_bots
+	await end_match(game, saved_mode)
+
+
+func _test_duos_match() -> void:
+	section("Team modes: Duos match")
+	var saved_mode := GameSettings.match_mode
+	var saved_bots := GameSettings.bot_count
+	GameSettings.bot_count = 4
+	var game := start_match(GameSettings.MatchMode.DUOS)
+	var controller := game.get("controller") as MatchController
+	var player := game.get("player") as Player
+	var teams := {}
+	for actor in controller.actors:
+		teams[actor.team_id] = int(teams.get(actor.team_id, 0)) + 1
+	check(controller.actors.size() == 6 and teams.size() == 3, "4 bots asked for, 5 brought: three pairs")
+	check(teams.values().all(func(count: int) -> bool: return count == 2), "every pair has exactly two players")
+	var buddy := (game.get("bots") as Array)[0] as Bot
+	check(buddy.team_id == player.team_id and buddy.color.is_equal_approx(player.color), "your buddy is on your team, in your colour")
+	GameSettings.bot_count = saved_bots
+	await end_match(game, saved_mode)
+
+
+## Regression: bots used to wear the default cap whatever hat the roster gave them.
+func _test_bot_hats() -> void:
+	section("Bots wear their own hats")
+	var saved_mode := GameSettings.match_mode
+	var game := start_match(GameSettings.MatchMode.FREE_FOR_ALL)
+	var bots: Array = game.get("bots")
+	var right := true
+	for i in bots.size():
+		var model := (bots[i] as Bot).get_node("Model") as CharacterModel
+		right = right and model.hat_id() == MatchScene.BOT_ROSTER[i]["hat"]
+	check(right, "every bot's model wears its roster hat (%d bots)" % bots.size())
+	await end_match(game, saved_mode)
+
+
+func _test_lobby() -> void:
+	section("Lobby (the players' own menu design)")
+	var saved_mode := GameSettings.match_mode
+	var saved_bots := GameSettings.bot_count
+	GameSettings.match_mode = GameSettings.MatchMode.FREE_FOR_ALL
+	GameSettings.bot_count = 3
+	var menu := (load("res://scenes/ui/main_menu.tscn") as PackedScene).instantiate()
+	add_child(menu)
+	await physics_frames(2)
+	var squad: Array = menu.get("squad")
+	check(menu.get("player_model") != null, "you stand in the middle of the island")
+	check(squad.size() == 3, "your 3 bots stand on platforms around you")
+	var play := menu.get("_play_button") as Button
+	check(play != null and play.has_focus(), "the big PLAY button has focus (A on a controller starts a match)")
+	check((menu.get("_mode_buttons") as Array).size() == 4, "four mode cards: SOLO, DUOS, TEAMS, GUN GAME")
+
+	menu.call("_pick_mode", GameSettings.MatchMode.TEAMS)
+	await physics_frames(1)
+	squad = menu.get("squad")
+	check(GameSettings.match_mode == GameSettings.MatchMode.TEAMS, "picking TEAMS selects Blue vs Orange")
+	check(squad.size() == 3, "…with 3 bots for an even 2 v 2")
+	var mate := squad[0] as CharacterModel
+	check((mate.get("_tint") as Color).is_equal_approx(GameMode.team_color(0)), "your team-mate stands nearest you, in blue")
+	check(((menu.get("player_model") as CharacterModel).get("_tint") as Color).is_equal_approx(GameMode.team_color(0)),
+			"…and so do you (your own colour comes back in SOLO)")
+	menu.call("_change_bots", 99)
+	await physics_frames(1)
+	check(GameSettings.bot_count == GameSettings.MAX_BOTS and (menu.get("squad") as Array).size() == GameSettings.MAX_BOTS,
+			"the bots button stops at %d, and they all fit on the island" % GameSettings.MAX_BOTS)
+
+	menu.call("_show_customise", true)
+	await physics_frames(1)
+	var slots: Array = menu.get("_slots")
+	check(slots.all(func(slot: Node3D) -> bool: return not slot.visible), "customising clears the stage so you're alone")
+	menu.call("_show_customise", false)
+	await physics_frames(1)
+	slots = menu.get("_slots")
+	check(slots.all(func(slot: Node3D) -> bool: return slot.visible), "…and everyone comes back afterwards")
+
+	menu.queue_free()
+	GameSettings.match_mode = saved_mode
+	GameSettings.bot_count = saved_bots
+	GameSettings.save_settings()
+	await physics_frames(2)

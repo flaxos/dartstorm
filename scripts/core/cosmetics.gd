@@ -24,13 +24,17 @@ const HATS: Array[Dictionary] = [
 	{"id": &"party", "name": "Party Hat"},
 	{"id": &"cowboy", "name": "Cowboy"},
 	{"id": &"crown", "name": "Crown"},
+	{"id": &"goggles", "name": "Goggles"},
+	{"id": &"bunny", "name": "Bunny Ears"},
+	{"id": &"horns", "name": "Horns"},
+	{"id": &"spiky", "name": "Spiky Hair"},
 	{"id": &"none", "name": "No Hat"},
 ]
 
 const RANDOM_NAMES: Array[String] = [
 	"Captain Foam", "Sir Splat", "Blaster Bean", "Tag Master", "Zippy", "Bounce Boss",
 	"Captain Fizz", "Dart Wizard", "Foam Ninja", "Turbo Toast", "Mega Muffin", "Ricochet Rex",
-	"Windy Wendy", "Bucket Bandit", "Storm Chaser", "Professor Pop",
+	"Breezy Blaster", "Bucket Bandit", "Storm Chaser", "Professor Pop",
 ]
 
 
@@ -59,6 +63,13 @@ static func has_hat(id: StringName) -> bool:
 		if hat["id"] == id:
 			return true
 	return false
+
+
+static func hat_name(id: StringName) -> String:
+	for hat in HATS:
+		if hat["id"] == id:
+			return hat["name"]
+	return "No Hat"
 
 
 static func random_name() -> String:

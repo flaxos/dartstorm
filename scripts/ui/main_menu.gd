@@ -1,13 +1,44 @@
 extends Node3D
-## Title screen. The Backyard Fortress spins slowly in the background while the
-## player picks a mode, the bots, the Chainstorm rule, and their own look
-## (name, colour, hat) with a live 3D preview. Fully usable with a controller.
+## The lobby, laid out like the young players' own drawing of DARTSTORM's home
+## screen (GDD §3.21): you stand on a round platform in the middle of a
+## floating island, with your squad on platforms around you and the backyard
+## battlefield behind. Your player card is top left with a column of buttons
+## under it, the mode picker is top right, the DARTSTORM logo is bottom middle
+## and a big PLAY button is bottom right. Fully usable with a controller.
 
 const MATCH_SCENE := "res://scenes/game/match.tscn"
 const ARENA_SCENE := preload("res://scenes/arenas/backyard_fortress.tscn")
 const DIFFICULTY_NAMES := ["EASY", "NORMAL", "HARD"]
-const MIN_BOTS := 2
-const MAX_BOTS := 5
+## Mode cards, in the order shown (GameSettings.MatchMode values).
+const MODE_ORDER: Array[int] = [
+	GameSettings.MatchMode.FREE_FOR_ALL,
+	GameSettings.MatchMode.DUOS,
+	GameSettings.MatchMode.TEAMS,
+	GameSettings.MatchMode.GUN_GAME,
+]
+## The lobby island floats just south of the yard, so the backyard fills the background.
+const STAGE := Vector3(0.0, 9.0, 38.0)
+## Where your squad stands (relative to the island), nearest spots first.
+## Back rows stand higher, like a team photo, so nobody hides behind anyone.
+const SQUAD_SPOTS: Array[Vector3] = [
+	Vector3(-2.0, 0.0, -0.5), Vector3(2.0, 0.0, -0.5),
+	Vector3(-3.3, 0.45, -2.3), Vector3(3.3, 0.45, -2.3),
+	Vector3(-1.1, 0.9, -3.7), Vector3(1.1, 0.9, -3.7),
+	Vector3(-3.9, 1.3, -5.0), Vector3(3.9, 1.3, -5.0),
+]
+const PLAYER_SPOT := Vector3(0.0, 0.0, 0.7)
+## Camera poses: the whole squad, or a close-up of you while customising.
+## The lobby camera sits a little right so the squad fills the gap between the
+## button column on the left and the mode picker on the right.
+const CAMERA_LOBBY := Vector3(1.0, 3.9, 10.6)
+const LOOK_LOBBY := Vector3(1.0, 1.1, -1.6)
+const CAMERA_CLOSE := Vector3(-1.45, 1.9, 4.6)
+const LOOK_CLOSE := Vector3(-1.45, 1.15, 0.0)
+const BLASTERS := [
+	"res://resources/weapons/dart_sprayer.tres",
+	"res://resources/weapons/pocket_popper.tres",
+	"res://resources/weapons/flaxs_chainstorm.tres",
+]
 const KEYBOARD_HELP := [
 	"Move: W A S D     Look: Mouse",
 	"Jump: Space     Sprint: Shift",
@@ -24,28 +55,47 @@ const CONTROLLER_HELP := [
 ]
 const HOW_TO_PLAY := [
 	"",
-	"Tag the bots with foam darts!",
+	"Tag your rivals with foam darts!",
 	"Darts drop, curve in the wind and",
 	"bounce off the shiny mirror panels.",
 	"Stand by a bucket to refill ammo.",
+	"In DUOS and TEAMS your darts fly",
+	"straight through your friends.",
 ]
 
-var _orbit: Node3D
+## Your character in the middle of the island (also the customise preview).
+var player_model: CharacterModel
+## Everyone else on the island, in the colours they'll wear in the match.
+var squad: Array[CharacterModel] = []
+
+var _stage: Node3D
+var _squad_root: Node3D
 var _camera: Camera3D
+var _camera_tween: Tween
 var _ui: Control
 var _menu: Control
 var _settings: SettingsPanel
 var _customise: PanelContainer
-var _preview: CharacterModel
-var _bots_value: Label
-var _difficulty_button: Button
-var _storm_button: Button
+var _help: PanelContainer
 var _help_box: VBoxContainer
+var _bunker_label: Label
+var _card_name: Label
+var _mode_buttons: Array[Button] = []
+var _mode_blurb: Label
+var _bots_value: Label
+var _teams_info: Label
+var _difficulty_button: Button
+var _storm_row: HBoxContainer
+var _storm_button: Button
 var _name_edit: LineEdit
 var _swatches: Array[Button] = []
 var _hat_buttons: Array[Button] = []
-var _player_button: Button
 var _play_button: Button
+var _play_mode_label: Label
+var _bolts: Array[Node3D] = []
+## Height each squad member stands at (their platform top).
+var _squad_floor: Array[float] = []
+var _slots: Array[Node3D] = []
 var _time: float = 0.0
 
 
@@ -56,14 +106,20 @@ func _ready() -> void:
 	var arena := ARENA_SCENE.instantiate() as Arena
 	arena.bake_navigation = false
 	add_child(arena)
-	_orbit = Node3D.new()
-	add_child(_orbit)
+	_build_island()
+
 	_camera = Camera3D.new()
-	_camera.position = Vector3(0.0, 17.0, 44.0)
-	_camera.rotation_degrees.x = -19.0
-	_camera.fov = 60.0
+	_camera.fov = 50.0
 	_camera.current = true
-	_orbit.add_child(_camera)
+	# Soft focus on the yard far behind, so the squad stands out like on a poster.
+	var focus := CameraAttributesPractical.new()
+	focus.dof_blur_far_enabled = true
+	focus.dof_blur_far_distance = 26.0
+	focus.dof_blur_far_transition = 14.0
+	focus.dof_blur_amount = 0.06
+	_camera.attributes = focus
+	add_child(_camera)
+	_place_camera(CAMERA_LOBBY, LOOK_LOBBY)
 
 	var layer := CanvasLayer.new()
 	add_child(layer)
@@ -71,8 +127,8 @@ func _ready() -> void:
 	_ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	layer.add_child(_ui)
 	_build_menu()
+	_build_help()
 	_build_customise()
-	_build_preview()
 
 	_settings = SettingsPanel.new()
 	_settings.visible = false
@@ -80,6 +136,7 @@ func _ready() -> void:
 	UiKit.pin(_settings, Vector2(0.5, 0.5), Vector2.ZERO, Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_BOTH)
 	_settings.closed.connect(_show_settings.bind(false))
 
+	_rebuild_squad()
 	GameSettings.input_device_changed.connect(func(_pad: bool) -> void: _refresh_help())
 	Sfx.play_music(&"menu")
 
@@ -92,47 +149,240 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_time += delta
-	_orbit.rotate_y(delta * 0.08)
-	if _preview.visible:
-		_preview.rotation.y = PI + sin(_time * 0.8) * 0.7
+	if player_model != null:
+		player_model.rotation.y = PI + sin(_time * 0.8) * (0.7 if _customise.visible else 0.3)
+		player_model.position.y = PLAYER_SPOT.y + 0.32 + absf(sin(_time * 1.6)) * 0.04
+	for i in squad.size():
+		var member := squad[i]
+		member.rotation.y = PI + sin(_time * 0.7 + i * 1.3) * 0.35
+		# Now and then someone does a happy little hop.
+		var hop := maxf(sin(_time * 1.1 + i * 2.1) - 0.93, 0.0) * 4.0
+		member.position.y = _squad_floor[i] + hop
+	for i in _bolts.size():
+		_bolts[i].scale = Vector3.ONE * (1.0 + sin(_time * 5.0 + i * 2.0) * 0.06)
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _customise.visible and event.is_action_pressed(&"ui_cancel"):
+	if not event.is_action_pressed(&"ui_cancel"):
+		return
+	if _customise.visible:
 		_show_customise(false)
+		get_viewport().set_input_as_handled()
+	elif _help.visible:
+		_show_help(false)
 		get_viewport().set_input_as_handled()
 
 
-# --- Main panel -----------------------------------------------------------------
+# --- The island (3D) ---------------------------------------------------------------
+
+func _build_island() -> void:
+	_stage = Node3D.new()
+	_stage.name = "Lobby"
+	add_child(_stage)
+	_stage.position = STAGE
+	var grass := ArenaKit.deco_cylinder(_stage, 7.6, 0.5, Vector3(0.0, -0.25, -1.6), Color(0.36, 0.72, 0.28))
+	grass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ArenaKit.deco_cylinder(_stage, 2.4, 4.2, Vector3(0.0, -2.6, -1.6), Color(0.55, 0.37, 0.22), Vector3.ZERO, 7.4)
+	ArenaKit.deco_cylinder(_stage, 0.9, 1.6, Vector3(0.0, -5.5, -1.6), Color(0.45, 0.3, 0.18), Vector3.ZERO, 2.3)
+	for rock: Vector3 in [Vector3(-8.5, -1.5, 0.5), Vector3(8.8, -0.8, -2.5), Vector3(-6.5, -3.5, -5.0)]:
+		ArenaKit.deco_sphere(_stage, 0.7, rock, Color(0.5, 0.42, 0.36), 0.7)
+	# Your platform: bigger, with a gold ring.
+	ArenaKit.deco_cylinder(_stage, 1.15, 0.3, PLAYER_SPOT + Vector3(0.0, 0.15, 0.0), Color(0.93, 0.93, 0.98))
+	var ring := ArenaKit.deco_cylinder(_stage, 1.25, 0.12, PLAYER_SPOT + Vector3(0.0, 0.08, 0.0), Color(1.0, 0.8, 0.15))
+	ring.material_override = ArenaKit.mat(Color(1.0, 0.8, 0.15), 0.5, 0.0, 0.6)
+	# Yellow lightning bolts crackling over the squad, straight from the drawing.
+	_bolts.append(_lightning_bolt(Vector3(-2.5, 4.9, -3.0), -14.0))
+	_bolts.append(_lightning_bolt(Vector3(4.2, 4.6, -3.0), 12.0))
+	_squad_root = Node3D.new()
+	_stage.add_child(_squad_root)
+
+
+func _lightning_bolt(at: Vector3, tilt: float) -> Node3D:
+	var bolt := Node3D.new()
+	_stage.add_child(bolt)
+	bolt.position = at
+	bolt.rotation_degrees.z = tilt
+	var yellow := Color(1.0, 0.86, 0.15)
+	ArenaKit.deco_box(bolt, Vector3(0.16, 0.8, 0.12), Vector3(0.12, 0.45, 0.0), yellow, Vector3(0.0, 0.0, -28.0), 1.2)
+	ArenaKit.deco_box(bolt, Vector3(0.6, 0.14, 0.12), Vector3(0.0, 0.05, 0.0), yellow, Vector3(0.0, 0.0, 10.0), 1.2)
+	ArenaKit.deco_box(bolt, Vector3(0.16, 0.8, 0.12), Vector3(-0.12, -0.35, 0.0), yellow, Vector3(0.0, 0.0, -28.0), 1.2)
+	return bolt
+
+
+## Rebuilds everyone on the island for the selected mode and bot count: team
+## colours in DUOS and TEAMS (your team-mates nearest you), your own colour
+## while you're customising.
+func _rebuild_squad() -> void:
+	for child in _squad_root.get_children():
+		child.queue_free()
+	squad.clear()
+	_slots.clear()
+	_squad_floor.clear()
+	var mode := MatchScene.resolve_mode(GameSettings.match_mode)
+	var teams := mode.is_team_mode()
+	var my_team := mode.team_for(0)
+	var my_color := GameMode.team_color(my_team) if teams and not _customise.visible else GameSettings.color()
+
+	player_model = CharacterModel.new()
+	_squad_root.add_child(player_model)
+	player_model.setup(GameSettings.display_name(), my_color, GameSettings.player_hat)
+	player_model.show_overhead(false)
+	player_model.position = PLAYER_SPOT + Vector3(0.0, 0.32, 0.0)
+	player_model.rotation.y = PI
+	player_model.set_weapon(load(BLASTERS[2]) as WeaponData)
+
+	var count := MatchScene.team_bot_count(mode, GameSettings.bot_count)
+	var colors := MatchScene.bot_colors(GameSettings.color(), count)
+	# Team-mates first, so they stand right beside you.
+	var order: Array[int] = []
+	for i in count:
+		if mode.team_for(i + 1) == my_team:
+			order.append(i)
+	for i in count:
+		if not order.has(i):
+			order.append(i)
+	for slot in mini(order.size(), SQUAD_SPOTS.size()):
+		var i := order[slot]
+		var team := mode.team_for(i + 1)
+		var tint: Color = GameMode.team_color(team) if teams else colors[i]
+		_add_squad_member(MatchScene.BOT_ROSTER[i]["name"], tint, MatchScene.BOT_ROSTER[i]["hat"], SQUAD_SPOTS[slot], i)
+	_show_squad(not _customise.visible)
+
+
+func _add_squad_member(member_name: String, tint: Color, hat: StringName, spot: Vector3, index: int) -> void:
+	# Everything for one member lives under one node, so they can be hidden together.
+	var slot := Node3D.new()
+	_squad_root.add_child(slot)
+	_slots.append(slot)
+	# A floating platform; raised ones get a little stalk underneath.
+	var top := spot.y + 0.25
+	ArenaKit.deco_cylinder(slot, 0.78, 0.25, spot + Vector3(0.0, 0.125, 0.0), Color(0.93, 0.93, 0.98))
+	var ring := ArenaKit.deco_cylinder(slot, 0.86, 0.1, spot + Vector3(0.0, 0.05, 0.0), tint)
+	ring.material_override = ArenaKit.mat(tint, 0.5, 0.0, 0.5)
+	if spot.y > 0.0:
+		ArenaKit.deco_cylinder(slot, 0.18, spot.y, Vector3(spot.x, spot.y * 0.5, spot.z), Color(0.8, 0.82, 0.9))
+	var model := CharacterModel.new()
+	slot.add_child(model)
+	model.setup(member_name, tint, hat)
+	model.show_overhead(false)
+	model.position = Vector3(spot.x, top, spot.z)
+	model.rotation.y = PI
+	model.set_weapon(load(BLASTERS[index % 2]) as WeaponData)
+	squad.append(model)
+	_squad_floor.append(top)
+	# A name tag over each head, like the speech bubbles in the drawing.
+	var bubble := Label3D.new()
+	bubble.text = member_name.to_upper()
+	bubble.font = UiKit.font()
+	bubble.font_size = 44
+	bubble.pixel_size = 0.0062
+	bubble.modulate = tint.lightened(0.4)
+	bubble.outline_size = 14
+	bubble.outline_modulate = UiKit.NAVY_DARK
+	bubble.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	# Write depth, or the background blur treats the text as far away and smears it.
+	bubble.alpha_cut = Label3D.ALPHA_CUT_OPAQUE_PREPASS
+	bubble.position = Vector3(spot.x, top + 2.4, spot.z)
+	slot.add_child(bubble)
+
+
+## Shows or hides everyone but you (they step aside while you customise).
+func _show_squad(shown: bool) -> void:
+	for slot in _slots:
+		slot.visible = shown
+
+
+func _place_camera(offset: Vector3, look: Vector3) -> void:
+	_camera.position = STAGE + offset
+	_camera.look_at(STAGE + look, Vector3.UP)
+
+
+func _move_camera(offset: Vector3, look: Vector3) -> void:
+	if _camera_tween != null and _camera_tween.is_valid():
+		_camera_tween.kill()
+	var target := Transform3D(Basis.IDENTITY, STAGE + offset).looking_at(STAGE + look, Vector3.UP)
+	_camera_tween = create_tween()
+	_camera_tween.tween_property(_camera, "global_transform", target, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+# --- The lobby screen (2D) ------------------------------------------------------------
 
 func _build_menu() -> void:
 	_menu = Control.new()
 	_menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_menu.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui.add_child(_menu)
+	_build_player_card()
+	_build_mode_picker()
+	_build_logo()
 
-	# Title.
-	var title_box := VBoxContainer.new()
-	title_box.add_theme_constant_override("separation", -8)
-	_menu.add_child(title_box)
-	UiKit.pin(title_box, Vector2(0.0, 0.0), Vector2(48, 28), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_END)
-	title_box.add_child(UiKit.label("DARTSTORM", 104, UiKit.ORANGE_HOT, 20))
-	title_box.add_child(UiKit.label("ELEMENTAL ARENA", 36, UiKit.SKY, 10))
+	# Bottom right: the big PLAY button.
+	var play_box := VBoxContainer.new()
+	play_box.add_theme_constant_override("separation", 4)
+	_menu.add_child(play_box)
+	UiKit.pin(play_box, Vector2(1.0, 1.0), Vector2(-32, -28), Control.GROW_DIRECTION_BEGIN, Control.GROW_DIRECTION_BEGIN)
+	_play_mode_label = UiKit.label("", 20, UiKit.CREAM, 6)
+	_play_mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	play_box.add_child(_play_mode_label)
+	_play_button = UiKit.button("PLAY", 64, Vector2(300, 104))
+	_play_button.add_theme_constant_override("outline_size", 12)
+	_play_button.pressed.connect(_play)
+	play_box.add_child(_play_button)
 
-	# Buttons.
-	var panel := UiKit.panel(UiKit.NAVY, 0.9, 22, 4, UiKit.ORANGE, 22)
+	_refresh_options()
+	_play_button.grab_focus()
+
+
+## Top left: "<NAME>'S BUNKER" and a column of buttons, like the drawing.
+func _build_player_card() -> void:
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 10)
+	_menu.add_child(column)
+	UiKit.pin(column, Vector2(0.0, 0.0), Vector2(28, 24), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_END)
+	var card := UiKit.panel(UiKit.NAVY, 0.9, 18, 4, UiKit.ORANGE, 14)
+	column.add_child(card)
+	var card_box := VBoxContainer.new()
+	card_box.add_theme_constant_override("separation", -2)
+	card.add_child(card_box)
+	_bunker_label = UiKit.label("", 30, UiKit.ORANGE_HOT, 10)
+	card_box.add_child(_bunker_label)
+	_card_name = UiKit.label("", 22, UiKit.CREAM, 6)
+	card_box.add_child(_card_name)
+	for entry: Array in [["CHARACTER", _show_customise.bind(true)], ["HOW TO PLAY", _show_help.bind(true)],
+			["SETTINGS", _show_settings.bind(true)], ["QUIT", func() -> void: Sfx.quit_game()]]:
+		var button := UiKit.small_button(entry[0], Vector2(210, 48))
+		button.name = String(entry[0]).replace(" ", "")
+		button.pressed.connect(entry[1])
+		column.add_child(button)
+	_refresh_card()
+
+
+## Top right: the mode cards and the match options.
+func _build_mode_picker() -> void:
+	var panel := UiKit.panel(UiKit.NAVY, 0.9, 18, 4, UiKit.SKY, 16)
 	_menu.add_child(panel)
-	UiKit.pin(panel, Vector2(0.0, 1.0), Vector2(48, -36), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_BEGIN)
+	UiKit.pin(panel, Vector2(1.0, 0.0), Vector2(-28, 24), Control.GROW_DIRECTION_BEGIN, Control.GROW_DIRECTION_END)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
 	panel.add_child(box)
-
-	_play_button = UiKit.button("PLAY: BACKYARD BATTLE", 26, Vector2(400, 60))
-	_play_button.pressed.connect(_play.bind(GameSettings.MatchMode.FREE_FOR_ALL))
-	box.add_child(_play_button)
-	var gun_game := UiKit.button("PLAY: GUN GAME", 26, Vector2(400, 60))
-	gun_game.pressed.connect(_play.bind(GameSettings.MatchMode.GUN_GAME))
-	box.add_child(gun_game)
+	box.add_child(UiKit.label("PICK A MODE", 24, UiKit.SKY, 6))
+	var cards := GridContainer.new()
+	cards.columns = 2
+	cards.add_theme_constant_override("h_separation", 10)
+	cards.add_theme_constant_override("v_separation", 10)
+	box.add_child(cards)
+	for mode_index in MODE_ORDER:
+		var mode := MatchScene.resolve_mode(mode_index)
+		var card := UiKit.small_button(mode.short_name, Vector2(170, 56))
+		card.add_theme_font_size_override("font_size", 26)
+		card.name = mode.short_name.replace(" ", "")
+		card.pressed.connect(_pick_mode.bind(mode_index))
+		cards.add_child(card)
+		_mode_buttons.append(card)
+	_mode_blurb = UiKit.label("", 16, UiKit.CREAM, 4)
+	_mode_blurb.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_mode_blurb.custom_minimum_size = Vector2(350, 44)
+	box.add_child(_mode_blurb)
 
 	var bots_row := _option_row(box, "BOTS")
 	var fewer := UiKit.small_button("-")
@@ -140,48 +390,41 @@ func _build_menu() -> void:
 	bots_row.add_child(fewer)
 	_bots_value = UiKit.label("", 28, UiKit.ORANGE_HOT)
 	_bots_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_bots_value.custom_minimum_size.x = 60
+	_bots_value.custom_minimum_size.x = 50
 	bots_row.add_child(_bots_value)
 	var more := UiKit.small_button("+")
 	more.pressed.connect(_change_bots.bind(1))
 	bots_row.add_child(more)
+	_teams_info = UiKit.label("", 16, UiKit.SKY, 4)
+	box.add_child(_teams_info)
 
 	var difficulty_row := _option_row(box, "BOT SKILL")
-	_difficulty_button = UiKit.small_button("", Vector2(190, 44))
+	_difficulty_button = UiKit.small_button("", Vector2(180, 44))
 	_difficulty_button.pressed.connect(_cycle_difficulty)
 	difficulty_row.add_child(_difficulty_button)
 
-	var storm_row := _option_row(box, "CHAINSTORM")
-	_storm_button = UiKit.small_button("", Vector2(190, 44))
+	_storm_row = _option_row(box, "CHAINSTORM")
+	_storm_button = UiKit.small_button("", Vector2(180, 44))
 	_storm_button.tooltip_text = "EVERYONE: all players start with it.\nPOWER-UP: it lands on the treehouse; grab it first!"
 	_storm_button.pressed.connect(_toggle_storm)
-	storm_row.add_child(_storm_button)
+	_storm_row.add_child(_storm_button)
 
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	box.add_child(row)
-	_player_button = UiKit.small_button("YOUR PLAYER", Vector2(195, 48))
-	_player_button.pressed.connect(_show_customise.bind(true))
-	row.add_child(_player_button)
-	var settings := UiKit.small_button("SETTINGS", Vector2(195, 48))
-	settings.pressed.connect(_show_settings.bind(true))
-	row.add_child(settings)
-	var quit := UiKit.small_button("QUIT", Vector2(400, 40))
-	quit.pressed.connect(func() -> void: Sfx.quit_game())
-	box.add_child(quit)
 
-	# How to play (shows controller buttons when a pad is in use).
-	var help := UiKit.panel(UiKit.NAVY, 0.86, 22, 0, UiKit.ORANGE, 20)
-	help.name = "Help"
-	_menu.add_child(help)
-	UiKit.pin(help, Vector2(1.0, 1.0), Vector2(-36, -36), Control.GROW_DIRECTION_BEGIN, Control.GROW_DIRECTION_BEGIN)
-	_help_box = VBoxContainer.new()
-	_help_box.add_theme_constant_override("separation", 4)
-	help.add_child(_help_box)
-	_refresh_help()
-
-	_refresh_options()
-	_play_button.grab_focus()
+## Bottom middle: the DARTSTORM logo with blue swooshes.
+func _build_logo() -> void:
+	var logo := HBoxContainer.new()
+	logo.add_theme_constant_override("separation", 6)
+	logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_menu.add_child(logo)
+	UiKit.pin(logo, Vector2(0.4, 1.0), Vector2(0, -20), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_BEGIN)
+	var words := VBoxContainer.new()
+	words.add_theme_constant_override("separation", -14)
+	logo.add_child(words)
+	words.add_child(UiKit.label("DARTSTORM", 80, UiKit.ORANGE_HOT, 18))
+	var sub := UiKit.label("ELEMENTAL ARENA", 28, UiKit.SKY, 9)
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	words.add_child(sub)
+	logo.add_child(Swoosh.new())
 
 
 func _option_row(parent: Control, text: String) -> HBoxContainer:
@@ -194,26 +437,88 @@ func _option_row(parent: Control, text: String) -> HBoxContainer:
 	return row
 
 
+func _build_help() -> void:
+	_help = UiKit.panel(UiKit.NAVY, 0.95, 22, 4, UiKit.ORANGE, 24)
+	_help.mouse_filter = Control.MOUSE_FILTER_STOP
+	_help.visible = false
+	_ui.add_child(_help)
+	UiKit.pin(_help, Vector2(0.5, 0.5), Vector2.ZERO, Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_BOTH)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	_help.add_child(box)
+	_help_box = VBoxContainer.new()
+	_help_box.add_theme_constant_override("separation", 4)
+	box.add_child(_help_box)
+	var done := UiKit.button("GOT IT!", 26, Vector2(220, 54))
+	done.name = "HelpDone"
+	done.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	done.pressed.connect(_show_help.bind(false))
+	box.add_child(done)
+	_refresh_help()
+
+
 func _refresh_help() -> void:
 	for child in _help_box.get_children():
 		child.queue_free()
 	var pad := GameSettings.using_controller
-	_help_box.add_child(UiKit.label("HOW TO PLAY" + (" (CONTROLLER)" if pad else ""), 26, UiKit.ORANGE_HOT, 8))
+	_help_box.add_child(UiKit.label("HOW TO PLAY" + (" (CONTROLLER)" if pad else ""), 32, UiKit.ORANGE_HOT, 8))
 	var lines: Array = (CONTROLLER_HELP if pad else KEYBOARD_HELP) + HOW_TO_PLAY
 	for line: String in lines:
-		_help_box.add_child(UiKit.label(line, 18, UiKit.CREAM, 4))
+		_help_box.add_child(UiKit.label(line, 20, UiKit.CREAM, 4))
 
 
-func _play(mode: int) -> void:
-	GameSettings.match_mode = mode
+func _refresh_card() -> void:
+	var shown := GameSettings.display_name()
+	var named := shown != "You"
+	_bunker_label.text = "%s'S BUNKER" % shown.to_upper() if named else "YOUR BUNKER"
+	_card_name.text = shown.to_upper() if named else "SET YOUR NAME!"
+	_card_name.add_theme_color_override("font_color", GameSettings.color().lightened(0.3) if named else UiKit.SKY)
+
+
+func _refresh_options() -> void:
+	var mode := MatchScene.resolve_mode(GameSettings.match_mode)
+	for i in _mode_buttons.size():
+		var chosen := MODE_ORDER[i] == GameSettings.match_mode
+		_mode_buttons[i].add_theme_stylebox_override("normal",
+				UiKit.panel_style(UiKit.ORANGE if chosen else UiKit.BLUE, 1.0, 12, 3 if chosen else 0, UiKit.CREAM, 8))
+	_mode_blurb.text = mode.description
+	_play_mode_label.text = mode.display_name.to_upper()
+	_bots_value.text = str(GameSettings.bot_count)
+	var bots := MatchScene.team_bot_count(mode, GameSettings.bot_count)
+	var players := bots + 1
+	var info := ""
+	match mode.teams:
+		GameMode.Teams.DUOS:
+			info = "%d PAIRS" % (players >> 1)
+		GameMode.Teams.BLUE_VS_ORANGE:
+			info = "%d v %d" % [players >> 1, players >> 1]
+		_:
+			info = "YOU + %d BOTS" % bots
+	if bots > GameSettings.bot_count:
+		info += "  (+1 BOT TO EVEN THE TEAMS)"
+	_teams_info.text = info
+	_difficulty_button.text = DIFFICULTY_NAMES[clampi(GameSettings.bot_difficulty, 0, DIFFICULTY_NAMES.size() - 1)]
+	_storm_row.visible = not mode is GunGameMode
+	_storm_button.text = "POWER-UP" if GameSettings.chainstorm_powerup else "EVERYONE"
+
+
+func _pick_mode(mode_index: int) -> void:
+	GameSettings.match_mode = mode_index
+	GameSettings.save_settings()  # Remembered even if no match is started.
+	_refresh_options()
+	_rebuild_squad()
+
+
+func _play() -> void:
 	GameSettings.save_settings()
 	get_tree().change_scene_to_file(MATCH_SCENE)
 
 
 func _change_bots(step: int) -> void:
-	GameSettings.bot_count = clampi(GameSettings.bot_count + step, MIN_BOTS, MAX_BOTS)
-	GameSettings.save_settings()  # Remembered even if no match is started.
+	GameSettings.bot_count = clampi(GameSettings.bot_count + step, GameSettings.MIN_BOTS, GameSettings.MAX_BOTS)
+	GameSettings.save_settings()
 	_refresh_options()
+	_rebuild_squad()
 
 
 func _cycle_difficulty() -> void:
@@ -228,12 +533,6 @@ func _toggle_storm() -> void:
 	_refresh_options()
 
 
-func _refresh_options() -> void:
-	_bots_value.text = str(GameSettings.bot_count)
-	_difficulty_button.text = DIFFICULTY_NAMES[clampi(GameSettings.bot_difficulty, 0, DIFFICULTY_NAMES.size() - 1)]
-	_storm_button.text = "POWER-UP" if GameSettings.chainstorm_powerup else "EVERYONE"
-
-
 func _show_settings(shown: bool) -> void:
 	_settings.visible = shown
 	_menu.visible = not shown
@@ -243,18 +542,27 @@ func _show_settings(shown: bool) -> void:
 		_play_button.grab_focus()
 
 
-# --- Your player (customise) ---------------------------------------------------
+func _show_help(shown: bool) -> void:
+	_help.visible = shown
+	_menu.visible = not shown
+	if shown:
+		(_help.find_child("HelpDone", true, false) as Button).grab_focus()
+	else:
+		_play_button.grab_focus()
+
+
+# --- Character (customise) -------------------------------------------------------
 
 func _build_customise() -> void:
 	_customise = UiKit.panel(UiKit.NAVY, 0.94, 22, 4, UiKit.ORANGE, 24)
 	_customise.mouse_filter = Control.MOUSE_FILTER_STOP
 	_customise.visible = false
 	_ui.add_child(_customise)
-	UiKit.pin(_customise, Vector2(0.0, 0.5), Vector2(48, 0), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_BOTH)
+	UiKit.pin(_customise, Vector2(0.0, 0.5), Vector2(36, 0), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_BOTH)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 14)
+	box.add_theme_constant_override("separation", 12)
 	_customise.add_child(box)
-	box.add_child(UiKit.label("YOUR PLAYER", 40, UiKit.ORANGE_HOT, 10))
+	box.add_child(UiKit.label("CHARACTER", 40, UiKit.ORANGE_HOT, 10))
 
 	box.add_child(UiKit.label("NAME", 20, UiKit.SKY, 4))
 	var name_row := HBoxContainer.new()
@@ -276,7 +584,7 @@ func _build_customise() -> void:
 		_on_name_changed(_name_edit.text))
 	name_row.add_child(random)
 
-	box.add_child(UiKit.label("COLOUR", 20, UiKit.SKY, 4))
+	box.add_child(UiKit.label("COLOUR  (TEAM MODES USE TEAM COLOURS)", 18, UiKit.SKY, 4))
 	var colours := HBoxContainer.new()
 	colours.add_theme_constant_override("separation", 8)
 	box.add_child(colours)
@@ -296,7 +604,8 @@ func _build_customise() -> void:
 	hats.add_theme_constant_override("v_separation", 8)
 	box.add_child(hats)
 	for hat in Cosmetics.HATS:
-		var hat_button := UiKit.small_button(String(hat["name"]).to_upper(), Vector2(120, 44))
+		var hat_button := UiKit.small_button(String(hat["name"]).to_upper(), Vector2(120, 42))
+		hat_button.add_theme_font_size_override("font_size", 18)
 		hat_button.pressed.connect(_pick_hat.bind(hat["id"]))
 		hats.add_child(hat_button)
 		_hat_buttons.append(hat_button)
@@ -308,26 +617,18 @@ func _build_customise() -> void:
 	_refresh_customise()
 
 
-## The 3D "you" that appears beside the customise panel.
-func _build_preview() -> void:
-	_preview = CharacterModel.new()
-	_camera.add_child(_preview)
-	_preview.setup(GameSettings.display_name(), GameSettings.color(), GameSettings.player_hat)
-	_preview.show_overhead(false)
-	_preview.position = Vector3(2.0, -1.55, -5.2)
-	_preview.rotation.y = PI
-	_preview.visible = false
-
-
 func _show_customise(shown: bool) -> void:
 	_customise.visible = shown
-	_preview.visible = shown
 	_menu.visible = not shown
+	_rebuild_squad()  # Your own colour while customising (alone); team colours otherwise.
 	if shown:
+		_move_camera(CAMERA_CLOSE, LOOK_CLOSE)
 		_refresh_customise()
 		_swatches[clampi(GameSettings.player_color, 0, _swatches.size() - 1)].grab_focus()
 	else:
+		_move_camera(CAMERA_LOBBY, LOOK_LOBBY)
 		GameSettings.save_settings()
+		_refresh_card()
 		_play_button.grab_focus()
 
 
@@ -340,20 +641,13 @@ func _on_name_changed(text: String) -> void:
 func _pick_color(index: int) -> void:
 	GameSettings.player_color = index
 	_refresh_customise()
-	_rebuild_preview()
+	_rebuild_squad()
 
 
 func _pick_hat(id: StringName) -> void:
 	GameSettings.player_hat = id
-	_preview.set_hat(id)
+	player_model.set_hat(id)
 	_refresh_customise()
-
-
-func _rebuild_preview() -> void:
-	var was_visible := _preview.visible
-	_preview.queue_free()
-	_build_preview()
-	_preview.visible = was_visible
 
 
 func _refresh_customise() -> void:
@@ -370,3 +664,15 @@ func _refresh_customise() -> void:
 		var chosen: bool = Cosmetics.HATS[i]["id"] == GameSettings.player_hat
 		var style := UiKit.panel_style(UiKit.ORANGE if chosen else UiKit.BLUE, 1.0, 12, 3 if chosen else 0, UiKit.CREAM, 8)
 		_hat_buttons[i].add_theme_stylebox_override("normal", style)
+
+
+## The three blue ")))" swooshes beside the logo in the drawing.
+class Swoosh extends Control:
+	func _init() -> void:
+		custom_minimum_size = Vector2(90, 110)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		for i in 3:
+			var radius := 34.0 + i * 16.0
+			draw_arc(Vector2(-6.0, size.y * 0.5), radius, -1.0, 1.0, 24, Color(UiKit.SKY, 1.0 - i * 0.22), 8.0, true)

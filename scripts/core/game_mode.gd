@@ -108,6 +108,14 @@ static func team_color(team: int) -> Color:
 	return TEAM_INFO[team % TEAM_INFO.size()]["color"] if team >= 0 else Color.WHITE
 
 
+func get_team_name(team: int) -> String:
+	return team_name(team)
+
+
+func get_team_color(team: int) -> Color:
+	return team_color(team)
+
+
 ## Every team, best first: [{team, score, tags, members (best first)}].
 ## In solo modes each player is a "team" of one.
 func rank_teams(board: Scoreboard) -> Array[Dictionary]:

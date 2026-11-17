@@ -452,6 +452,8 @@ func _build_bank() -> void:
 	_register(&"ricochet", _mix([_tone(0.22, 500.0, 1500.0, Wave.SINE, 0.45), _tone(0.12, 1800.0, 2600.0, Wave.SINE, 0.15)]))
 	_register(&"ding", _mix([_tone(0.5, 1320.0, 1320.0, Wave.SINE, 0.4), _tone(0.5, 1980.0, 1980.0, Wave.SINE, 0.2)]))
 	_register(&"boing", _tone(0.3, 160.0, 520.0, Wave.SINE, 0.6))
+	_register(&"zombie_moan", _mix([_tone(0.55, 130.0, 95.0, Wave.SAW, 0.42, 0.12, 0.05, 1.2), _tone(0.55, 90.0, 70.0, Wave.TRIANGLE, 0.48, 0.05, 0.04, 1.1)]))
+	_register(&"infect", _mix([_noise(0.18, 2800.0, 500.0, 0.52, 1.5), _tone(0.14, 340.0, 110.0, Wave.SQUARE, 0.38), _tone(0.18, 480.0, 190.0, Wave.SINE, 0.35)]))
 	# Handling.
 	_register(&"reload", _sequence([_tone(0.03, 900.0, 700.0, Wave.SQUARE, 0.3, 0.5), _silence(0.08), _tone(0.04, 1200.0, 900.0, Wave.SQUARE, 0.3, 0.5)]))
 	_register(&"dry", _tone(0.03, 300.0, 250.0, Wave.SQUARE, 0.25, 0.6))

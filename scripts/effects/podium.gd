@@ -138,6 +138,8 @@ func _add_dancer(place: int, entry: ScoreEntry, x: float, slot: int, shared: boo
 	var dancer := CharacterModel.new()
 	add_child(dancer)
 	dancer.setup(entry.display_name, entry.color, entry.hat)
+	if entry.color == ZombieMode.ZOMBIE_COLOR or entry.team == ZombieMode.ZOMBIE_TEAM:
+		dancer.set_zombie(true)
 	dancer.show_overhead(false)
 	dancer.position = Vector3(x, STEP_HEIGHT[place], 0.0)
 	dancer.rotation.y = PI

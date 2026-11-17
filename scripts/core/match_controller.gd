@@ -193,10 +193,18 @@ func _on_tagged_out(victim: Actor, attacker: Actor, weapon: WeaponData, ricochet
 	attacker_entry.tags += 1
 	if ricochet:
 		attacker_entry.ricochet_tags += 1
-	mode.apply_tag(attacker_entry, victim_entry, ricochet)
-	popup.emit(attacker, "+%d TAG!" % mode.points_per_tag, UiKit.ORANGE_HOT)
-	if ricochet:
-		popup.emit(attacker, "+%d RICOCHET BONUS!" % mode.ricochet_bonus, UiKit.SKY)
+	var points := mode.apply_tag(attacker_entry, victim_entry, ricochet)
+	if mode is ZombieMode:
+		if attacker.is_zombie and not victim.is_zombie:
+			victim.set_zombie(true)
+			announce(victim_entry, "%s WAS INFECTED!" % victim.display_name.to_upper(), ZombieMode.ZOMBIE_COLOR, &"infect")
+			popup.emit(attacker, "+%d INFECTED!" % points, ZombieMode.ZOMBIE_COLOR)
+		else:
+			popup.emit(attacker, "+%d TAGGED ZOMBIE!" % points, UiKit.ORANGE_HOT)
+	else:
+		popup.emit(attacker, "+%d TAG!" % mode.points_per_tag, UiKit.ORANGE_HOT)
+		if ricochet:
+			popup.emit(attacker, "+%d RICOCHET BONUS!" % mode.ricochet_bonus, UiKit.SKY)
 	tag_scored.emit(attacker_entry, victim_entry, weapon, ricochet)
 	board.notify_changed()
 	_announce_tag(attacker_entry, victim_entry, ended_streak)
@@ -283,7 +291,7 @@ func _on_ammo_collected(amount: int, actor: Actor) -> void:
 ## True if `point` is on this team's side of the yard (Blue vs Orange only;
 ## every point counts as home in other modes).
 func is_home_spawn(team: int, point: Vector3) -> bool:
-	if mode.teams != GameMode.Teams.BLUE_VS_ORANGE or arena.team_bases.size() < 2:
+	if mode is ZombieMode or mode.teams != GameMode.Teams.BLUE_VS_ORANGE or arena.team_bases.size() < 2:
 		return true
 	var home := arena.team_bases[team % arena.team_bases.size()]
 	var away := arena.team_bases[(team + 1) % arena.team_bases.size()]

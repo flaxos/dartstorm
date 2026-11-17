@@ -93,7 +93,7 @@ The photo isn't kept in the repo (it has their names on it). This is what it ask
 | **Fire, Water and Electric** (lightning bolts everywhere) | ✅ v0.5.0 | Elemental darts (Wind, Fire, Water, Lightning, Ice) and 10-rung Gun Game ladder (§2.4) |
 | **Goggles, bunny ears, horns, spiky hair** (their characters) | ✅ v0.3.0 | New hats (§3.16) |
 | **Shield** | ✅ v0.5.2 | Foam Shield power-up: glowing hexagonal bubble absorbs 50 tag points (§3.23) |
-| **Missions, Level, Coins, Shop, Upgrade, Pass** | ⏳ Planned | Earned by playing only, cosmetics only, one currency (coins), no gems, no real money (§10, D-028) |
+| **Missions, Level, Coins, Shop** | ✅ v0.5.3 | Player levels, XP, 3 active backyard missions, cosmetic Coin Shop, zero real money (§10, D-028, D-036) |
 | **Gems** | ✗ Not doing | A second currency is a pattern built to sell things |
 | **Chat, Clan, 32 players, League, Private** | ✗ Not now | Needs online play; chat isn't safe for young players. Couch/LAN play may come later (D-008) |
 | **Phone controls** (LEFT/RIGHT sticks, SHOOT button) | ✅ by controller | The PC version does this with a gamepad (§3.17) |
@@ -908,17 +908,15 @@ podium and results (play again, main menu). Every menu works with keyboard, cont
 - **Readable signs:** world signs only show from the front, so nothing reads mirrored.
 - **Planned:** remappable keys and buttons, a colour-blind-safe team palette option, subtitles or icons for important sounds.
 
-## 10. Progression and rewards (planned, not built)
-The young players asked for levels, coins, missions, a shop, a pass and upgrades (§1.9). Combat passed UAT, so the
-brief's "don't build an economy until combat is fun" condition is met. The rules (D-028):
-- **One currency: coins.** Earned only by playing (points, wins, awards) and by **missions** ("tag 5 rivals with the
-  Pocket Popper", "score a ricochet tag", "hit 3 bullseyes"). No gems, no timers, no real money, nothing to buy.
-- **Spend on looks only:** hats, colours, blaster skins, dart colours, lobby decorations. **No paid or bought power**, so a
-  match against a friend stays fair. Weapon "upgrades" are cosmetic or sidegrades (trade-offs), never straight power.
-- **Level:** from XP (points earned), shown on the lobby card ("LEVEL 18" in the drawing). A free reward track (the
-  "pass") gives a cosmetic every few levels. Nothing expires.
-- Weapon XP and mastery, alternate and elemental darts and barrel customisation stay planned. Upgrades must modify a
-  *duplicated* WeaponData at runtime, never the shared `.tres`.
+## 10. Progression, Levels, Missions & Coin Shop (v0.5.3)
+Built directly to the young players' wishlist (§1.9, D-028, D-036). A fair, joyous, kid-safe reward system:
+- **`Progression` Autoload Singleton:** manages lifetime XP, player levels, coins, unlocks, and active missions. Saved locally to `user://progression.cfg`.
+- **Level Curve:** Starts at Level 1 (`0 XP`). Each level $N \to N+1$ requires $100 \times N$ XP (Level 1 requires 100 XP, Level 2 requires 200 XP, etc.). Cumulative XP for level $N$: $50 \times N \times (N - 1)$.
+- **Player Card in Lobby:** Prominently displays bunker title, player name, gold Level badge (`⭐ LVL [N]`), XP progress bar (`[====   ] 120 / 200 XP`), and live Coin counter (`🪙 350`).
+- **Backyard Missions:** 3 active kid-safe objectives dynamically selected and replenished from the mission pool (ricochet tags off mirrors, lightning chain zaps, extinguishing fire with water, sliding on ice slicks, absorbing damage with Foam Shield, tagging zombies, Pocket Popper tags). Completing a mission awards +200 XP, +100 Coins, and celebratory audio.
+- **Kid-Safe Coin Shop:** Strictly one currency (Coins). Earned strictly by playing and finishing missions. Zero real money, zero gems, zero microtransactions, zero timers, and zero paid power. Cosmetic items only: hats (Party, Cowboy, Propeller, Goggles, Bunny Ears, Horns, Spiky Hair, Champion Crown) and custom colour swatches (Bubblegum Pink, Golden Yellow, Tangerine Orange, Electric Teal).
+- **Match Rewards Payout:** At match conclusion, awards XP and Coins (+25 XP/+5 Coins per tag, +100/+25 for match completion, +150/+50 for victory) with a celebratory rewards summary banner on the podium results panel.
+
 
 ## 11. Glossary
 | Term | Meaning |

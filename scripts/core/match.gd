@@ -260,6 +260,22 @@ func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 	podium.name = "Podium"
 	add_child(podium)
 	var mode := controller.mode
+
+	var prog: Node = get_node_or_null("/root/Progression")
+	if prog != null and player != null:
+		var human_entry: ScoreEntry = controller.board.entry_for(player)
+		var tags := human_entry.tags if human_entry != null else 0
+		var won := false
+		if not ranking.is_empty():
+			if not mode.is_team_mode():
+				won = ranking[0].is_human
+			else:
+				var winning_team := mode.winning_team(controller.board)
+				won = winning_team == player.team_id
+		var xp_earned: int = tags * int(prog.get("XP_PER_TAG")) + int(prog.get("XP_MATCH_FINISH")) + (int(prog.get("XP_MATCH_WIN")) if won else 0)
+		var coins_earned: int = tags * int(prog.get("COINS_PER_TAG")) + int(prog.get("COINS_MATCH_FINISH")) + (int(prog.get("COINS_MATCH_WIN")) if won else 0)
+		prog.call("add_xp", xp_earned)
+		prog.call("add_coins", coins_earned)
 	if ranking.is_empty():
 		podium.show_places([], "MATCH\nOVER", UiKit.ORANGE_HOT)
 	elif not mode.is_team_mode():

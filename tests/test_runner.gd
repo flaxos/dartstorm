@@ -63,6 +63,7 @@ func _ready() -> void:
 	await _test_elemental_gameplay()
 	await _test_zombies_mode()
 	await _test_shield_and_hazards()
+	await _test_progression_and_shop()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -1655,6 +1656,101 @@ func _test_shield_and_hazards() -> void:
 
 	# Teardown
 	stage.queue_free()
+	await physics_frames(2)
+
+
+func _test_progression_and_shop() -> void:
+	section("Progression, Levels, Missions & Coin Shop")
+
+	# 1. Level formulas and progress calculations
+	check(Progression.level_for_xp(0) == 1, "0 XP is Level 1")
+	check(Progression.level_for_xp(99) == 1, "99 XP is Level 1")
+	check(Progression.level_for_xp(100) == 2, "100 XP is Level 2")
+	check(Progression.level_for_xp(299) == 2, "299 XP is Level 2")
+	check(Progression.level_for_xp(300) == 3, "300 XP is Level 3")
+	check(Progression.level_for_xp(600) == 4, "600 XP is Level 4")
+
+	check(Progression.xp_for_level(1) == 0, "Level 1 base XP is 0")
+	check(Progression.xp_for_level(2) == 100, "Level 2 base XP is 100")
+	check(Progression.xp_for_level(3) == 300, "Level 3 base XP is 300")
+	check(Progression.xp_for_level(4) == 600, "Level 4 base XP is 600")
+
+	var prog_stat: Dictionary = Progression.level_progress(150)
+	check(int(prog_stat["level"]) == 2, "150 XP resolves to level 2")
+	check(int(prog_stat["current_xp"]) == 50, "150 XP has 50 XP into level 2")
+	check(int(prog_stat["needed_xp"]) == 200, "Level 2 needs 200 XP to level up")
+	check(is_equal_approx(float(prog_stat["ratio"]), 0.25), "Ratio at 150 XP is 0.25 (25%)")
+
+	# 2. XP accumulation and level up signal
+	Progression.reset_to_defaults()
+	check(Progression.coins == 250, "fresh progression profile has 250 starting coins")
+	check(Progression.get_level() == 1, "fresh progression profile starts at Level 1")
+
+	var level_up_result: Array[int] = [0]
+	var on_level_up := func(lvl: int) -> void: level_up_result[0] = lvl
+	Progression.level_up.connect(on_level_up)
+	Progression.add_xp(150)
+	check(Progression.get_level() == 2, "player reaches level 2 after earning 150 XP")
+	check(level_up_result[0] == 2, "level_up signal emitted with new level 2")
+	Progression.level_up.disconnect(on_level_up)
+
+	# 3. Coins balance, earning, spending, affordability
+	check(Progression.can_afford(200), "can afford 200 coins with 250 balance")
+	check(not Progression.can_afford(300), "cannot afford 300 coins with 250 balance")
+	Progression.add_coins(100)
+	check(Progression.coins == 350, "balance increased to 350 coins")
+	var spent := Progression.spend_coins(150)
+	check(spent and Progression.coins == 200, "successfully spent 150 coins, balance is now 200")
+	var failed_spend := Progression.spend_coins(500)
+	check(not failed_spend and Progression.coins == 200, "overspending fails gracefully without changing balance")
+
+	# 4. Cosmetics Unlocks & Default states
+	check(Progression.is_unlocked(&"hat", &"cap"), "default cap is unlocked")
+	check(Progression.is_unlocked(&"hat", &"beanie"), "default beanie is unlocked")
+	check(Progression.is_unlocked(&"hat", &"none"), "default none is unlocked")
+	check(not Progression.is_unlocked(&"hat", &"crown"), "champion crown starts locked")
+	check(Progression.is_unlocked(&"color", 0), "default blue color is unlocked")
+	check(not Progression.is_unlocked(&"color", 4), "bubblegum pink color starts locked")
+
+	# Unlock crown and pink
+	var crown_unlocked := Progression.unlock_item(&"hat", &"crown")
+	check(crown_unlocked and Progression.is_unlocked(&"hat", &"crown"), "crown unlocks successfully")
+	var pink_unlocked := Progression.unlock_item(&"color", 4)
+	check(pink_unlocked and Progression.is_unlocked(&"color", 4), "pink color unlocks successfully")
+
+	# 5. Backyard Missions
+	check(Progression.active_missions.size() == 3, "3 active backyard missions generated")
+	var m0: Dictionary = Progression.active_missions[0]
+	var m0_ev: StringName = m0["event"]
+	var m0_tgt: int = m0["target"]
+	var xp_before := Progression.lifetime_xp
+	var coins_before := Progression.coins
+	Progression.notify_event(m0_ev, m0_tgt)
+	check(Progression.lifetime_xp > xp_before, "completing backyard mission awards XP")
+	check(Progression.coins > coins_before, "completing backyard mission awards Coins")
+	check(Progression.active_missions.size() == 3, "active missions list replenished after completion")
+
+	# 6. Shop and Missions Panel Modals
+	var shop := ShopPanel.new()
+	add_child(shop)
+	await physics_frames(2)
+	check(shop._coin_label.text.contains(str(Progression.coins)), "shop panel displays live coin balance")
+	shop.queue_free()
+
+	var mpanel := MissionsPanel.new()
+	add_child(mpanel)
+	await physics_frames(2)
+	check(mpanel._cards_box.get_child_count() == 3, "missions panel displays cards for all 3 active missions")
+	mpanel.queue_free()
+
+	# 7. Persistence integrity
+	Progression.save_progression()
+	Progression.load_progression()
+	check(Progression.is_unlocked(&"hat", &"crown"), "persistence preserved unlocked crown after load")
+	check(Progression.is_unlocked(&"color", 4), "persistence preserved unlocked pink after load")
+
+	# Clean up to defaults
+	Progression.reset_to_defaults()
 	await physics_frames(2)
 
 

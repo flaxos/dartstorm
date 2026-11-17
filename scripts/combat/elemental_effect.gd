@@ -104,6 +104,10 @@ func apply_dart(dart: DartProjectile, hit_point: Vector3) -> void:
 		sparkle_left = 0.0
 		combo_triggered.emit(&"extinguish", hit_point)
 		status_ended.emit(DartData.Element.FIRE)
+		if _last_attacker != null and _last_attacker.is_human:
+			var prog: Node = get_node_or_null("/root/Progression")
+			if prog != null:
+				prog.call("notify_event", &"extinguish", 1)
 
 	var radius := dart.data.chain_radius
 	if elem == DartData.Element.LIGHTNING and wet_left > 0.0:
@@ -167,6 +171,10 @@ func _perform_chain_zap(dart: DartProjectile, radius: float) -> void:
 	)
 
 	var targets := candidates.slice(0, dart.data.chain_count)
+	if not targets.is_empty() and dart.shooter != null and dart.shooter.is_human:
+		var prog: Node = get_node_or_null("/root/Progression")
+		if prog != null:
+			prog.call("notify_event", &"chain_zap", targets.size())
 	for target in targets:
 		chain_zapped.emit(actor, target)
 		var zap_power := maxf(dart.data.element_power, 12.0)

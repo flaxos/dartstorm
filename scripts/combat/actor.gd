@@ -159,6 +159,10 @@ func receive_zombie_infection(attacker: Actor) -> void:
 	if not alive or is_protected():
 		return
 	if shield_points > 0.0:
+		if is_human:
+			var prog: Node = get_node_or_null("/root/Progression")
+			if prog != null:
+				prog.call("notify_event", &"shield_absorb", 1)
 		shield_points = 0.0
 		shield_changed.emit(0.0, SHIELD_MAX)
 		shield_broken.emit(self)
@@ -204,6 +208,10 @@ func receive_dart(dart: DartProjectile) -> void:
 	var ricochet := dart.ricochet_count > 0
 
 	if shield_points > 0.0:
+		if is_human:
+			var prog: Node = get_node_or_null("/root/Progression")
+			if prog != null:
+				prog.call("notify_event", &"shield_absorb", 1)
 		if power <= shield_points:
 			shield_points -= power
 			shield_changed.emit(shield_points, SHIELD_MAX)

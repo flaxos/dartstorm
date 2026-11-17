@@ -112,3 +112,7 @@ func _boost_actor(actor: Actor) -> void:
 	var dir := (global_transform.basis * slide_direction.normalized()).normalized()
 	actor.velocity += dir * boost_speed
 	Sfx.play_at(&"ice_slide", actor.global_position, 1.05, -3.0, 0.08)
+	if actor.is_human:
+		var prog: Node = get_node_or_null("/root/Progression")
+		if prog != null:
+			prog.call("notify_event", &"ice_slide", 1)

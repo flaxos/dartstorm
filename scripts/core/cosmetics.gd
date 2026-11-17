@@ -6,29 +6,29 @@ extends RefCounted
 const NAME_MAX_LENGTH := 12
 
 const COLORS: Array[Dictionary] = [
-	{"name": "Blue", "color": Color(0.15, 0.5, 1.0)},
-	{"name": "Red", "color": Color(0.95, 0.22, 0.25)},
-	{"name": "Green", "color": Color(0.25, 0.8, 0.3)},
-	{"name": "Purple", "color": Color(0.62, 0.38, 1.0)},
-	{"name": "Pink", "color": Color(1.0, 0.42, 0.72)},
-	{"name": "Yellow", "color": Color(1.0, 0.84, 0.15)},
-	{"name": "Orange", "color": Color(1.0, 0.52, 0.12)},
-	{"name": "Teal", "color": Color(0.1, 0.8, 0.78)},
+	{"name": "Blue", "color": Color(0.15, 0.5, 1.0), "cost": 0, "tier": "Starter"},
+	{"name": "Red", "color": Color(0.95, 0.22, 0.25), "cost": 0, "tier": "Starter"},
+	{"name": "Green", "color": Color(0.25, 0.8, 0.3), "cost": 0, "tier": "Starter"},
+	{"name": "Purple", "color": Color(0.62, 0.38, 1.0), "cost": 0, "tier": "Starter"},
+	{"name": "Pink", "color": Color(1.0, 0.42, 0.72), "cost": 100, "tier": "Bubblegum"},
+	{"name": "Yellow", "color": Color(1.0, 0.84, 0.15), "cost": 100, "tier": "Golden"},
+	{"name": "Orange", "color": Color(1.0, 0.52, 0.12), "cost": 100, "tier": "Tangerine"},
+	{"name": "Teal", "color": Color(0.1, 0.8, 0.78), "cost": 100, "tier": "Electric"},
 ]
 
-## Hat ids in menu order, with the name shown on the button.
+## Hat ids in menu order, with the name shown on the button, cost in coins, and tier.
 const HATS: Array[Dictionary] = [
-	{"id": &"cap", "name": "Cap"},
-	{"id": &"beanie", "name": "Beanie"},
-	{"id": &"propeller", "name": "Propeller"},
-	{"id": &"party", "name": "Party Hat"},
-	{"id": &"cowboy", "name": "Cowboy"},
-	{"id": &"crown", "name": "Crown"},
-	{"id": &"goggles", "name": "Goggles"},
-	{"id": &"bunny", "name": "Bunny Ears"},
-	{"id": &"horns", "name": "Horns"},
-	{"id": &"spiky", "name": "Spiky Hair"},
-	{"id": &"none", "name": "No Hat"},
+	{"id": &"cap", "name": "Cap", "cost": 0, "tier": "Starter"},
+	{"id": &"beanie", "name": "Beanie", "cost": 0, "tier": "Starter"},
+	{"id": &"none", "name": "No Hat", "cost": 0, "tier": "Starter"},
+	{"id": &"party", "name": "Party Hat", "cost": 150, "tier": "Party"},
+	{"id": &"cowboy", "name": "Cowboy", "cost": 150, "tier": "Classic"},
+	{"id": &"propeller", "name": "Propeller", "cost": 250, "tier": "Toy"},
+	{"id": &"goggles", "name": "Goggles", "cost": 250, "tier": "Toy"},
+	{"id": &"bunny", "name": "Bunny Ears", "cost": 250, "tier": "Fun"},
+	{"id": &"horns", "name": "Horns", "cost": 400, "tier": "Costume"},
+	{"id": &"spiky", "name": "Spiky Hair", "cost": 400, "tier": "Style"},
+	{"id": &"crown", "name": "Crown", "cost": 500, "tier": "Champion"},
 ]
 
 const RANDOM_NAMES: Array[String] = [
@@ -70,6 +70,40 @@ static func hat_name(id: StringName) -> String:
 		if hat["id"] == id:
 			return hat["name"]
 	return "No Hat"
+
+
+static func hat_cost(id: StringName) -> int:
+	for hat in HATS:
+		if hat["id"] == id:
+			return int(hat.get("cost", 0))
+	return 0
+
+
+static func hat_tier(id: StringName) -> String:
+	for hat in HATS:
+		if hat["id"] == id:
+			return str(hat.get("tier", "Starter"))
+	return "Starter"
+
+
+static func color_cost(index: int) -> int:
+	if index >= 0 and index < COLORS.size():
+		return int(COLORS[index].get("cost", 0))
+	return 0
+
+
+static func color_tier(index: int) -> String:
+	if index >= 0 and index < COLORS.size():
+		return str(COLORS[index].get("tier", "Starter"))
+	return "Starter"
+
+
+static func is_default_hat(id: StringName) -> bool:
+	return hat_cost(id) <= 0
+
+
+static func is_default_color(index: int) -> bool:
+	return color_cost(index) <= 0
 
 
 static func random_name() -> String:

@@ -10,11 +10,14 @@ signal landed_hit(victim: Actor, was_tag: bool, was_ricochet: bool)
 signal respawned(actor: Actor)
 signal ammo_collected(amount: int)
 signal turned_zombie(actor: Actor)
+signal shield_changed(current: float, max_val: float)
+signal shield_broken(actor: Actor)
 
 const GRAVITY := 20.0
 const BODY_RADIUS := 0.4
 const BODY_HEIGHT := 1.8
 const KILL_PLANE_Y := -25.0
+const SHIELD_MAX := 50.0
 
 @export var display_name: String = "Actor"
 @export var walk_speed: float = 7.0
@@ -44,6 +47,7 @@ var tag_meter: float = 0.0
 var damage_scale: float = 1.0
 var is_human: bool = false
 var is_zombie: bool = false
+var shield_points: float = 0.0
 
 var arsenal: Arsenal
 var dart_pool: DartPool
@@ -154,12 +158,34 @@ func try_zombie_infect(victim: Actor) -> bool:
 func receive_zombie_infection(attacker: Actor) -> void:
 	if not alive or is_protected():
 		return
+	if shield_points > 0.0:
+		shield_points = 0.0
+		shield_changed.emit(0.0, SHIELD_MAX)
+		shield_broken.emit(self)
+		Sfx.play_at(&"shield_pop", global_position, 1.0, 0.0)
+		tag_meter = minf(tag_meter + 50.0, tag_meter_max)
+		meter_changed.emit(tag_meter, tag_meter_max)
+		_since_hit = 0.0
+		_on_hit_received(attacker)
+		if tag_meter >= tag_meter_max:
+			_tag_out(attacker, null, false)
+		return
 	tag_meter = tag_meter_max
 	meter_changed.emit(tag_meter, tag_meter_max)
 	_tag_out(attacker, null, false)
 
 
 # --- Being tagged -----------------------------------------------------------
+
+func grant_shield(amount: float = SHIELD_MAX) -> void:
+	shield_points = minf(amount, SHIELD_MAX)
+	shield_changed.emit(shield_points, SHIELD_MAX)
+	Sfx.play_at(&"shield_pickup", global_position, 1.0, 0.0)
+
+
+func has_shield() -> bool:
+	return shield_points > 0.0
+
 
 func accepts_dart_from(other_team: int) -> bool:
 	return alive and other_team != team_id
@@ -175,10 +201,28 @@ func receive_dart(dart: DartProjectile) -> void:
 		return
 	var attacker: Actor = dart.shooter if is_instance_valid(dart.shooter) else null
 	var power := dart.data.tag_power * (attacker.damage_scale if attacker != null else 1.0)
+	var ricochet := dart.ricochet_count > 0
+
+	if shield_points > 0.0:
+		if power <= shield_points:
+			shield_points -= power
+			shield_changed.emit(shield_points, SHIELD_MAX)
+			Sfx.play_at(&"shield_hit", global_position, 1.0, 0.0, 0.1)
+			_since_hit = 0.0
+			_on_hit_received(attacker)
+			if attacker != null:
+				attacker.landed_hit.emit(self, false, ricochet)
+			return
+		else:
+			power -= shield_points
+			shield_points = 0.0
+			shield_changed.emit(0.0, SHIELD_MAX)
+			shield_broken.emit(self)
+			Sfx.play_at(&"shield_pop", global_position, 1.0, 0.0)
+
 	tag_meter = minf(tag_meter + power, tag_meter_max)
 	_since_hit = 0.0
 	meter_changed.emit(tag_meter, tag_meter_max)
-	var ricochet := dart.ricochet_count > 0
 	var out := tag_meter >= tag_meter_max
 	_on_hit_received(attacker)
 	if out:
@@ -194,6 +238,8 @@ func respawn(at: Transform3D) -> void:
 	global_transform = at
 	velocity = Vector3.ZERO
 	tag_meter = 0.0
+	shield_points = 0.0
+	shield_changed.emit(0.0, SHIELD_MAX)
 	_since_hit = 0.0
 	_protect_left = spawn_protection
 	alive = true

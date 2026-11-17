@@ -137,10 +137,9 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
    (F with a real controller, G, H on their PC, I for the lobby and teams), then just let them play. Ask: best moment,
    most annoying thing, what would you add? Does TEAMS or DUOS beat SOLO? POWER-UP or EVERYONE?
 2. ✅ **ZOMBIES mode** (v0.5.1): Goofy green foam zombies with no blasters. 1 Alpha Zombie ("Patient Zero") hunts survivors; touching infects survivors into green foam horde members (+150 pts). Survivors use elemental blasters (Hydro Soaker knockback & Frost Ranger chills repel charging zombies). Zombie bot AI, first-person green cartoon zombie arms/swipe, lobby preview card, survivor HUD counter, procedural audio (&"zombie_moan", &"infect"), and 338 passing automated tests.
-3. ✅ **Elements: Fire, Water, Electric (+ Ice) & 10-Rung Gun Game** (v0.5.0): playful elemental darts (fire = sparkle
-   burn ticks, water = knockback & wet conduction, electric = chain zap across rivals, ice = frost slow & slide boosting,
-   wind = updraft lift), full 10-rung Gun Game ladder (added Wind Whisperer, Hydro Soaker, Thunder Cannon), and elemental
-   combos (steam, flash steam, conductive shock). Tested across 309 automated tests. Next for elements: foam Shield power-up.
+3. ✅ **Elements, Foam Shield & Environmental Hazards** (v0.5.0 & v0.5.2):
+   - *v0.5.0*: Playful elemental darts (Fire, Water, Lightning, Ice, Wind), full 10-rung Gun Game ladder, and elemental combos (steam, flash steam, conductive shock).
+   - *v0.5.2*: **Foam Shield** power-up (`ShieldPickup`, holographic hexagonal bubble with `foam_shield.gdshader`, 50 tag point buffer, zombie infection protection), **conductive water puddles** (`WaterPuddle` electrified by Thunder Cannon/lightning), **frictionless ice slicks** on ramps/slides (`IceSlick`, meltable by fire), and **interactive wind vents** (`WindVent`) amplifying elemental dart clouds. Tested across 359 automated tests with zero warnings and zero leaks.
 4. **Rewards (D-028):** XP and **levels** on the lobby card, **missions**, **coins** (earned only), a **shop** for hats,
    colours and blaster skins, and a free reward track. No gems, no real money, no power for sale.
 5. ✅ **Home Turf arena** (v0.4.0). Next for it: the suburb map (Splash Pond park, Foam Field) as a bigger arena.

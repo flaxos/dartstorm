@@ -29,6 +29,7 @@ var _hat_root: Node3D
 var _propeller: Node3D
 var _hat_id: StringName = &"cap"
 var _is_zombie: bool = false
+var _shield_bubble: MeshInstance3D
 
 
 func setup(display_name: String, tint: Color, hat: StringName = &"cap") -> void:
@@ -200,6 +201,36 @@ func _build() -> void:
 	_meter_fill.sorting_offset = 1.0
 	_meter_fill.visible = false
 	add_child(_meter_fill)
+
+	# Hexagonal Foam Shield bubble
+	_shield_bubble = MeshInstance3D.new()
+	var bubble_mesh := SphereMesh.new()
+	bubble_mesh.radius = 0.95
+	bubble_mesh.height = 2.1
+	bubble_mesh.radial_segments = 24
+	bubble_mesh.rings = 16
+	_shield_bubble.mesh = bubble_mesh
+	var shield_mat := ShaderMaterial.new()
+	shield_mat.shader = load("res://assets/materials/foam_shield.gdshader") as Shader
+	_shield_bubble.material_override = shield_mat
+	_shield_bubble.position.y = 1.05
+	_shield_bubble.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_shield_bubble.visible = false
+	add_child(_shield_bubble)
+
+
+func set_shield_visible(shown: bool) -> void:
+	if _shield_bubble != null:
+		_shield_bubble.visible = shown
+
+
+func flash_shield() -> void:
+	if _shield_bubble != null and _shield_bubble.material_override is ShaderMaterial:
+		var mat := _shield_bubble.material_override as ShaderMaterial
+		mat.set_shader_parameter(&"hit_flash", 1.0)
+		var tween := create_tween()
+		if tween != null:
+			tween.tween_method(func(val: float) -> void: mat.set_shader_parameter(&"hit_flash", val), 1.0, 0.0, 0.25)
 
 
 func _build_hat() -> void:

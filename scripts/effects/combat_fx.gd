@@ -17,9 +17,15 @@ func watch_pool(pool: DartPool) -> void:
 func watch_actor(actor: Actor) -> void:
 	actor.tagged_out.connect(_on_tagged_out)
 	actor.respawned.connect(_on_respawned)
+	actor.shield_broken.connect(_on_shield_broken)
 	if actor.elemental != null:
 		actor.elemental.combo_triggered.connect(_on_combo_triggered)
 		actor.elemental.chain_zapped.connect(_on_chain_zapped)
+
+
+func _on_shield_broken(actor: Actor) -> void:
+	var centre := actor.global_position + Vector3.UP
+	FoamBurst.spawn(self, centre, Color(0.2, 0.85, 1.0), 22, 5.0, Vector3.UP, true)
 
 
 func _on_impact(kind: int, at: Vector3, normal: Vector3, tint: Color) -> void:
@@ -58,8 +64,19 @@ func _on_elemental_impact(element: DartData.Element, _kind: int, at: Vector3, no
 func _on_combo_triggered(combo_name: StringName, at: Vector3) -> void:
 	match combo_name:
 		&"steam", &"flash_steam":
-			FoamBurst.spawn(self, at, Color(0.92, 0.94, 0.98, 0.7), 24, 3.5, Vector3.UP, true)
-			Sfx.play_at(&"steam", at, 1.0, 0.0)
+			var count := 24
+			var speed := 3.5
+			var tree := get_tree()
+			if tree != null:
+				for node in tree.get_nodes_in_group(&"wind_vents"):
+					var vent := node as WindVent
+					if vent != null and vent.global_position.distance_to(at) < 5.5:
+						count = 60
+						speed = 7.0
+						vent.amplify(DartData.Element.WATER, 6.0)
+						break
+			FoamBurst.spawn(self, at, Color(0.92, 0.94, 0.98, 0.75), count, speed, Vector3.UP, true)
+			Sfx.play_at(&"steam", at, 1.0, 1.0)
 		&"conductive_shock":
 			FoamBurst.spawn(self, at, Color(1.0, 1.0, 0.3), 18, 5.5, Vector3.UP, true)
 			Sfx.play_at(&"zap", at, 0.85, 2.0)

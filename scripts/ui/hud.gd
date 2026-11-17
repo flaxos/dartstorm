@@ -20,6 +20,9 @@ var _root: Control
 var _crosshair: Crosshair
 var _meter_bar: ProgressBar
 var _meter_label: Label
+var _shield_box: HBoxContainer
+var _shield_label: Label
+var _shield_bar: ProgressBar
 var _weapon_label: Label
 var _ammo_label: Label
 var _ammo_hint: Label
@@ -56,6 +59,8 @@ func setup(player: Player, controller: MatchController) -> void:
 	_build()
 
 	player.meter_changed.connect(_on_meter_changed)
+	player.shield_changed.connect(_on_shield_changed)
+	player.shield_broken.connect(_on_shield_broken)
 	player.landed_hit.connect(_on_landed_hit)
 	player.shot_fired.connect(_on_shot_fired)
 	player.tagged_out.connect(_on_player_tagged)
@@ -151,6 +156,13 @@ func _build() -> void:
 	UiKit.pin(meter_panel, Vector2(0.0, 1.0), Vector2(20, -20), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_BEGIN)
 	var meter_box := VBoxContainer.new()
 	meter_panel.add_child(meter_box)
+	_shield_box = HBoxContainer.new()
+	_shield_label = UiKit.label("SHIELD", 14, Color(0.2, 0.85, 1.0))
+	_shield_box.add_child(_shield_label)
+	_shield_bar = UiKit.bar(Color(0.2, 0.85, 1.0), Vector2(160, 14))
+	_shield_box.add_child(_shield_bar)
+	_shield_box.visible = false
+	meter_box.add_child(_shield_box)
 	_meter_label = UiKit.label("TAG METER", 18, UiKit.SKY)
 	meter_box.add_child(_meter_label)
 	_meter_bar = UiKit.bar(UiKit.ORANGE, Vector2(260, 26))
@@ -345,6 +357,22 @@ func _on_meter_changed(value: float, maximum: float) -> void:
 	_meter_bar.value = ratio
 	_meter_label.text = "TAG METER" if ratio < 0.7 else "TAG METER - DANGER!"
 	_meter_label.add_theme_color_override("font_color", UiKit.SKY if ratio < 0.7 else UiKit.ORANGE_HOT)
+
+
+func _on_shield_changed(current: float, max_val: float) -> void:
+	if _shield_box == null:
+		return
+	_shield_box.visible = current > 0.0
+	_shield_bar.value = clampf(current / maxf(max_val, 1.0), 0.0, 1.0)
+	_shield_label.text = "SHIELD %d/%d" % [int(current), int(max_val)]
+
+
+func _on_shield_broken(_actor: Actor) -> void:
+	if _shield_box != null:
+		_shield_box.visible = false
+	if _hurt_flash != null:
+		_hurt_flash.color = Color(0.2, 0.85, 1.0, 0.25 * clampf(GameSettings.visual_intensity, 0.0, 1.0))
+		create_tween().tween_property(_hurt_flash, "color:a", 0.0, 0.4)
 
 
 func _on_weapon_changed(state: WeaponState) -> void:

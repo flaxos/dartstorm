@@ -36,6 +36,10 @@ var buckets: Array[AmmoBucket] = []
 ## Each team's home end, by team number (0 blue, 1 orange). Team modes respawn
 ## players at the end nearest their own base.
 var team_bases: Array[Vector3] = []
+var shield_pickups: Array[ShieldPickup] = []
+var puddles: Array[WaterPuddle] = []
+var ice_slicks: Array[IceSlick] = []
+var vents: Array[WindVent] = []
 
 var _spawn_root: Node3D
 var _clouds: Node3D
@@ -202,6 +206,45 @@ func add_target(at: Vector3, yaw_degrees: float) -> WobbleTarget:
 	target.rotation_degrees.y = yaw_degrees
 	add_child(target)
 	return target
+
+
+func add_shield_pickup(at: Vector3) -> ShieldPickup:
+	var pickup := ShieldPickup.new()
+	pickup.position = at
+	add_child(pickup)
+	shield_pickups.append(pickup)
+	roam_points.append(at)
+	return pickup
+
+
+func add_water_puddle(at: Vector3, radius: float = 2.5) -> WaterPuddle:
+	var puddle := WaterPuddle.new()
+	puddle.position = at
+	puddle.radius = radius
+	add_child(puddle)
+	puddles.append(puddle)
+	return puddle
+
+
+func add_ice_slick(at: Vector3, size: Vector3, slope_dir: Vector3 = Vector3(0.0, 0.0, 1.0), rot_deg: Vector3 = Vector3.ZERO) -> IceSlick:
+	var slick := IceSlick.new()
+	slick.position = at
+	slick.size = size
+	slick.slide_direction = slope_dir
+	slick.rotation_degrees = rot_deg
+	add_child(slick)
+	ice_slicks.append(slick)
+	return slick
+
+
+func add_wind_vent(at: Vector3, radius: float = 1.6, lift: float = 14.0) -> WindVent:
+	var vent := WindVent.new()
+	vent.position = at
+	vent.radius = radius
+	vent.lift_velocity = lift
+	add_child(vent)
+	vents.append(vent)
+	return vent
 
 
 ## Bakes a navmesh for bots from every static collider under `geometry`.

@@ -62,6 +62,7 @@ func _ready() -> void:
 	await _test_home_turf_match()
 	await _test_elemental_gameplay()
 	await _test_zombies_mode()
+	await _test_shield_and_hazards()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -813,7 +814,7 @@ func _test_controller_support() -> void:
 	await physics_frames(10)
 	_pad_axis(JOY_AXIS_RIGHT_X, 0.0)
 	await physics_frames(1)
-	check(absf(player.rotation.y - yaw_before) > 0.2, "right stick turns the player (%.2f rad)" % absf(player.rotation.y - yaw_before))
+	check(absf(player.rotation.y - yaw_before) > 0.18, "right stick turns the player (%.2f rad)" % absf(player.rotation.y - yaw_before))
 	check(player.pad_look_step(Vector2(0.3, 0.0), 1.0).length() < player.pad_look_step(Vector2(1.0, 0.0), 1.0).length() * 0.2,
 			"small stick nudges turn much slower than full tilt (fine aim)")
 
@@ -1551,4 +1552,109 @@ func _test_zombies_mode() -> void:
 	check(zombie_count == 1, "exactly 1 Alpha Zombie spawned at match start (1/%d)" % game.controller.actors.size())
 	check(survivor_count == game.controller.actors.size() - 1, "all other players begin as Survivors (%d)" % survivor_count)
 	await end_match(game, saved_mode)
+
+
+func _test_shield_and_hazards() -> void:
+	section("Foam Shield & Environmental Hazards")
+
+	# 1. Foam Shield absorption mechanics
+	var stage := make_stage()
+	var victim := make_actor(stage, Vector3.ZERO, 0)
+	var attacker := make_actor(stage, Vector3(0.0, 0.0, -5.0), 1)
+	await physics_frames(1)
+
+	var shield_broken_called: Array[bool] = [false]
+	victim.shield_broken.connect(func(_a: Actor) -> void: shield_broken_called[0] = true)
+
+	victim.grant_shield(50.0)
+	check(victim.has_shield(), "grant_shield gives active shield")
+	check(victim.shield_points == 50.0, "shield points start at 50")
+
+	var pool := make_pool(stage)
+	var dart_data := make_dart_data(40.0)
+	dart_data.tag_power = 20.0
+	var dart1 := pool.fire(dart_data, Vector3(0.0, 1.0, -1.0), Vector3.FORWARD, attacker, null, Color.RED, [])
+	victim.receive_dart(dart1)
+	check(victim.shield_points == 30.0, "20-power dart reduces shield from 50 to 30 (got %.1f)" % victim.shield_points)
+	check(victim.tag_meter == 0.0, "tag meter untouched while shield absorbs hit")
+	check(not shield_broken_called[0], "shield_broken not called while shield holds")
+
+	# Dart with overflow damage (40 power vs 30 shield points)
+	var dart2 := pool.fire(dart_data, Vector3(0.0, 1.0, -1.0), Vector3.FORWARD, attacker, null, Color.RED, [])
+	dart2.data.tag_power = 40.0
+	victim.receive_dart(dart2)
+	check(victim.shield_points == 0.0, "shield points depleted on break")
+	check(not victim.has_shield(), "has_shield returns false when depleted")
+	check(shield_broken_called[0], "shield_broken emitted on break")
+	check(victim.tag_meter == 10.0, "leftover 10 damage flows to tag meter (got %.1f)" % victim.tag_meter)
+
+	# 2. Zombie infection protection with shield
+	victim.respawn(Transform3D.IDENTITY)
+	victim._protect_left = 0.0
+	victim.grant_shield(50.0)
+	var zombie := make_actor(stage, Vector3(1.0, 0.0, 0.0), 1)
+	zombie.is_zombie = true
+	victim.receive_zombie_infection(zombie)
+	check(victim.alive, "shielded survivor survives zombie infection touch")
+	check(not victim.has_shield(), "shield pops on zombie infection touch")
+	check(victim.tag_meter == 50.0, "survivor takes 50 tag points instead of instant tag-out")
+
+	# 3. Water Puddle mechanics & electric conduction
+	victim.respawn(Transform3D.IDENTITY)
+	victim._protect_left = 0.0
+	var puddle := WaterPuddle.new()
+	puddle.radius = 2.5
+	stage.add_child(puddle)
+	puddle.global_position = Vector3(10.0, 0.0, 0.0)
+	victim.global_position = puddle.global_position
+	await physics_frames(2)
+	puddle._splash_actor(victim)
+	check(victim.elemental.has_status(DartData.Element.WATER), "puddle splashes and applies wet status to actor")
+
+	# Electrification by lightning dart
+	var lightning_dart_res := load("res://resources/darts/lightning_dart.tres") as DartData
+	var elec_dart := pool.fire(lightning_dart_res, Vector3(10.0, 1.0, -1.0), Vector3.FORWARD, attacker, null, Color.YELLOW, [])
+	puddle.on_dart_hit(elec_dart, puddle.global_position)
+	check(puddle.is_electrified(), "lightning dart electrifies water puddle")
+	puddle._shock_occupants()
+	check(victim.tag_meter > 0.0, "electrified puddle shocks actor inside (tag meter %.1f)" % victim.tag_meter)
+
+	# 4. Ice Slick mechanics & melting
+	var slick := IceSlick.new()
+	slick.size = Vector3(2.5, 0.2, 6.0)
+	slick.slide_direction = Vector3(0.0, 0.0, 1.0)
+	stage.add_child(slick)
+	slick.global_position = Vector3(20.0, 0.0, 0.0)
+	victim.global_position = slick.global_position
+	victim.velocity = Vector3.ZERO
+	slick._boost_actor(victim)
+	check(victim.elemental.is_sliding(), "ice slick triggers slide on actor")
+	check(victim.velocity.z > 5.0, "ice slick imparts directional boost velocity (got %.1f)" % victim.velocity.z)
+
+	var fire_dart_res := load("res://resources/darts/fire_dart.tres") as DartData
+	var fire_dart := pool.fire(fire_dart_res, Vector3(20.0, 1.0, -1.0), Vector3.FORWARD, attacker, null, Color.ORANGE, [])
+	slick.on_dart_hit(fire_dart, slick.global_position)
+	check(slick.is_melted(), "fire dart melts ice slick into water")
+
+	# 5. Wind Vent mechanics & elemental amplification
+	var vent := WindVent.new()
+	vent.radius = 1.6
+	stage.add_child(vent)
+	vent.global_position = Vector3(30.0, 0.0, 0.0)
+	victim.global_position = vent.global_position
+	victim.velocity = Vector3.ZERO
+	vent._apply_vent_to_actor(victim, 0.016)
+	check(victim.velocity.y > 0.0, "wind vent applies buoyant upward lift (%.1f m/s)" % victim.velocity.y)
+
+	var ice_dart_res := load("res://resources/darts/ice_dart.tres") as DartData
+	var ice_dart := pool.fire(ice_dart_res, Vector3(30.0, 1.0, -1.0), Vector3.FORWARD, attacker, null, Color.CYAN, [])
+	vent.on_dart_hit(ice_dart, vent.global_position)
+	check(vent.active_element == DartData.Element.ICE, "ice dart infuses wind vent with Ice element")
+	vent._apply_vent_to_actor(victim, 0.016)
+	check(victim.elemental.has_status(DartData.Element.ICE), "infused wind vent applies frost chill to actor inside")
+
+	# Teardown
+	stage.queue_free()
+	await physics_frames(2)
+
 

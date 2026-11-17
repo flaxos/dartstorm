@@ -20,6 +20,9 @@
 | **v0.3.0 the players' design: lobby, team modes, Linux build** | ✅ Built and validated. PR #5 to main. ⏳ UAT |
 | **v0.4.0 Home Turf arena** | ✅ Built and validated (276 tests). ⏳ UAT |
 | **v0.5.0 Elemental Arena & AAA Game Feel** | ✅ Built and validated (309 tests). ⏳ UAT |
+| **v0.5.1 Zombies Mode** | ✅ Built and validated (338 tests). ⏳ UAT |
+| **v0.5.2 Foam Shield & Environmental Hazards** | ✅ Built and validated (359 tests). ⏳ UAT |
+| **v0.5.3 Progression, Levels, Missions & Coin Shop** | ✅ Built and validated (398 tests). ⏳ UAT |
 | Phase 7 Expansion | ⏳ Not started (on purpose) |
 
 ## v0.4.0: Home Turf (this release)
@@ -140,8 +143,13 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
 3. ✅ **Elements, Foam Shield & Environmental Hazards** (v0.5.0 & v0.5.2):
    - *v0.5.0*: Playful elemental darts (Fire, Water, Lightning, Ice, Wind), full 10-rung Gun Game ladder, and elemental combos (steam, flash steam, conductive shock).
    - *v0.5.2*: **Foam Shield** power-up (`ShieldPickup`, holographic hexagonal bubble with `foam_shield.gdshader`, 50 tag point buffer, zombie infection protection), **conductive water puddles** (`WaterPuddle` electrified by Thunder Cannon/lightning), **frictionless ice slicks** on ramps/slides (`IceSlick`, meltable by fire), and **interactive wind vents** (`WindVent`) amplifying elemental dart clouds. Tested across 359 automated tests with zero warnings and zero leaks.
-4. **Rewards (D-028):** XP and **levels** on the lobby card, **missions**, **coins** (earned only), a **shop** for hats,
-   colours and blaster skins, and a free reward track. No gems, no real money, no power for sale.
+4. ✅ **Progression, Levels, Missions & Coin Shop** (v0.5.3, D-028, D-036):
+   - **`Progression` Autoload**: Lifetime XP, Player Levels ($100 \times \text{level}$ XP per level), Coins (starts with 250 coins), unlocked cosmetics, and active backyard missions. Clean persistence to `user://progression.cfg`.
+   - **Player Card**: Displays gold Level badge (`⭐ LVL [N]`), XP progress bar, and live Coin balance in the lobby.
+   - **Backyard Missions**: 3 active kid-safe objectives dynamically replenished from mission pool upon completion (+200 XP, +100 Coins).
+   - **Coin Shop**: 100% kid-safe cosmetic catalog for hats and colours. Zero real money, zero gems, zero microtransactions, zero paid power.
+   - **Match End Payout**: Rewards calculated and awarded on match completion (+25 XP/+5 Coins per tag, +100/+25 match finish, +150/+50 win) with a celebratory breakdown banner in the results panel beside the podium.
+   - **Validation**: 398 automated tests passing with zero errors, zero warnings, and zero leaks.
 5. ✅ **Home Turf arena** (v0.4.0). Next for it: the suburb map (Splash Pond park, Foam Field) as a bigger arena.
 6. **Playtest-driven tuning** of the `.tres` numbers ([TUNING.md](TUNING.md)) as feedback arrives.
 7. **Better models** *(the big remaining look item)*: toy-style blasters and characters (CC0 packs with licences
@@ -161,8 +169,8 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
 - The music is simple chiptune made in code; real recordings could replace it later.
 - Bots ignore wind (deliberate, see GDD §3.9) and can briefly snag on geometry before the unstick hop kicks in.
 - Gun Game has 7 of the 10 planned rungs.
-- The lobby shows no level or coins yet (they arrive with rewards, item 4).
 - In DUOS, spawns don't put buddies together; you'll often start apart from your buddy.
 
 *Resolved in v0.1.1:* the navmesh load hitch, the "ObjectDB instances leaked at exit" warning, and the integer-division
 warnings in the HUD.
+*Resolved in v0.5.3:* the lobby shows Player Level, XP progress, and Coins; Backyard Missions and Coin Shop are live.

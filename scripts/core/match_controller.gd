@@ -206,6 +206,15 @@ func _on_tagged_out(victim: Actor, attacker: Actor, weapon: WeaponData, ricochet
 		if ricochet:
 			popup.emit(attacker, "+%d RICOCHET BONUS!" % mode.ricochet_bonus, UiKit.SKY)
 	tag_scored.emit(attacker_entry, victim_entry, weapon, ricochet)
+	if attacker.is_human:
+		var prog: Node = get_node_or_null("/root/Progression")
+		if prog != null:
+			if ricochet:
+				prog.call("notify_event", &"ricochet_tag", 1)
+			if weapon != null and weapon.display_name.to_lower().contains("popper"):
+				prog.call("notify_event", &"popper_tag", 1)
+			if mode is ZombieMode and not attacker.is_zombie and victim != null and victim.is_zombie:
+				prog.call("notify_event", &"zombie_tag", 1)
 	board.notify_changed()
 	_announce_tag(attacker_entry, victim_entry, ended_streak)
 

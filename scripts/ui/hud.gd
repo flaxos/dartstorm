@@ -480,6 +480,7 @@ func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 	UiKit.pin(_board_panel, Vector2(1.0, 0.5), Vector2(-24, 0), Control.GROW_DIRECTION_BEGIN, Control.GROW_DIRECTION_BOTH)
 	_board_buttons.visible = true
 	_board_panel.visible = true
+	_build_rewards(ranking)
 	_build_awards(Awards.compute(ranking))
 	var first := _board_buttons.get_child(0) as Button
 	if first != null:
@@ -498,6 +499,43 @@ func result_title(ranking: Array[ScoreEntry]) -> String:
 	if team < 0:
 		return "IT'S A DRAW!"
 	return "YOUR TEAM WINS!" if team == _player.team_id else "%s TEAM WINS!" % GameMode.team_name(team)
+
+
+func _build_rewards(ranking: Array[ScoreEntry]) -> void:
+	var human_entry: ScoreEntry = _controller.board.entry_for(_player)
+	var tags := human_entry.tags if human_entry != null else 0
+	var mode := _controller.mode
+	var won := false
+	if not ranking.is_empty():
+		if not mode.is_team_mode():
+			won = ranking[0].is_human
+		else:
+			var winning_team := mode.winning_team(_controller.board)
+			won = winning_team == _player.team_id
+	var prog: Node = get_node_or_null("/root/Progression")
+	var xp_per_tag: int = int(prog.get("XP_PER_TAG")) if prog != null else 25
+	var coins_per_tag: int = int(prog.get("COINS_PER_TAG")) if prog != null else 5
+	var xp_finish: int = int(prog.get("XP_MATCH_FINISH")) if prog != null else 100
+	var coins_finish: int = int(prog.get("COINS_MATCH_FINISH")) if prog != null else 25
+	var xp_win: int = int(prog.get("XP_MATCH_WIN")) if prog != null else 150
+	var coins_win: int = int(prog.get("COINS_MATCH_WIN")) if prog != null else 50
+
+	var xp_earned := tags * xp_per_tag + xp_finish + (xp_win if won else 0)
+	var coins_earned := tags * coins_per_tag + coins_finish + (coins_win if won else 0)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	var panel_box := _board_buttons.get_parent()
+	panel_box.add_child(box)
+	panel_box.move_child(box, _board_buttons.get_index())
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	box.add_child(row)
+
+	row.add_child(UiKit.label("REWARDS:", 20, UiKit.CREAM, 5))
+	row.add_child(UiKit.label("⭐ +%d XP" % xp_earned, 20, UiKit.LIME, 5))
+	row.add_child(UiKit.label("🪙 +%d COINS" % coins_earned, 20, UiKit.ORANGE_HOT, 5))
 
 
 func _build_awards(awards: Array[Dictionary]) -> void:

@@ -76,11 +76,17 @@ var _camera_tween: Tween
 var _ui: Control
 var _menu: Control
 var _settings: SettingsPanel
+var _missions: MissionsPanel
+var _shop: ShopPanel
 var _customise: PanelContainer
 var _help: PanelContainer
 var _help_box: VBoxContainer
 var _bunker_label: Label
 var _card_name: Label
+var _level_badge: Label
+var _xp_bar: ProgressBar
+var _xp_label: Label
+var _coins_label: Label
 var _mode_buttons: Array[Button] = []
 var _mode_blurb: Label
 var _bots_value: Label
@@ -138,6 +144,28 @@ func _ready() -> void:
 	UiKit.pin(_settings, Vector2(0.5, 0.5), Vector2.ZERO, Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_BOTH)
 	_settings.closed.connect(_show_settings.bind(false))
 
+	_missions = MissionsPanel.new()
+	_missions.visible = false
+	_ui.add_child(_missions)
+	UiKit.pin(_missions, Vector2(0.5, 0.5), Vector2.ZERO, Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_BOTH)
+	_missions.closed.connect(_show_missions.bind(false))
+
+	_shop = ShopPanel.new()
+	_shop.visible = false
+	_ui.add_child(_shop)
+	UiKit.pin(_shop, Vector2(0.5, 0.5), Vector2.ZERO, Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_BOTH)
+	_shop.closed.connect(_show_shop.bind(false))
+	_shop.item_equipped.connect(func(_cat: Variant, _id: Variant) -> void:
+		_rebuild_squad()
+		_refresh_card()
+		_refresh_customise())
+
+	var prog: Node = get_node_or_null("/root/Progression")
+	if prog != null:
+		prog.connect("xp_gained", func(_a: Variant, _t: Variant) -> void: _refresh_card())
+		prog.connect("level_up", func(_l: Variant) -> void: _refresh_card())
+		prog.connect("coins_changed", func(_c: Variant) -> void: _refresh_card())
+
 	_rebuild_squad()
 	GameSettings.input_device_changed.connect(func(_pad: bool) -> void: _refresh_help())
 	Sfx.play_music(&"menu")
@@ -167,11 +195,20 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed(&"ui_cancel"):
 		return
-	if _customise.visible:
+	if _missions != null and _missions.visible:
+		_show_missions(false)
+		get_viewport().set_input_as_handled()
+	elif _shop != null and _shop.visible:
+		_show_shop(false)
+		get_viewport().set_input_as_handled()
+	elif _customise != null and _customise.visible:
 		_show_customise(false)
 		get_viewport().set_input_as_handled()
-	elif _help.visible:
+	elif _help != null and _help.visible:
 		_show_help(false)
+		get_viewport().set_input_as_handled()
+	elif _settings != null and _settings.visible:
+		_show_settings(false)
 		get_viewport().set_input_as_handled()
 
 
@@ -338,24 +375,60 @@ func _build_menu() -> void:
 	_play_button.grab_focus()
 
 
-## Top left: "<NAME>'S BUNKER" and a column of buttons, like the drawing.
+## Top left: "<NAME>'S BUNKER", Level, XP Bar, Coins and a column of buttons.
 func _build_player_card() -> void:
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 10)
+	column.add_theme_constant_override("separation", 8)
 	_menu.add_child(column)
-	UiKit.pin(column, Vector2(0.0, 0.0), Vector2(28, 24), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_END)
-	var card := UiKit.panel(UiKit.NAVY, 0.9, 18, 4, UiKit.ORANGE, 14)
+	UiKit.pin(column, Vector2(0.0, 0.0), Vector2(28, 20), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_END)
+	var card := UiKit.panel(UiKit.NAVY, 0.9, 18, 4, UiKit.ORANGE, 12)
 	column.add_child(card)
 	var card_box := VBoxContainer.new()
-	card_box.add_theme_constant_override("separation", -2)
+	card_box.add_theme_constant_override("separation", 3)
 	card.add_child(card_box)
-	_bunker_label = UiKit.label("", 30, UiKit.ORANGE_HOT, 10)
+
+	_bunker_label = UiKit.label("", 26, UiKit.ORANGE_HOT, 8)
 	card_box.add_child(_bunker_label)
-	_card_name = UiKit.label("", 22, UiKit.CREAM, 6)
-	card_box.add_child(_card_name)
-	for entry: Array in [["CHARACTER", _show_customise.bind(true)], ["HOW TO PLAY", _show_help.bind(true)],
-			["SETTINGS", _show_settings.bind(true)], ["QUIT", func() -> void: Sfx.quit_game()]]:
-		var button := UiKit.small_button(entry[0], Vector2(210, 48))
+
+	var sub_row := HBoxContainer.new()
+	sub_row.add_theme_constant_override("separation", 8)
+	card_box.add_child(sub_row)
+
+	_card_name = UiKit.label("", 20, UiKit.CREAM, 6)
+	_card_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sub_row.add_child(_card_name)
+
+	_level_badge = UiKit.label("⭐ LVL 1", 20, UiKit.ORANGE_HOT, 6)
+	sub_row.add_child(_level_badge)
+
+	# XP Progress Bar & Counter
+	var xp_box := VBoxContainer.new()
+	xp_box.add_theme_constant_override("separation", 2)
+	card_box.add_child(xp_box)
+
+	_xp_bar = UiKit.bar(UiKit.SKY, Vector2(230, 12))
+	xp_box.add_child(_xp_bar)
+
+	var xp_row := HBoxContainer.new()
+	xp_row.add_theme_constant_override("separation", 6)
+	xp_box.add_child(xp_row)
+
+	_xp_label = UiKit.label("0 / 100 XP", 14, UiKit.CREAM, 4)
+	_xp_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	xp_row.add_child(_xp_label)
+
+	_coins_label = UiKit.label("🪙 250", 18, UiKit.ORANGE_HOT, 5)
+	xp_row.add_child(_coins_label)
+
+	for entry: Array in [
+		["MISSIONS", _show_missions.bind(true)],
+		["SHOP", _show_shop.bind(true)],
+		["CHARACTER", _show_customise.bind(true)],
+		["HOW TO PLAY", _show_help.bind(true)],
+		["SETTINGS", _show_settings.bind(true)],
+		["QUIT", func() -> void: Sfx.quit_game()]
+	]:
+		var button := UiKit.small_button(entry[0], Vector2(230, 42))
 		button.name = String(entry[0]).replace(" ", "")
 		button.pressed.connect(entry[1])
 		column.add_child(button)
@@ -485,6 +558,29 @@ func _refresh_card() -> void:
 	_card_name.text = shown.to_upper() if named else "SET YOUR NAME!"
 	_card_name.add_theme_color_override("font_color", GameSettings.color().lightened(0.3) if named else UiKit.SKY)
 
+	var prog: Node = get_node_or_null("/root/Progression")
+	var lvl := 1
+	var cur_xp := 0
+	var need_xp := 100
+	var ratio := 0.0
+	var coins_val := 250
+	if prog != null:
+		var prog_dict: Dictionary = prog.call("level_progress", int(prog.get("lifetime_xp")))
+		lvl = int(prog_dict.get("level", 1))
+		cur_xp = int(prog_dict.get("current_xp", 0))
+		need_xp = int(prog_dict.get("needed_xp", 100))
+		ratio = float(prog_dict.get("ratio", 0.0))
+		coins_val = int(prog.get("coins"))
+
+	if _level_badge != null:
+		_level_badge.text = "⭐ LVL %d" % lvl
+	if _xp_bar != null:
+		_xp_bar.value = ratio
+	if _xp_label != null:
+		_xp_label.text = "%d / %d XP" % [cur_xp, need_xp]
+	if _coins_label != null:
+		_coins_label.text = "🪙 %d" % coins_val
+
 
 func _refresh_options() -> void:
 	var mode := MatchScene.resolve_mode(GameSettings.match_mode)
@@ -553,6 +649,27 @@ func _toggle_storm() -> void:
 	GameSettings.chainstorm_powerup = not GameSettings.chainstorm_powerup
 	GameSettings.save_settings()
 	_refresh_options()
+
+
+func _show_missions(shown: bool) -> void:
+	_missions.visible = shown
+	_menu.visible = not shown
+	if shown:
+		_missions.focus_default()
+	else:
+		_refresh_card()
+		_play_button.grab_focus()
+
+
+func _show_shop(shown: bool) -> void:
+	_shop.visible = shown
+	_menu.visible = not shown
+	if shown:
+		_shop.focus_default()
+	else:
+		_rebuild_squad()
+		_refresh_card()
+		_play_button.grab_focus()
 
 
 func _show_settings(shown: bool) -> void:
@@ -632,10 +749,20 @@ func _build_customise() -> void:
 		hats.add_child(hat_button)
 		_hat_buttons.append(hat_button)
 
-	var done := UiKit.button("DONE", 26, Vector2(220, 54))
-	done.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var btn_row := HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 14)
+	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_child(btn_row)
+
+	var shop_btn := UiKit.small_button("COIN SHOP 🪙", Vector2(170, 52))
+	shop_btn.pressed.connect(func() -> void:
+		_show_customise(false)
+		_show_shop(true))
+	btn_row.add_child(shop_btn)
+
+	var done := UiKit.button("DONE", 26, Vector2(170, 52))
 	done.pressed.connect(_show_customise.bind(false))
-	box.add_child(done)
+	btn_row.add_child(done)
 	_refresh_customise()
 
 
@@ -661,12 +788,20 @@ func _on_name_changed(text: String) -> void:
 
 
 func _pick_color(index: int) -> void:
+	var prog: Node = get_node_or_null("/root/Progression")
+	if prog != null and not bool(prog.call("is_unlocked", &"color", index)):
+		GameSettings.notify("Colour locked! Visit the Coin Shop (🪙 %d)" % Cosmetics.color_cost(index))
+		return
 	GameSettings.player_color = index
 	_refresh_customise()
 	_rebuild_squad()
 
 
 func _pick_hat(id: StringName) -> void:
+	var prog: Node = get_node_or_null("/root/Progression")
+	if prog != null and not bool(prog.call("is_unlocked", &"hat", id)):
+		GameSettings.notify("Hat locked! Visit the Coin Shop (🪙 %d)" % Cosmetics.hat_cost(id))
+		return
 	GameSettings.player_hat = id
 	player_model.set_hat(id)
 	_refresh_customise()
@@ -675,17 +810,27 @@ func _pick_hat(id: StringName) -> void:
 func _refresh_customise() -> void:
 	if not _name_edit.has_focus() and _name_edit.text != GameSettings.player_name:
 		_name_edit.text = GameSettings.player_name
+	var prog: Node = get_node_or_null("/root/Progression")
 	for i in _swatches.size():
 		var tint := Cosmetics.color_at(i)
 		var chosen := i == GameSettings.player_color
-		_swatches[i].add_theme_stylebox_override("normal", UiKit.panel_style(tint, 1.0, 23, 4 if chosen else 0, UiKit.CREAM, 0))
-		_swatches[i].add_theme_stylebox_override("hover", UiKit.panel_style(tint.lightened(0.2), 1.0, 23, 3, UiKit.CREAM, 0))
-		_swatches[i].add_theme_stylebox_override("pressed", UiKit.panel_style(tint.darkened(0.2), 1.0, 23, 4, UiKit.CREAM, 0))
-		_swatches[i].add_theme_stylebox_override("focus", UiKit.panel_style(tint, 0.0, 23, 4, UiKit.ORANGE_HOT, 0))
+		var unlocked := prog == null or bool(prog.call("is_unlocked", &"color", i))
+		var display_tint := tint if unlocked else tint.darkened(0.5)
+		_swatches[i].add_theme_stylebox_override("normal", UiKit.panel_style(display_tint, 1.0, 23, 4 if chosen else 0, UiKit.CREAM, 0))
+		_swatches[i].add_theme_stylebox_override("hover", UiKit.panel_style(display_tint.lightened(0.2), 1.0, 23, 3, UiKit.CREAM, 0))
+		_swatches[i].add_theme_stylebox_override("pressed", UiKit.panel_style(display_tint.darkened(0.2), 1.0, 23, 4, UiKit.CREAM, 0))
+		_swatches[i].add_theme_stylebox_override("focus", UiKit.panel_style(display_tint, 0.0, 23, 4, UiKit.ORANGE_HOT, 0))
+		_swatches[i].tooltip_text = Cosmetics.COLORS[i]["name"] + ("" if unlocked else " (Locked - 🪙 %d)" % Cosmetics.color_cost(i))
 	for i in _hat_buttons.size():
-		var chosen: bool = Cosmetics.HATS[i]["id"] == GameSettings.player_hat
-		var style := UiKit.panel_style(UiKit.ORANGE if chosen else UiKit.BLUE, 1.0, 12, 3 if chosen else 0, UiKit.CREAM, 8)
+		var hat_id: StringName = Cosmetics.HATS[i]["id"]
+		var hat_name: String = Cosmetics.HATS[i]["name"]
+		var chosen: bool = hat_id == GameSettings.player_hat
+		var unlocked := prog == null or bool(prog.call("is_unlocked", &"hat", hat_id))
+		_hat_buttons[i].text = (hat_name if unlocked else "🔒 " + hat_name).to_upper()
+		var bg_col := (UiKit.ORANGE if chosen else UiKit.BLUE) if unlocked else UiKit.NAVY_DARK
+		var style := UiKit.panel_style(bg_col, 1.0, 12, 3 if chosen else 0, UiKit.CREAM if unlocked else UiKit.GREY, 8)
 		_hat_buttons[i].add_theme_stylebox_override("normal", style)
+		_hat_buttons[i].tooltip_text = hat_name + ("" if unlocked else " (Locked - 🪙 %d)" % Cosmetics.hat_cost(hat_id))
 
 
 ## The three blue ")))" swooshes beside the logo in the drawing.

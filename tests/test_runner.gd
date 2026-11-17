@@ -59,6 +59,7 @@ func _ready() -> void:
 	# Home Turf: the toy-sized house arena
 	await _test_home_turf()
 	await _test_home_turf_match()
+	await _test_elemental_gameplay()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -1363,3 +1364,90 @@ func _test_no_stacked_spawns() -> void:
 			await end_match(game, saved_mode)
 	GameSettings.bot_count = saved_bots
 	GameSettings.arena = saved_arena
+
+
+func _test_elemental_gameplay() -> void:
+	section("Elemental gameplay & combos")
+	var wind_dart := load("res://resources/darts/wind_dart.tres") as DartData
+	var fire_dart := load("res://resources/darts/fire_dart.tres") as DartData
+	var water_dart := load("res://resources/darts/water_dart.tres") as DartData
+	var lightning_dart := load("res://resources/darts/lightning_dart.tres") as DartData
+	var ice_dart := load("res://resources/darts/ice_dart.tres") as DartData
+
+	check(wind_dart != null and wind_dart.element == DartData.Element.WIND, "wind dart is Element.WIND")
+	check(wind_dart != null and wind_dart.wind_response > 1.2, "wind dart catches drafts strongly (%.1fx)" % (wind_dart.wind_response if wind_dart != null else 0.0))
+	check(fire_dart != null and fire_dart.element == DartData.Element.FIRE, "fire dart is Element.FIRE")
+	check(water_dart != null and water_dart.element == DartData.Element.WATER, "water dart is Element.WATER")
+	check(water_dart != null and water_dart.knockback_impulse >= 5.0, "water dart has strong knockback (%.1f m/s)" % (water_dart.knockback_impulse if water_dart != null else 0.0))
+	check(lightning_dart != null and lightning_dart.element == DartData.Element.LIGHTNING, "lightning dart is Element.LIGHTNING")
+	check(lightning_dart != null and lightning_dart.chain_count >= 2, "lightning dart chains across rivals (%d)" % (lightning_dart.chain_count if lightning_dart != null else 0))
+	check(ice_dart != null and ice_dart.element == DartData.Element.ICE, "ice dart is Element.ICE")
+
+	var gun_game := load(GUN_GAME) as GunGameMode
+	check(gun_game != null and gun_game.ladder.size() == 10, "Gun Game ladder now has the full 10 rungs (10/10)")
+	var ladder_ids: Array[StringName] = []
+	if gun_game != null:
+		for weapon in gun_game.ladder:
+			ladder_ids.append(weapon.id)
+	check(ladder_ids.has(&"wind_whisperer"), "ladder includes Wind Whisperer")
+	check(ladder_ids.has(&"hydro_soaker"), "ladder includes Hydro Soaker")
+	check(ladder_ids.has(&"thunder_cannon"), "ladder includes Thunder Cannon")
+
+	# Actor elemental effects & combos
+	var victim := Actor.new()
+	add_child(victim)
+	await get_tree().physics_frame
+
+	check(victim.elemental != null, "actor automatically initializes an ElementalEffect component")
+	check(victim.elemental.get_speed_multiplier() == 1.0, "default speed multiplier is 1.0")
+
+	# Mock dart projectile for testing payloads
+	var mock_dart := DartProjectile.new()
+	mock_dart.velocity = Vector3(0.0, 0.0, -30.0)
+
+	# Water splash: sets wet and pushes victim
+	mock_dart.data = water_dart
+	victim.elemental.apply_dart(mock_dart, victim.global_position)
+	check(victim.elemental.has_status(DartData.Element.WATER), "water dart wets the actor")
+	check(victim.velocity.z < -4.0, "water dart pushes victim backwards (velocity.z = %.1f)" % victim.velocity.z)
+
+	# Combo: Fire on Wet actor -> Steam combo!
+	var combos: Array[StringName] = []
+	victim.elemental.combo_triggered.connect(func(combo: StringName, _at: Vector3) -> void: combos.append(combo))
+	mock_dart.data = fire_dart
+	victim.elemental.apply_dart(mock_dart, victim.global_position)
+	check(combos.has(&"steam"), "fire on wet actor triggers 'steam' combo")
+	check(not victim.elemental.has_status(DartData.Element.WATER), "steam combo clears wet status")
+	check(not victim.elemental.has_status(DartData.Element.FIRE), "fire was doused by steam")
+
+	# Frost slow & ice sliding
+	mock_dart.data = ice_dart
+	victim.elemental.apply_dart(mock_dart, victim.global_position)
+	check(victim.elemental.has_status(DartData.Element.ICE), "ice dart applies frost status")
+	check(victim.elemental.get_speed_multiplier() <= 0.75, "frost status slows actor (%.2f)" % victim.elemental.get_speed_multiplier())
+	victim.elemental.clear_all()
+	victim.elemental.start_slide(1.0)
+	check(victim.elemental.is_sliding(), "start_slide enables sliding flag")
+	check(victim.elemental.get_speed_multiplier() >= 1.4, "sliding gives a speed boost (%.2f)" % victim.elemental.get_speed_multiplier())
+
+	# Lightning chain zap test with a nearby rival
+	var rival := Actor.new()
+	rival.team_id = 1
+	add_child(rival)
+	rival.global_position = victim.global_position + Vector3(3.0, 0.0, 0.0)
+	await get_tree().physics_frame
+
+	var chains: Array[Actor] = []
+	victim.elemental.chain_zapped.connect(func(_from: Actor, to: Actor) -> void: chains.append(to))
+	mock_dart.data = lightning_dart
+	mock_dart.team_id = 0
+	victim.elemental.apply_dart(mock_dart, victim.global_position)
+	check(chains.has(rival), "lightning dart on victim chain-zaps nearby rival (3m away)")
+	check(rival.tag_meter > 0.0, "chain zap fills rival's tag meter (%.1f)" % rival.tag_meter)
+
+	# Clean teardown
+	mock_dart.free()
+	rival.queue_free()
+	victim.queue_free()
+	await physics_frames(2)
+

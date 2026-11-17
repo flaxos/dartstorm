@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="DartData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/dart_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Volt Bolt Dart"
+initial_speed = 55.0
+gravity_multiplier = 0.45
+air_drag = 0.12
+tag_power = 35.0
+max_ricochets = 1
+element = 4
+element_power = 16.0
+element_duration = 0.5
+chain_count = 2
+chain_radius = 5.5

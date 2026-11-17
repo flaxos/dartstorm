@@ -436,6 +436,14 @@ func _build_bank() -> void:
 	_register(&"chain", _mix([_tone(0.055, 420.0, 180.0, Wave.SQUARE, 0.24), _noise(0.04, 5000.0, 1500.0, 0.24, 1.5)]))
 	_register(&"thump", _mix([_tone(0.2, 220.0, 60.0, Wave.SINE, 0.8), _noise(0.12, 2500.0, 400.0, 0.38, 1.4)]))
 	_register(&"zip", _mix([_tone(0.16, 1400.0, 300.0, Wave.SAW, 0.3), _noise(0.08, 8000.0, 2000.0, 0.2, 1.5)]))
+	# Elemental launches and reactions.
+	_register(&"whoosh", _mix([_tone(0.18, 700.0, 260.0, Wave.SINE, 0.5), _noise(0.15, 4500.0, 900.0, 0.35, 1.4)]))
+	_register(&"splash", _mix([_tone(0.14, 380.0, 120.0, Wave.SINE, 0.65), _noise(0.10, 3200.0, 700.0, 0.45, 1.6)]))
+	_register(&"zap", _mix([_tone(0.12, 1800.0, 350.0, Wave.SAW, 0.45), _noise(0.08, 8500.0, 3000.0, 0.3, 1.3)]))
+	_register(&"freeze", _mix([_tone(0.22, 1200.0, 1600.0, Wave.TRIANGLE, 0.4), _noise(0.10, 6000.0, 2200.0, 0.25, 1.8)]))
+	_register(&"sparkle", _mix([_tone(0.09, 880.0, 1400.0, Wave.SQUARE, 0.25), _noise(0.06, 9000.0, 4000.0, 0.22, 1.2)]))
+	_register(&"steam", _noise(0.25, 3000.0, 800.0, 0.3, 1.2, 0.05))
+
 	# Impacts and scoring.
 	_register(&"hit", _mix([_noise(0.09, 2200.0, 300.0, 0.6, 1.6), _tone(0.07, 180.0, 90.0, Wave.SINE, 0.35)]))
 	_register(&"hit_confirm", _tone(0.06, 1500.0, 1100.0, Wave.TRIANGLE, 0.45))

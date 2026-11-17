@@ -33,7 +33,12 @@ var _punch: float = 0.0
 var _recoil: float = 0.0
 var _swap: float = 0.0
 var _bob_phase: float = 0.0
-var _sway: Vector2 = Vector2.ZERO
+var _sway_pos := Vector2.ZERO
+var _sway_vel := Vector2.ZERO
+var _dip_pos: float = 0.0
+var _dip_vel: float = 0.0
+var _was_on_floor: bool = true
+var _last_vel_y: float = 0.0
 var _time: float = 0.0
 var _aim_query: PhysicsRayQueryParameters3D
 ## Set when a click was used to re-capture the mouse, so that click never fires.
@@ -86,7 +91,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if motion != null and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		var scale_factor := MOUSE_RADIANS_PER_PIXEL * GameSettings.mouse_sensitivity
 		_look(-motion.relative.x * scale_factor, -motion.relative.y * scale_factor)
-		_sway = (_sway + motion.relative * 0.00012).limit_length(0.03)
+		_sway_vel += Vector2(-motion.relative.x, motion.relative.y) * 0.0012
 		return
 	# Clicking back into the window after alt-tab grabs the mouse again
 	# instead of firing a surprise shot.
@@ -167,15 +172,45 @@ func _process(delta: float) -> void:
 	var fov_target := GameSettings.fov + (SPRINT_FOV_BOOST if _sprinting else 0.0)
 	camera.fov = lerpf(camera.fov, fov_target, minf(8.0 * delta, 1.0))
 
-	# Blaster in view: bob while walking, sway with the mouse, kick on each shot.
+	# Blaster in view: spring-damper sway with looking, bob while walking,
+	# landing dip, sprint canting, and kick on each shot.
 	_recoil = lerpf(_recoil, 0.0, minf(14.0 * delta, 1.0))
 	_swap = move_toward(_swap, 0.0, delta / Arsenal.SWAP_TIME)
-	_sway = _sway.lerp(Vector2.ZERO, minf(10.0 * delta, 1.0))
+
+	# 2nd-order spring for weapon inertia
+	var sway_accel := -65.0 * _sway_pos - 14.0 * _sway_vel
+	_sway_vel += sway_accel * delta
+	_sway_pos += _sway_vel * delta
+	_sway_pos = _sway_pos.limit_length(0.05)
+
+	# Landing dip spring
+	var on_floor := is_on_floor()
+	if on_floor and not _was_on_floor and _last_vel_y < -2.5:
+		_dip_vel += clampf(-_last_vel_y * 0.015, 0.0, 0.12)
+	_was_on_floor = on_floor
+	_last_vel_y = velocity.y
+
+	var dip_accel := -75.0 * _dip_pos - 15.0 * _dip_vel
+	_dip_vel += dip_accel * delta
+	_dip_pos += _dip_vel * delta
+	_dip_pos = clampf(_dip_pos, -0.04, 0.08)
+
 	var speed := Vector2(velocity.x, velocity.z).length()
-	var bob_amount := clampf(speed / walk_speed, 0.0, 1.4) if is_on_floor() else 0.0
+	var bob_amount := clampf(speed / walk_speed, 0.0, 1.4) if on_floor else 0.0
 	if bob_amount > 0.05:
 		_bob_phase += delta * (6.0 + speed * 0.9)
 	var bob := Vector3(cos(_bob_phase * 0.5) * 0.008, -absf(sin(_bob_phase * 0.5)) * 0.012, 0.0) * bob_amount
+
+	# Breathing idle sway
+	var idle := Vector3(sin(_time * 1.5) * 0.0015, cos(_time * 3.0) * 0.0012, 0.0) * (1.0 - bob_amount)
+
+	# Sprint weapon posture
+	var sprint_factor := 0.0
+	if _sprinting and speed > walk_speed * 0.7:
+		sprint_factor = clampf((speed - walk_speed * 0.7) / (sprint_speed - walk_speed * 0.7), 0.0, 1.0)
+	var sprint_offset := Vector3(0.01, -0.035, -0.03) * sprint_factor
+	var sprint_rot := Vector3(-0.12, -0.15, 0.08) * sprint_factor
+
 	var rattle := Vector3.ZERO
 	var state := arsenal.current()
 	var spin := 0.0
@@ -186,8 +221,8 @@ func _process(delta: float) -> void:
 	if _view_model != null:
 		_view_model.set_spin(spin)
 	_view_root.visible = alive
-	_view_root.position = _view_offset + bob + rattle + Vector3(-_sway.x, _sway.y - 0.35 * _swap, _recoil * 0.07)
-	_view_root.rotation = Vector3(_recoil * 0.12 - _swap * 0.6, VIEW_YAW + _sway.x * 0.5, 0.0)
+	_view_root.position = _view_offset + bob + idle + sprint_offset + rattle + Vector3(_sway_pos.x, -_sway_pos.y - 0.35 * _swap - _dip_pos, _recoil * 0.07)
+	_view_root.rotation = Vector3(_recoil * 0.12 - _swap * 0.6 + sprint_rot.x - _dip_pos * 1.2, VIEW_YAW - _sway_pos.x * 0.5 + sprint_rot.y, sprint_rot.z - _sway_pos.x * 0.3)
 
 
 ## Adds camera shake. `amount` 0..1; scaled by the player's shake setting.

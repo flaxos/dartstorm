@@ -218,3 +218,9 @@ platform, reached by a ramp.
 **Why:** real rooms are too small for running and dart arcs. No roof keeps rooms sunlit and cheap to render, and lets
 the overview camera see in. Walls too tall to climb keep fights inside the rooms. Furniture pushed against walls can
 box in corners for bots, so walkways are at least 1.5 m (the dining chairs moved to the table ends for this reason).
+
+### D-033: Elemental Reaction Engine & 2nd-Order Spring Dynamics (v0.5.0)
+**Chosen:** attach an `ElementalEffect` component to `Actor` that processes status afflictions (Wind micro-lift, Fire sparkle tick, Water knockback/wet, Lightning chain zap, Ice slow & slide boost) and combos (Fire on Wet -> Steam cloud; Ice on Fire -> Flash steam; Lightning on Wet -> Conductive shock). Upgrade player viewmodel with 2nd-order damped harmonic spring dynamics for weapon inertia, landing dip, and sprint canting. Enable Forward+ Screen-Space Ambient Occlusion (SSAO), Screen-Space Reflections (SSR), and tactile rim lighting with Burley diffuse on materials.
+**Alternatives:** complex stat machines with debuff stacks; static weapon transforms.
+**Why:** keeps combat joyful, non-violent, and readable while introducing emergent tactical depth (e.g. wet targets conduct lightning; ice ramps boost slides). Spring physics give blasters a weighty, responsive, modern AAA feel without sacrificing responsive twitch aim.
+

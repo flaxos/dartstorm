@@ -3,7 +3,7 @@ extends Resource
 ## Tunable flight and impact numbers for one kind of foam dart.
 ## Weapons point at a DartData, so new dart types need no code.
 
-enum Element { NONE, WIND, FIRE, LIGHTNING, ICE }
+enum Element { NONE, WIND, FIRE, WATER, LIGHTNING, ICE }
 
 @export var display_name: String = "Foam Dart"
 
@@ -32,5 +32,17 @@ enum Element { NONE, WIND, FIRE, LIGHTNING, ICE }
 
 @export_group("Look")
 @export var visual_scale: float = 1.0
-## Reserved for elemental arenas and weapons (see docs/ARCHITECTURE.md).
+
+@export_group("Elemental")
 @export var element: Element = Element.NONE
+## Auxiliary elemental strength (burn ticks, chain damage, or slow percentage).
+@export var element_power: float = 0.0
+## Seconds the elemental condition lasts on the target.
+@export var element_duration: float = 2.0
+## Velocity impulse applied to the victim upon hit (metres per second).
+@export var knockback_impulse: float = 0.0
+## For Lightning darts: max number of nearby rivals to zap in a chain.
+@export var chain_count: int = 0
+## Search radius for lightning chain targets.
+@export var chain_radius: float = 5.0
+

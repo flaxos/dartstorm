@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="DartData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/dart_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Sparkle Dart"
+initial_speed = 42.0
+gravity_multiplier = 0.65
+air_drag = 0.22
+tag_power = 24.0
+max_ricochets = 1
+element = 2
+element_power = 12.0
+element_duration = 2.4

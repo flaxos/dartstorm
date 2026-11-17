@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/darts/wind_dart.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"wind_whisperer"
+dart = ExtResource("2")
+display_name = "Wind Whisperer"
+description = "An aerodynamic spiral rifle. Its darts slice through drag and draft through wind corridors."
+fire_mode = 0
+shots_per_second = 3.0
+darts_per_shot = 1
+spread_degrees = 0.15
+magazine_size = 10
+reserve_max = 60
+reserve_start = 40
+reload_time = 0.9
+recoil_kick = 1.0
+camera_shake = 0.08
+sound = &"whoosh"
+sound_pitch = 1.1
+model_style = 5
+body_color = Color(0.85, 0.95, 1, 1)
+accent_color = Color(0.1, 0.55, 0.9, 1)
+view_offset = Vector3(0.22, -0.19, -0.36)
+ai_min_range = 5.0
+ai_max_range = 45.0
+ai_preference = 1.2

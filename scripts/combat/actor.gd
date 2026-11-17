@@ -46,6 +46,7 @@ var is_human: bool = false
 var arsenal: Arsenal
 var dart_pool: DartPool
 var hitbox: Hitbox
+var elemental: ElementalEffect
 
 var _since_hit: float = 0.0
 var _protect_left: float = 0.0
@@ -84,14 +85,24 @@ func _ready() -> void:
 	add_child(arsenal)
 	arsenal.fired.connect(_on_arsenal_fired)
 
+	add_to_group(&"actors")
+	elemental = ElementalEffect.new()
+	elemental.name = "ElementalEffect"
+	elemental.actor = self
+	add_child(elemental)
+
 
 # --- Movement ---------------------------------------------------------------
 
 ## Moves with smooth acceleration. `wish` is a horizontal direction of length 0..1.
 func move_actor(wish: Vector3, sprinting: bool, jump: bool, delta: float) -> void:
 	var speed := (sprint_speed if sprinting else walk_speed) * arsenal.get_move_multiplier()
+	if elemental != null:
+		speed *= elemental.get_speed_multiplier()
 	var target := wish * speed
 	var acceleration := ground_acceleration if is_on_floor() else air_acceleration
+	if elemental != null and elemental.is_sliding():
+		acceleration *= 0.25
 	var horizontal := Vector3(velocity.x, 0.0, velocity.z).move_toward(target, acceleration * delta)
 	velocity.x = horizontal.x
 	velocity.z = horizontal.z
@@ -131,6 +142,9 @@ func receive_dart(dart: DartProjectile) -> void:
 	_on_hit_received(attacker)
 	if out:
 		_tag_out(attacker, dart.weapon, ricochet)
+	else:
+		if elemental != null:
+			elemental.apply_dart(dart, dart.global_position)
 	if attacker != null:
 		attacker.landed_hit.emit(self, out, ricochet)
 
@@ -142,6 +156,8 @@ func respawn(at: Transform3D) -> void:
 	_since_hit = 0.0
 	_protect_left = spawn_protection
 	alive = true
+	if elemental != null:
+		elemental.clear_all()
 	collision_layer = Layers.ACTORS
 	hitbox.collision_layer = Layers.HITBOX
 	arsenal.enabled = true
@@ -165,6 +181,8 @@ func tick_status(delta: float) -> void:
 
 func _tag_out(attacker: Actor, weapon: WeaponData, ricochet: bool) -> void:
 	alive = false
+	if elemental != null:
+		elemental.clear_all()
 	arsenal.set_trigger(false)
 	arsenal.enabled = false
 	collision_layer = 0

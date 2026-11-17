@@ -259,6 +259,10 @@ func _build_patio() -> void:
 	for side: float in [-1.0, 1.0]:
 		ArenaKit.ramp(geometry, Vector3(29.0, 0.35, -22.0 + side * 2.1), Vector3(15.1, PATIO_ROOF_TOP + 0.35, -22.0 + side * 2.1),
 				0.3, Color(1.0, 0.85, 0.2), 0.7)
+	# Ice slick down the toy race-track ramp!
+	add_ice_slick(Vector3(22.05, PATIO_ROOF_TOP * 0.5, -22.0), Vector3(14.2, 0.2, 3.8), Vector3(1.0, -0.45, 0.0), Vector3(0.0, 0.0, 24.0))
+	# Shield pickup up on the patio roof fort
+	add_shield_pickup(Vector3(6.5, PATIO_ROOF_TOP, -22.5))
 	add_roam_point(Vector3(7.5, PATIO_ROOF_TOP, -22.5))
 
 	# Barbecue, outdoor table and benches, pot plants.
@@ -308,6 +312,10 @@ func _build_furniture() -> void:
 	ArenaKit.box(geometry, Vector3(7.5, 2.7, 3.2), Vector3(-6.0, 1.35, -21.6), Color(0.95, 0.95, 0.95))
 	ArenaKit.deco_box(decor, Vector3(7.7, 0.25, 3.4), Vector3(-6.0, 2.82, -21.6), Color(0.3, 0.3, 0.35))
 	ArenaKit.box(geometry, Vector3(2.6, 5.6, 2.4), Vector3(-10.3, 2.8, -17.4), Color(0.85, 0.88, 0.92))
+	# Puddles and vents:
+	add_water_puddle(Vector3(-6.0, 0.0, -17.5), 2.4)
+	add_water_puddle(Vector3(22.0, 0.0, -38.0), 2.6)
+	add_wind_vent(Vector3(-1.0, 0.0, -21.6), 1.6, 13.5)
 	# Meals table with chairs as steps up onto it (and room to crawl underneath).
 	_table(Vector3(-6.5, 0.0, -28.5), Vector2(7.0, 4.4), 2.25, FURNITURE)
 	for x: float in [-8.5, -4.5]:

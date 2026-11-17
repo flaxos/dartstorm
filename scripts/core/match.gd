@@ -203,6 +203,13 @@ func _ready() -> void:
 	if mode.uses_power_up() and not arena.power_up_spots.is_empty():
 		_create_power_up(mode)
 
+	controller.state_changed.connect(func(state: MatchController.State) -> void:
+		var playing := state == MatchController.State.PLAYING
+		if arena != null:
+			for sp in arena.shield_pickups:
+				if sp != null:
+					sp.active = playing)
+
 	for node in get_tree().get_nodes_in_group(&"wobble_targets"):
 		var target := node as WobbleTarget
 		if target != null:
@@ -245,6 +252,10 @@ func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 	Sfx.stop_music()
 	if power_up != null:
 		power_up.active = false
+	if arena != null:
+		for sp in arena.shield_pickups:
+			if sp != null:
+				sp.active = false
 	podium = Podium.new()
 	podium.name = "Podium"
 	add_child(podium)

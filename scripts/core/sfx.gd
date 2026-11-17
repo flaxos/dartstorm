@@ -454,6 +454,10 @@ func _build_bank() -> void:
 	_register(&"boing", _tone(0.3, 160.0, 520.0, Wave.SINE, 0.6))
 	_register(&"zombie_moan", _mix([_tone(0.55, 130.0, 95.0, Wave.SAW, 0.42, 0.12, 0.05, 1.2), _tone(0.55, 90.0, 70.0, Wave.TRIANGLE, 0.48, 0.05, 0.04, 1.1)]))
 	_register(&"infect", _mix([_noise(0.18, 2800.0, 500.0, 0.52, 1.5), _tone(0.14, 340.0, 110.0, Wave.SQUARE, 0.38), _tone(0.18, 480.0, 190.0, Wave.SINE, 0.35)]))
+	_register(&"shield_hit", _mix([_tone(0.12, 1400.0, 900.0, Wave.TRIANGLE, 0.4), _tone(0.08, 2200.0, 1800.0, Wave.SINE, 0.25), _noise(0.04, 8000.0, 4000.0, 0.2, 1.5)]))
+	_register(&"shield_pop", _mix([_tone(0.18, 400.0, 120.0, Wave.SINE, 0.7), _noise(0.20, 5000.0, 1000.0, 0.45, 1.8), _tone(0.15, 800.0, 1600.0, Wave.TRIANGLE, 0.3)]))
+	_register(&"shield_pickup", _melody([659.0, 880.0, 1174.0, 1568.0], 0.05, Wave.TRIANGLE, 0.35))
+	_register(&"ice_slide", _mix([_noise(0.35, 3800.0, 1200.0, 0.38, 1.3), _tone(0.3, 300.0, 550.0, Wave.SINE, 0.25)]))
 	# Handling.
 	_register(&"reload", _sequence([_tone(0.03, 900.0, 700.0, Wave.SQUARE, 0.3, 0.5), _silence(0.08), _tone(0.04, 1200.0, 900.0, Wave.SQUARE, 0.3, 0.5)]))
 	_register(&"dry", _tone(0.03, 300.0, 250.0, Wave.SQUARE, 0.25, 0.6))

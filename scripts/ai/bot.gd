@@ -74,6 +74,8 @@ func _ready() -> void:
 
 	arsenal.weapon_changed.connect(_on_weapon_changed)
 	meter_changed.connect(func(value: float, maximum: float) -> void: _model.set_meter(value / maximum))
+	shield_changed.connect(func(curr: float, _max: float) -> void: _model.set_shield_visible(curr > 0.0))
+	shield_broken.connect(func(_a: Actor) -> void: _model.set_shield_visible(false))
 
 
 func _physics_process(delta: float) -> void:
@@ -157,6 +159,13 @@ func _think() -> void:
 		_mood = Mood.ROAM  # Keeps shooting at any target while it runs.
 		_set_goal(power_up.global_position)
 		return
+
+	if _wants_shield():
+		var sp := _nearest_shield_pickup()
+		if sp != null:
+			_mood = Mood.ROAM
+			_set_goal(sp.global_position)
+			return
 
 	if _target != null:
 		_mood = Mood.FIGHT
@@ -248,6 +257,29 @@ func _wants_power_up() -> bool:
 	if arsenal.has_weapon(power_up.weapon.id):
 		return false
 	return _target == null or global_position.distance_to(power_up.global_position) < POWER_UP_DETOUR
+
+
+func _wants_shield() -> bool:
+	if is_zombie or shield_points > 0.0 or arena == null or arena.shield_pickups.is_empty():
+		return false
+	var nearest := _nearest_shield_pickup()
+	if nearest == null or not nearest.is_available():
+		return false
+	return _target == null or global_position.distance_to(nearest.global_position) < 20.0
+
+
+func _nearest_shield_pickup() -> ShieldPickup:
+	if arena == null:
+		return null
+	var best: ShieldPickup = null
+	var best_dist := INF
+	for sp in arena.shield_pickups:
+		if sp != null and sp.is_available():
+			var d := global_position.distance_to(sp.global_position)
+			if d < best_dist:
+				best_dist = d
+				best = sp
+	return best
 
 
 func _wants_resupply() -> bool:
@@ -475,6 +507,8 @@ func _on_shot_feedback(state: WeaponState) -> void:
 ## React to being hit: flinch, dodge the other way and remember who did it.
 func _on_hit_received(attacker: Actor) -> void:
 	_model.flinch()
+	if shield_points > 0.0:
+		_model.flash_shield()
 	_strafe_sign = -_strafe_sign
 	_strafe_left = randf_range(0.6, 1.4)
 	if attacker != null:

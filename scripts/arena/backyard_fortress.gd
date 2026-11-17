@@ -200,6 +200,17 @@ func _build_treehouse() -> void:
 		var lift := Vector3(rail_x, 0.35, 0.0)
 		ArenaKit.ramp(geometry, slide_low + lift, slide_high + lift, 0.12, SLIDE.darkened(0.2), 0.35)
 
+	# Environmental hazards and power-ups:
+	# Ice slick down the yellow slide!
+	add_ice_slick(Vector3(0.0, DECK_HEIGHT * 0.5, -9.5), Vector3(2.4, 0.2, 9.2), Vector3(0.0, -0.4, -1.0), Vector3(-24.0, 0.0, 0.0))
+	# Foam Shield on the treehouse deck
+	add_shield_pickup(Vector3(0.0, DECK_HEIGHT, -2.2))
+	# Water puddles in the courtyard and near the garden tap
+	add_water_puddle(Vector3(0.0, 0.0, 8.5), 2.5)
+	add_water_puddle(Vector3(-11.5, 0.0, 6.0), 2.6)
+	# Updraft wind vent near the central walkway
+	add_wind_vent(Vector3(8.5, 0.0, 0.0), 1.8, 14.5)
+
 	# Trampolines that bounce you onto the deck corners.
 	add_jump_pad(Vector3(6.8, 0.0, -6.8))
 	add_jump_pad(Vector3(-6.8, 0.0, 6.8))

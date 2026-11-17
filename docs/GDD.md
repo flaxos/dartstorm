@@ -92,7 +92,7 @@ The photo isn't kept in the repo (it has their names on it). This is what it ask
 | **Zombie mode** | ✅ v0.5.1 | Goofy green foam zombies: tagged players join the horde (§3.21) |
 | **Fire, Water and Electric** (lightning bolts everywhere) | ✅ v0.5.0 | Elemental darts (Wind, Fire, Water, Lightning, Ice) and 10-rung Gun Game ladder (§2.4) |
 | **Goggles, bunny ears, horns, spiky hair** (their characters) | ✅ v0.3.0 | New hats (§3.16) |
-| **Shield** | ⏳ Planned | A foam shield power-up |
+| **Shield** | ✅ v0.5.2 | Foam Shield power-up: glowing hexagonal bubble absorbs 50 tag points (§3.23) |
 | **Missions, Level, Coins, Shop, Upgrade, Pass** | ⏳ Planned | Earned by playing only, cosmetics only, one currency (coins), no gems, no real money (§10, D-028) |
 | **Gems** | ✗ Not doing | A second currency is a pattern built to sell things |
 | **Chat, Clan, 32 players, League, Private** | ✗ Not now | Needs online play; chat isn't safe for young players. Couch/LAN play may come later (D-008) |
@@ -491,8 +491,26 @@ The main menu is the players' own drawing (§1.9), built in 3D:
   what it means ("3 v 3", "3 PAIRS", "+1 BOT TO EVEN THE TEAMS"), **BOT SKILL** and **CHAINSTORM** (EVERYONE / POWER-UP;
   hidden for Gun Game). Everything is remembered.
 - **Bottom middle:** the DARTSTORM logo with three blue swooshes. **Bottom right:** a huge **PLAY** button with the
-  mode's name over it. PLAY has focus, so a controller player just presses A.
 - Planned from the drawing: a level and coins on the card, and MISSIONS / SHOP buttons in the column (§10).
+
+### 3.23 Foam Shield & Environmental Hazards *(v0.5.2)*
+- **Foam Shield Power-Up (`ShieldPickup`):** A floating, glowing hexagonal forcefield bubble in a cyan light beam.
+  - Touching it grants 50 shield points, surrounding the character in a procedural holographic hexagonal bubble (`foam_shield.gdshader`).
+  - Absorbs incoming dart tag power 1:1. When broken, leftover damage spills onto the tag meter and the shield pops with a sparkling burst (`&"shield_pop"`).
+  - In ZOMBIES mode, a shield absorbs 50 points of an infection touch, giving the survivor a crucial escape opportunity instead of an instant tag-out.
+  - Displayed on the HUD as a cyan shield gauge right above the tag meter. Respawns 30s after pickup.
+- **Conductive Water Puddles (`WaterPuddle`):**
+  - Shallow glossy pools located in both arenas (garden tap and kitchen sink).
+  - Walking through applies the `wet` status (4.0s) and splashes foam droplets.
+  - Shooting a puddle with a Lightning dart or Thunder Cannon conducts electricity across the entire surface for 2.0s (`&"zap"`), shocking and tagging any players inside!
+- **Frictionless Ice Slicks (`IceSlick`):**
+  - Frosty glistening patches placed on ramps and slides (the backyard yellow slide and the Home Turf toy race-track ramp).
+  - Stepping on an ice slick drops friction to zero and launches the player down the slope with an instant high-velocity slide-boost (+9.5 m/s, `&"ice_slide"`).
+  - Fire darts temporarily melt ice slicks into water and steam for 3.5s before they refreeze.
+- **Interactive Wind Vents (`WindVent`):**
+  - Floor vents with spinning fan blades that provide an upward buoyant air launch.
+  - Elemental darts infuse and amplify the wind stream for 5.0s (Fire embers, Water mist, Ice blizzard, Lightning plasma), applying those statuses to passing players.
+  - Steam combos triggered near vents billow into massive 60-particle amplified steam clouds!
 
 ---
 

@@ -305,8 +305,10 @@ func _rebuild_board(title: String, compact: bool = false) -> void:
 		var place := 0
 		for team in mode.rank_teams(_controller.board):
 			place += 1
-			var tint := GameMode.team_color(team["team"]).lightened(0.35)
-			var header := [str(place), "%s TEAM" % GameMode.team_name(team["team"]), str(team["tags"]), "", str(team["score"])]
+			var team_id: int = team["team"]
+			var tint := mode.get_team_color(team_id).lightened(0.35)
+			var team_title := mode.get_team_name(team_id) if mode is ZombieMode else "%s TEAM" % mode.get_team_name(team_id)
+			var header := [str(place), team_title, str(team["tags"]), "", str(team["score"])]
 			for cell: String in header:
 				_board_grid.add_child(UiKit.label(cell, row_size, tint, 6))
 			for entry: ScoreEntry in team["members"]:
@@ -539,7 +541,14 @@ func _refresh_score() -> void:
 	var mode := _controller.mode
 	var progress := mode.describe_progress(entry)
 	var text := ""
-	if mode.is_team_mode():
+	if mode is ZombieMode:
+		var zombie_mode := mode as ZombieMode
+		var survivors := zombie_mode.count_survivors(_controller.board)
+		var total := _controller.board.entries.size()
+		text = "TAGS %d   SURVIVORS LEFT %d/%d" % [entry.tags, survivors, total]
+		var teams := mode.rank_teams(_controller.board)
+		_refresh_team_strip(teams, entry.team)
+	elif mode.is_team_mode():
 		var teams := mode.rank_teams(_controller.board)
 		var team_place := 1
 		for i in teams.size():
@@ -566,8 +575,10 @@ func _refresh_team_strip(teams: Array[Dictionary], mine: int) -> void:
 	ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["team"] < b["team"])
 	for team: Dictionary in ordered:
 		var id: int = team["team"]
-		var chip := UiKit.panel(GameMode.team_color(id).darkened(0.25), 0.92, 14, 3 if id == mine else 0, UiKit.CREAM, 8)
-		chip.add_child(UiKit.label("%s %d" % [GameMode.team_name(id), team["score"]], 22, UiKit.CREAM, 5))
+		var color := _controller.mode.get_team_color(id)
+		var name_str := _controller.mode.get_team_name(id)
+		var chip := UiKit.panel(color.darkened(0.25), 0.92, 14, 3 if id == mine else 0, UiKit.CREAM, 8)
+		chip.add_child(UiKit.label("%s %d" % [name_str, team["score"]], 22, UiKit.CREAM, 5))
 		_team_strip.add_child(chip)
 
 

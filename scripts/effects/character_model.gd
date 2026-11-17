@@ -8,9 +8,14 @@ const SKIN := Color(1.0, 0.82, 0.66)
 const NAVY := Color(0.1, 0.14, 0.3)
 const GOLD := Color(1.0, 0.8, 0.15)
 const HAT_Y := 1.86
+const ZOMBIE_GREEN := Color(0.38, 0.78, 0.28)
+const ZOMBIE_SKIN := Color(0.48, 0.82, 0.38)
 
 var _tint: Color = Color.WHITE
 var _upper: Node3D
+var _torso: MeshInstance3D
+var _head: MeshInstance3D
+var _arms: Array[MeshInstance3D] = []
 var _legs: Array[MeshInstance3D] = []
 var _weapon_mount: Node3D
 var _weapon: BlasterModel
@@ -23,6 +28,7 @@ var _flinch: float = 0.0
 var _hat_root: Node3D
 var _propeller: Node3D
 var _hat_id: StringName = &"cap"
+var _is_zombie: bool = false
 
 
 func setup(display_name: String, tint: Color, hat: StringName = &"cap") -> void:
@@ -49,6 +55,46 @@ func show_overhead(shown: bool) -> void:
 	_meter_back.visible = shown
 	if not shown:
 		_meter_fill.visible = false
+
+
+func set_zombie(enabled: bool) -> void:
+	_is_zombie = enabled
+	if enabled:
+		var zombie_mat := ArenaKit.mat(ZOMBIE_GREEN, 0.7)
+		var zombie_skin_mat := ArenaKit.mat(ZOMBIE_SKIN, 0.7)
+		if _torso != null:
+			_torso.material_override = zombie_mat
+		if _head != null:
+			_head.material_override = zombie_skin_mat
+		for i in _arms.size():
+			var arm := _arms[i]
+			var side: float = -1.0 if i == 0 else 1.0
+			arm.material_override = zombie_mat
+			arm.rotation_degrees = Vector3(90.0, side * -5.0, 0.0)
+		for leg in _legs:
+			leg.material_override = ArenaKit.mat(ZOMBIE_GREEN.darkened(0.25), 0.7)
+		set_weapon(null)
+		if _name_label != null:
+			_name_label.modulate = Color(0.5, 0.95, 0.35)
+	else:
+		var shirt := ArenaKit.mat(_tint, 0.7)
+		if _torso != null:
+			_torso.material_override = shirt
+		if _head != null:
+			_head.material_override = ArenaKit.mat(SKIN, 0.7)
+		for i in _arms.size():
+			var arm := _arms[i]
+			var side: float = -1.0 if i == 0 else 1.0
+			arm.material_override = shirt
+			arm.rotation_degrees = Vector3(80.0, side * -18.0, 0.0)
+		for leg in _legs:
+			leg.material_override = ArenaKit.mat(NAVY)
+		if _name_label != null:
+			_name_label.modulate = _tint.lightened(0.35)
+
+
+func is_zombie() -> bool:
+	return _is_zombie
 
 
 func _process(delta: float) -> void:
@@ -95,6 +141,12 @@ func animate(horizontal_speed: float, delta: float) -> void:
 	_flinch = move_toward(_flinch, 0.0, delta * 5.0)
 	_upper.position.y = absf(sin(_walk_phase)) * 0.04 * clampf(horizontal_speed / 6.0, 0.0, 1.0)
 	_upper.rotation.z = sin(_flinch * PI * 2.0) * 0.25 * _flinch
+	if _is_zombie:
+		for i in _arms.size():
+			var arm := _arms[i]
+			var side: float = -1.0 if i == 0 else 1.0
+			var lurch := sin(_walk_phase * 0.8 + float(i) * 1.5) * 0.12
+			arm.rotation = Vector3(deg_to_rad(90.0) + lurch, deg_to_rad(side * -5.0), sin(_walk_phase * 0.5) * 0.05)
 
 
 func _build() -> void:
@@ -105,13 +157,15 @@ func _build() -> void:
 
 	_upper = Node3D.new()
 	add_child(_upper)
-	_capsule(_upper, 0.31, 0.86, Vector3(0.0, 1.05, 0.0), shirt)
-	ArenaKit.deco_sphere(_upper, 0.26, Vector3(0.0, 1.66, 0.0), SKIN)
+	_torso = _capsule(_upper, 0.31, 0.86, Vector3(0.0, 1.05, 0.0), shirt)
+	_head = ArenaKit.deco_sphere(_upper, 0.26, Vector3(0.0, 1.66, 0.0), SKIN)
+	_arms.clear()
 	for side: float in [-1.0, 1.0]:
 		ArenaKit.deco_sphere(_upper, 0.065, Vector3(side * 0.095, 1.7, -0.215), Color.WHITE)
 		ArenaKit.deco_sphere(_upper, 0.034, Vector3(side * 0.095, 1.7, -0.265), Color(0.05, 0.05, 0.1))
 		var arm := _capsule(_upper, 0.085, 0.52, Vector3(side * 0.3, 1.18, -0.24), shirt)
 		arm.rotation_degrees = Vector3(80.0, side * -18.0, 0.0)
+		_arms.append(arm)
 	_hat_root = Node3D.new()
 	_upper.add_child(_hat_root)
 	_build_hat()

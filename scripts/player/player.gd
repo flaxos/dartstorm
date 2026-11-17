@@ -46,6 +46,8 @@ var _fire_blocked_until_release: bool = false
 var _assist_query: PhysicsRayQueryParameters3D
 ## Shown once per life when the Chainstorm reaches full spin.
 var storm_mode_announced: bool = false
+var _zombie_arms: Node3D
+var _zombie_swipe: float = 0.0
 
 
 func _ready() -> void:
@@ -102,7 +104,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_fire_blocked_until_release = true
 		get_viewport().set_input_as_handled()
 		return
-	if not alive or not controls_enabled:
+	if not alive or not controls_enabled or is_zombie:
 		return
 	if event.is_action_pressed(&"weapon_next"):
 		arsenal.cycle(1)
@@ -144,7 +146,12 @@ func _physics_process(delta: float) -> void:
 				fire_held = false
 			else:
 				_fire_blocked_until_release = false
-		arsenal.set_trigger(fire_held)
+		if is_zombie:
+			arsenal.set_trigger(false)
+			if Input.is_action_just_pressed(&"fire") and not _fire_blocked_until_release:
+				_perform_zombie_swipe()
+		else:
+			arsenal.set_trigger(fire_held)
 	else:
 		arsenal.set_trigger(false)
 
@@ -220,6 +227,12 @@ func _process(delta: float) -> void:
 	Sfx.set_spin(spin)
 	if _view_model != null:
 		_view_model.set_spin(spin)
+	_zombie_swipe = maxf(_zombie_swipe - delta * 4.0, 0.0)
+	if _zombie_arms != null and _zombie_arms.visible:
+		var swipe_forward := sin(_zombie_swipe * PI) * 0.22
+		var swipe_down := -sin(_zombie_swipe * PI) * 0.08
+		_zombie_arms.position = Vector3(0.0, swipe_down, -swipe_forward)
+		_zombie_arms.rotation = Vector3(-sin(_zombie_swipe * PI) * 0.35, 0.0, 0.0)
 	_view_root.visible = alive
 	_view_root.position = _view_offset + bob + idle + sprint_offset + rattle + Vector3(_sway_pos.x, -_sway_pos.y - 0.35 * _swap - _dip_pos, _recoil * 0.07)
 	_view_root.rotation = Vector3(_recoil * 0.12 - _swap * 0.6 + sprint_rot.x - _dip_pos * 1.2, VIEW_YAW - _sway_pos.x * 0.5 + sprint_rot.y, sprint_rot.z - _sway_pos.x * 0.3)
@@ -282,6 +295,8 @@ func crosshair_on_rival() -> bool:
 	_assist_query.exclude = [get_rid(), hitbox.get_rid()]
 	var hit := get_world_3d().direct_space_state.intersect_ray(_assist_query)
 	var box := hit.get("collider") as Hitbox
+	if is_zombie:
+		return box != null and box.actor != null and box.actor != self and not box.actor.is_zombie and box.actor.alive
 	return box != null and box.actor != null and box.actor != self and box.actor.accepts_dart_from(team_id)
 
 
@@ -295,12 +310,22 @@ func respawn(at: Transform3D) -> void:
 	super.respawn(at)
 	_pitch = 0.0
 	head.rotation.x = 0.0
+	if is_zombie:
+		_on_weapon_changed(null)
 
 
 func _on_weapon_changed(state: WeaponState) -> void:
 	if _view_model != null:
 		_view_model.queue_free()
 		_view_model = null
+	if is_zombie:
+		if _zombie_arms == null:
+			_build_zombie_arms()
+		_zombie_arms.visible = true
+		_view_offset = Vector3(0.0, -0.15, -0.3)
+		return
+	if _zombie_arms != null:
+		_zombie_arms.visible = false
 	if state == null:
 		return
 	_view_model = BlasterModel.create(state.data, true)
@@ -338,3 +363,63 @@ func _tag_out(attacker: Actor, weapon: WeaponData, ricochet: bool) -> void:
 	super._tag_out(attacker, weapon, ricochet)
 	Sfx.play(&"tagged")
 	GameSettings.vibrate(0.8, 0.8, 0.4)
+
+
+func _on_zombie_state_changed(enabled: bool) -> void:
+	if enabled:
+		_on_weapon_changed(null)
+	elif _zombie_arms != null:
+		_zombie_arms.visible = false
+
+
+func _perform_zombie_swipe() -> void:
+	_zombie_swipe = 1.0
+	var eye := head.global_transform
+	var reach := 2.4
+	_aim_query.from = eye.origin
+	_aim_query.to = eye.origin - eye.basis.z * reach
+	_aim_query.collision_mask = Layers.HITBOX | Layers.ACTORS
+	_aim_query.collide_with_areas = true
+	_aim_query.exclude = [get_rid(), hitbox.get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(_aim_query)
+	var hit_actor: Actor = null
+	if not hit.is_empty():
+		var box := hit.get("collider") as Hitbox
+		if box != null and box.actor != null:
+			hit_actor = box.actor
+		else:
+			hit_actor = hit.get("collider") as Actor
+	if hit_actor != null and hit_actor != self and not hit_actor.is_zombie and hit_actor.alive:
+		try_zombie_infect(hit_actor)
+		Sfx.play(&"infect")
+		Sfx.play(&"zombie_moan", 1.1, -1.0)
+		GameSettings.vibrate(0.7, 0.7, 0.2)
+	else:
+		Sfx.play(&"whoosh", 1.2, -4.0, 0.05)
+
+
+func _build_zombie_arms() -> void:
+	if _zombie_arms != null:
+		return
+	_zombie_arms = Node3D.new()
+	_zombie_arms.name = "ZombieArms"
+	_view_root.add_child(_zombie_arms)
+	var mat := ArenaKit.mat(Color(0.38, 0.78, 0.28), 0.7)
+	for side: float in [-1.0, 1.0]:
+		var arm := _capsule_arm(_zombie_arms, 0.065, 0.42, Vector3(side * 0.22, -0.16, -0.36), mat)
+		arm.rotation_degrees = Vector3(70.0, side * -12.0, 0.0)
+		ArenaKit.deco_sphere(_zombie_arms, 0.05, Vector3(side * 0.22, -0.06, -0.52), Color(0.48, 0.82, 0.38))
+
+
+func _capsule_arm(parent: Node3D, radius: float, height: float, pos: Vector3, material: Material) -> MeshInstance3D:
+	var mesh := CapsuleMesh.new()
+	mesh.radius = radius
+	mesh.height = height
+	mesh.radial_segments = 10
+	mesh.rings = 3
+	var instance := MeshInstance3D.new()
+	instance.mesh = mesh
+	instance.material_override = material
+	instance.position = pos
+	parent.add_child(instance)
+	return instance

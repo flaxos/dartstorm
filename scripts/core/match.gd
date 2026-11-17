@@ -25,6 +25,7 @@ const MODE_PATHS := [
 	"res://resources/modes/gun_game.tres",
 	"res://resources/modes/duos.tres",
 	"res://resources/modes/blue_vs_orange.tres",
+	"res://resources/modes/zombies.tres",
 ]
 ## Indexed by GameSettings.bot_difficulty.
 const DIFFICULTY_PATHS := [
@@ -189,6 +190,16 @@ func _ready() -> void:
 			if actor != bot:
 				bot.rivals.append(actor)
 
+	if mode is ZombieMode:
+		var alpha: Actor = player
+		if not bots.is_empty():
+			alpha = bots[bots.size() - 1]
+		alpha.set_zombie(true)
+		var alpha_entry := controller.board.entry_for(alpha)
+		if alpha_entry != null:
+			alpha_entry.team = ZombieMode.ZOMBIE_TEAM
+			alpha_entry.color = ZombieMode.ZOMBIE_COLOR
+
 	if mode.uses_power_up() and not arena.power_up_spots.is_empty():
 		_create_power_up(mode)
 
@@ -244,8 +255,17 @@ func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 		podium.show_places(mode.podium_places(controller.board), "DARTSTORM\nCHAMPIONS", UiKit.ORANGE_HOT)
 	else:
 		var team := mode.winning_team(controller.board)
-		var banner := "IT'S A\nDRAW!" if team < 0 else "%s TEAM\nWINS!" % GameMode.team_name(team)
-		var tint := UiKit.CREAM if team < 0 else GameMode.team_color(team).lightened(0.25)
+		var banner: String
+		var tint: Color
+		if team < 0:
+			banner = "IT'S A\nDRAW!"
+			tint = UiKit.CREAM
+		elif mode is ZombieMode:
+			banner = "%s\nWIN!" % mode.get_team_name(team)
+			tint = mode.get_team_color(team).lightened(0.25)
+		else:
+			banner = "%s TEAM\nWINS!" % GameMode.team_name(team)
+			tint = GameMode.team_color(team).lightened(0.25)
 		podium.show_places(mode.podium_places(controller.board), banner, tint)
 	get_tree().create_timer(RESULTS_MUSIC_DELAY).timeout.connect(func() -> void: Sfx.play_music(&"menu"))
 

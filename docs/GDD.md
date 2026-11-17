@@ -89,8 +89,8 @@ The photo isn't kept in the repo (it has their names on it). This is what it ask
 |---|---|---|
 | **A lobby:** your character in the middle on a round platform, your squad on platforms beside you, a player card top left, a column of buttons on the left, modes top right, the logo bottom middle, a big PLAY bottom right | ✅ v0.3.0 | §3.22, built to their layout |
 | **Solo, Duo and Team modes** | ✅ v0.3.0 | SOLO, DUOS, TEAMS (Blue vs Orange), §3.21 |
-| **Zombie mode** | ⏳ Next | Goofy green foam zombies: tagged players join the horde (§3.21 note) |
-| **Fire, Water and Electric** (lightning bolts everywhere) | ⏳ Planned | Elemental darts and the missing Gun Game rungs (§2.4); lightning bolts already crackle over the lobby |
+| **Zombie mode** | ✅ v0.5.1 | Goofy green foam zombies: tagged players join the horde (§3.21) |
+| **Fire, Water and Electric** (lightning bolts everywhere) | ✅ v0.5.0 | Elemental darts (Wind, Fire, Water, Lightning, Ice) and 10-rung Gun Game ladder (§2.4) |
 | **Goggles, bunny ears, horns, spiky hair** (their characters) | ✅ v0.3.0 | New hats (§3.16) |
 | **Shield** | ⏳ Planned | A foam shield power-up |
 | **Missions, Level, Coins, Shop, Upgrade, Pass** | ⏳ Planned | Earned by playing only, cosmetics only, one currency (coins), no gems, no real money (§10, D-028) |
@@ -471,9 +471,12 @@ The menu music returns after 3 seconds.
 - **Announcer:** "YOUR TEAM TAKES THE LEAD!" / "ORANGE TEAM TAKES THE LEAD!" whenever a different team goes in front.
 - **End:** "YOUR TEAM WINS!", "ORANGE TEAM WINS!" or "IT'S A DRAW!" (level points and tags). On the podium each **step holds a
   whole team**, winners on top, with the banner in the winning team's colour. Awards are still for individual players.
-- **Next: ZOMBIES** (from the drawing). Planned rules: one or two players start as goofy green foam zombies with no
-  blaster. A zombie touch turns a survivor into a zombie. Darts knock zombies back for a moment, and they get up again.
-  Survivors win if anyone's left at the end; zombies win if everyone turns.
+- **ZOMBIES mode *(v0.5.1)*:** 1 player/bot begins as the **Alpha Zombie** ("Patient Zero"). All other players are **Survivors** equipped with foam blasters (Pocket Popper, Dart Sprayer, Hydro Soaker, Frost Ranger).
+  Zombies carry no blasters, run at high speed (11.2 m/s sprint) with green foam bodies (`Color(0.38, 0.78, 0.28)`) and outstretched cartoon arms.
+  A single melee touch or claw swipe from a zombie infects a survivor, tagging them out (+150 infection score) and causing them to pop into confetti and respawn on the horde team.
+  Survivors fight back with blasters: Water darts knock zombies back, Ice darts chill and slow them down, and 100 tag power knocks a zombie out (+100 tag score) to respawn far away.
+  Survivors win if at least one survivor survives until the 180s clock expires; Zombies win early if all survivors are turned.
+  Winning team takes the top step of the podium ("SURVIVORS WIN!" / "ZOMBIES WIN!"), with goofy zombie celebration dances.
 
 ### 3.22 The lobby (the young players' design) *(v0.3.0)*
 The main menu is the players' own drawing (§1.9), built in 3D:

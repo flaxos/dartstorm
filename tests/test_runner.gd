@@ -11,6 +11,7 @@ const SPRAYER := "res://resources/weapons/dart_sprayer.tres"
 const CHAINSTORM := "res://resources/weapons/flaxs_chainstorm.tres"
 const FFA := "res://resources/modes/free_for_all.tres"
 const GUN_GAME := "res://resources/modes/gun_game.tres"
+const ZOMBIES_MODE := "res://resources/modes/zombies.tres"
 const WEAPON_DIR := "res://resources/weapons"
 
 var _passed: int = 0
@@ -59,6 +60,8 @@ func _ready() -> void:
 	# Home Turf: the toy-sized house arena
 	await _test_home_turf()
 	await _test_home_turf_match()
+	await _test_elemental_gameplay()
+	await _test_zombies_mode()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -1204,7 +1207,7 @@ func _test_lobby() -> void:
 	check(squad.size() == 3, "your 3 bots stand on platforms around you")
 	var play := menu.get("_play_button") as Button
 	check(play != null and play.has_focus(), "the big PLAY button has focus (A on a controller starts a match)")
-	check((menu.get("_mode_buttons") as Array).size() == 4, "four mode cards: SOLO, DUOS, TEAMS, GUN GAME")
+	check((menu.get("_mode_buttons") as Array).size() == 5, "five mode cards: SOLO, DUOS, TEAMS, GUN GAME, ZOMBIES")
 
 	menu.call("_pick_mode", GameSettings.MatchMode.TEAMS)
 	await physics_frames(1)
@@ -1363,3 +1366,189 @@ func _test_no_stacked_spawns() -> void:
 			await end_match(game, saved_mode)
 	GameSettings.bot_count = saved_bots
 	GameSettings.arena = saved_arena
+
+
+func _test_elemental_gameplay() -> void:
+	section("Elemental gameplay & combos")
+	var wind_dart := load("res://resources/darts/wind_dart.tres") as DartData
+	var fire_dart := load("res://resources/darts/fire_dart.tres") as DartData
+	var water_dart := load("res://resources/darts/water_dart.tres") as DartData
+	var lightning_dart := load("res://resources/darts/lightning_dart.tres") as DartData
+	var ice_dart := load("res://resources/darts/ice_dart.tres") as DartData
+
+	check(wind_dart != null and wind_dart.element == DartData.Element.WIND, "wind dart is Element.WIND")
+	check(wind_dart != null and wind_dart.wind_response > 1.2, "wind dart catches drafts strongly (%.1fx)" % (wind_dart.wind_response if wind_dart != null else 0.0))
+	check(fire_dart != null and fire_dart.element == DartData.Element.FIRE, "fire dart is Element.FIRE")
+	check(water_dart != null and water_dart.element == DartData.Element.WATER, "water dart is Element.WATER")
+	check(water_dart != null and water_dart.knockback_impulse >= 5.0, "water dart has strong knockback (%.1f m/s)" % (water_dart.knockback_impulse if water_dart != null else 0.0))
+	check(lightning_dart != null and lightning_dart.element == DartData.Element.LIGHTNING, "lightning dart is Element.LIGHTNING")
+	check(lightning_dart != null and lightning_dart.chain_count >= 2, "lightning dart chains across rivals (%d)" % (lightning_dart.chain_count if lightning_dart != null else 0))
+	check(ice_dart != null and ice_dart.element == DartData.Element.ICE, "ice dart is Element.ICE")
+
+	var gun_game := load(GUN_GAME) as GunGameMode
+	check(gun_game != null and gun_game.ladder.size() == 10, "Gun Game ladder now has the full 10 rungs (10/10)")
+	var ladder_ids: Array[StringName] = []
+	if gun_game != null:
+		for weapon in gun_game.ladder:
+			ladder_ids.append(weapon.id)
+	check(ladder_ids.has(&"wind_whisperer"), "ladder includes Wind Whisperer")
+	check(ladder_ids.has(&"hydro_soaker"), "ladder includes Hydro Soaker")
+	check(ladder_ids.has(&"thunder_cannon"), "ladder includes Thunder Cannon")
+
+	# Actor elemental effects & combos
+	var victim := Actor.new()
+	add_child(victim)
+	await get_tree().physics_frame
+
+	check(victim.elemental != null, "actor automatically initializes an ElementalEffect component")
+	check(victim.elemental.get_speed_multiplier() == 1.0, "default speed multiplier is 1.0")
+
+	# Mock dart projectile for testing payloads
+	var mock_dart := DartProjectile.new()
+	mock_dart.velocity = Vector3(0.0, 0.0, -30.0)
+
+	# Water splash: sets wet and pushes victim
+	mock_dart.data = water_dart
+	victim.elemental.apply_dart(mock_dart, victim.global_position)
+	check(victim.elemental.has_status(DartData.Element.WATER), "water dart wets the actor")
+	check(victim.velocity.z < -4.0, "water dart pushes victim backwards (velocity.z = %.1f)" % victim.velocity.z)
+
+	# Combo: Fire on Wet actor -> Steam combo!
+	var combos: Array[StringName] = []
+	victim.elemental.combo_triggered.connect(func(combo: StringName, _at: Vector3) -> void: combos.append(combo))
+	mock_dart.data = fire_dart
+	victim.elemental.apply_dart(mock_dart, victim.global_position)
+	check(combos.has(&"steam"), "fire on wet actor triggers 'steam' combo")
+	check(not victim.elemental.has_status(DartData.Element.WATER), "steam combo clears wet status")
+	check(not victim.elemental.has_status(DartData.Element.FIRE), "fire was doused by steam")
+
+	# Frost slow & ice sliding
+	mock_dart.data = ice_dart
+	victim.elemental.apply_dart(mock_dart, victim.global_position)
+	check(victim.elemental.has_status(DartData.Element.ICE), "ice dart applies frost status")
+	check(victim.elemental.get_speed_multiplier() <= 0.75, "frost status slows actor (%.2f)" % victim.elemental.get_speed_multiplier())
+	victim.elemental.clear_all()
+	victim.elemental.start_slide(1.0)
+	check(victim.elemental.is_sliding(), "start_slide enables sliding flag")
+	check(victim.elemental.get_speed_multiplier() >= 1.4, "sliding gives a speed boost (%.2f)" % victim.elemental.get_speed_multiplier())
+
+	# Lightning chain zap test with a nearby rival
+	var rival := Actor.new()
+	rival.team_id = 1
+	add_child(rival)
+	rival.global_position = victim.global_position + Vector3(3.0, 0.0, 0.0)
+	await get_tree().physics_frame
+
+	var chains: Array[Actor] = []
+	victim.elemental.chain_zapped.connect(func(_from: Actor, to: Actor) -> void: chains.append(to))
+	mock_dart.data = lightning_dart
+	mock_dart.team_id = 0
+	victim.elemental.apply_dart(mock_dart, victim.global_position)
+	check(chains.has(rival), "lightning dart on victim chain-zaps nearby rival (3m away)")
+	check(rival.tag_meter > 0.0, "chain zap fills rival's tag meter (%.1f)" % rival.tag_meter)
+
+	# Clean teardown
+	mock_dart.free()
+	rival.queue_free()
+	victim.queue_free()
+	await physics_frames(2)
+
+
+func _test_zombies_mode() -> void:
+	section("Zombies mode")
+	var zom_mode := load(ZOMBIES_MODE) as ZombieMode
+	check(zom_mode != null, "zombies mode resource loads cleanly")
+	check(zom_mode.id == &"zombies", "zombies mode id is 'zombies'")
+	check(zom_mode.is_team_mode(), "zombies mode is a team mode (Survivors vs Horde)")
+	check(zom_mode.get_team_name(0) == "SURVIVORS", "team 0 is named SURVIVORS")
+	check(zom_mode.get_team_name(1) == "ZOMBIES", "team 1 is named ZOMBIES")
+	check(zom_mode.get_team_color(1) == ZombieMode.ZOMBIE_COLOR, "team 1 color is ZOMBIE_COLOR")
+	check(zom_mode.loadout.size() >= 4, "survivor loadout has at least 4 blasters (%d)" % zom_mode.loadout.size())
+
+	# Loadout checks
+	var survivor_entry := ScoreEntry.new()
+	survivor_entry.display_name = "Survivor"
+	survivor_entry.color = Color.BLUE
+	survivor_entry.hat = &"cap"
+	survivor_entry.team = ZombieMode.SURVIVOR_TEAM
+	var zombie_entry := ScoreEntry.new()
+	zombie_entry.display_name = "Zombie"
+	zombie_entry.color = ZombieMode.ZOMBIE_COLOR
+	zombie_entry.hat = &"cap"
+	zombie_entry.team = ZombieMode.ZOMBIE_TEAM
+
+	check(zom_mode.get_loadout(survivor_entry).size() >= 4, "survivor gets weapon loadout")
+	check(zom_mode.get_loadout(zombie_entry).is_empty(), "zombies have empty loadout (no blasters)")
+
+	# Actor infection & tag out test
+	var survivor_actor := Actor.new()
+	survivor_actor.team_id = ZombieMode.SURVIVOR_TEAM
+	var zombie_actor := Actor.new()
+	add_child(survivor_actor)
+	add_child(zombie_actor)
+	await get_tree().physics_frame
+
+	zombie_actor.set_zombie(true)
+	check(zombie_actor.is_zombie, "set_zombie sets is_zombie to true")
+	check(zombie_actor.team_id == ZombieMode.ZOMBIE_TEAM, "set_zombie sets team_id to 1")
+	check(not zombie_actor.arsenal.enabled, "zombie actor has arsenal disabled")
+	check(zombie_actor.sprint_speed > 11.0, "zombie actor gets increased sprint speed (%.1f)" % zombie_actor.sprint_speed)
+
+	# Zombie touches survivor -> survivor infected & tagged out
+	var infected := zombie_actor.try_zombie_infect(survivor_actor)
+	check(infected, "try_zombie_infect returns true when touching survivor")
+	check(not survivor_actor.alive, "infected survivor is tagged out")
+	check(survivor_actor.tag_meter == survivor_actor.tag_meter_max, "tag meter maxed on infection")
+
+	# Mode scoring test
+	var pts := zom_mode.apply_tag(zombie_entry, survivor_entry, false)
+	check(pts == 150, "zombie tagging survivor awards 150 points")
+	check(survivor_entry.team == ZombieMode.ZOMBIE_TEAM, "victim converted to zombie team")
+	check(survivor_entry.color == ZombieMode.ZOMBIE_COLOR, "victim color converted to zombie color")
+
+	# Win condition evaluation
+	var board := Scoreboard.new()
+	var e1 := ScoreEntry.new()
+	e1.display_name = "S1"
+	e1.color = Color.BLUE
+	e1.hat = &"cap"
+	e1.team = ZombieMode.SURVIVOR_TEAM
+	var e2 := ScoreEntry.new()
+	e2.display_name = "Z1"
+	e2.color = ZombieMode.ZOMBIE_COLOR
+	e2.hat = &"cap"
+	e2.team = ZombieMode.ZOMBIE_TEAM
+	board.entries = [e1, e2]
+
+	check(zom_mode.count_survivors(board) == 1, "count_survivors finds 1 survivor")
+	check(zom_mode.count_zombies(board) == 1, "count_zombies finds 1 zombie")
+	check(zom_mode.get_early_winner(board) == null, "no early winner while survivors remain")
+	check(zom_mode.winning_team(board) == ZombieMode.SURVIVOR_TEAM, "survivors win if time expires with survivors left")
+
+	# All turned -> Zombies early victory
+	e1.team = ZombieMode.ZOMBIE_TEAM
+	check(zom_mode.count_survivors(board) == 0, "0 survivors remain after conversion")
+	check(zom_mode.get_early_winner(board) == e2 or zom_mode.get_early_winner(board) == e1, "zombies win early when all survivors turned")
+	check(zom_mode.winning_team(board) == ZombieMode.ZOMBIE_TEAM, "zombies are the winning team")
+
+	# Teardown actor nodes
+	survivor_actor.queue_free()
+	zombie_actor.queue_free()
+	await physics_frames(2)
+
+	# Fast live match verification
+	var saved_mode := GameSettings.match_mode
+	var game := start_match(GameSettings.MatchMode.ZOMBIES)
+	await physics_frames(5)
+	check(game.controller.mode is ZombieMode, "match instantiated with ZombieMode")
+	var zombie_count := 0
+	var survivor_count := 0
+	for actor: Actor in game.controller.actors:
+		if actor.is_zombie:
+			zombie_count += 1
+		else:
+			survivor_count += 1
+	check(zombie_count == 1, "exactly 1 Alpha Zombie spawned at match start (1/%d)" % game.controller.actors.size())
+	check(survivor_count == game.controller.actors.size() - 1, "all other players begin as Survivors (%d)" % survivor_count)
+	await end_match(game, saved_mode)
+

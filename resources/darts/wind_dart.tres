@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="DartData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/dart_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Wind Spiral Dart"
+initial_speed = 52.0
+gravity_multiplier = 0.4
+air_drag = 0.08
+wind_response = 1.8
+tag_power = 28.0
+max_ricochets = 1
+element = 1
+knockback_impulse = 3.0
+element_duration = 0.6

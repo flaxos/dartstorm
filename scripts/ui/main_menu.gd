@@ -15,6 +15,7 @@ const MODE_ORDER: Array[int] = [
 	GameSettings.MatchMode.DUOS,
 	GameSettings.MatchMode.TEAMS,
 	GameSettings.MatchMode.GUN_GAME,
+	GameSettings.MatchMode.ZOMBIES,
 ]
 ## The lobby island floats just south of the yard, so the backyard fills the background.
 const STAGE := Vector3(0.0, 9.0, 38.0)
@@ -246,11 +247,13 @@ func _rebuild_squad() -> void:
 		var i := order[slot]
 		var team := mode.team_for(i + 1)
 		var tint: Color = GameMode.team_color(team) if teams else colors[i]
-		_add_squad_member(MatchScene.BOT_ROSTER[i]["name"], tint, MatchScene.BOT_ROSTER[i]["hat"], SQUAD_SPOTS[slot], i)
+		var member := _add_squad_member(MatchScene.BOT_ROSTER[i]["name"], tint, MatchScene.BOT_ROSTER[i]["hat"], SQUAD_SPOTS[slot], i)
+		if mode is ZombieMode and i == count - 1:
+			member.set_zombie(true)
 	_show_squad(not _customise.visible)
 
 
-func _add_squad_member(member_name: String, tint: Color, hat: StringName, spot: Vector3, index: int) -> void:
+func _add_squad_member(member_name: String, tint: Color, hat: StringName, spot: Vector3, index: int) -> CharacterModel:
 	# Everything for one member lives under one node, so they can be hidden together.
 	var slot := Node3D.new()
 	_squad_root.add_child(slot)
@@ -285,6 +288,7 @@ func _add_squad_member(member_name: String, tint: Color, hat: StringName, spot: 
 	bubble.alpha_cut = Label3D.ALPHA_CUT_OPAQUE_PREPASS
 	bubble.position = Vector3(spot.x, top + 2.4, spot.z)
 	slot.add_child(bubble)
+	return model
 
 
 ## Shows or hides everyone but you (they step aside while you customise).
@@ -495,19 +499,22 @@ func _refresh_options() -> void:
 	var bots := MatchScene.team_bot_count(mode, GameSettings.bot_count)
 	var players := bots + 1
 	var info := ""
-	match mode.teams:
-		GameMode.Teams.DUOS:
-			info = "%d PAIRS" % (players >> 1)
-		GameMode.Teams.BLUE_VS_ORANGE:
-			info = "%d v %d" % [players >> 1, players >> 1]
-		_:
-			info = "YOU + %d BOTS" % bots
-	if bots > GameSettings.bot_count:
-		info += "  (+1 BOT TO EVEN THE TEAMS)"
+	if mode is ZombieMode:
+		info = "1 ALPHA ZOMBIE vs %d SURVIVORS" % (players - 1)
+	else:
+		match mode.teams:
+			GameMode.Teams.DUOS:
+				info = "%d PAIRS" % (players >> 1)
+			GameMode.Teams.BLUE_VS_ORANGE:
+				info = "%d v %d" % [players >> 1, players >> 1]
+			_:
+				info = "YOU + %d BOTS" % bots
+		if bots > GameSettings.bot_count:
+			info += "  (+1 BOT TO EVEN THE TEAMS)"
 	_teams_info.text = info
 	_arena_button.text = MatchScene.ARENAS[clampi(GameSettings.arena, 0, MatchScene.ARENAS.size() - 1)]["name"]
 	_difficulty_button.text = DIFFICULTY_NAMES[clampi(GameSettings.bot_difficulty, 0, DIFFICULTY_NAMES.size() - 1)]
-	_storm_row.visible = not mode is GunGameMode
+	_storm_row.visible = not mode is GunGameMode and not mode is ZombieMode
 	_storm_button.text = "POWER-UP" if GameSettings.chainstorm_powerup else "EVERYONE"
 
 

@@ -9,6 +9,7 @@ signal meter_changed(value: float, maximum: float)
 signal landed_hit(victim: Actor, was_tag: bool, was_ricochet: bool)
 signal respawned(actor: Actor)
 signal ammo_collected(amount: int)
+signal turned_zombie(actor: Actor)
 
 const GRAVITY := 20.0
 const BODY_RADIUS := 0.4
@@ -42,10 +43,12 @@ var tag_meter: float = 0.0
 ## Multiplies the tag power of darts this actor fires (bot difficulty).
 var damage_scale: float = 1.0
 var is_human: bool = false
+var is_zombie: bool = false
 
 var arsenal: Arsenal
 var dart_pool: DartPool
 var hitbox: Hitbox
+var elemental: ElementalEffect
 
 var _since_hit: float = 0.0
 var _protect_left: float = 0.0
@@ -84,14 +87,24 @@ func _ready() -> void:
 	add_child(arsenal)
 	arsenal.fired.connect(_on_arsenal_fired)
 
+	add_to_group(&"actors")
+	elemental = ElementalEffect.new()
+	elemental.name = "ElementalEffect"
+	elemental.actor = self
+	add_child(elemental)
+
 
 # --- Movement ---------------------------------------------------------------
 
 ## Moves with smooth acceleration. `wish` is a horizontal direction of length 0..1.
 func move_actor(wish: Vector3, sprinting: bool, jump: bool, delta: float) -> void:
 	var speed := (sprint_speed if sprinting else walk_speed) * arsenal.get_move_multiplier()
+	if elemental != null:
+		speed *= elemental.get_speed_multiplier()
 	var target := wish * speed
 	var acceleration := ground_acceleration if is_on_floor() else air_acceleration
+	if elemental != null and elemental.is_sliding():
+		acceleration *= 0.25
 	var horizontal := Vector3(velocity.x, 0.0, velocity.z).move_toward(target, acceleration * delta)
 	velocity.x = horizontal.x
 	velocity.z = horizontal.z
@@ -100,11 +113,50 @@ func move_actor(wish: Vector3, sprinting: bool, jump: bool, delta: float) -> voi
 	elif not is_on_floor():
 		velocity.y -= GRAVITY * delta
 	move_and_slide()
+	if is_zombie and controls_enabled and alive:
+		for i in get_slide_collision_count():
+			var col := get_slide_collision(i)
+			var other := col.get_collider() as Actor
+			if other != null and not other.is_zombie and other.alive and not other.is_protected():
+				try_zombie_infect(other)
+				break
 
 
 ## Throws the actor upward (trampolines).
 func launch(upward_speed: float) -> void:
 	velocity.y = upward_speed
+
+
+func set_zombie(enabled: bool) -> void:
+	is_zombie = enabled
+	if enabled:
+		team_id = 1
+		color = Color(0.38, 0.78, 0.28)
+		arsenal.set_trigger(false)
+		arsenal.enabled = false
+		sprint_speed = 11.2
+		walk_speed = 7.5
+	else:
+		sprint_speed = 10.5
+		walk_speed = 7.0
+		arsenal.enabled = true
+	_on_zombie_state_changed(enabled)
+	turned_zombie.emit(self)
+
+
+func try_zombie_infect(victim: Actor) -> bool:
+	if not is_zombie or not alive or victim == null or not victim.alive or victim.is_zombie or victim.is_protected():
+		return false
+	victim.receive_zombie_infection(self)
+	return true
+
+
+func receive_zombie_infection(attacker: Actor) -> void:
+	if not alive or is_protected():
+		return
+	tag_meter = tag_meter_max
+	meter_changed.emit(tag_meter, tag_meter_max)
+	_tag_out(attacker, null, false)
 
 
 # --- Being tagged -----------------------------------------------------------
@@ -131,6 +183,9 @@ func receive_dart(dart: DartProjectile) -> void:
 	_on_hit_received(attacker)
 	if out:
 		_tag_out(attacker, dart.weapon, ricochet)
+	else:
+		if elemental != null:
+			elemental.apply_dart(dart, dart.global_position)
 	if attacker != null:
 		attacker.landed_hit.emit(self, out, ricochet)
 
@@ -142,9 +197,11 @@ func respawn(at: Transform3D) -> void:
 	_since_hit = 0.0
 	_protect_left = spawn_protection
 	alive = true
+	if elemental != null:
+		elemental.clear_all()
 	collision_layer = Layers.ACTORS
 	hitbox.collision_layer = Layers.HITBOX
-	arsenal.enabled = true
+	arsenal.enabled = not is_zombie
 	_set_body_visible(true)
 	meter_changed.emit(tag_meter, tag_meter_max)
 	respawned.emit(self)
@@ -165,6 +222,8 @@ func tick_status(delta: float) -> void:
 
 func _tag_out(attacker: Actor, weapon: WeaponData, ricochet: bool) -> void:
 	alive = false
+	if elemental != null:
+		elemental.clear_all()
 	arsenal.set_trigger(false)
 	arsenal.enabled = false
 	collision_layer = 0
@@ -235,4 +294,8 @@ func _on_hit_received(_attacker: Actor) -> void:
 
 
 func _set_body_visible(_shown: bool) -> void:
+	pass
+
+
+func _on_zombie_state_changed(_enabled: bool) -> void:
 	pass

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="DartData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/dart_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Splash Balloon Dart"
+initial_speed = 36.0
+gravity_multiplier = 0.95
+air_drag = 0.3
+tag_power = 30.0
+max_ricochets = 1
+element = 3
+knockback_impulse = 7.5
+element_duration = 4.0

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="DartData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/dart_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Frost Crystal Dart"
+initial_speed = 46.0
+gravity_multiplier = 0.6
+air_drag = 0.18
+tag_power = 32.0
+max_ricochets = 1
+element = 5
+element_duration = 2.0

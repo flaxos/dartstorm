@@ -6,6 +6,8 @@ extends Node3D
 ## Emitted for every dart impact so effects/audio can react without darts
 ## knowing about them. `kind` is a DartProjectile.Impact value.
 signal impact(kind: int, at: Vector3, normal: Vector3, color: Color)
+signal elemental_impact(element: DartData.Element, kind: int, at: Vector3, normal: Vector3, color: Color)
+
 
 ## Loaded at runtime, not preloaded: dart_projectile.gd refers back to
 ## DartPool, and a preload here makes a load cycle when the editor re-imports.
@@ -48,8 +50,10 @@ func release(dart: DartProjectile) -> void:
 	_idle.append(dart)
 
 
-func report_impact(kind: int, at: Vector3, normal: Vector3, color: Color) -> void:
+func report_impact(kind: int, at: Vector3, normal: Vector3, color: Color, element: DartData.Element = DartData.Element.NONE) -> void:
 	impact.emit(kind, at, normal, color)
+	if element != DartData.Element.NONE:
+		elemental_impact.emit(element, kind, at, normal, color)
 
 
 func live_count() -> int:

@@ -100,8 +100,21 @@ func launch(p_data: DartData, origin: Vector3, direction: Vector3, p_shooter: Ac
 	scale = Vector3.ONE
 	_visual.rotation = Vector3.ZERO
 	_visual.scale = Vector3.ONE * data.visual_scale
-	_foam.material_override = _foam_material(color)
-	_trail.material_override = _trail_material(color)
+	var dart_color := color
+	if data.element != DartData.Element.NONE:
+		match data.element:
+			DartData.Element.WIND:
+				dart_color = dart_color.lerp(Color(0.7, 0.95, 1.0), 0.6)
+			DartData.Element.FIRE:
+				dart_color = dart_color.lerp(Color(1.0, 0.4, 0.1), 0.75)
+			DartData.Element.WATER:
+				dart_color = dart_color.lerp(Color(0.2, 0.75, 1.0), 0.75)
+			DartData.Element.LIGHTNING:
+				dart_color = dart_color.lerp(Color(1.0, 0.95, 0.25), 0.75)
+			DartData.Element.ICE:
+				dart_color = dart_color.lerp(Color(0.85, 0.98, 1.0), 0.75)
+	_foam.material_override = _foam_material(dart_color)
+	_trail.material_override = _trail_material(dart_color)
 	_trail.visible = true
 	global_position = origin
 	_face_velocity()
@@ -257,7 +270,7 @@ func _settle_or_bounce(point: Vector3, normal: Vector3) -> void:
 
 func _report(kind: Impact, point: Vector3, normal: Vector3) -> void:
 	if pool != null:
-		pool.report_impact(kind, point, normal, color)
+		pool.report_impact(kind, point, normal, color, data.element if data != null else DartData.Element.NONE)
 
 
 func _face_velocity() -> void:

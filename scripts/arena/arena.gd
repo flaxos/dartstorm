@@ -100,6 +100,11 @@ func _build_sky_and_sun(sun_pitch: float = -52.0, warm_fill: float = 0.0) -> voi
 	environment.glow_enabled = true
 	environment.glow_intensity = 0.4
 	environment.glow_bloom = 0.05
+	environment.ssao_enabled = true
+	environment.ssao_radius = 1.2
+	environment.ssao_intensity = 1.4
+	environment.ssr_enabled = true
+	environment.ssr_max_steps = 32
 	var world := WorldEnvironment.new()
 	world.environment = environment
 	add_child(world)
@@ -109,6 +114,7 @@ func _build_sky_and_sun(sun_pitch: float = -52.0, warm_fill: float = 0.0) -> voi
 	sun.light_energy = 1.25
 	sun.light_color = Color(1.0, 0.97, 0.9)
 	sun.shadow_enabled = true
+	sun.shadow_blur = 1.2
 	sun.directional_shadow_max_distance = 110.0
 	add_child(sun)
 

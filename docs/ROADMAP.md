@@ -19,6 +19,7 @@
 | **v0.2.0 controller + appeal pack** | ✅ Built and validated. PR #3. ⏳ UAT with young players and a real controller |
 | **v0.3.0 the players' design: lobby, team modes, Linux build** | ✅ Built and validated. PR #5 to main. ⏳ UAT |
 | **v0.4.0 Home Turf arena** | ✅ Built and validated (276 tests). ⏳ UAT |
+| **v0.5.0 Elemental Arena & AAA Game Feel** | ✅ Built and validated (309 tests). ⏳ UAT |
 | Phase 7 Expansion | ⏳ Not started (on purpose) |
 
 ## v0.4.0: Home Turf (this release)
@@ -135,13 +136,11 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
 1. **UAT of v0.2.0 and v0.3.0 with young players** *(next, for the humans)*. Show them their lobby first! Run UAT.md
    (F with a real controller, G, H on their PC, I for the lobby and teams), then just let them play. Ask: best moment,
    most annoying thing, what would you add? Does TEAMS or DUOS beat SOLO? POWER-UP or EVERYONE?
-2. **ZOMBIES mode** (from their drawing). Goofy green foam zombies with no blasters. A zombie touch turns a survivor.
-   Darts knock zombies back for a moment. Survivors win if anyone's left. Needs a zombie bot brain (chase and touch), a
-   zombie look, and a mode card in the lobby. Acceptance: a full bot-only zombie round ends correctly; tests.
-3. **Elements: Fire, Water, Electric (+ Ice)** (their drawing and the brief): playful elemental darts (fire = sparkly
-   splash, water = splash knock-back, electric = a zap that chains to a nearby rival, ice = brief slow), the missing
-   Gun Game rungs (Wind Whisperer, Thunder Cannon, Rocket Dart), and a **foam Shield** power-up. Acceptance: a 10-rung
-   ladder, each element visibly distinct, tests.
+2. ✅ **ZOMBIES mode** (v0.5.1): Goofy green foam zombies with no blasters. 1 Alpha Zombie ("Patient Zero") hunts survivors; touching infects survivors into green foam horde members (+150 pts). Survivors use elemental blasters (Hydro Soaker knockback & Frost Ranger chills repel charging zombies). Zombie bot AI, first-person green cartoon zombie arms/swipe, lobby preview card, survivor HUD counter, procedural audio (&"zombie_moan", &"infect"), and 338 passing automated tests.
+3. ✅ **Elements: Fire, Water, Electric (+ Ice) & 10-Rung Gun Game** (v0.5.0): playful elemental darts (fire = sparkle
+   burn ticks, water = knockback & wet conduction, electric = chain zap across rivals, ice = frost slow & slide boosting,
+   wind = updraft lift), full 10-rung Gun Game ladder (added Wind Whisperer, Hydro Soaker, Thunder Cannon), and elemental
+   combos (steam, flash steam, conductive shock). Tested across 309 automated tests. Next for elements: foam Shield power-up.
 4. **Rewards (D-028):** XP and **levels** on the lobby card, **missions**, **coins** (earned only), a **shop** for hats,
    colours and blaster skins, and a free reward track. No gems, no real money, no power for sale.
 5. ✅ **Home Turf arena** (v0.4.0). Next for it: the suburb map (Splash Pond park, Foam Field) as a bigger arena.

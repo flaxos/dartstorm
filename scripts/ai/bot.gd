@@ -94,6 +94,9 @@ func _physics_process(delta: float) -> void:
 		_update_aim(delta)
 		_update_trigger(delta)
 		wish = _choose_direction(delta)
+		if is_zombie and _target != null and is_instance_valid(_target) and _target.alive:
+			if global_position.distance_to(_target.global_position) < 1.4:
+				try_zombie_infect(_target)
 		# Unstick: hop, and if that fails pick somewhere else to go.
 		var horizontal_speed := Vector2(velocity.x, velocity.z).length()
 		if wish.length_squared() > 0.25 and horizontal_speed < 1.0:
@@ -109,7 +112,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		arsenal.set_trigger(false)
 
-	move_actor(wish * difficulty.move_speed_scale, false, jump, delta)
+	move_actor(wish * difficulty.move_speed_scale, is_zombie, jump, delta)
 	_model.animate(Vector2(velocity.x, velocity.z).length(), delta)
 	var held := _model.get_weapon()
 	if held != null:
@@ -119,6 +122,18 @@ func _physics_process(delta: float) -> void:
 # --- Deciding ---------------------------------------------------------------
 
 func _think() -> void:
+	if is_zombie:
+		_target = _pick_survivor_target()
+		_mood = Mood.FIGHT
+		if _target != null:
+			_set_goal(_target.global_position)
+		else:
+			_mood = Mood.ROAM
+			var zom_arrived := _has_goal and global_position.distance_to(_goal) < GOAL_REACHED_DISTANCE
+			if not _has_goal or zom_arrived or _goal_age > GOAL_TIMEOUT:
+				_set_goal(_random_roam_point())
+		return
+
 	_target = _pick_target()
 	_ensure_loaded_weapon()
 
@@ -155,6 +170,19 @@ func _think() -> void:
 			_set_goal(_grudge.global_position)  # Go and find whoever hit us.
 		else:
 			_set_goal(_random_roam_point())
+
+
+func _pick_survivor_target() -> Actor:
+	var best: Actor = null
+	var best_distance := INF
+	for rival in rivals:
+		if not is_instance_valid(rival) or not rival.alive or rival.team_id == team_id or rival.is_zombie:
+			continue
+		var distance := global_position.distance_squared_to(rival.global_position)
+		if distance < best_distance:
+			best_distance = distance
+			best = rival
+	return best
 
 
 func _pick_target() -> Actor:
@@ -215,7 +243,7 @@ func _choose_weapon() -> void:
 ## Go for the power-up when it's out, we don't have it, and it's close or
 ## there's nobody to fight.
 func _wants_power_up() -> bool:
-	if power_up == null or not power_up.is_available() or power_up.weapon == null:
+	if is_zombie or power_up == null or not power_up.is_available() or power_up.weapon == null:
 		return false
 	if arsenal.has_weapon(power_up.weapon.id):
 		return false
@@ -223,7 +251,7 @@ func _wants_power_up() -> bool:
 
 
 func _wants_resupply() -> bool:
-	if arsenal.total_missing() <= 0:
+	if is_zombie or arsenal.total_missing() <= 0:
 		return false  # Full up (or bottomless, as in Gun Game).
 	if arsenal.total_ammo() < LOW_AMMO:
 		return true
@@ -312,6 +340,10 @@ func _ballistic_aim(target: Actor) -> Vector3:
 
 
 func _update_trigger(delta: float) -> void:
+	if is_zombie:
+		arsenal.set_trigger(false)
+		_trigger_clock = 0.0
+		return
 	var state := arsenal.current()
 	var wants_fire := state != null and _target != null and _on_target and _seen_for >= difficulty.reaction_time
 	if not wants_fire:
@@ -334,6 +366,12 @@ func _update_trigger(delta: float) -> void:
 # --- Moving -----------------------------------------------------------------
 
 func _choose_direction(delta: float) -> Vector3:
+	if is_zombie:
+		if _target != null and is_instance_valid(_target) and _target.alive:
+			return _path_direction(_target.global_position)
+		if _has_goal:
+			return _path_direction(_goal)
+		return Vector3.ZERO
 	match _mood:
 		Mood.FIGHT:
 			if _target == null:
@@ -416,9 +454,14 @@ func respawn(at: Transform3D) -> void:
 	_seen_for = 0.0
 	_stuck_for = 0.0
 	_model.set_meter(0.0)
+	if is_zombie:
+		_model.set_zombie(true)
 
 
 func _on_weapon_changed(state: WeaponState) -> void:
+	if is_zombie:
+		_model.set_weapon(null)
+		return
 	_model.set_weapon(state.data if state != null else null)
 
 
@@ -443,3 +486,8 @@ func _on_hit_received(attacker: Actor) -> void:
 
 func _set_body_visible(shown: bool) -> void:
 	_model.visible = shown
+
+
+func _on_zombie_state_changed(enabled: bool) -> void:
+	if _model != null:
+		_model.set_zombie(enabled)

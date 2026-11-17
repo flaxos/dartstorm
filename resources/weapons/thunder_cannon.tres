@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/darts/lightning_dart.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"thunder_cannon"
+dart = ExtResource("2")
+display_name = "Thunder Cannon"
+description = "Crackling high-voltage blaster. Tags zap and arc across to nearby rivals!"
+fire_mode = 0
+shots_per_second = 1.2
+darts_per_shot = 1
+spread_degrees = 0.2
+magazine_size = 5
+reserve_max = 25
+reserve_start = 15
+reload_time = 1.6
+recoil_kick = 2.0
+camera_shake = 0.22
+sound = &"zap"
+sound_pitch = 1.0
+model_style = 4
+body_color = Color(0.18, 0.18, 0.25, 1)
+accent_color = Color(1, 0.95, 0.2, 1)
+view_offset = Vector3(0.24, -0.2, -0.4)
+ai_min_range = 4.0
+ai_max_range = 35.0
+ai_preference = 1.3

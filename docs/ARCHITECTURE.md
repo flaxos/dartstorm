@@ -74,8 +74,9 @@ Match (scripts/core/match.gd)              wires everything, owns restart/quit
 | **DogHouse** | Solid prop; barks when a dart hits it | `barked` signal; `on_dart_hit()` |
 | **GameMode** (Resource) | The rules: duration, points, loadout. `GunGameMode` adds the ladder | Hooks: `get_loadout`, `apply_tag`, `get_early_winner`, `rank`, `describe_progress` |
 | **Actor** | Movement, tag meter, alive state, Arsenal, Hitbox, dart launching | Signals: `tagged_out`, `landed_hit`, `meter_changed`, `respawned`, `ammo_collected` |
+| **ElementalEffect** | Afflictions (Wind lift, Fire sparkle, Water wet/knockback, Lightning chain zap, Ice slow/slide), reactions & combos | Signals: `status_started`, `status_ended`, `combo_triggered`, `chain_zapped` |
 | **Arsenal** | Held WeaponStates, fire timing, spin-up, reloads | Signals: `fired`, `ammo_changed`, `weapon_changed`, `reload_*`, `dry_fired` |
-| **DartPool / DartProjectile** | Every dart's flight, collision, ricochets, lifetime | Pool `impact(kind, at, normal, color)` signal; calls `Actor.receive_dart`, `on_dart_hit`, `on_dart_ricochet` |
+| **DartPool / DartProjectile** | Every dart's flight, collision, ricochets, lifetime, elemental payload | Pool `impact` and `elemental_impact` signals; calls `Actor.receive_dart`, `on_dart_hit`, `on_dart_ricochet` |
 | **WindField / WindZone** | Wind at any point in the arena | `get_wind_at(point)`; zones auto-register via the `wind_zones` group |
 | **Arena** | Geometry, navmesh, spawns, roam points, buckets | Public arrays + `add_*` builder helpers |
 | **Hud** | Purely presentational: HUD, announcer queue, results panel with awards | Listens to Player, Arsenal, MatchController. Never mutates game state |
@@ -155,8 +156,7 @@ Restart reloads `match.tscn`.
 - **New arena:** subclass `Arena`, override `_build()`, add a `.tscn`, and point `match.gd`'s `ARENA_SCENE`
   at it (an arena selector belongs on the menu when there are two). Elemental hazards should be their own
   scenes under `scripts/systems/`, and wind changes should go through `WindField.global_wind` or WindZone gusts.
-- **Elemental darts:** `DartData.element` is already in the data. Add behaviour in `DartProjectile._on_hit`
-  (an effect on the victim) and visuals in `CombatFx`.
+- **Elemental darts & combos (v0.5.0):** `DartData.element` drives physical traits, projectile tints, and victim afflictions via `ElementalEffect` (Wind lift, Fire sparkle tick, Water knockback/wet, Lightning chain zap, Ice slow & slide boosting, plus steam/shock combos). Visualized in `CombatFx` and sound bank.
 - **Team modes:** `Actor.team_id` already gates friendly fire, so a team mode is a new `GameMode` subclass
   that assigns teams and sums the score per team.
 - **Multiplayer (later):** the Actor brain is already split from the body (Player input vs Bot AI).

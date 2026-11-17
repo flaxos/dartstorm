@@ -21,6 +21,10 @@ static func mat(color: Color, roughness: float = 0.85, metallic: float = 0.0,
 	material.albedo_color = color
 	material.roughness = roughness
 	material.metallic = metallic
+	material.diffuse_mode = BaseMaterial3D.DIFFUSE_BURLEY
+	material.rim_enabled = true
+	material.rim = 0.28
+	material.rim_tint = 0.35
 	if color.a < 0.999:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	if emission > 0.0:

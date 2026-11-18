@@ -103,6 +103,63 @@ UAT proves the *game* works. A release isn't done until both pass.
 | J5 | Play TEAMS on Home Turf | Blue starts at the front (driveway, garage), orange in the backyard; nobody starts on top of anyone |
 | J6 | Watch bots for a minute | They go room to room, round the side paths, and up the ramp |
 
+### K. Elemental Gameplay & Reactions *(v0.5.0)*
+| ID | Do this | Expect |
+|---|---|---|
+| K1 | Fire **Wind Darts** at a bot | Notice subtle upward lift / buoyancy on hit; darts drift easily in wind |
+| K2 | Fire **Fire Blaster** at a bot | Fire sparkle status ticks over 3s, displaying gentle non-violent flame sparks |
+| K3 | Fire **Hydro Soaker** at a bot | High knockback shoves bot backward, applies `wet` status (4s) |
+| K4 | Fire **Thunder Cannon** at a `wet` bot | Lightning conducts an instant chain zap shock (+50 combo bonus) |
+| K5 | Shoot Fire dart at a `wet` target | Flash steam cloud erupts (+50 steam combo bonus) |
+| K6 | Sprint and land from a jump | 2nd-order damped harmonic spring weapon inertia dips and cants smoothly |
+
+### L. Zombies Mode *(v0.5.1)*
+| ID | Do this | Expect |
+|---|---|---|
+| L1 | Lobby → Mode: **ZOMBIES** → PLAY | 1 player/bot chosen as green Alpha Zombie; survivors carry blasters |
+| L2 | Play as Survivor | Tag incoming zombies (+100); survive until 180s clock expires to win |
+| L3 | Get tagged by a zombie | Pop into foam confetti (+150 infection tag) and respawn on the Zombie horde team with green body and cartoon outstretched arms |
+| L4 | Attack as Zombie | Sprint (11.2 m/s) and press Fire for cartoon claw swipes; touch survivors to turn them |
+| L5 | Match Conclusion | Survivors win if any survive clock expiry; Zombies win early if all survivors are turned |
+
+### M. Foam Shield & Environmental Hazards *(v0.5.2)*
+| ID | Do this | Expect |
+|---|---|---|
+| M1 | Walk into a **Shield Pickup** bubble | Cyan holographic hexagonal forcefield wraps around your actor; HUD displays cyan shield gauge (50 HP) |
+| M2 | Take dart damage while shielded | Shield absorbs tag power 1:1; pops with sparkling burst upon depletion |
+| M3 | Walk into a **Water Puddle** | Foam droplet splashes and `wet` status applied for 4.0s |
+| M4 | Shoot Water Puddle with Thunder Cannon | Conducts electricity across puddle surface for 2.0s with zapping arcs |
+| M5 | Run onto an **Ice Slick** (ramp/slide) | Friction drops to zero and player gets instant +9.5 m/s slide boost |
+| M6 | Step into an **Interactive Wind Vent** | Upward buoyant draft launches player into the air; infuses and amplifies elemental dart clouds |
+
+### N. Progression, Levels, Missions & Coin Shop *(v0.5.3)*
+| ID | Do this | Expect |
+|---|---|---|
+| N1 | Check Player Card in Lobby | Displays gold Level badge (`⭐ LVL [N]`), XP progress bar, and live Coin balance |
+| N2 | Click **MISSIONS** button | 3 active kid-safe backyard missions displayed with progress bars |
+| N3 | Complete a mission in a match | Celebratory fanfare, +200 XP, and +100 Coins awarded; replaced by new mission |
+| N4 | Click **SHOP** button | Kid-safe cosmetic shop with Hats and Color Swatches. Unlocks persist across launches in `user://progression.cfg` |
+| N5 | Finish any match | Podium results panel displays celebratory match rewards summary banner with earned XP and Coins |
+
+### O. Tempest Treehouse Arena *(v0.6.0)*
+| ID | Do this | Expect |
+|---|---|---|
+| O1 | Lobby → ARENA: **TEMPEST TREEHOUSE** → PLAY | High ancient tree canopy grove with dual fortified decks at $Y=5.4\text{ m}$ |
+| O2 | Cross the Suspension Rope Bridge | Realistic catenary rope bridge spanning the 20m central chasm |
+| O3 | Climb or Jump-Pad to Crow's Nest ($Y=10.5\text{ m}$) | North Tree high platform holding Foam Shield and Chainstorm pickup |
+| O4 | Slide down the Canopy Escape Ice Slide | High-velocity slide-boost down the chute onto the suspension bridge |
+| O5 | Cross-chasm gale wind | Strong 28 m/s wind tunnel sweeps darts across the upper chasm |
+
+### P. Zombie Siege (Base Defense) & Blaster Skins *(v0.7.0)*
+| ID | Do this | Expect |
+|---|---|---|
+| P1 | Lobby → Mode: **SIEGE** → PLAY | Yard centre holds the 1000 HP Base Core and 4 choke-point barricades (250 HP) |
+| P2 | Defend against Wave 1 & 2 | Standard zombies and fast Runners swarm towards barricades and the core |
+| P3 | Survive through Wave 3 & 4 | Armored Brutes (220 HP, 1.35x scale) charge defenses; barricades absorb hits |
+| P4 | 20s Intermission phase | "FORTIFY & REPAIR!" countdown; all buckets refill; spend Scrap to repair core and rebuild barricades |
+| P5 | Face Wave 5: Mega Foam Titan Boss | 3.5m Titan Boss (650 HP) with ground shockwaves; defeat boss to clear mode and unlock exclusive **Toxic Slime** skin |
+| P6 | Lobby → SHOP → **SKINS** tab | Interactive 3D preview of 8 tactile skins with Matte, Gloss, Metallic Flake, and Holographic finishes; equip works in first-person and on lobby squad |
+
 ### E. Comfort
 | ID | Do this | Expect |
 |---|---|---|
@@ -119,3 +176,9 @@ UAT proves the *game* works. A release isn't done until both pass.
 | 0.2.0 | — | — | ⏳ Pending | Controller support and appeal pack. Run everything, especially sections F (with a real pad) and G, and ask the players what they'd change |
 | 0.3.0 | — | — | ⏳ Pending | Their lobby, team modes, Linux build: sections H and I. Can be run together with 0.2.0 |
 | 0.4.0 | — | — | ⏳ Pending | Home Turf: section J. Can be run with the others |
+| 0.5.0 | — | — | ⏳ Pending | Elemental Arena & Spring Dynamics: section K |
+| 0.5.1 | — | — | ⏳ Pending | Zombies Mode: section L |
+| 0.5.2 | — | — | ⏳ Pending | Foam Shield & Environmental Hazards: section M |
+| 0.5.3 | — | — | ⏳ Pending | Progression, Levels, Missions & Coin Shop: section N |
+| 0.6.0 | — | — | ⏳ Pending | Tempest Treehouse: section O |
+| 0.7.0 | — | — | ⏳ Pending | Zombie Siege (Base Defense) & Blaster Skins: section P |

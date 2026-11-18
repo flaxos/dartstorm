@@ -12,18 +12,19 @@ scenes/                 thin .tscn wrappers (one root node + script)
   game/match.tscn       one round: arena + actors + HUD
   arenas/  player/  enemies/  projectiles/  pickups/  effects/  ui/
 scripts/
-  core/      settings, sfx (+ music), input, match flow and announcer, modes, scoring, awards, cosmetics, UI kit, layers
+  core/      settings, sfx (+ music), input, match flow and announcer, progression, modes (solo, duos, teams, gun game, zombies, zombie siege), scoring, awards, cosmetics, UI kit, layers
   combat/    DartData, WeaponData, WeaponState, Arsenal, Actor, Hitbox, DartProjectile, DartPool
   ai/        Bot, BotDifficulty
   player/    Player
-  arena/     Arena (base: shared sky, sun and clouds), ArenaKit (primitive builders, houses, trees), BackyardFortress, HomeTurf
-  systems/   WindField, WindZone, ReflectiveSurface, AmmoBucket, JumpPad, WobbleTarget, PowerUpPickup, DogHouse
-  effects/   BlasterModel, CharacterModel (with hats), FoamBurst, CombatFx, Podium
-  ui/        Hud, Crosshair, WindGauge, PauseMenu, SettingsPanel, main_menu (the lobby)
+  arena/     Arena (base: shared sky, sun and clouds), ArenaKit (primitive builders, houses, trees), BackyardFortress, HomeTurf, TempestTreehouse
+  systems/   WindField, WindZone, ReflectiveSurface, AmmoBucket, JumpPad, WobbleTarget, PowerUpPickup, DogHouse, ShieldPickup, WaterPuddle, IceSlick, WindVent, BaseCore, BaseBarricade, HordeDirector
+  effects/   BlasterModel, CharacterModel (with hats & skins), FoamBurst, CombatFx, Podium
+  ui/        Hud, Crosshair, WindGauge, PauseMenu, SettingsPanel, ShopPanel, MissionsPanel, main_menu (the lobby)
   debug/     DemoDriver (only active with `-- --demo`)
 resources/
   weapons/*.tres  darts/*.tres  modes/*.tres  bots/*.tres
-assets/materials/lawn.gdshader
+assets/materials/lawn.gdshader, blaster_skin.gdshader, foam_shield.gdshader
+assets/textures/skins/*.png (seamless 2D vector patterns)
 assets/fonts/LilitaOne-Regular.ttf (+ OFL.txt)
 tests/test_runner.tscn  headless test suite (tests/test_runner.gd)
 tools/
@@ -31,6 +32,7 @@ tools/
   export_linux.sh       Linux release build + headless smoke test (linux/: README and shortcut helper)
   run.sh                play / editor / demo
   check_scripts.gd      strict compile (every warning is an error)
+  generate_skins.py     generates the 8 seamless 2D vector pattern textures
   dart_table.gd         prints the GDD dart-flight table from the real dart code
   arena_shots.gd        overview screenshots of an arena (needs a display)
 docs/                   GDD, ARCHITECTURE, ROADMAP, DECISIONS, CONCEPT_BRIEF, UAT, TUNING
@@ -63,23 +65,29 @@ Match (scripts/core/match.gd)              wires everything, owns restart/quit
 
 | System | Owns | Talks via |
 |---|---|---|
-| **GameSettings** (autoload) | Preferences, your look (name/colour/hat), last menu choices, saved to `user://settings.cfg`. **Input-device awareness**: controller hot-plug, which device is in use, rumble, on-screen notices. Applies the default font to the root window's theme | `changed`, `controller_changed`, `input_device_changed` signals; `vibrate()`, `notify()` |
+| **GameSettings** (autoload) | Preferences, your look (name/colour/hat/skin), last menu choices, saved to `user://settings.cfg`. **Input-device awareness**: controller hot-plug, which device is in use, rumble, on-screen notices. Applies the default font to the root window's theme | `changed`, `controller_changed`, `input_device_changed` signals; `vibrate()`, `notify()` |
 | **Sfx** (autoload) | Synthesised sound bank on pooled voices (SFX bus), Chainstorm spin loop, **two music loops rendered on worker threads** (Music bus), **clean quitting** | `play(id)`, `play_at(id, pos)`, `set_spin(ratio)`, `play_music(id)`, `stop_music()`, `duck_music()`, `quit_game(code)` |
+| **Progression** (autoload) | Player lifetime XP, Level curve ($100 \times N$), gameplay Coins, 3 active Backyard Missions, cosmetic unlocks, saved to `user://progression.cfg` | `xp_changed`, `leveled_up`, `coins_changed`, `mission_completed`; `add_xp()`, `add_coins()`, `unlock_item()` |
 | **PauseMenu** | Pause state, the settings panel in a match, **auto-pause on focus loss** | `open()`, `close()`, `pause_for_focus_loss()`, `is_open()` |
 | **MatchController** | Match state, clock, Scoreboard, respawn timers, **announcer** (streaks, multi-tags, time warnings) and **award stats** | Signals: `countdown_tick`, `clock_tick`, `tag_scored`, `popup`, `announcement`, `match_ended`; `announce()` |
-| **Cosmetics** (static data) | Player colours, hats, random names, name cleaning | `sanitize_name()`, `color_at()`, `too_similar()` |
+| **Cosmetics** (static data) | Player colours, hats, blaster skins, random names, name cleaning | `sanitize_name()`, `color_at()`, `skin_pattern()`, `skin_finish()` |
 | **Awards** (static logic) | Turns ScoreEntry stats into end-of-match awards | `Awards.compute(ranked)` |
-| **Podium** | The end-of-match sky stage, dancers, confetti, camera | `show_ranking(ranking)` |
+| **Podium** | The end-of-match sky stage, dancers, confetti, camera, match reward summary | `show_ranking(ranking)` |
 | **PowerUpPickup** | Power-up mode: availability, countdown, handing over the blaster | `spawned`, `collected(actor)` signals; `active`, `make_available()`, `give_to()` |
+| **ShieldPickup** | Holographic hexagonal bubble power-up absorbing 50 tag points | `picked_up` signal; `apply_shield()` |
+| **WaterPuddle / IceSlick / WindVent** | Interactive arena environmental hazards (conductive puddle, frictionless slide-boost, upward buoyant launch & elemental amplifier) | Area3D signals; elemental reactions on contact |
+| **BaseCore** | 1000 HP physical base objective with pulsating rings, rotating 3D HP billboard, sirens (< 350 HP), repair API | `damaged`, `repaired`, `destroyed` signals; `damage()`, `repair()` |
+| **BaseBarricade** | 250 HP destructible choke barriers, solid collision disabling when broken, rebuild API | `damaged`, `broken`, `repaired` signals; `damage()`, `rebuild()` |
+| **HordeDirector** | 5-wave horde escalation, perimeter batch spawns, 20s intermission fortification, scrap economy, victory triggers | `wave_started`, `wave_cleared`, `intermission_tick`, `scrap_changed`, `all_waves_cleared`, `defeat` signals |
 | **DogHouse** | Solid prop; barks when a dart hits it | `barked` signal; `on_dart_hit()` |
-| **GameMode** (Resource) | The rules: duration, points, loadout. `GunGameMode` adds the ladder | Hooks: `get_loadout`, `apply_tag`, `get_early_winner`, `rank`, `describe_progress` |
+| **GameMode** (Resource) | The rules: duration, points, loadout. Subclasses: `GunGameMode`, `ZombieMode`, `ZombieSiegeMode` | Hooks: `get_loadout`, `apply_tag`, `get_early_winner`, `rank`, `describe_progress`, `should_respawn` |
 | **Actor** | Movement, tag meter, alive state, Arsenal, Hitbox, dart launching | Signals: `tagged_out`, `landed_hit`, `meter_changed`, `respawned`, `ammo_collected` |
 | **ElementalEffect** | Afflictions (Wind lift, Fire sparkle, Water wet/knockback, Lightning chain zap, Ice slow/slide), reactions & combos | Signals: `status_started`, `status_ended`, `combo_triggered`, `chain_zapped` |
 | **Arsenal** | Held WeaponStates, fire timing, spin-up, reloads | Signals: `fired`, `ammo_changed`, `weapon_changed`, `reload_*`, `dry_fired` |
 | **DartPool / DartProjectile** | Every dart's flight, collision, ricochets, lifetime, elemental payload | Pool `impact` and `elemental_impact` signals; calls `Actor.receive_dart`, `on_dart_hit`, `on_dart_ricochet` |
 | **WindField / WindZone** | Wind at any point in the arena | `get_wind_at(point)`; zones auto-register via the `wind_zones` group |
 | **Arena** | Geometry, navmesh, spawns, roam points, buckets | Public arrays + `add_*` builder helpers |
-| **Hud** | Purely presentational: HUD, announcer queue, results panel with awards | Listens to Player, Arsenal, MatchController. Never mutates game state |
+| **Hud** | Purely presentational: HUD, announcer queue, results panel, Base Core HP bar, Wave badge, Intermission timer, live scrap counter | Listens to Player, Arsenal, MatchController, HordeDirector, BaseCore. Never mutates game state |
 
 The dependency direction is **data → logic → presentation**. WeaponData/DartData never reference nodes.
 The Arsenal never knows where darts go. Darts don't know about effects or scoring.
@@ -207,7 +215,7 @@ Measured during the automated 3-bot Hard match: a peak of about 140 darts in the
    writes it at "Error" into a temporary `override.cfg` (removed by a trap). Then every `.gd` under `scripts/`,
    `tests/` and `tools/` is recompiled. Zero warnings is the bar.
 3. **Boots:** the main menu (120 frames) and a match (300 frames), headless.
-4. **Tests:** `tests/test_runner.tscn`, 205 checks in 26 sections. Includes a fast-forwarded bot match
+4. **Tests:** `tests/test_runner.tscn`, 518 checks in 45 sections. Includes fast-forwarded bot matches
    (8× ticks at 8× time scale, so each tick is still 1/60 s).
 5. **Leak check:** the test run must exit without "ObjectDB instances leaked".
 
@@ -259,3 +267,21 @@ put everything solid under `geometry` (so the navmesh sees it), looks under `dec
 spawns, buckets, mirrors, wind zones, targets and the power-up spot. Set `team_bases` (blue, then orange) for TEAMS.
 To add one: write the script and a thin `.tscn`, add it to `ARENAS`, and copy the *Home Turf* tests (spawns clear,
 every roam point reachable, a bot match). Check the layout with `tools/arena_shots.gd`.
+
+## 18. Zombie Siege & Base Defense (v0.7.0)
+Base defense is orchestrated by `HordeDirector` alongside `ZombieSiegeMode`:
+- Defenders belong to Team 0 (`SURVIVORS`) and respawn on tag-out; zombies belong to Team 1 (`ZOMBIES`) and do not respawn when tagged.
+- Physical `BaseCore` (1000 HP) and 4 `BaseBarricade`s (250 HP) reside directly under `arena.geometry` to integrate with navmesh pathfinding.
+- Zombies evaluate threat targets: prioritizing melee strikes on barricades and the core, but switching dynamically to swarm defenders within 6m.
+- Tagged zombies drop Scrap (+15 standard, +25 runner, +40 brute, +100 boss).
+- Wave progression: 5 waves escalating to the Wave 5 Mega Titan Boss (650 HP, 1.85x scale).
+- 20s Intermissions between waves replenish all ammo buckets and enable core repair (+250 HP for 100 scrap) and barricade rebuilds (75 scrap).
+
+## 19. Anti-Slop Generative Blaster Skin Pipeline (v0.7.0)
+To avoid noisy, washed-out diffusion art with baked lighting ("AI slop"), DARTSTORM uses a clean vector + shader architecture:
+- Generative 2D vector graphic patterns only: unlit, seamless, black-and-white 1024x1024 patterns in `assets/textures/skins/` generated by `tools/generate_skins.py`.
+- `blaster_skin.gdshader`: Spatial PBR tri-planar projection with object-space coordinates and a sharp blend power ($P^{12}$), preventing seam distortion and UV pinching on CSG blaster geometry.
+- Dynamic Forward+ PBR lighting: real-time Fresnel rim glow, roughness, metallic, and specular reflection.
+- 4 tactile finishes: `MATTE` (0.55 roughness), `GLOSS` (0.18 roughness + clearcoat), `METALLIC_FLAKE` (0.75 metallic + micro-sparkle shimmer), and `HOLOGRAPHIC_IRIDESCENT` (view-dependent prismatic rainbow rim).
+- Strict zoning: preserves toy safety orange muzzle tips (`Color(1.0, 0.45, 0.05)`) and dark tactical rubber grips (`Color(0.13, 0.16, 0.24)`).
+

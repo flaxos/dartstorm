@@ -25,8 +25,8 @@ Controllers must stay plug and play: every binding uses device -1, and every scr
   `godot --path . res://scenes/game/match.tscn -- --demo --shots=<abs dir> --quit-after=12`
   plays the match automatically (turns, fires, cycles blasters) and saves PNGs you can inspect.
   Running the menu with `-- --demo --shots=...` captures the title screen; add `--open-settings` or `--open-customise`
-  for those panels. `--mode=N` (GameSettings.MatchMode: 0 SOLO, 1 GUN GAME, 2 DUOS, 3 TEAMS) and `--bots=N` pick the
-  mode and bot count for that run, and `--arena=N` (0 BACKYARD, 1 HOME TURF) the arena, in the lobby or a match.
+  for those panels. `--mode=N` (GameSettings.MatchMode: 0 SOLO, 1 GUN GAME, 2 DUOS, 3 TEAMS, 4 ZOMBIES, 5 ZOMBIE_SIEGE) and `--bots=N` pick the
+  mode and bot count for that run, and `--arena=N` (0 BACKYARD, 1 HOME TURF, 2 TEMPEST TREEHOUSE) the arena, in the lobby or a match.
   In a match, `--powerup` turns on power-up mode and drops the Chainstorm at 4 s, and `--end-after=N`
   ends the round after N seconds (to see the podium). See `scripts/debug/demo_driver.gd`.
 - Arena layouts: `godot --path . -s res://tools/arena_shots.gd -- --arena=1 --shots=<abs dir>` saves views from above
@@ -42,7 +42,7 @@ Controllers must stay plug and play: every binding uses device -1, and every scr
 | `docs/TUNING.md` | A data field is added or renamed |
 | `docs/UAT.md` | A release needs a hands-on check (add rows, then log results) |
 | `docs/ARCHITECTURE.md` | Systems, ownership, safeguards (§10) or budgets (§11) change |
-| `docs/DECISIONS.md` | A non-obvious choice is made (next is D-033) |
+| `docs/DECISIONS.md` | A non-obvious choice is made (latest is D-038) |
 | `docs/ROADMAP.md` | Always, at the end of a piece of work |
 
 ## Conventions
@@ -66,7 +66,7 @@ Controllers must stay plug and play: every binding uses device -1, and every scr
   otherwise bots can't navigate around it.
 - Physics layers are in `scripts/core/layers.gd` and must match `project.godot`.
 - Input actions are registered in `scripts/core/input_setup.gd`, not in project.godot.
-- Only two autoloads: `GameSettings` (preferences) and `Sfx` (procedural sounds). Don't add more without a good reason.
+- Only three autoloads: `GameSettings` (preferences), `Sfx` (procedural sounds), and `Progression` (XP, levels, coins, missions, unlocks). Don't add more without a good reason.
 - No external assets without recording their source and licence in `assets/README.md`.
 - Keep the number of live darts bounded (`DartPool.max_active`).
 

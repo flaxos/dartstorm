@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ZombieSiegeMode" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/zombie_siege_mode.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/weapons/pocket_popper.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/weapons/dart_sprayer.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/weapons/hydro_soaker.tres" id="5"]
+[ext_resource type="Resource" path="res://resources/weapons/frost_ranger.tres" id="6"]
+
+[resource]
+script = ExtResource("1")
+id = &"zombie_siege"
+display_name = "Zombie Siege"
+short_name = "SIEGE"
+description = "Defend the Base Core against escalating waves of green foam zombies and the Mega Titan Boss!"
+duration_seconds = 900.0
+countdown_seconds = 3
+respawn_delay = 3.0
+points_per_tag = 100
+ricochet_bonus = 50
+points_per_target = 10
+loadout = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")])
+infinite_reserve = false

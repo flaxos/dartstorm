@@ -13,6 +13,9 @@ var data: WeaponData
 var first_person: bool = false
 var muzzle: Marker3D
 
+var skin_id: StringName = &"default"
+static var _skin_shader: Shader = preload("res://assets/materials/blaster_skin.gdshader")
+
 var _spinner: Node3D
 var _belt: Array[Node3D] = []
 var _belt_phase: float = 0.0
@@ -21,10 +24,16 @@ var _flash: MeshInstance3D
 var _flash_left: float = 0.0
 
 
-static func create(p_data: WeaponData, p_first_person: bool) -> BlasterModel:
+static func create(p_data: WeaponData, p_first_person: bool, p_skin_id: StringName = &"") -> BlasterModel:
 	var model := BlasterModel.new()
 	model.data = p_data
 	model.first_person = p_first_person
+	if not p_skin_id.is_empty():
+		model.skin_id = p_skin_id
+	elif p_first_person:
+		model.skin_id = GameSettings.player_skin
+	else:
+		model.skin_id = &"default"
 	model._build()
 	return model
 
@@ -235,7 +244,21 @@ func _part(mesh: Mesh, pos: Vector3, color: Color, rot_deg: Vector3, parent: Nod
 		metallic: float) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh
-	instance.material_override = ArenaKit.mat(color, 0.5, metallic)
+	var is_chassis := not color.is_equal_approx(ORANGE_TIP) and not color.is_equal_approx(DARK) and metallic < 0.2
+	if is_chassis and skin_id != &"default" and Cosmetics.has_skin(skin_id):
+		var skin_mat := ShaderMaterial.new()
+		skin_mat.shader = _skin_shader
+		var b_col := data.body_color if data != null else color
+		var a_col := data.accent_color if data != null else color
+		skin_mat.set_shader_parameter("body_color", b_col)
+		skin_mat.set_shader_parameter("accent_color", a_col)
+		var pattern_path: String = Cosmetics.skin_pattern(skin_id)
+		if ResourceLoader.exists(pattern_path):
+			skin_mat.set_shader_parameter("skin_pattern", load(pattern_path))
+		skin_mat.set_shader_parameter("finish_mode", Cosmetics.skin_finish(skin_id))
+		instance.material_override = skin_mat
+	else:
+		instance.material_override = ArenaKit.mat(color, 0.85 if color.is_equal_approx(DARK) else 0.5, metallic)
 	instance.position = pos
 	instance.rotation_degrees = rot_deg
 	if first_person:

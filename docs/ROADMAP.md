@@ -24,9 +24,23 @@
 | **v0.5.2 Foam Shield & Environmental Hazards** | ✅ Built and validated (359 tests). ⏳ UAT |
 | **v0.5.3 Progression, Levels, Missions & Coin Shop** | ✅ Built and validated (398 tests). ⏳ UAT |
 | **v0.6.0 Tempest Treehouse Arena** | ✅ Built and validated (423 tests). ⏳ UAT |
+| **v0.7.0 Zombie Siege & Blaster Skins** | ✅ Built and validated (518 tests). ⏳ UAT |
 | Phase 7 Expansion | ⏳ Not started (on purpose) |
 
-## v0.6.0: Tempest Treehouse (this release)
+## v0.7.0: Zombie Siege & Blaster Skins (this release)
+
+Goal: Co-op base defense mode against 5 escalating zombie waves and the Mega Foam Titan Boss, combined with an anti-slop generative blaster skin pipeline.
+
+- [x] **Zombie Siege Mode (Base Defense):** 5 escalating horde waves (Runners, Brutes, and Wave 5 Mega Titan Boss) defending a 1000 HP physical `BaseCore` and 4 destructible lane `BaseBarricade`s (250 HP).
+- [x] **Intermission Fortification:** 20-second building/repair phase between waves; defenders earn Scrap to repair the base (+250 HP for 100 scrap), rebuild barricades (75 scrap), and auto-replenish ammo buckets.
+- [x] **Anti-Slop Blaster Skin Architecture:** Sharp object-space tri-planar shader projection ($P^{12}$ blend power in `blaster_skin.gdshader`) with 8 seamless 1024x1024 2D vector graphic patterns, tactile PBR finishes (Matte, Gloss, Metallic Flake, and Holographic Iridescence), strict material zoning (body chassis mapped while preserving safety orange muzzle tips and dark rubber grips).
+- [x] **Collectible Skin Catalog:** 8 skins in Coin Shop (`SKINS` tab with 3D preview) earnable via gameplay coins; Wave 5 boss clear unlocks exclusive **Toxic Slime** blaster skin.
+- [x] **Horde AI & Archetypes:** Bot AI extended with BaseCore/barricade targeting and melee strikes; Runner (1.0x scale, 100 HP), Brute (1.35x scale, 300 HP), and Mega Foam Titan Boss (2.2x scale, 800 HP).
+- [x] Automated unit and whole-match tests in `tests/test_runner.gd` (518 tests passed, 0 leaks, 0 warnings).
+
+**Acceptance:** `./tools/validate.sh` passes (**518/518 tests**) ✅.
+
+## v0.6.0: Tempest Treehouse
 
 Goal: the high-canopy elemental treehouse arena from GDD §5.4.
 

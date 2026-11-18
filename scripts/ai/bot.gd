@@ -26,6 +26,12 @@ var rivals: Array[Actor] = []
 ## Power-up mode: the Chainstorm pickup to race for (null otherwise).
 var power_up: PowerUpPickup
 
+var archetype: StringName = &"runner"
+var base_core: BaseCore = null
+var barricades: Array[BaseBarricade] = []
+var melee_damage: float = 15.0
+var _melee_cooldown: float = 0.0
+
 var _nav: NavigationAgent3D
 var _model: CharacterModel
 var _mood: Mood = Mood.ROAM
@@ -96,9 +102,23 @@ func _physics_process(delta: float) -> void:
 		_update_aim(delta)
 		_update_trigger(delta)
 		wish = _choose_direction(delta)
+		_melee_cooldown = maxf(_melee_cooldown - delta, 0.0)
 		if is_zombie and _target != null and is_instance_valid(_target) and _target.alive:
 			if global_position.distance_to(_target.global_position) < 1.4:
 				try_zombie_infect(_target)
+		if is_zombie and _melee_cooldown <= 0.0:
+			var attacked := false
+			for b in barricades:
+				if is_instance_valid(b) and not b.is_broken:
+					if global_position.distance_to(b.global_position) < 2.5:
+						b.damage(melee_damage)
+						_melee_cooldown = 1.0
+						attacked = true
+						break
+			if not attacked and base_core != null and is_instance_valid(base_core) and not base_core.is_destroyed:
+				if global_position.distance_to(base_core.global_position) < 2.8:
+					base_core.damage(melee_damage, self)
+					_melee_cooldown = 1.0
 		# Unstick: hop, and if that fails pick somewhere else to go.
 		var horizontal_speed := Vector2(velocity.x, velocity.z).length()
 		if wish.length_squared() > 0.25 and horizontal_speed < 1.0:
@@ -121,14 +141,69 @@ func _physics_process(delta: float) -> void:
 		held.set_spin(arsenal.spin)
 
 
+func apply_archetype(p_archetype: StringName) -> void:
+	archetype = p_archetype
+	match p_archetype:
+		&"runner":
+			scale = Vector3.ONE
+			hitbox_radius = 0.6
+			sprint_speed = 11.2
+			walk_speed = 7.5
+			melee_damage = 15.0
+			tag_meter_max = 100.0
+			tag_meter = 0.0
+			meter_changed.emit(tag_meter, tag_meter_max)
+		&"brute":
+			scale = Vector3.ONE * 1.35
+			hitbox_radius = 0.85
+			sprint_speed = 8.0
+			walk_speed = 5.5
+			melee_damage = 35.0
+			tag_meter_max = 300.0
+			tag_meter = 0.0
+			meter_changed.emit(tag_meter, tag_meter_max)
+		&"titan_boss":
+			scale = Vector3.ONE * 2.2
+			hitbox_radius = 1.4
+			sprint_speed = 6.5
+			walk_speed = 4.5
+			melee_damage = 70.0
+			tag_meter_max = 800.0
+			tag_meter = 0.0
+			meter_changed.emit(tag_meter, tag_meter_max)
+
+
 # --- Deciding ---------------------------------------------------------------
 
 func _think() -> void:
 	if is_zombie:
-		_target = _pick_survivor_target()
-		_mood = Mood.FIGHT
-		if _target != null:
-			_set_goal(_target.global_position)
+		var survivor := _pick_survivor_target()
+		if survivor != null and global_position.distance_to(survivor.global_position) < 6.0:
+			_target = survivor
+			_mood = Mood.FIGHT
+			_set_goal(survivor.global_position)
+			return
+		if base_core != null and is_instance_valid(base_core) and not base_core.is_destroyed:
+			var target_pos := base_core.global_position
+			var closest_b: BaseBarricade = null
+			var closest_dist := INF
+			for b in barricades:
+				if is_instance_valid(b) and not b.is_broken:
+					var dist := global_position.distance_squared_to(b.global_position)
+					if dist < closest_dist and dist < 64.0:
+						closest_dist = dist
+						closest_b = b
+			if closest_b != null:
+				target_pos = closest_b.global_position
+			_target = null
+			_mood = Mood.ROAM
+			_set_goal(target_pos)
+			return
+		elif survivor != null:
+			_target = survivor
+			_mood = Mood.FIGHT
+			_set_goal(survivor.global_position)
+			return
 		else:
 			_mood = Mood.ROAM
 			var zom_arrived := _has_goal and global_position.distance_to(_goal) < GOAL_REACHED_DISTANCE

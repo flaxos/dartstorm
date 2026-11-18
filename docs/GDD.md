@@ -4,8 +4,8 @@
 
 | | |
 |---|---|
-| **Game version** | 0.4.0 (Home Turf: a toy-sized house arena) |
-| **Status** | v0.1.0 **passed UAT** on 2026-11-15; v0.1.1 hardening merged; v0.2.0 and v0.3.0 awaiting UAT with young players (see [UAT.md](UAT.md)) |
+| **Game version** | 0.7.0 (Zombie Siege & Blaster Skins) |
+| **Status** | v0.1.0 **passed UAT** on 2026-11-15; v0.1.1–v0.7.0 validated and awaiting UAT with young players (see [UAT.md](UAT.md)) |
 | **Platform** | Linux first (the target machine runs Linux). Windows is deferred until needed. |
 | **Authority** | This GDD is the authoritative description of the game. Numbers mirror the `.tres` files in `resources/`. If they ever disagree, the `.tres` file is what the game uses, so fix this doc. |
 | **Source vision** | [CONCEPT_BRIEF.md](CONCEPT_BRIEF.md), the original brief, archived verbatim (personal details redacted). §1 summarises it and §2 tracks it. §1.9 records the young players' own design sketch. |
@@ -97,6 +97,8 @@ The photo isn't kept in the repo (it has their names on it). This is what it ask
 | **Gems** | ✗ Not doing | A second currency is a pattern built to sell things |
 | **Chat, Clan, 32 players, League, Private** | ✗ Not now | Needs online play; chat isn't safe for young players. Couch/LAN play may come later (D-008) |
 | **Phone controls** (LEFT/RIGHT sticks, SHOOT button) | ✅ by controller | The PC version does this with a gamepad (§3.17) |
+| **Zombie Siege (Base Defense)** | ✅ v0.7.0 | Defend the Base Core & barricades against 5 zombie waves and the Titan Boss (§3.24) |
+| **Blaster Skins** | ✅ v0.7.0 | Anti-slop 2D vector patterns, tactile PBR finishes, 8 collectible skins in Coin Shop (§10.2) |
 
 ## 2. Brief traceability
 
@@ -511,6 +513,28 @@ The main menu is the players' own drawing (§1.9), built in 3D:
   - Floor vents with spinning fan blades that provide an upward buoyant air launch.
   - Elemental darts infuse and amplify the wind stream for 5.0s (Fire embers, Water mist, Ice blizzard, Lightning plasma), applying those statuses to passing players.
   - Steam combos triggered near vents billow into massive 60-particle amplified steam clouds!
+
+### 3.24 Zombie Siege Mode: Base Defense *(v0.7.0)*
+- **Concept:** Co-op/solo survival where players fortify and defend the central **Base Core** against 5 escalating waves of foam zombie hordes.
+- **Base Core (`BaseCore`):**
+  - High-durability objective (1000 HP) located at the yard centre with pulsing core rings and a 3D rotating health billboard.
+  - Emits flashing yellow/orange warnings under 600 HP, and red siren strobe alarm lighting with klaxons under 350 HP.
+  - Can be repaired by defenders during intermissions (+250 HP per 100 scrap). If destroyed, the siege fails ("BASE CORE DESTROYED — MATCH OVER!").
+- **Destructible Barricades (`BaseBarricade`):**
+  - 4 perimeter foam/wood barriers (250 HP each) blocking choke points around the base.
+  - Solid collision blocks zombie pathing; flashes yellow/red as damage accumulates. Disables collision when broken.
+  - Can be rebuilt during intermissions (75 scrap) to restore full integrity.
+- **Wave Director & Escalation (`HordeDirector`):**
+  - 5 escalating waves:
+    - Wave 1: 10 Standard Zombies (introductory swarm).
+    - Wave 2: 15 Zombies including Fast Runners (sprint speed 11.2 m/s).
+    - Wave 3: 20 Zombies including Armored Brutes (220 HP, 1.35x scale, heavy damage).
+    - Wave 4: 25 Zombies mixed swarm with aggressive perimeter flanking.
+    - Wave 5: 30 Zombies led by the **Mega Titan Boss** (650 HP, 1.85x scale, massive foam shockwaves).
+  - Spawning: Controlled perimeter batches of 3 zombies every 2.2s to prevent swarming lag while maintaining relentless horde pressure.
+  - Intermission: 20s fortification phase between waves where all ammo buckets instantly refill, defenders collect scrap, and repairs can be executed.
+- **Economy:** Zombie tags drop scrap (+15 standard, +25 runner, +40 brute, +100 boss).
+- **Zombies AI Targeting:** Zombies prioritize hitting the Base Core and Barricades when within range, but aggressively swarm survivors who venture close (< 6m).
 
 ---
 
@@ -936,6 +960,30 @@ Built directly to the young players' wishlist (§1.9, D-028, D-036). A fair, joy
 - **Backyard Missions:** 3 active kid-safe objectives dynamically selected and replenished from the mission pool (ricochet tags off mirrors, lightning chain zaps, extinguishing fire with water, sliding on ice slicks, absorbing damage with Foam Shield, tagging zombies, Pocket Popper tags). Completing a mission awards +200 XP, +100 Coins, and celebratory audio.
 - **Kid-Safe Coin Shop:** Strictly one currency (Coins). Earned strictly by playing and finishing missions. Zero real money, zero gems, zero microtransactions, zero timers, and zero paid power. Cosmetic items only: hats (Party, Cowboy, Propeller, Goggles, Bunny Ears, Horns, Spiky Hair, Champion Crown) and custom colour swatches (Bubblegum Pink, Golden Yellow, Tangerine Orange, Electric Teal).
 - **Match Rewards Payout:** At match conclusion, awards XP and Coins (+25 XP/+5 Coins per tag, +100/+25 for match completion, +150/+50 for victory) with a celebratory rewards summary banner on the podium results panel.
+
+### 10.2 Anti-Slop Blaster Skin Generative Pipeline *(v0.7.0)*
+To elevate blasters beyond plain flat toy plastics while avoiding the muddy, inconsistent look of unconstrained diffusion art ("AI slop"), DARTSTORM uses a strictly guided procedural & generative shader pipeline:
+- **Design Principles (Anti-Slop Standard):**
+  - **Flat 2D Vector Patterns Only:** AI / generative scripts produce pure unlit black-and-white 2D geometric/stylized graphic patterns (1024x1024 seamless).
+  - **Zero Baked Fake Lighting:** Never bake shadows, directional highlights, photorealistic dirt, or simulated ambient occlusion into textures. Godot's Forward+ PBR engine handles all lighting, normal reflection, and Fresnel rim lighting in real time.
+  - **Sharp Object-Space Tri-Planar Shader (`blaster_skin.gdshader`):** High-power projection ($P^{12}$) eliminates UV distortion and seam stretching across CSG geometric weapon bodies.
+  - **Color Dual-Tone Modulation:** The pattern modulates dynamically between weapon body and accent colors, preserving toy branding.
+  - **Safety Tip & Grip Zoning:** Toy safety orange tips (`Color(1.0, 0.45, 0.05)`) and dark tactical rubber grips (`Color(0.13, 0.16, 0.24)`) are strictly preserved and never overwritten by patterns.
+  - **4 Tactile Finish Modes:**
+    - `MATTE`: Smooth molded toy plastic (Roughness 0.55).
+    - `GLOSS`: High-shine reflective coat with clearcoat shine (Roughness 0.18, Clearcoat 0.8).
+    - `METALLIC_FLAKE`: Sparkly metal-flake finish with micro-sparkle shimmer (Metallic 0.75, Roughness 0.32).
+    - `HOLOGRAPHIC_IRIDESCENT`: Prismatic rainbow rim effect shifting with viewing angle (Fresnel 1.0, pulse glow).
+- **8 Distinct Skins Catalog:**
+  1. `Default Orange`: Classic factory blaster style (Matte).
+  2. `Nitro Neon`: High-octane diagonal racing chevrons (Gloss).
+  3. `Cyber Circuit`: Glowing microchip PCB traces (Gloss).
+  4. `Hazard Stripe`: Industrial warning caution stripes (Matte).
+  5. `Cosmic Galaxy`: Interstellar starfield and constellations (Metallic Flake).
+  6. `Dino Scales`: Playful prehistoric reptile scale plating (Matte).
+  7. `Holo Prismatic`: Iridescent rainbow holographic foil (Holographic).
+  8. `Toxic Slime`: Biohazard radioactive drip splatter (Gloss).
+- **Shop Integration:** Available in the Shop under the `SKINS` tab for earned Coins (100–350 Coins). Instantly equip and view on both 3D lobby weapons and third-person character models.
 
 
 ## 11. Glossary

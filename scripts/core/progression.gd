@@ -31,6 +31,7 @@ const COINS_MISSION_REWARD := 100
 
 const DEFAULT_HATS: Array[StringName] = [&"cap", &"beanie", &"none"]
 const DEFAULT_COLORS: Array[int] = [0, 1, 2, 3]
+const DEFAULT_SKINS: Array[StringName] = [&"default"]
 
 ## The backyard mission pool: kid-safe, engaging objectives
 const MISSION_POOL: Array[Dictionary] = [
@@ -112,6 +113,7 @@ var lifetime_xp: int = 0
 var coins: int = STARTING_COINS
 var unlocked_hats: Array[StringName] = []
 var unlocked_colors: Array[int] = []
+var unlocked_skins: Array[StringName] = []
 var active_missions: Array[Dictionary] = []
 
 
@@ -206,6 +208,9 @@ func is_unlocked(category: StringName, id: Variant) -> bool:
 		&"color":
 			var color_index := int(id)
 			return Cosmetics.is_default_color(color_index) or unlocked_colors.has(color_index)
+		&"skin":
+			var skin_id := StringName(str(id))
+			return Cosmetics.is_default_skin(skin_id) or unlocked_skins.has(skin_id)
 	return false
 
 
@@ -227,6 +232,14 @@ func unlock_item(category: StringName, id: Variant) -> bool:
 				return false
 			unlocked_colors.append(color_index)
 			item_unlocked.emit(category, color_index)
+			save_progression()
+			return true
+		&"skin":
+			var skin_id := StringName(str(id))
+			if not Cosmetics.has_skin(skin_id):
+				return false
+			unlocked_skins.append(skin_id)
+			item_unlocked.emit(category, skin_id)
 			save_progression()
 			return true
 	return false
@@ -313,6 +326,7 @@ func reset_to_defaults() -> void:
 	coins = STARTING_COINS
 	unlocked_hats = DEFAULT_HATS.duplicate()
 	unlocked_colors = DEFAULT_COLORS.duplicate()
+	unlocked_skins = DEFAULT_SKINS.duplicate()
 	active_missions.clear()
 	ensure_active_missions()
 	save_progression()
@@ -342,6 +356,13 @@ func load_progression() -> void:
 		var ci := int(c)
 		if not unlocked_colors.has(ci) and ci >= 0 and ci < Cosmetics.COLORS.size():
 			unlocked_colors.append(ci)
+
+	var saved_skins: Array = file.get_value("unlocks", "skins", [])
+	unlocked_skins = DEFAULT_SKINS.duplicate()
+	for sk in saved_skins:
+		var skid := StringName(str(sk))
+		if not unlocked_skins.has(skid) and Cosmetics.has_skin(skid):
+			unlocked_skins.append(skid)
 
 	active_missions.clear()
 	var saved_missions: Array = file.get_value("missions", "active", [])
@@ -374,6 +395,11 @@ func save_progression() -> void:
 	for c in unlocked_colors:
 		colors_save.append(c)
 	file.set_value("unlocks", "colors", colors_save)
+
+	var skins_save: Array[String] = []
+	for sk in unlocked_skins:
+		skins_save.append(String(sk))
+	file.set_value("unlocks", "skins", skins_save)
 
 	var missions_save: Array[Dictionary] = []
 	for m in active_missions:

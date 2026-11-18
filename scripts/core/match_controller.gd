@@ -141,6 +141,10 @@ func _start_play() -> void:
 	_set_state(State.PLAYING)
 
 
+func end_match() -> void:
+	_finish()
+
+
 func _finish() -> void:
 	if state == State.ENDED:
 		return
@@ -170,9 +174,9 @@ func _tick_respawns(delta: float) -> void:
 func _on_tagged_out(victim: Actor, attacker: Actor, weapon: WeaponData, ricochet: bool) -> void:
 	if state == State.ENDED:
 		return
-	# Anyone tagged out comes back, whenever it happens (even a fall off the
-	# map during the countdown). Points are only awarded while playing.
-	_respawns[victim] = mode.respawn_delay
+	# Anyone tagged out comes back if allowed by mode.
+	if mode.should_respawn(victim):
+		_respawns[victim] = mode.respawn_delay
 	if state != State.PLAYING:
 		return
 	var victim_entry := board.entry_for(victim)

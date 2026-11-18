@@ -12,6 +12,7 @@ const CHAINSTORM := "res://resources/weapons/flaxs_chainstorm.tres"
 const FFA := "res://resources/modes/free_for_all.tres"
 const GUN_GAME := "res://resources/modes/gun_game.tres"
 const ZOMBIES_MODE := "res://resources/modes/zombies.tres"
+const ZOMBIE_SIEGE_MODE := "res://resources/modes/zombie_siege.tres"
 const WEAPON_DIR := "res://resources/weapons"
 
 var _passed: int = 0
@@ -67,6 +68,11 @@ func _ready() -> void:
 	await _test_zombies_mode()
 	await _test_shield_and_hazards()
 	await _test_progression_and_shop()
+	# Zombie Siege & Blaster Skins (v0.7.0)
+	await _test_blaster_skins_and_shader()
+	await _test_base_core_and_barricades()
+	await _test_zombie_siege_and_director()
+	await _test_zombie_siege_match()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -1212,7 +1218,7 @@ func _test_lobby() -> void:
 	check(squad.size() == 3, "your 3 bots stand on platforms around you")
 	var play := menu.get("_play_button") as Button
 	check(play != null and play.has_focus(), "the big PLAY button has focus (A on a controller starts a match)")
-	check((menu.get("_mode_buttons") as Array).size() == 5, "five mode cards: SOLO, DUOS, TEAMS, GUN GAME, ZOMBIES")
+	check((menu.get("_mode_buttons") as Array).size() == 6, "six mode cards: SOLO, DUOS, TEAMS, GUN GAME, ZOMBIES, SIEGE")
 
 	menu.call("_pick_mode", GameSettings.MatchMode.TEAMS)
 	await physics_frames(1)
@@ -1859,6 +1865,250 @@ func _test_progression_and_shop() -> void:
 
 	# Clean up to defaults
 	Progression.reset_to_defaults()
+	await physics_frames(2)
+
+
+func _test_blaster_skins_and_shader() -> void:
+	section("Blaster skins and generative shader pipeline")
+	check(Cosmetics.SKINS.size() == 8, "Cosmetics catalog defines 8 skins (%d)" % Cosmetics.SKINS.size())
+
+	# 1. Catalog integrity & pattern textures
+	for skin in Cosmetics.SKINS:
+		var skid: StringName = skin["id"]
+		check(Cosmetics.has_skin(skid), "Cosmetics.has_skin recognizes %s" % skid)
+		check(not Cosmetics.skin_name(skid).is_empty(), "skin %s has non-empty display name" % skid)
+		var pattern_path := Cosmetics.skin_pattern(skid)
+		check(ResourceLoader.exists(pattern_path), "pattern texture exists on disk: %s" % pattern_path)
+		var img_tex := load(pattern_path) as Texture2D
+		check(img_tex != null and img_tex.get_width() == 1024 and img_tex.get_height() == 1024,
+				"skin pattern %s is valid 1024x1024 texture" % skid)
+
+	# 2. Shader compilation
+	var shader := load("res://assets/materials/blaster_skin.gdshader") as Shader
+	check(shader != null, "blaster_skin.gdshader loads cleanly")
+
+	# 3. Progression unlocks & equipping
+	Progression.reset_to_defaults()
+	check(Progression.is_unlocked(&"skin", &"default"), "default skin is unlocked by default")
+	check(not Progression.is_unlocked(&"skin", &"cyber"), "neon circuit skin starts locked")
+	var unlocked_cyber := Progression.unlock_item(&"skin", &"cyber")
+	check(unlocked_cyber and Progression.is_unlocked(&"skin", &"cyber"), "unlock_item successfully unlocks cyber skin")
+
+	# Save and reload persistence
+	Progression.save_progression()
+	Progression.load_progression()
+	check(Progression.is_unlocked(&"skin", &"cyber"), "persistence preserves unlocked cyber skin across save/load")
+
+	# 4. BlasterModel shader application & part zoning
+	var popper_data := load(POPPER) as WeaponData
+	var model := BlasterModel.create(popper_data, true, &"cyber")
+	add_child(model)
+	await physics_frames(2)
+	check(model.skin_id == &"cyber", "BlasterModel has skin_id &\"cyber\"")
+
+	var found_chassis_shader := false
+	var preserved_orange_tip := false
+	var preserved_dark_grip := false
+
+	for child in model.get_children():
+		var mesh_inst := child as MeshInstance3D
+		if mesh_inst != null and mesh_inst.material_override != null:
+			if mesh_inst.material_override is ShaderMaterial:
+				found_chassis_shader = true
+			elif mesh_inst.material_override is StandardMaterial3D:
+				var std_mat := mesh_inst.material_override as StandardMaterial3D
+				if std_mat.albedo_color.is_equal_approx(BlasterModel.ORANGE_TIP):
+					preserved_orange_tip = true
+				elif std_mat.albedo_color.is_equal_approx(BlasterModel.DARK):
+					preserved_dark_grip = true
+
+	check(found_chassis_shader, "chassis parts use ShaderMaterial with tri-planar skin shader")
+	check(preserved_orange_tip, "safety orange muzzle tip preserves official safety plastic")
+	check(preserved_dark_grip, "dark grip preserves matte tactile polymer material")
+	model.queue_free()
+
+	# 5. Shop Panel skins tab
+	var shop := ShopPanel.new()
+	add_child(shop)
+	await physics_frames(2)
+	shop._switch_tab(ShopPanel.Tab.SKINS)
+	await physics_frames(2)
+	var active_cards := 0
+	for child in shop._grid_container.get_children():
+		if not child.is_queued_for_deletion():
+			active_cards += 1
+	check(active_cards == 8, "shop panel renders 8 skin cards in SKINS tab")
+	shop.queue_free()
+
+	Progression.reset_to_defaults()
+	await physics_frames(2)
+
+
+func _test_base_core_and_barricades() -> void:
+	section("Base Core and Barricades")
+	var core := BaseCore.new()
+	add_child(core)
+	await physics_frames(2)
+
+	check(core.health == 1000.0, "BaseCore initializes with 1000 HP")
+	check(not core.is_destroyed, "BaseCore is not destroyed at start")
+
+	var core_events := {"damaged": 0.0, "destroyed": false}
+	core.damaged.connect(func(amount: float, _attacker: Node) -> void: core_events["damaged"] += amount)
+	core.damage(250.0)
+	check(core.health == 750.0, "BaseCore takes 250 damage -> 750 HP remaining")
+	check(float(core_events["damaged"]) == 250.0, "BaseCore damaged signal emitted with correct amount")
+
+	core.repair(150.0)
+	check(core.health == 900.0, "BaseCore repair restores 150 HP -> 900 HP")
+	core.repair(500.0)
+	check(core.health == 1000.0, "BaseCore repair clamps to max 1000 HP")
+
+	core.destroyed.connect(func() -> void: core_events["destroyed"] = true)
+	core.damage(1000.0)
+	check(core.health == 0.0, "BaseCore HP reduced to 0")
+	check(core.is_destroyed, "BaseCore is_destroyed is true")
+	check(bool(core_events["destroyed"]), "BaseCore destroyed signal emitted")
+	core.queue_free()
+
+	# BaseBarricade tests
+	var barricade := BaseBarricade.new()
+	add_child(barricade)
+	await physics_frames(2)
+
+	check(barricade.health == 250.0, "BaseBarricade initializes with 250 HP")
+	check(not barricade.is_broken, "BaseBarricade is not broken at start")
+
+	barricade.damage(100.0)
+	check(barricade.health == 150.0, "BaseBarricade takes 100 damage -> 150 HP remaining")
+
+	var b_events := {"broken": false, "repaired": false}
+	barricade.broken.connect(func() -> void: b_events["broken"] = true)
+	barricade.damage(150.0)
+	check(barricade.health == 0.0, "BaseBarricade HP reduced to 0")
+	check(barricade.is_broken, "BaseBarricade is_broken is true")
+	check(bool(b_events["broken"]), "BaseBarricade broken signal emitted")
+
+	barricade.repaired.connect(func() -> void: b_events["repaired"] = true)
+	barricade.rebuild()
+	check(barricade.health == 250.0, "BaseBarricade rebuilt to 250 HP")
+	check(not barricade.is_broken, "BaseBarricade is_broken is false after rebuild")
+	check(bool(b_events["repaired"]), "BaseBarricade repaired signal emitted")
+	barricade.queue_free()
+
+
+func _test_zombie_siege_and_director() -> void:
+	section("Zombie Siege mode and Horde Director")
+	var siege := load(ZOMBIE_SIEGE_MODE) as ZombieSiegeMode
+	check(siege != null, "zombie_siege.tres loads cleanly")
+	check(siege.id == &"zombie_siege", "mode id is 'zombie_siege'")
+	check(siege.is_team_mode(), "ZombieSiegeMode is a team mode")
+	check(siege.get_team_name(0) == "DEFENDERS", "team 0 is DEFENDERS")
+	check(siege.get_team_name(1) == "ZOMBIE HORDE", "team 1 is ZOMBIE HORDE")
+
+	var dummy_actor := Actor.new()
+	add_child(dummy_actor)
+	await physics_frames(1)
+	check(siege.should_respawn(dummy_actor), "defenders respawn when tagged out")
+	dummy_actor.set_zombie(true)
+	check(not siege.should_respawn(dummy_actor), "horde zombies do NOT respawn when tagged out")
+	dummy_actor.queue_free()
+
+	# HordeDirector wave configuration & pacing
+	check(HordeDirector.WAVES.size() == 5, "HordeDirector defines 5 escalating waves")
+	check(HordeDirector.WAVES[0]["runners"] == 10, "Wave 1 spawns 10 Runners")
+	check(HordeDirector.WAVES[3]["brutes"] == 6, "Wave 4 spawns 6 Brutes")
+	check(HordeDirector.WAVES[4]["boss"] == true, "Wave 5 spawns Mega Titan Boss")
+
+	var hd := HordeDirector.new()
+	add_child(hd)
+	await physics_frames(1)
+
+	var core := BaseCore.new()
+	var barricade := BaseBarricade.new()
+	add_child(core)
+	add_child(barricade)
+	hd.setup(null, null, core, [barricade], null, null)
+
+	hd.start()
+	check(hd.current_wave == 1, "HordeDirector starts at wave 1")
+	check(hd.scrap == 100, "HordeDirector starts with 100 starting scrap")
+	check(hd.remaining_enemies == 10, "Wave 1 has 10 remaining enemies")
+
+	# Test scrap operations
+	hd.add_scrap(50)
+	check(hd.scrap == 150, "add_scrap adds 50 scrap -> 150")
+	var spent_ok := hd.spend_scrap(75)
+	check(spent_ok and hd.scrap == 75, "spend_scrap spends 75 scrap -> 75 remaining")
+	var spent_fail := hd.spend_scrap(100)
+	check(not spent_fail and hd.scrap == 75, "spend_scrap fails when unaffordable")
+
+	# Test base core repair via scrap
+	core.damage(300.0)
+	hd.add_scrap(100)
+	var repair_ok := hd.repair_base_core(100, 250.0)
+	check(repair_ok and core.health == 950.0, "repair_base_core spends scrap and restores core HP")
+
+	# Test barricade rebuild via scrap
+	barricade.damage(250.0)
+	check(barricade.is_broken, "barricade is broken")
+	var rebuild_ok := hd.rebuild_barricade(barricade, 75)
+	check(rebuild_ok and not barricade.is_broken and barricade.health == 250.0, "rebuild_barricade restores broken barricade")
+
+	# Test bot archetypes
+	var bot := Bot.new()
+	add_child(bot)
+	await physics_frames(1)
+
+	bot.apply_archetype(&"runner")
+	check(bot.tag_meter_max == 100.0 and bot.melee_damage == 15.0, "runner archetype has 100 HP and 15 melee damage")
+
+	bot.apply_archetype(&"brute")
+	check(bot.tag_meter_max == 300.0 and bot.melee_damage == 35.0 and bot.scale.x > 1.3,
+			"brute archetype has 300 HP, 35 melee damage, and 1.35x scale")
+
+	bot.apply_archetype(&"titan_boss")
+	check(bot.tag_meter_max == 800.0 and bot.melee_damage == 70.0 and bot.scale.x > 2.0,
+			"titan_boss archetype has 800 HP, 70 melee damage, and 2.2x scale")
+
+	bot.queue_free()
+	barricade.queue_free()
+	core.queue_free()
+	hd.queue_free()
+
+
+func _test_zombie_siege_match() -> void:
+	section("Zombie Siege Match Simulation")
+	GameSettings.match_mode = GameSettings.MatchMode.ZOMBIE_SIEGE
+	GameSettings.bot_count = 2
+
+	var match_scene := MatchScene.new()
+	add_child(match_scene)
+
+	# Allow initialization and spawn frames
+	await physics_frames(10)
+
+	check(match_scene.base_core != null, "MatchScene instantiated BaseCore")
+	check(match_scene.base_core.health == 1000.0, "BaseCore has full 1000 HP")
+	check(match_scene.horde_director != null, "MatchScene instantiated HordeDirector")
+	check(match_scene.horde_director.current_wave == 1, "HordeDirector started Wave 1")
+	check(match_scene.horde_director.barricades.size() == 4, "MatchScene deployed 4 perimeter barricades")
+
+	# Check HUD integration
+	check(match_scene.hud._core_bar != null, "HUD instantiated BaseCore progress bar")
+	check(match_scene.hud._core_bar.value == 1000.0, "HUD core bar shows 1000 HP")
+	check(match_scene.hud._wave_label != null, "HUD instantiated wave label")
+	check(match_scene.hud._wave_label.text.contains("WAVE 1"), "HUD wave label displays WAVE 1")
+	check(match_scene.hud._scrap_label != null, "HUD instantiated scrap label")
+
+	# Test BaseCore damage reflects in HUD
+	match_scene.base_core.damage(100.0)
+	await physics_frames(2)
+	check(match_scene.hud._core_bar.value == 900.0, "BaseCore damage updates HUD progress bar to 900")
+
+	# Clean up match scene
+	match_scene.queue_free()
+	GameSettings.match_mode = GameSettings.MatchMode.FREE_FOR_ALL
 	await physics_frames(2)
 
 

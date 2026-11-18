@@ -16,6 +16,7 @@ const MODE_ORDER: Array[int] = [
 	GameSettings.MatchMode.TEAMS,
 	GameSettings.MatchMode.GUN_GAME,
 	GameSettings.MatchMode.ZOMBIES,
+	GameSettings.MatchMode.ZOMBIE_SIEGE,
 ]
 ## The lobby island floats just south of the yard, so the backyard fills the background.
 const STAGE := Vector3(0.0, 9.0, 38.0)
@@ -268,7 +269,7 @@ func _rebuild_squad() -> void:
 	player_model.show_overhead(false)
 	player_model.position = PLAYER_SPOT + Vector3(0.0, 0.32, 0.0)
 	player_model.rotation.y = PI
-	player_model.set_weapon(load(BLASTERS[2]) as WeaponData)
+	player_model.set_weapon(load(BLASTERS[2]) as WeaponData, GameSettings.player_skin)
 
 	var count := MatchScene.team_bot_count(mode, GameSettings.bot_count)
 	var colors := MatchScene.bot_colors(GameSettings.color(), count)

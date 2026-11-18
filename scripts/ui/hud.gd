@@ -51,6 +51,12 @@ var _announce_queue: Array[Dictionary] = []
 var _announce_left: float = 0.0
 var _awards_count: int = 0
 var _team_strip: HBoxContainer
+var _siege_box: VBoxContainer
+var _core_bar: ProgressBar
+var _core_label: Label
+var _wave_label: Label
+var _intermission_label: Label
+var _scrap_label: Label
 
 
 func setup(player: Player, controller: MatchController) -> void:
@@ -81,6 +87,9 @@ func setup(player: Player, controller: MatchController) -> void:
 	_on_clock_tick(int(ceilf(controller.time_left)))
 	_refresh_score()
 	_on_weapon_changed(player.arsenal.current())
+
+	if controller.mode is ZombieSiegeMode:
+		_build_siege_ui(controller.mode as ZombieSiegeMode)
 
 
 func _process(delta: float) -> void:
@@ -680,3 +689,73 @@ func _show_banner(title: String, subtitle: String, hide_after: float) -> void:
 func _hide_banner() -> void:
 	_banner.text = ""
 	_banner_sub.text = ""
+
+
+func _build_siege_ui(siege: ZombieSiegeMode) -> void:
+	_team_strip.visible = false
+	_siege_box = VBoxContainer.new()
+	_siege_box.add_theme_constant_override("separation", 4)
+	_siege_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	_siege_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_siege_box)
+	UiKit.pin(_siege_box, Vector2(0.5, 0.0), Vector2(0, 96), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
+
+	var info_row := HBoxContainer.new()
+	info_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	info_row.add_theme_constant_override("separation", 16)
+	_siege_box.add_child(info_row)
+
+	_wave_label = UiKit.label("WAVE 1 / 5", 20, UiKit.CREAM, 6)
+	info_row.add_child(_wave_label)
+
+	_scrap_label = UiKit.label("🔧 100 SCRAP", 20, UiKit.LIME, 6)
+	info_row.add_child(_scrap_label)
+
+	var core_panel := PanelContainer.new()
+	core_panel.custom_minimum_size = Vector2(360, 26)
+	core_panel.add_theme_stylebox_override("panel", UiKit.panel_style(UiKit.NAVY_DARK, 0.9, 10, 2, UiKit.BLUE, 2))
+	_siege_box.add_child(core_panel)
+
+	_core_bar = ProgressBar.new()
+	_core_bar.min_value = 0.0
+	_core_bar.max_value = 1000.0
+	_core_bar.value = 1000.0
+	_core_bar.show_percentage = false
+	_core_bar.custom_minimum_size = Vector2(356, 22)
+	_core_bar.add_theme_stylebox_override("background", UiKit.panel_style(Color(0.05, 0.1, 0.2), 0.8, 8))
+	_core_bar.add_theme_stylebox_override("fill", UiKit.panel_style(UiKit.SKY, 1.0, 8))
+	core_panel.add_child(_core_bar)
+
+	_core_label = UiKit.label("BASE CORE: 1000 / 1000", 14, UiKit.CREAM, 4)
+	_core_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	core_panel.add_child(_core_label)
+
+	_intermission_label = UiKit.label("", 18, UiKit.ORANGE_HOT, 6)
+	_intermission_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_intermission_label.visible = false
+	_siege_box.add_child(_intermission_label)
+
+	if siege.base_core != null:
+		siege.base_core.health_changed.connect(func(curr: float, max_hp: float) -> void:
+			_core_bar.value = curr
+			_core_bar.max_value = max_hp
+			_core_label.text = "BASE CORE: %d / %d" % [int(ceilf(curr)), int(max_hp)]
+			var ratio := curr / max_hp
+			_core_bar.add_theme_stylebox_override("fill", UiKit.panel_style(
+					UiKit.SKY if ratio > 0.5 else (UiKit.ORANGE if ratio > 0.25 else Color(0.95, 0.22, 0.25)), 1.0, 8))
+		)
+
+	if siege.horde_director != null:
+		var hd := siege.horde_director
+		hd.wave_started.connect(func(wave_num: int, _total: int, wave_name: String) -> void:
+			_wave_label.text = "WAVE %d / 5 • %s" % [wave_num, wave_name]
+			_intermission_label.visible = false
+		)
+		hd.intermission_tick.connect(func(seconds_left: int) -> void:
+			_intermission_label.visible = true
+			_intermission_label.text = "FORTIFY & REPAIR! (%ds)" % seconds_left
+		)
+		hd.scrap_changed.connect(func(current_scrap: int) -> void:
+			_scrap_label.text = "🔧 %d SCRAP" % current_scrap
+		)
+		_scrap_label.text = "🔧 %d SCRAP" % hd.scrap

@@ -27,6 +27,7 @@ const MODE_PATHS := [
 	"res://resources/modes/duos.tres",
 	"res://resources/modes/blue_vs_orange.tres",
 	"res://resources/modes/zombies.tres",
+	"res://resources/modes/zombie_siege.tres",
 ]
 ## Indexed by GameSettings.bot_difficulty.
 const DIFFICULTY_PATHS := [
@@ -55,6 +56,8 @@ var hud: Hud
 var pause_menu: PauseMenu
 var podium: Podium
 var power_up: PowerUpPickup
+var base_core: BaseCore
+var horde_director: HordeDirector
 
 
 ## Loads a resource without ever crashing: returns null if the file is missing
@@ -200,6 +203,33 @@ func _ready() -> void:
 		if alpha_entry != null:
 			alpha_entry.team = ZombieMode.ZOMBIE_TEAM
 			alpha_entry.color = ZombieMode.ZOMBIE_COLOR
+
+	if mode is ZombieSiegeMode:
+		var siege := mode as ZombieSiegeMode
+		base_core = BaseCore.new()
+		base_core.name = "BaseCore"
+		var core_pos := arena.team_bases[0] if not arena.team_bases.is_empty() else Vector3(0.0, 0.0, 0.0)
+		base_core.position = core_pos
+		arena.add_child(base_core)
+		siege.base_core = base_core
+
+		var angles := [0.0, PI * 0.5, PI, PI * 1.5]
+		for a: float in angles:
+			var barricade := BaseBarricade.new()
+			var b_offset := Vector3(cos(a) * 4.8, 0.0, sin(a) * 4.8)
+			barricade.position = core_pos + b_offset
+			barricade.rotation.y = a + PI * 0.5
+			arena.add_child(barricade)
+			siege.barricades.append(barricade)
+
+		horde_director = HordeDirector.new()
+		horde_director.name = "HordeDirector"
+		add_child(horde_director)
+		horde_director.setup(arena, controller, base_core, siege.barricades, dart_pool, difficulty)
+		siege.horde_director = horde_director
+		horde_director.all_waves_cleared.connect(controller.end_match)
+		horde_director.defeat.connect(controller.end_match)
+		horde_director.start()
 
 	if mode.uses_power_up() and not arena.power_up_spots.is_empty():
 		_create_power_up(mode)

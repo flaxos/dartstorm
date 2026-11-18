@@ -208,3 +208,8 @@ func _is_better(a: ScoreEntry, b: ScoreEntry) -> bool:
 	if a.tags != b.tags:
 		return a.tags > b.tags
 	return a.outs < b.outs
+
+
+## Whether an actor who was tagged out should respawn on a timer.
+func should_respawn(_actor: Actor) -> bool:
+	return true

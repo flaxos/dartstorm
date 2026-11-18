@@ -35,7 +35,7 @@ const MIN_BOTS := 2
 const MAX_BOTS := 7
 
 ## Saved as numbers, so only ever add to the end.
-enum MatchMode { FREE_FOR_ALL, GUN_GAME, DUOS, TEAMS, ZOMBIES }
+enum MatchMode { FREE_FOR_ALL, GUN_GAME, DUOS, TEAMS, ZOMBIES, ZOMBIE_SIEGE }
 
 # --- Preferences ---
 var mouse_sensitivity: float = 1.0
@@ -61,6 +61,7 @@ var fullscreen: bool = false
 var player_name: String = ""
 var player_color: int = 0
 var player_hat: StringName = &"cap"
+var player_skin: StringName = &"default"
 
 # --- Match options (picked on the main menu) ---
 var match_mode: int = MatchMode.FREE_FOR_ALL
@@ -241,6 +242,8 @@ func load_settings() -> void:
 	player_color = clampi(int(file.get_value("player", "color", player_color)), 0, Cosmetics.COLORS.size() - 1)
 	var hat := StringName(str(file.get_value("player", "hat", player_hat)))
 	player_hat = hat if Cosmetics.has_hat(hat) else &"cap"
+	var skin := StringName(str(file.get_value("player", "skin", player_skin)))
+	player_skin = skin if Cosmetics.has_skin(skin) else &"default"
 	match_mode = clampi(int(file.get_value("match", "mode", match_mode)), 0, MatchMode.size() - 1)
 	bot_count = clampi(int(file.get_value("match", "bot_count", bot_count)), MIN_BOTS, MAX_BOTS)
 	bot_difficulty = clampi(int(file.get_value("match", "bot_difficulty", bot_difficulty)), 0, 2)
@@ -266,6 +269,7 @@ func save_settings() -> void:
 	file.set_value("player", "name", Cosmetics.sanitize_name(player_name))
 	file.set_value("player", "color", player_color)
 	file.set_value("player", "hat", String(player_hat))
+	file.set_value("player", "skin", String(player_skin))
 	file.set_value("match", "mode", match_mode)
 	file.set_value("match", "bot_count", bot_count)
 	file.set_value("match", "bot_difficulty", bot_difficulty)

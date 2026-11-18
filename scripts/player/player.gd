@@ -4,6 +4,7 @@ extends Actor
 ## the blaster held in view, and all the "feel" (recoil, bob, shake, sounds).
 
 signal shot_fired(state: WeaponState)
+signal aiming_changed(is_aiming: bool)
 
 const HEAD_HEIGHT := 1.62
 const MOUSE_RADIANS_PER_PIXEL := 0.0022
@@ -48,6 +49,7 @@ var _assist_query: PhysicsRayQueryParameters3D
 var storm_mode_announced: bool = false
 var _zombie_arms: Node3D
 var _zombie_swipe: float = 0.0
+var is_aiming_down_sights: bool = false
 
 
 func _ready() -> void:
@@ -91,9 +93,10 @@ func _exit_tree() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	var motion := event as InputEventMouseMotion
 	if motion != null and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		var scale_factor := MOUSE_RADIANS_PER_PIXEL * GameSettings.mouse_sensitivity
+		var zoom_ratio := camera.fov / maxf(GameSettings.fov, 1.0) if is_aiming_down_sights else 1.0
+		var scale_factor := MOUSE_RADIANS_PER_PIXEL * GameSettings.mouse_sensitivity * zoom_ratio
 		_look(-motion.relative.x * scale_factor, -motion.relative.y * scale_factor)
-		_sway_vel += Vector2(-motion.relative.x, motion.relative.y) * 0.0012
+		_sway_vel += Vector2(-motion.relative.x, motion.relative.y) * (0.0012 * zoom_ratio)
 		return
 	# Clicking back into the window after alt-tab grabs the mouse again
 	# instead of firing a surprise shot.
@@ -146,13 +149,28 @@ func _physics_process(delta: float) -> void:
 				fire_held = false
 			else:
 				_fire_blocked_until_release = false
+
+		var current_w := arsenal.current()
+		var wants_aim := Input.is_action_pressed(&"aim_down_sights") and not is_zombie and not _sprinting and current_w != null and current_w.data.zoom_fov > 0.0
+		if wants_aim != is_aiming_down_sights:
+			is_aiming_down_sights = wants_aim
+			aiming_changed.emit(is_aiming_down_sights)
+
 		if is_zombie:
+			if is_aiming_down_sights:
+				is_aiming_down_sights = false
+				aiming_changed.emit(false)
 			arsenal.set_trigger(false)
 			if Input.is_action_just_pressed(&"fire") and not _fire_blocked_until_release:
 				_perform_zombie_swipe()
+				if wish.length_squared() > 0.05:
+					lunge(wish.normalized(), 6.0)
 		else:
 			arsenal.set_trigger(fire_held)
 	else:
+		if is_aiming_down_sights:
+			is_aiming_down_sights = false
+			aiming_changed.emit(false)
 		arsenal.set_trigger(false)
 
 	_coyote_left = COYOTE_TIME if is_on_floor() else maxf(_coyote_left - delta, 0.0)
@@ -176,8 +194,13 @@ func _process(delta: float) -> void:
 		sin(_time * 47.0) * 0.012 * shake + _punch * shake_setting,
 		sin(_time * 39.0 + 1.3) * 0.012 * shake,
 		sin(_time * 31.0 + 2.1) * 0.01 * shake)
-	var fov_target := GameSettings.fov + (SPRINT_FOV_BOOST if _sprinting else 0.0)
-	camera.fov = lerpf(camera.fov, fov_target, minf(8.0 * delta, 1.0))
+	var target_base_fov := GameSettings.fov
+	var current_w := arsenal.current()
+	if is_aiming_down_sights and current_w != null and current_w.data.zoom_fov > 0.0:
+		target_base_fov = current_w.data.zoom_fov
+	var fov_target := target_base_fov + (SPRINT_FOV_BOOST if _sprinting and not is_aiming_down_sights else 0.0)
+	var fov_speed := 16.0 if is_aiming_down_sights else 8.0
+	camera.fov = lerpf(camera.fov, fov_target, minf(fov_speed * delta, 1.0))
 
 	# Blaster in view: spring-damper sway with looking, bob while walking,
 	# landing dip, sprint canting, and kick on each shot.
@@ -233,7 +256,7 @@ func _process(delta: float) -> void:
 		var swipe_down := -sin(_zombie_swipe * PI) * 0.08
 		_zombie_arms.position = Vector3(0.0, swipe_down, -swipe_forward)
 		_zombie_arms.rotation = Vector3(-sin(_zombie_swipe * PI) * 0.35, 0.0, 0.0)
-	_view_root.visible = alive
+	_view_root.visible = alive and not (is_aiming_down_sights and camera.fov < GameSettings.fov - 10.0)
 	_view_root.position = _view_offset + bob + idle + sprint_offset + rattle + Vector3(_sway_pos.x, -_sway_pos.y - 0.35 * _swap - _dip_pos, _recoil * 0.07)
 	_view_root.rotation = Vector3(_recoil * 0.12 - _swap * 0.6 + sprint_rot.x - _dip_pos * 1.2, VIEW_YAW - _sway_pos.x * 0.5 + sprint_rot.y, sprint_rot.z - _sway_pos.x * 0.3)
 
@@ -282,6 +305,8 @@ func get_aim_direction(origin: Vector3) -> Vector3:
 func pad_look_step(stick: Vector2, delta: float) -> Vector2:
 	var curved := stick * stick.length()
 	var speed := PAD_LOOK_SPEED * GameSettings.controller_look_speed
+	if is_aiming_down_sights:
+		speed *= (camera.fov / maxf(GameSettings.fov, 1.0))
 	if GameSettings.aim_assist and crosshair_on_rival():
 		speed *= AIM_ASSIST_SLOWDOWN
 	return Vector2(-curved.x, -curved.y) * speed * delta
@@ -310,11 +335,17 @@ func respawn(at: Transform3D) -> void:
 	super.respawn(at)
 	_pitch = 0.0
 	head.rotation.x = 0.0
+	if is_aiming_down_sights:
+		is_aiming_down_sights = false
+		aiming_changed.emit(false)
 	if is_zombie:
 		_on_weapon_changed(null)
 
 
 func _on_weapon_changed(state: WeaponState) -> void:
+	if is_aiming_down_sights:
+		is_aiming_down_sights = false
+		aiming_changed.emit(false)
 	if _view_model != null:
 		_view_model.queue_free()
 		_view_model = null
@@ -360,6 +391,9 @@ func _on_hit_received(_attacker: Actor) -> void:
 
 
 func _tag_out(attacker: Actor, weapon: WeaponData, ricochet: bool) -> void:
+	if is_aiming_down_sights:
+		is_aiming_down_sights = false
+		aiming_changed.emit(false)
 	super._tag_out(attacker, weapon, ricochet)
 	Sfx.play(&"tagged")
 	GameSettings.vibrate(0.8, 0.8, 0.4)

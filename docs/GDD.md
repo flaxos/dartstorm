@@ -4,8 +4,8 @@
 
 | | |
 |---|---|
-| **Game version** | 0.7.0 (Zombie Siege & Blaster Skins) |
-| **Status** | v0.1.0 **passed UAT** on 2026-11-15; v0.1.1–v0.7.0 validated and awaiting UAT with young players (see [UAT.md](UAT.md)) |
+| **Game version** | 0.7.1 (Kid Feedback: Calibration, Sniper Buff, and Zombie Pacing) |
+| **Status** | v0.1.0 **passed UAT** on 2026-11-15; v0.1.1–v0.7.1 validated and awaiting UAT with young players (see [UAT.md](UAT.md)) |
 | **Platform** | Linux first (the target machine runs Linux). Windows is deferred until needed. |
 | **Authority** | This GDD is the authoritative description of the game. Numbers mirror the `.tres` files in `resources/`. If they ever disagree, the `.tres` file is what the game uses, so fix this doc. |
 | **Source vision** | [CONCEPT_BRIEF.md](CONCEPT_BRIEF.md), the original brief, archived verbatim (personal details redacted). §1 summarises it and §2 tracks it. §1.9 records the young players' own design sketch. |
@@ -99,6 +99,14 @@ The photo isn't kept in the repo (it has their names on it). This is what it ask
 | **Phone controls** (LEFT/RIGHT sticks, SHOOT button) | ✅ by controller | The PC version does this with a gamepad (§3.17) |
 | **Zombie Siege (Base Defense)** | ✅ v0.7.0 | Defend the Base Core & barricades against 5 zombie waves and the Titan Boss (§3.24) |
 | **Blaster Skins** | ✅ v0.7.0 | Anti-slop 2D vector patterns, tactile PBR finishes, 8 collectible skins in Coin Shop (§10.2) |
+| **Kid Feedback: Game Pacing** | ✅ v0.7.1 | Game speed calibration slider (0.70–1.10, default 0.90) and softened base actor speeds |
+| **Fix "Yeet" Map Glitches** | ✅ v0.7.1 | Fixed ice slick compounding velocity runaway, capped max horizontal velocity (24.0 m/s), raised arena walls |
+| **Sniper Buff & Scope** | ✅ v0.7.1 | Longshot rifle ADS zoom (35° FOV), scoped crosshair overlay with mil-dots, tag power buffed to 85 |
+| **Zombie Pacing & Lunge** | ✅ v0.7.1 | Calibrated zombie speeds so humans can kite; added telegraphed lunge burst (+7.5 m/s) on 3.5s cooldown |
+| **Zombie Siege Rebalance** | ✅ v0.7.1 | BaseCore 1250 HP, Barricade 350 HP, 25s intermission, rebalanced wave batches, boosted scrap payouts |
+| **Wishlist: Floor is Lava mode** | ⏳ Phase 7 | Rising lava level hazard mode where low ground burns/tags players |
+| **Wishlist: Foam Grenade pickup** | ⏳ Phase 7 | Throwable bouncy foam canister with area-of-effect confetti burst |
+| **Wishlist: Elemental Weather** | ⏳ Phase 7 | Dynamic map events: thunder storms, flash freezing blizzards, lava seepage |
 
 ## 2. Brief traceability
 
@@ -514,27 +522,27 @@ The main menu is the players' own drawing (§1.9), built in 3D:
   - Elemental darts infuse and amplify the wind stream for 5.0s (Fire embers, Water mist, Ice blizzard, Lightning plasma), applying those statuses to passing players.
   - Steam combos triggered near vents billow into massive 60-particle amplified steam clouds!
 
-### 3.24 Zombie Siege Mode: Base Defense *(v0.7.0)*
+### 3.24 Zombie Siege Mode: Base Defense *(v0.7.0, rebalanced v0.7.1)*
 - **Concept:** Co-op/solo survival where players fortify and defend the central **Base Core** against 5 escalating waves of foam zombie hordes.
 - **Base Core (`BaseCore`):**
-  - High-durability objective (1000 HP) located at the yard centre with pulsing core rings and a 3D rotating health billboard.
-  - Emits flashing yellow/orange warnings under 600 HP, and red siren strobe alarm lighting with klaxons under 350 HP.
+  - High-durability objective (1250 HP, buffed in v0.7.1) located at the yard centre with pulsing core rings and a 3D rotating health billboard.
+  - Emits flashing yellow/orange warnings under 750 HP, and red siren strobe alarm lighting with klaxons under 400 HP.
   - Can be repaired by defenders during intermissions (+250 HP per 100 scrap). If destroyed, the siege fails ("BASE CORE DESTROYED — MATCH OVER!").
 - **Destructible Barricades (`BaseBarricade`):**
-  - 4 perimeter foam/wood barriers (250 HP each) blocking choke points around the base.
+  - 4 perimeter foam/wood barriers (350 HP each, buffed in v0.7.1) blocking choke points around the base.
   - Solid collision blocks zombie pathing; flashes yellow/red as damage accumulates. Disables collision when broken.
   - Can be rebuilt during intermissions (75 scrap) to restore full integrity.
 - **Wave Director & Escalation (`HordeDirector`):**
   - 5 escalating waves:
-    - Wave 1: 10 Standard Zombies (introductory swarm).
-    - Wave 2: 15 Zombies including Fast Runners (sprint speed 11.2 m/s).
-    - Wave 3: 20 Zombies including Armored Brutes (220 HP, 1.35x scale, heavy damage).
-    - Wave 4: 25 Zombies mixed swarm with aggressive perimeter flanking.
-    - Wave 5: 30 Zombies led by the **Mega Titan Boss** (650 HP, 1.85x scale, massive foam shockwaves).
+    - Wave 1: 6 Standard Zombies (gentle introductory wave).
+    - Wave 2: 10 Fast Runners (sprint speed 9.2 m/s).
+    - Wave 3: 14 Zombies (12 runners, 2 heavy brutes at 300 HP, 6.8 m/s).
+    - Wave 4: 18 Mixed Swarm (14 runners, 4 heavy brutes).
+    - Wave 5: 17 Zombies (16 runners + 1 **Mega Titan Boss** with 800 HP, 2.2x scale, 70 melee damage).
   - Spawning: Controlled perimeter batches of 3 zombies every 2.2s to prevent swarming lag while maintaining relentless horde pressure.
-  - Intermission: 20s fortification phase between waves where all ammo buckets instantly refill, defenders collect scrap, and repairs can be executed.
-- **Economy:** Zombie tags drop scrap (+15 standard, +25 runner, +40 brute, +100 boss).
-- **Zombies AI Targeting:** Zombies prioritize hitting the Base Core and Barricades when within range, but aggressively swarm survivors who venture close (< 6m).
+  - Intermission: 25s fortification phase between waves where all ammo buckets refill, defenders collect scrap (+75 wave bonus), and repairs/rebuilds occur.
+- **Economy:** Zombie tags drop scrap (+20 standard, +35 runner, +60 brute, +150 boss, +75 wave clear bonus).
+- **Zombies AI Targeting & Lunge:** Zombies prioritize hitting the Base Core and Barricades when in range, but swarm nearby survivors (< 6m). Base zombie sprint is 8.4 m/s (runner 9.2 m/s) so sprinting defenders (9.6 m/s) can kite, offset with a sudden telegraphed lunge burst (+7.5 m/s forward impulse) when within 2.5–4.2m with line of sight on a 3.5s cooldown.
 
 ---
 
@@ -549,9 +557,9 @@ The main menu is the players' own drawing (§1.9), built in 3D:
 | Double Trouble | Semi | 3.2/s | 2 | 1.6° | 8 / 48 (32) | 1.0 s | 100% | Two at once |
 | Foam Hammer | Semi | 1.5/s | 8 | 6.5° | 4 / 28 (20) | 1.6 s | 100% | Point-blank blast |
 | Ricochet Ranger | Semi | 3/s | 1 | 0.5° | 6 / 36 (24) | 1.2 s | 100% | Bounces off everything |
-| Longshot | Semi | 1.1/s | 1 | 0.1° | 4 / 24 (16) | 1.8 s | 100% | Fast, flat, two-hit tags |
+| Longshot | Semi | 1.1/s | 1 | 0.1° | 4 / 24 (16) | 1.8 s | 100% | ADS sniper scope (35° FOV), 85 tag power |
 
-Keys `1 2 3`, the mouse wheel or `Q`/`E` (controller: Y, LB, RB) switch blasters (0.3 s swap). In free-for-all you carry the
+Keys `1 2 3`, the mouse wheel or `Q`/`E` (controller: Y, LB, RB) switch blasters (0.3 s swap). Right mouse button / controller Left Trigger aims down sights (ADS) with sniper scope on Longshot. In free-for-all you carry the
 Popper, the Sprayer and the Chainstorm, unless power-up mode is on (§3.19).
 
 ### 4.2 Spotlight: FLAX'S CHAINSTORM

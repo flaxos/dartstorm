@@ -20,14 +20,14 @@ enum State { INACTIVE, COUNTDOWN, SPAWNING, COMBAT, INTERMISSION, VICTORY, DEFEA
 const BOT_SCENE := preload("res://scenes/enemies/bot.tscn")
 const BATCH_INTERVAL := 2.2
 const BATCH_SIZE := 3
-const INTERMISSION_DURATION := 20.0
+const INTERMISSION_DURATION := 25.0
 
 const WAVES: Array[Dictionary] = [
-	{"wave": 1, "name": "THE OUTBREAK", "runners": 10, "brutes": 0, "boss": false},
-	{"wave": 2, "name": "TWIN PINCER", "runners": 18, "brutes": 0, "boss": false},
-	{"wave": 3, "name": "JUMPERS & SPITTERS", "runners": 26, "brutes": 0, "boss": false},
-	{"wave": 4, "name": "HEAVY FOAM BRUTES", "runners": 26, "brutes": 6, "boss": false},
-	{"wave": 5, "name": "THE MEGA TITAN", "runners": 30, "brutes": 0, "boss": true},
+	{"wave": 1, "name": "THE OUTBREAK", "runners": 6, "brutes": 0, "boss": false},
+	{"wave": 2, "name": "TWIN PINCER", "runners": 10, "brutes": 0, "boss": false},
+	{"wave": 3, "name": "JUMPERS & SPITTERS", "runners": 12, "brutes": 2, "boss": false},
+	{"wave": 4, "name": "HEAVY FOAM BRUTES", "runners": 14, "brutes": 4, "boss": false},
+	{"wave": 5, "name": "THE MEGA TITAN", "runners": 16, "brutes": 0, "boss": true},
 ]
 
 var current_wave: int = 0
@@ -180,9 +180,11 @@ func _on_zombie_tagged_out(victim: Actor, attacker: Actor, _weapon: WeaponData, 
 	remaining_enemies = maxi(remaining_enemies - 1, 0)
 
 	# Award scrap based on archetype
-	var scrap_award := 15
-	if bot.archetype == &"brute":
+	var scrap_award := 20
+	if bot.archetype == &"runner":
 		scrap_award = 35
+	elif bot.archetype == &"brute":
+		scrap_award = 60
 	elif bot.archetype == &"titan_boss":
 		scrap_award = 150
 
@@ -221,10 +223,10 @@ func _start_intermission() -> void:
 				b._refresh()
 
 	# Award wave bonus scrap
-	add_scrap(50)
+	add_scrap(75)
 
 	if controller != null:
-		controller.announce(null, "WAVE %d CLEARED! INTERMISSION (20s)" % current_wave,
+		controller.announce(null, "WAVE %d CLEARED! INTERMISSION (25s)" % current_wave,
 				UiKit.LIME, &"announce")
 
 

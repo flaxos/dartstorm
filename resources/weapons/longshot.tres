@@ -19,6 +19,7 @@ reserve_start = 16
 reload_time = 1.8
 recoil_kick = 2.2
 camera_shake = 0.28
+zoom_fov = 35.0
 sound = &"zip"
 sound_pitch = 1.0
 model_style = 5

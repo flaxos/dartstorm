@@ -31,6 +31,9 @@ var base_core: BaseCore = null
 var barricades: Array[BaseBarricade] = []
 var melee_damage: float = 15.0
 var _melee_cooldown: float = 0.0
+var _lunge_cooldown: float = 0.0
+var _lunge_telegraph_left: float = 0.0
+var _lunge_dir: Vector3 = Vector3.ZERO
 
 var _nav: NavigationAgent3D
 var _model: CharacterModel
@@ -103,9 +106,27 @@ func _physics_process(delta: float) -> void:
 		_update_trigger(delta)
 		wish = _choose_direction(delta)
 		_melee_cooldown = maxf(_melee_cooldown - delta, 0.0)
-		if is_zombie and _target != null and is_instance_valid(_target) and _target.alive:
-			if global_position.distance_to(_target.global_position) < 1.4:
-				try_zombie_infect(_target)
+		_lunge_cooldown = maxf(_lunge_cooldown - delta, 0.0)
+		if _lunge_telegraph_left > 0.0:
+			_lunge_telegraph_left = maxf(_lunge_telegraph_left - delta, 0.0)
+			_model.position.y = -0.2
+			wish = Vector3.ZERO
+			if _lunge_telegraph_left <= 0.0:
+				_model.position.y = 0.0
+				lunge(_lunge_dir, 7.5)
+				Sfx.play(&"whoosh", 0.9, -2.0)
+		else:
+			_model.position.y = 0.0
+			if is_zombie and _target != null and is_instance_valid(_target) and _target.alive:
+				var to_target := _target.global_position - global_position
+				var dist := to_target.length()
+				if dist < 1.4:
+					try_zombie_infect(_target)
+				elif dist >= 2.5 and dist <= 4.2 and _lunge_cooldown <= 0.0 and is_on_floor() and _has_line_of_sight(_target):
+					_lunge_cooldown = 3.5 + randf() * 1.5
+					_lunge_telegraph_left = 0.25
+					_lunge_dir = Vector3(to_target.x, 0.0, to_target.z).normalized()
+					Sfx.play(&"zombie_moan", 1.3, -3.0)
 		if is_zombie and _melee_cooldown <= 0.0:
 			var attacked := false
 			for b in barricades:
@@ -147,8 +168,8 @@ func apply_archetype(p_archetype: StringName) -> void:
 		&"runner":
 			scale = Vector3.ONE
 			hitbox_radius = 0.6
-			sprint_speed = 11.2
-			walk_speed = 7.5
+			sprint_speed = 9.2
+			walk_speed = 6.2
 			melee_damage = 15.0
 			tag_meter_max = 100.0
 			tag_meter = 0.0
@@ -156,8 +177,8 @@ func apply_archetype(p_archetype: StringName) -> void:
 		&"brute":
 			scale = Vector3.ONE * 1.35
 			hitbox_radius = 0.85
-			sprint_speed = 8.0
-			walk_speed = 5.5
+			sprint_speed = 6.8
+			walk_speed = 4.8
 			melee_damage = 35.0
 			tag_meter_max = 300.0
 			tag_meter = 0.0
@@ -165,12 +186,20 @@ func apply_archetype(p_archetype: StringName) -> void:
 		&"titan_boss":
 			scale = Vector3.ONE * 2.2
 			hitbox_radius = 1.4
-			sprint_speed = 6.5
-			walk_speed = 4.5
+			sprint_speed = 5.5
+			walk_speed = 3.8
 			melee_damage = 70.0
 			tag_meter_max = 800.0
 			tag_meter = 0.0
 			meter_changed.emit(tag_meter, tag_meter_max)
+
+
+func _has_line_of_sight(target_actor: Actor) -> bool:
+	if target_actor == null or not is_instance_valid(target_actor):
+		return false
+	_sight_query.from = global_position + Vector3.UP * EYE_HEIGHT
+	_sight_query.to = target_actor.global_position + Vector3.UP * 1.1
+	return get_world_3d().direct_space_state.intersect_ray(_sight_query).is_empty()
 
 
 # --- Deciding ---------------------------------------------------------------

@@ -44,6 +44,8 @@ func _build() -> void:
 			func(on: bool) -> void: GameSettings.aim_assist = on)
 	_toggle(controls, "Controller rumble", GameSettings.vibration,
 			func(on: bool) -> void: GameSettings.vibration = on)
+	_slider(controls, "Game speed", 0.70, 1.10, 0.05, GameSettings.game_speed,
+			func(value: float) -> void: GameSettings.game_speed = value)
 	var video := _column(columns, "VIDEO & SOUND")
 	_slider(video, "Field of view", 60.0, 110.0, 1.0, GameSettings.fov,
 			func(value: float) -> void: GameSettings.fov = value)

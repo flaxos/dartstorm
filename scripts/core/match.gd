@@ -133,6 +133,7 @@ static func resolve_difficulty(index: int) -> BotDifficulty:
 
 
 func _ready() -> void:
+	Engine.time_scale = GameSettings.game_speed
 	# A private copy, so per-match switches never leak into the shared .tres.
 	var mode := resolve_mode(GameSettings.match_mode).duplicate() as GameMode
 	var demo_powerup := OS.get_cmdline_user_args().has("--powerup")  # Screenshot runs only.
@@ -345,3 +346,8 @@ func _create_power_up(mode: GameMode) -> void:
 		var prize := mode.power_weapon.display_name.to_upper()
 		var text := "YOU GRABBED %s!" % prize if actor.is_human else "%s GRABBED %s!" % [actor.display_name.to_upper(), prize]
 		controller.announce(entry, text, MatchController.color_for(entry), &"announce"))
+
+
+func _exit_tree() -> void:
+	Engine.time_scale = 1.0
+

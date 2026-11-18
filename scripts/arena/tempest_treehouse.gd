@@ -80,7 +80,7 @@ func _build_ground_and_trees() -> void:
 	ArenaKit.deco_box(decor, Vector3(400.0, 0.2, 400.0), Vector3(0.0, -0.16, 0.0), Color(0.28, 0.58, 0.24))
 
 	# Boundary walls
-	var wall_h := 14.0
+	var wall_h := 22.0
 	var thick := 0.6
 	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, wall_h, thick), Vector3(0.0, wall_h * 0.5, -HALF_Z - thick * 0.5), FENCE)
 	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, wall_h, thick), Vector3(0.0, wall_h * 0.5, HALF_Z + thick * 0.5), FENCE)

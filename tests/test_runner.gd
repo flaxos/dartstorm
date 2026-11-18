@@ -73,6 +73,8 @@ func _ready() -> void:
 	await _test_base_core_and_barricades()
 	await _test_zombie_siege_and_director()
 	await _test_zombie_siege_match()
+	# Feedback, Pacing, Sniper ADS & Zombie Lunge (v0.7.1)
+	await _test_kid_feedback_calibration_and_sniper()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -1608,7 +1610,7 @@ func _test_zombies_mode() -> void:
 	check(zombie_actor.is_zombie, "set_zombie sets is_zombie to true")
 	check(zombie_actor.team_id == ZombieMode.ZOMBIE_TEAM, "set_zombie sets team_id to 1")
 	check(not zombie_actor.arsenal.enabled, "zombie actor has arsenal disabled")
-	check(zombie_actor.sprint_speed > 11.0, "zombie actor gets increased sprint speed (%.1f)" % zombie_actor.sprint_speed)
+	check(zombie_actor.sprint_speed >= 8.4, "zombie actor gets calibrated sprint speed (%.1f)" % zombie_actor.sprint_speed)
 
 	# Zombie touches survivor -> survivor infected & tagged out
 	var infected := zombie_actor.try_zombie_infect(survivor_actor)
@@ -1950,22 +1952,22 @@ func _test_base_core_and_barricades() -> void:
 	add_child(core)
 	await physics_frames(2)
 
-	check(core.health == 1000.0, "BaseCore initializes with 1000 HP")
+	check(core.health == 1250.0, "BaseCore initializes with 1250 HP")
 	check(not core.is_destroyed, "BaseCore is not destroyed at start")
 
 	var core_events := {"damaged": 0.0, "destroyed": false}
 	core.damaged.connect(func(amount: float, _attacker: Node) -> void: core_events["damaged"] += amount)
 	core.damage(250.0)
-	check(core.health == 750.0, "BaseCore takes 250 damage -> 750 HP remaining")
+	check(core.health == 1000.0, "BaseCore takes 250 damage -> 1000 HP remaining")
 	check(float(core_events["damaged"]) == 250.0, "BaseCore damaged signal emitted with correct amount")
 
 	core.repair(150.0)
-	check(core.health == 900.0, "BaseCore repair restores 150 HP -> 900 HP")
+	check(core.health == 1150.0, "BaseCore repair restores 150 HP -> 1150 HP")
 	core.repair(500.0)
-	check(core.health == 1000.0, "BaseCore repair clamps to max 1000 HP")
+	check(core.health == 1250.0, "BaseCore repair clamps to max 1250 HP")
 
 	core.destroyed.connect(func() -> void: core_events["destroyed"] = true)
-	core.damage(1000.0)
+	core.damage(1250.0)
 	check(core.health == 0.0, "BaseCore HP reduced to 0")
 	check(core.is_destroyed, "BaseCore is_destroyed is true")
 	check(bool(core_events["destroyed"]), "BaseCore destroyed signal emitted")
@@ -1976,22 +1978,22 @@ func _test_base_core_and_barricades() -> void:
 	add_child(barricade)
 	await physics_frames(2)
 
-	check(barricade.health == 250.0, "BaseBarricade initializes with 250 HP")
+	check(barricade.health == 350.0, "BaseBarricade initializes with 350 HP")
 	check(not barricade.is_broken, "BaseBarricade is not broken at start")
 
 	barricade.damage(100.0)
-	check(barricade.health == 150.0, "BaseBarricade takes 100 damage -> 150 HP remaining")
+	check(barricade.health == 250.0, "BaseBarricade takes 100 damage -> 250 HP remaining")
 
 	var b_events := {"broken": false, "repaired": false}
 	barricade.broken.connect(func() -> void: b_events["broken"] = true)
-	barricade.damage(150.0)
+	barricade.damage(250.0)
 	check(barricade.health == 0.0, "BaseBarricade HP reduced to 0")
 	check(barricade.is_broken, "BaseBarricade is_broken is true")
 	check(bool(b_events["broken"]), "BaseBarricade broken signal emitted")
 
 	barricade.repaired.connect(func() -> void: b_events["repaired"] = true)
 	barricade.rebuild()
-	check(barricade.health == 250.0, "BaseBarricade rebuilt to 250 HP")
+	check(barricade.health == 350.0, "BaseBarricade rebuilt to 350 HP")
 	check(not barricade.is_broken, "BaseBarricade is_broken is false after rebuild")
 	check(bool(b_events["repaired"]), "BaseBarricade repaired signal emitted")
 	barricade.queue_free()
@@ -2016,8 +2018,9 @@ func _test_zombie_siege_and_director() -> void:
 
 	# HordeDirector wave configuration & pacing
 	check(HordeDirector.WAVES.size() == 5, "HordeDirector defines 5 escalating waves")
-	check(HordeDirector.WAVES[0]["runners"] == 10, "Wave 1 spawns 10 Runners")
-	check(HordeDirector.WAVES[3]["brutes"] == 6, "Wave 4 spawns 6 Brutes")
+	check(HordeDirector.INTERMISSION_DURATION == 25.0, "HordeDirector intermission duration is 25 seconds")
+	check(HordeDirector.WAVES[0]["runners"] == 6, "Wave 1 spawns 6 Runners")
+	check(HordeDirector.WAVES[3]["brutes"] == 4, "Wave 4 spawns 4 Brutes")
 	check(HordeDirector.WAVES[4]["boss"] == true, "Wave 5 spawns Mega Titan Boss")
 
 	var hd := HordeDirector.new()
@@ -2033,7 +2036,7 @@ func _test_zombie_siege_and_director() -> void:
 	hd.start()
 	check(hd.current_wave == 1, "HordeDirector starts at wave 1")
 	check(hd.scrap == 100, "HordeDirector starts with 100 starting scrap")
-	check(hd.remaining_enemies == 10, "Wave 1 has 10 remaining enemies")
+	check(hd.remaining_enemies == 6, "Wave 1 has 6 remaining enemies")
 
 	# Test scrap operations
 	hd.add_scrap(50)
@@ -2047,13 +2050,13 @@ func _test_zombie_siege_and_director() -> void:
 	core.damage(300.0)
 	hd.add_scrap(100)
 	var repair_ok := hd.repair_base_core(100, 250.0)
-	check(repair_ok and core.health == 950.0, "repair_base_core spends scrap and restores core HP")
+	check(repair_ok and core.health == 1200.0, "repair_base_core spends scrap and restores core HP")
 
 	# Test barricade rebuild via scrap
-	barricade.damage(250.0)
+	barricade.damage(350.0)
 	check(barricade.is_broken, "barricade is broken")
 	var rebuild_ok := hd.rebuild_barricade(barricade, 75)
-	check(rebuild_ok and not barricade.is_broken and barricade.health == 250.0, "rebuild_barricade restores broken barricade")
+	check(rebuild_ok and not barricade.is_broken and barricade.health == 350.0, "rebuild_barricade restores broken barricade")
 
 	# Test bot archetypes
 	var bot := Bot.new()
@@ -2061,15 +2064,16 @@ func _test_zombie_siege_and_director() -> void:
 	await physics_frames(1)
 
 	bot.apply_archetype(&"runner")
-	check(bot.tag_meter_max == 100.0 and bot.melee_damage == 15.0, "runner archetype has 100 HP and 15 melee damage")
+	check(bot.tag_meter_max == 100.0 and bot.melee_damage == 15.0 and bot.sprint_speed == 9.2,
+			"runner archetype has 100 HP, 15 melee damage, 9.2 sprint speed")
 
 	bot.apply_archetype(&"brute")
-	check(bot.tag_meter_max == 300.0 and bot.melee_damage == 35.0 and bot.scale.x > 1.3,
-			"brute archetype has 300 HP, 35 melee damage, and 1.35x scale")
+	check(bot.tag_meter_max == 300.0 and bot.melee_damage == 35.0 and bot.sprint_speed == 6.8 and bot.scale.x > 1.3,
+			"brute archetype has 300 HP, 35 melee damage, 6.8 sprint speed, and 1.35x scale")
 
 	bot.apply_archetype(&"titan_boss")
-	check(bot.tag_meter_max == 800.0 and bot.melee_damage == 70.0 and bot.scale.x > 2.0,
-			"titan_boss archetype has 800 HP, 70 melee damage, and 2.2x scale")
+	check(bot.tag_meter_max == 800.0 and bot.melee_damage == 70.0 and bot.sprint_speed == 5.5 and bot.scale.x > 2.0,
+			"titan_boss archetype has 800 HP, 70 melee damage, 5.5 sprint speed, and 2.2x scale")
 
 	bot.queue_free()
 	barricade.queue_free()
@@ -2089,14 +2093,14 @@ func _test_zombie_siege_match() -> void:
 	await physics_frames(10)
 
 	check(match_scene.base_core != null, "MatchScene instantiated BaseCore")
-	check(match_scene.base_core.health == 1000.0, "BaseCore has full 1000 HP")
+	check(match_scene.base_core.health == 1250.0, "BaseCore has full 1250 HP")
 	check(match_scene.horde_director != null, "MatchScene instantiated HordeDirector")
 	check(match_scene.horde_director.current_wave == 1, "HordeDirector started Wave 1")
 	check(match_scene.horde_director.barricades.size() == 4, "MatchScene deployed 4 perimeter barricades")
 
 	# Check HUD integration
 	check(match_scene.hud._core_bar != null, "HUD instantiated BaseCore progress bar")
-	check(match_scene.hud._core_bar.value == 1000.0, "HUD core bar shows 1000 HP")
+	check(match_scene.hud._core_bar.value == 1250.0, "HUD core bar shows 1250 HP")
 	check(match_scene.hud._wave_label != null, "HUD instantiated wave label")
 	check(match_scene.hud._wave_label.text.contains("WAVE 1"), "HUD wave label displays WAVE 1")
 	check(match_scene.hud._scrap_label != null, "HUD instantiated scrap label")
@@ -2104,11 +2108,87 @@ func _test_zombie_siege_match() -> void:
 	# Test BaseCore damage reflects in HUD
 	match_scene.base_core.damage(100.0)
 	await physics_frames(2)
-	check(match_scene.hud._core_bar.value == 900.0, "BaseCore damage updates HUD progress bar to 900")
+	check(match_scene.hud._core_bar.value == 1150.0, "BaseCore damage updates HUD progress bar to 1150")
 
 	# Clean up match scene
 	match_scene.queue_free()
 	GameSettings.match_mode = GameSettings.MatchMode.FREE_FOR_ALL
 	await physics_frames(2)
+
+
+func _test_kid_feedback_calibration_and_sniper() -> void:
+	section("Kid Feedback: Game Pacing, Physics Safety, Sniper ADS, and Zombie Lunge (v0.7.1)")
+
+	# 1. GameSettings game_speed calibration
+	var original_speed := GameSettings.game_speed
+	GameSettings.game_speed = 0.90
+	check(is_equal_approx(GameSettings.game_speed, 0.90), "GameSettings.game_speed defaults to calibrated 0.90")
+	GameSettings.game_speed = 0.50
+	check(is_equal_approx(GameSettings.game_speed, 0.70), "GameSettings.game_speed clamps lower bound to 0.70")
+	GameSettings.game_speed = 1.50
+	check(is_equal_approx(GameSettings.game_speed, 1.10), "GameSettings.game_speed clamps upper bound to 1.10")
+	GameSettings.game_speed = original_speed
+
+	# 2. Actor maximum horizontal speed ceiling (yeet glitch prevention)
+	check(Actor.MAX_HORIZONTAL_SPEED == 24.0, "Actor MAX_HORIZONTAL_SPEED constant is 24.0 m/s")
+	var dummy_actor := Actor.new()
+	add_child(dummy_actor)
+	await physics_frames(1)
+	dummy_actor.velocity = Vector3(50.0, 0.0, 50.0)
+	dummy_actor.move_actor(Vector3.ZERO, false, false, 0.016)
+	var horiz_vel := Vector2(dummy_actor.velocity.x, dummy_actor.velocity.z).length()
+	check(horiz_vel <= Actor.MAX_HORIZONTAL_SPEED + 0.01, "Actor horizontal velocity is clamped within MAX_HORIZONTAL_SPEED")
+
+	# 3. IceSlick boost ceiling and throttling
+	var slick := IceSlick.new()
+	slick.boost_speed = 12.0
+	slick.slide_direction = Vector3.FORWARD
+	dummy_actor.velocity = Vector3.ZERO
+	slick._boost_actor(dummy_actor)
+	check(dummy_actor.velocity.z < 0.0, "IceSlick imparts forward boost to actor")
+	# Instant subsequent boost on same actor is throttled by cooldown
+	var vel_before := dummy_actor.velocity
+	slick._boost_actor(dummy_actor)
+	check(dummy_actor.velocity == vel_before, "IceSlick throttles repetitive boost spam with cooldown")
+	slick.free()
+
+	# 4. Longshot Rifle ADS zoom and damage buff
+	var longshot := load("res://resources/weapons/longshot.tres") as WeaponData
+	check(longshot != null, "longshot.tres loaded successfully")
+	check(longshot.zoom_fov == 35.0, "Longshot has zoom_fov configured to 35.0 degrees")
+	var long_dart := load("res://resources/darts/long_dart.tres") as DartData
+	check(long_dart != null, "long_dart.tres loaded successfully")
+	check(long_dart.tag_power == 85.0, "Long dart tag power buffed to 85.0")
+
+	# 5. Player ADS state & Crosshair scoping
+	var player := Player.new()
+	add_child(player)
+	await physics_frames(2)
+	player.arsenal.loadout = [longshot]
+	player.arsenal.equip_all()
+	check(player.arsenal.current().data.zoom_fov == 35.0, "Player equipped Longshot with zoom_fov")
+
+	var crosshair := Crosshair.new()
+	add_child(crosshair)
+	crosshair.set_scoped(true)
+	check(crosshair.scoped, "Crosshair set_scoped(true) enables sniper scope overlay")
+	crosshair.set_scoped(false)
+	check(not crosshair.scoped, "Crosshair set_scoped(false) restores standard crosshair")
+	crosshair.queue_free()
+
+	# 6. Zombie lunge mechanics and pacing
+	check(is_equal_approx(dummy_actor.walk_speed, 6.4), "Actor base walk speed softened to 6.4")
+	check(is_equal_approx(dummy_actor.sprint_speed, 9.6), "Actor base sprint speed softened to 9.6")
+
+	dummy_actor.set_zombie(true)
+	check(is_equal_approx(dummy_actor.walk_speed, 5.8), "Zombie walk speed calibrated to 5.8")
+	check(is_equal_approx(dummy_actor.sprint_speed, 8.4), "Zombie sprint speed calibrated to 8.4")
+
+	dummy_actor.velocity = Vector3.ZERO
+	dummy_actor.lunge(Vector3.FORWARD, 7.5)
+	check(dummy_actor.velocity.z < -7.0, "Actor.lunge imparts forward velocity impulse")
+
+	dummy_actor.queue_free()
+	player.queue_free()
 
 

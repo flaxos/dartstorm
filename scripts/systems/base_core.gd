@@ -9,7 +9,7 @@ signal damaged(amount: float, attacker: Node)
 signal repaired(amount: float)
 signal destroyed
 
-const MAX_HEALTH := 1000.0
+const MAX_HEALTH := 1250.0
 
 var max_health: float = MAX_HEALTH
 var health: float = MAX_HEALTH

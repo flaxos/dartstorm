@@ -8,6 +8,6 @@ display_name = "Mega Dart"
 initial_speed = 78.0
 gravity_multiplier = 0.35
 air_drag = 0.1
-tag_power = 70.0
+tag_power = 85.0
 max_ricochets = 1
 visual_scale = 1.3

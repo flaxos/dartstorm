@@ -175,14 +175,20 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
    - **Coin Shop**: 100% kid-safe cosmetic catalog for hats and colours. Zero real money, zero gems, zero microtransactions, zero paid power.
    - **Match End Payout**: Rewards calculated and awarded on match completion (+25 XP/+5 Coins per tag, +100/+25 match finish, +150/+50 win) with a celebratory breakdown banner in the results panel beside the podium.
    - **Validation**: 398 automated tests passing with zero errors, zero warnings, and zero leaks.
-5. ✅ **Home Turf arena** (v0.4.0). Next for it: the suburb map (Splash Pond park, Foam Field) as a bigger arena.
-6. **Playtest-driven tuning** of the `.tres` numbers ([TUNING.md](TUNING.md)) as feedback arrives.
-7. **Better models** *(the big remaining look item)*: toy-style blasters and characters (CC0 packs with licences
-   recorded, or nicer primitives). Plus a "tagged by" camera.
-8. **Capturable buckets** as team objectives (now that teams exist).
+5. ✅ **Tempest Treehouse arena** (v0.6.0): Multi-tier backyard treehouse canopy arena with rope bridge, Crow's Nest, kinetic jump-pads, ice slide chute, high-elevation wind tunnels, and foam shield spire.
+6. ✅ **Zombie Siege & Blaster Skins** (v0.7.0): 5-wave base defense mode protecting BaseCore and barricades against zombie hordes and Mega Titan Boss. Generative anti-slop tri-planar shader pipeline with 8 collectible vector skins.
+7. ✅ **Kid-Feedback Calibration, Sniper ADS & Zombie Lunge** (v0.7.1):
+   - **Game Pacing & Calibration**: Added `GameSettings.game_speed` (default `0.90`, range `0.70` to `1.10`) with a dedicated calibration slider in the Settings menu and `Engine.time_scale` integration. Softened base actor movement speeds.
+   - **Physics Yeet Glitch Prevention**: Fixed compounding velocity runaway in `IceSlick` with 0.8s cooldown and velocity ceiling; enforced `Actor.MAX_HORIZONTAL_SPEED = 24.0 m/s`; raised Tempest Treehouse boundary walls to 22.0m.
+   - **Sniper Rifle Buff & ADS Scope**: Added `zoom_fov = 35.0` to Longshot rifle, buffed tag power to 85.0, registered `aim_down_sights` action, scaled mouse/controller sensitivity, hid viewmodel while scoped, and added authentic sniper scope overlay with range mil-dots.
+   - **Zombie Pacing & Lunge**: Calibrated zombie speeds so humans can kite; added sudden telegraphed lunge (+7.5 m/s impulse) when within 2.5–4.2m with line-of-sight on a $\ge 3.5\text{s}$ cooldown.
+   - **Zombie Siege Rebalancing**: BaseCore HP boosted to 1250, Barricade HP boosted to 350, intermission extended to 25s, rebalanced wave batches, boosted scrap economy.
 
-## Later (Phase 7, only once the above is solid)
-- Second arena: **Tempest Treehouse** is cheapest (it reuses WindZone gusts and JumpPads)
+## Later (Phase 7 / Wishlist from Young Players)
+- **Floor is Lava Mode**: Dynamic rising lava hazard where ground level becomes dangerous and players must parkour across backyard forts, furniture, and rooftops.
+- **Foam Grenade Pickup Item**: Throwable bouncing canister that detonates into a multi-dart area-of-effect foam burst with festive confetti.
+- **Elemental Weather & Map Disasters**: Lightning storms electrifying puddles, flash freezing blizzards creating ice slicks, and wind whirlwinds.
+- **Elemental Weapon Power-Ups**: Temporary pickups providing fire, lightning, water, and ice dart infusions to any standard blaster.
 - Weapon customisation and mastery (cosmetic or sidegrades only, D-028)
 - Smarter bots (cover, wind awareness, team play)
 - Local split-screen or online multiplayer (DECISIONS D-008)
@@ -199,3 +205,4 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
 *Resolved in v0.1.1:* the navmesh load hitch, the "ObjectDB instances leaked at exit" warning, and the integer-division
 warnings in the HUD.
 *Resolved in v0.5.3:* the lobby shows Player Level, XP progress, and Coins; Backyard Missions and Coin Shop are live.
+*Resolved in v0.7.1:* the physics yeet velocity runaway bug, gameplay pacing calibrated with UAT slider, Longshot sniper rifle ADS scope buff, and zombie horde pacing and lunge mechanics rebalanced.

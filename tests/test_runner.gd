@@ -60,6 +60,9 @@ func _ready() -> void:
 	# Home Turf: the toy-sized house arena
 	await _test_home_turf()
 	await _test_home_turf_match()
+	# Tempest Treehouse: high canopy decks and chasm
+	await _test_tempest_treehouse()
+	await _test_tempest_treehouse_match()
 	await _test_elemental_gameplay()
 	await _test_zombies_mode()
 	await _test_shield_and_hazards()
@@ -1341,6 +1344,111 @@ func _test_home_turf_match() -> void:
 		inside = inside and spot.x > HomeTurf.LOT_WEST and spot.x < HomeTurf.LOT_EAST \
 				and spot.z > HomeTurf.LOT_NORTH and spot.z < HomeTurf.LOT_SOUTH and spot.y > -1.0
 	check(inside, "everyone stays inside the lot")
+	GameSettings.arena = saved_arena
+	GameSettings.bot_count = saved_bots
+	await end_match(game, saved_mode)
+
+
+func _test_tempest_treehouse() -> void:
+	section("Tempest Treehouse: high canopy decks and chasm")
+	var arena := (load(MatchScene.arena_path(2)) as PackedScene).instantiate() as Arena
+	add_child(arena)
+	await physics_frames(2)
+	check(arena.arena_name == "Tempest Treehouse", "the lobby's third arena is Tempest Treehouse")
+	check(arena.spawn_points.size() >= 12, "%d spawn points across canopies and ground" % arena.spawn_points.size())
+	check(arena.buckets.size() >= 3, "%d ammo buckets (blue base, orange base, forest floor)" % arena.buckets.size())
+	check(arena.power_up_spots.size() == 1, "one power-up spot (high crow's nest)")
+	check(arena.shield_pickups.size() == 1, "one foam shield pickup (crow's nest)")
+	check(arena.ice_slicks.size() == 1, "canopy escape ice slide chute")
+	check(arena.vents.size() == 1, "forest floor wind vent")
+	check(arena.puddles.size() == 1, "conductive bird-bath puddle")
+	check(arena.find_children("*", "JumpPad", true, false).size() >= 3, "kinetic jump-pads (%d found)" % arena.find_children("*", "JumpPad", true, false).size())
+	check(arena.find_children("*", "ReflectiveSurface", true, false).size() >= 3, "reflective mirrors for trick ricochets")
+	check(arena.find_children("*", "WobbleTarget", true, false).size() >= 3, "wobble bullseye targets")
+	check(arena.wind_field.get_wind_at(Vector3(0.0, TempestTreehouse.DECK_Y + 2.5, 0.0)).length() > 20.0, "strong gale wind tunnel blows across canopy chasm")
+	check(arena.wind_field.get_wind_at(Vector3(-25.0, 1.0, -15.0)).is_zero_approx(), "calm in shielded forest pockets")
+
+	# Nobody spawns inside trunks, railings or geometry
+	var space := arena.get_world_3d().direct_space_state
+	var capsule := CapsuleShape3D.new()
+	capsule.radius = Actor.BODY_RADIUS
+	capsule.height = Actor.BODY_HEIGHT
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = capsule
+	query.collision_mask = Layers.WORLD
+	var clear := 0
+	for marker in arena.spawn_points:
+		query.transform = Transform3D(Basis.IDENTITY, marker.global_position + Vector3.UP * (Actor.BODY_HEIGHT * 0.5 + 0.05))
+		if space.intersect_shape(query, 1).is_empty():
+			clear += 1
+	check(clear == arena.spawn_points.size(), "every spawn point is clear of geometry (%d/%d)" % [clear, arena.spawn_points.size()])
+
+	# Blue vs Orange bases
+	check(arena.team_bases.size() == 2, "blue fort base (-X) and orange fort base (+X)")
+	var home := [0, 0]
+	for marker in arena.spawn_points:
+		var spot := marker.global_position
+		home[0 if spot.distance_to(arena.team_bases[0]) < spot.distance_to(arena.team_bases[1]) else 1] += 1
+	check(home[0] >= 5 and home[1] >= 5, "each team has balanced home spawns (blue %d, orange %d)" % [home[0], home[1]])
+
+	# Navigation mesh bake
+	var waited := 0
+	while not arena.is_navigation_ready and waited < 900:
+		await get_tree().physics_frame
+		waited += 1
+	check(arena.is_navigation_ready, "navmesh baked (after %d frames)" % waited)
+	var map := arena.geometry.get_navigation_map()
+	var start := arena.spawn_points[0].global_position
+	waited = 0
+	while NavigationServer3D.map_get_path(map, start, arena.team_bases[1], true).is_empty() and waited < 300:
+		await get_tree().physics_frame
+		waited += 1
+	var reachable := 0
+	var missing: Array[String] = []
+	for point in arena.roam_points:
+		var path := NavigationServer3D.map_get_path(map, start, point, true)
+		if path.size() >= 2 and path[-1].distance_to(point) < 3.5:
+			reachable += 1
+		else:
+			missing.append(str(point))
+	check(reachable == arena.roam_points.size(), "every roam point is reachable across decks and ground (%d/%d) %s" % [reachable, arena.roam_points.size(), ", ".join(missing)])
+	arena.queue_free()
+	await physics_frames(2)
+
+
+func _test_tempest_treehouse_match() -> void:
+	section("Tempest Treehouse: a whole bot match")
+	var saved_mode := GameSettings.match_mode
+	var saved_arena := GameSettings.arena
+	var saved_bots := GameSettings.bot_count
+	GameSettings.arena = 2
+	GameSettings.bot_count = 3
+	var game := start_match(GameSettings.MatchMode.TEAMS)
+	var controller := game.get("controller") as MatchController
+	check(controller.arena is TempestTreehouse, "picking TEMPEST TREEHOUSE in the lobby loads the treehouse")
+	var player := game.get("player") as Player
+	player.controls_enabled = false
+	var bots: Array = game.get("bots")
+	var starts: Array[Vector3] = []
+	for bot: Bot in bots:
+		starts.append(bot.global_position)
+	await fast_forward(controller.mode.countdown_seconds + 60.0)
+	player.controls_enabled = false
+	var moved := 0
+	for i in bots.size():
+		if (bots[i] as Bot).global_position.distance_to(starts[i]) > 4.0:
+			moved += 1
+	check(moved >= 2, "bots navigate treehouse decks and bridge (%d of %d moved)" % [moved, bots.size()])
+	var tags := 0
+	for entry in controller.board.entries:
+		tags += entry.tags
+	check(tags > 0, "and tag each other in the treehouse canopy (%d tags)" % tags)
+	var inside := true
+	for actor in controller.actors:
+		var spot := actor.global_position
+		inside = inside and spot.x > -TempestTreehouse.HALF_X and spot.x < TempestTreehouse.HALF_X \
+				and spot.z > -TempestTreehouse.HALF_Z and spot.z < TempestTreehouse.HALF_Z and spot.y > -1.0
+	check(inside, "everyone stays inside the treehouse grounds")
 	GameSettings.arena = saved_arena
 	GameSettings.bot_count = saved_bots
 	await end_match(game, saved_mode)

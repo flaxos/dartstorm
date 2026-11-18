@@ -478,7 +478,7 @@ func _build_mode_picker() -> void:
 
 	var arena_row := _option_row(box, "ARENA")
 	_arena_button = UiKit.small_button("", Vector2(180, 44))
-	_arena_button.tooltip_text = "BACKYARD: the forts, the treehouse and Windy Way.\nHOME TURF: a whole house, and you're toy-sized!"
+	_arena_button.tooltip_text = "BACKYARD: the forts, the treehouse and Windy Way.\nHOME TURF: a whole house, and you're toy-sized!\nTEMPEST TREEHOUSE: high canopy decks, rope bridge, jump-pads and ice slides."
 	_arena_button.pressed.connect(_cycle_arena)
 	arena_row.add_child(_arena_button)
 

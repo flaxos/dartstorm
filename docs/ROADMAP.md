@@ -23,9 +23,20 @@
 | **v0.5.1 Zombies Mode** | ✅ Built and validated (338 tests). ⏳ UAT |
 | **v0.5.2 Foam Shield & Environmental Hazards** | ✅ Built and validated (359 tests). ⏳ UAT |
 | **v0.5.3 Progression, Levels, Missions & Coin Shop** | ✅ Built and validated (398 tests). ⏳ UAT |
+| **v0.6.0 Tempest Treehouse Arena** | ✅ Built and validated (423 tests). ⏳ UAT |
 | Phase 7 Expansion | ⏳ Not started (on purpose) |
 
-## v0.4.0: Home Turf (this release)
+## v0.6.0: Tempest Treehouse (this release)
+
+Goal: the high-canopy elemental treehouse arena from GDD §5.4.
+
+- [x] **Tempest Treehouse** (GDD §5.4): high ancient tree grove with dual fortified canopy decks (Blue Fort, Orange Fort at $Y=5.4\text{ m}$), suspension rope bridge spanning the chasm, High Crow's Nest ($Y=10.5\text{ m}$)
+- [x] **Multi-Tier Traversals:** rising canopy ramps, 3 kinetic jump-pads, upward forest wind vent ($16.5\text{ m/s}$ lift), escape ice slide chute (+9.5 m/s boost)
+- [x] **Elemental Interactivity:** Gale-force wind tunnels ($28\text{ m/s}$ upper chasm), conductive bird-bath water puddle, High Crow's Nest Foam Shield & Chainstorm pickups
+- [x] **Lobby & Match Integration:** Registered as third selectable arena; 14 balanced spawns; 100% navmesh bake and bot traversal across all tiers and game modes
+- [x] Automated unit and whole-match tests in `tests/test_runner.gd` (423 tests passed, 0 leaks, 0 warnings)
+
+**Acceptance:** `./tools/validate.sh` passes (**423/423 tests**) ✅.
 
 Goal: the house arena, built now at the owner's request (it was item 5 below).
 

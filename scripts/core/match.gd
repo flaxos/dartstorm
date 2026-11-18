@@ -13,6 +13,7 @@ const MAIN_MENU := "res://scenes/ui/main_menu.tscn"
 const ARENAS: Array[Dictionary] = [
 	{"name": "BACKYARD", "path": "res://scenes/arenas/backyard_fortress.tscn"},
 	{"name": "HOME TURF", "path": "res://scenes/arenas/home_turf.tscn"},
+	{"name": "TEMPEST TREEHOUSE", "path": "res://scenes/arenas/tempest_treehouse.tscn"},
 ]
 const PLAYER_SCENE := preload("res://scenes/player/player.tscn")
 const BOT_SCENE := preload("res://scenes/enemies/bot.tscn")

@@ -672,6 +672,26 @@ the lobby: **ARENA: HOME TURF**.
 - **Loops:** the west side path and the east lawn both join the front and back yards, so there's always a way round.
 - **Later:** the suburb map (Splash Pond park, Foam Field) as a separate, bigger arena.
 
+### 5.4 Tempest Treehouse: high canopy decks and chasm *(v0.6.0)*
+A sprawling multi-tier canopy fort built high into ancient backyard trees, high above the mossy forest floor.
+
+> **Fictional world (D-031):** like all DARTSTORM arenas, the ancient treehouse grove is completely fictional.
+
+**Built in v0.6.0** (`scripts/arena/tempest_treehouse.gd`), playable across all modes (FFA, Gun Game, Duos, Teams, Zombies). Pick it in the lobby: **ARENA: TEMPEST TREEHOUSE**.
+
+| Zone | Elevation | Description & Features |
+|---|---|---|
+| **Blue Canopy Fort** | $Y = 5.4\text{ m}$ (West, $-X$) | Fortified lookout hut, team sign, perimeter railings, ammo bucket, kinetic jump-pad launching up to the Crow's Nest. |
+| **Orange Canopy Fort** | $Y = 5.4\text{ m}$ (East, $+X$) | Symmetrical fortified lookout hut, team sign, cover crates, ammo bucket, kinetic jump-pad launching up to the Crow's Nest. |
+| **Suspension Rope Bridge** | $Y = 5.4\text{ m}$ ($Z = 0.0$) | $20\text{ m}$ wooden plank bridge spanning the canopy chasm between Blue and Orange Forts with catenary sag and rope railings. |
+| **High Crow's Nest & Spire** | $Y = 10.5\text{ m}$ (North, $-Z$) | High central treehouse platform around the North ancient tree. Houses the Chainstorm power-up and the Foam Shield pickup. |
+| **Canopy Escape Ice Slide** | $Y = 10.5 \to 5.4\text{ m}$ | Frictionless ice slick chute (+9.5 m/s slide-boost) plunging from Crow's Nest down across the chasm to the bridge. |
+| **Forest Floor Grove** | $Y = 0\text{ m}$ (Ground) | Lush lawn and buttress roots, Ammo Bucket, Ground Jump-Pad, Upward Wind Vent ($16.5\text{ m/s}$ lift), and Conductive Bird-Bath Puddle. |
+| **Gale Wind Tunnels** | Upper & Lower | Upper canopy wind zone blowing West to East at $28\text{ m/s}$, sweeping darts across the chasm; gentle lower floor cross-breeze ($12\text{ m/s}$). |
+
+- **Multi-tier traversal:** 14 balanced spawns (7 Blue, 7 Orange). Ramps link ground to mid-decks and mid-decks to the High Crow's Nest, supplemented by kinetic jump-pads, upward wind vents, and the escape ice slide chute.
+- **Elemental interactivity:** Wet puddle conducts lightning from Thunder Cannon darts; ice slide enables high-speed frictionless escapes; wind tunnels curve and amplify dart trajectories across the chasm.
+
 ## 6. Feature specifications (hardened)
 
 Each feature lists its **rules**, its **guarantees** (edge cases it must survive), and the **tests** that hold it

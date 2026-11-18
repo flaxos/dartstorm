@@ -18,10 +18,11 @@ const BODY_RADIUS := 0.4
 const BODY_HEIGHT := 1.8
 const KILL_PLANE_Y := -25.0
 const SHIELD_MAX := 50.0
+const MAX_HORIZONTAL_SPEED := 24.0
 
 @export var display_name: String = "Actor"
-@export var walk_speed: float = 7.0
-@export var sprint_speed: float = 10.5
+@export var walk_speed: float = 6.4
+@export var sprint_speed: float = 9.6
 @export var jump_velocity: float = 7.6
 @export var ground_acceleration: float = 60.0
 @export var air_acceleration: float = 18.0
@@ -110,6 +111,8 @@ func move_actor(wish: Vector3, sprinting: bool, jump: bool, delta: float) -> voi
 	if elemental != null and elemental.is_sliding():
 		acceleration *= 0.25
 	var horizontal := Vector3(velocity.x, 0.0, velocity.z).move_toward(target, acceleration * delta)
+	if horizontal.length_squared() > MAX_HORIZONTAL_SPEED * MAX_HORIZONTAL_SPEED:
+		horizontal = horizontal.normalized() * MAX_HORIZONTAL_SPEED
 	velocity.x = horizontal.x
 	velocity.z = horizontal.z
 	if jump:
@@ -131,6 +134,19 @@ func launch(upward_speed: float) -> void:
 	velocity.y = upward_speed
 
 
+## Sudden short forward burst for zombie lunges or melee leaps.
+func lunge(direction: Vector3, impulse_speed: float = 7.5) -> void:
+	var dir := Vector3(direction.x, 0.0, direction.z).normalized()
+	if dir.length_squared() > 0.01:
+		velocity.x += dir.x * impulse_speed
+		velocity.z += dir.z * impulse_speed
+		var horiz := Vector3(velocity.x, 0.0, velocity.z)
+		if horiz.length_squared() > MAX_HORIZONTAL_SPEED * MAX_HORIZONTAL_SPEED:
+			horiz = horiz.normalized() * MAX_HORIZONTAL_SPEED
+			velocity.x = horiz.x
+			velocity.z = horiz.z
+
+
 func set_zombie(enabled: bool) -> void:
 	is_zombie = enabled
 	if enabled:
@@ -138,11 +154,11 @@ func set_zombie(enabled: bool) -> void:
 		color = Color(0.38, 0.78, 0.28)
 		arsenal.set_trigger(false)
 		arsenal.enabled = false
-		sprint_speed = 11.2
-		walk_speed = 7.5
+		sprint_speed = 8.4
+		walk_speed = 5.8
 	else:
-		sprint_speed = 10.5
-		walk_speed = 7.0
+		sprint_speed = 9.6
+		walk_speed = 6.4
 		arsenal.enabled = true
 	_on_zombie_state_changed(enabled)
 	turned_zombie.emit(self)

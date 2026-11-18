@@ -39,6 +39,8 @@ enum ModelStyle { PISTOL, SPRAYER, ROTARY, DOUBLE, HAMMER, RIFLE }
 @export var camera_shake: float = 0.1
 @export var sound: StringName = &"pop"
 @export var sound_pitch: float = 1.0
+## Aim-Down-Sights zoom FOV. 0 = no zoom. e.g. 35.0 for sniper scope.
+@export var zoom_fov: float = 0.0
 
 @export_group("Presentation")
 @export var model_style: ModelStyle = ModelStyle.PISTOL

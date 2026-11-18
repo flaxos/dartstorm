@@ -17,7 +17,7 @@ Chainstorm sillier, or add a new blaster.
 | `resources/weapons/` | One file per blaster | WeaponData |
 | `resources/darts/` | One file per dart type (a blaster points at a dart) | DartData |
 | `resources/bots/` | `easy`, `normal`, `hard` | BotDifficulty |
-| `resources/modes/` | `free_for_all`, `gun_game` | GameMode / GunGameMode |
+| `resources/modes/` | `free_for_all`, `duos`, `teams`, `gun_game`, `zombies`, `zombie_siege` | GameMode / GunGameMode / ZombieMode / ZombieSiegeMode |
 
 > Some things are set in code rather than data: player movement (`scripts/combat/actor.gd` exports and
 > `scripts/player/player.gd`), bucket capacity per spot (`scripts/arena/backyard_fortress.gd`), and arena layout.
@@ -56,7 +56,7 @@ Chainstorm sillier, or add a new blaster.
 | `ricochet_speed_keep` | Speed kept per bounce | 0.6–0.95 |
 | `ricochet_any_surface` | Bounce off *everything*, not just mirrors | on/off |
 | `visual_scale` | Size of the dart | 0.7–1.5 |
-| `element` | Reserved for elemental darts (no effect yet) | NONE |
+| `element` | Elemental payload: NONE, WIND (lift), FIRE (tick), WATER (knockback), LIGHTNING (chain zap), ICE (slow & slide) | — |
 
 After changing a dart, regenerate the GDD's flight table:
 `godot --headless --path . -s res://tools/dart_table.gd`
@@ -77,7 +77,7 @@ After changing a dart, regenerate the GDD's flight table:
 ## GameMode / GunGameMode
 | Field | Meaning |
 |---|---|
-| `short_name` | The word on the lobby's mode card (SOLO, DUOS, TEAMS, GUN GAME) |
+| `short_name` | The word on the lobby's mode card (SOLO, DUOS, TEAMS, GUN GAME, ZOMBIES, SIEGE) |
 | `teams` | SOLO (everyone alone), DUOS (pairs) or BLUE_VS_ORANGE (two teams). Team modes add one bot when needed to even the teams |
 | `duration_seconds` | Round length (300 = 5:00) |
 | `countdown_seconds` | 3-2-1 length |

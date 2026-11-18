@@ -17,6 +17,7 @@ var _area: Area3D
 var _mesh: MeshInstance3D
 var _ice_material: StandardMaterial3D
 var _water_material: StandardMaterial3D
+var _actor_cooldowns: Dictionary = {}
 
 
 func _ready() -> void:
@@ -86,6 +87,14 @@ func _on_body_entered(body: Node3D) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	# Tick cooldowns for actors that have recently stepped on the slick
+	for actor_key in _actor_cooldowns.keys():
+		var time_left: float = float(_actor_cooldowns[actor_key]) - delta
+		if time_left <= 0.0 or not is_instance_valid(actor_key as Object):
+			_actor_cooldowns.erase(actor_key)
+		else:
+			_actor_cooldowns[actor_key] = time_left
+
 	if melted_left > 0.0:
 		melted_left -= delta
 		if melted_left <= 0.0:
@@ -106,11 +115,20 @@ func _boost_actor(actor: Actor) -> void:
 			actor.elemental.wet_left = maxf(actor.elemental.wet_left, 3.0)
 		return
 
+	if _actor_cooldowns.has(actor):
+		return
+
+	_actor_cooldowns[actor] = 0.8
+
 	if actor.elemental != null:
 		actor.elemental.start_slide(1.8)
 
 	var dir := (global_transform.basis * slide_direction.normalized()).normalized()
-	actor.velocity += dir * boost_speed
+	var horizontal_vel := Vector3(actor.velocity.x, 0.0, actor.velocity.z)
+	var current_proj := horizontal_vel.dot(dir)
+	if current_proj < boost_speed:
+		actor.velocity += dir * (boost_speed - current_proj)
+
 	Sfx.play_at(&"ice_slide", actor.global_position, 1.05, -3.0, 0.08)
 	if actor.is_human:
 		var prog: Node = get_node_or_null("/root/Progression")

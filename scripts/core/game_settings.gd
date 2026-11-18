@@ -24,6 +24,7 @@ const DEFAULTS := {
 	"fov": 85.0,
 	"camera_shake": 1.0,
 	"visual_intensity": 1.0,
+	"game_speed": 0.90,
 	"master_volume": 0.8,
 	"music_volume": 0.6,
 	"sfx_volume": 1.0,
@@ -51,6 +52,10 @@ var fov: float = 85.0
 var camera_shake: float = 1.0
 ## Scales particle counts and flash strength. 1 = default.
 var visual_intensity: float = 1.0
+## Scales gameplay speed (0.70 to 1.10). 0.90 = slightly relaxed for kids.
+var game_speed: float = 0.90:
+	set(value):
+		game_speed = clampf(value, 0.70, 1.10)
 var master_volume: float = 0.8
 var music_volume: float = 0.6
 var sfx_volume: float = 1.0
@@ -133,6 +138,8 @@ func apply() -> void:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 		elif not fullscreen and is_full:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+	if get_tree() != null and get_tree().current_scene != null and get_tree().current_scene.name == "Match":
+		Engine.time_scale = game_speed
 	changed.emit()
 
 
@@ -235,6 +242,7 @@ func load_settings() -> void:
 	camera_shake = clampf(float(file.get_value("video", "camera_shake", camera_shake)), 0.0, 1.5)
 	visual_intensity = clampf(float(file.get_value("video", "visual_intensity", visual_intensity)), 0.2, 1.5)
 	fullscreen = bool(file.get_value("video", "fullscreen", fullscreen))
+	game_speed = clampf(float(file.get_value("gameplay", "game_speed", game_speed)), 0.70, 1.10)
 	master_volume = clampf(float(file.get_value("audio", "master_volume", master_volume)), 0.0, 1.0)
 	music_volume = clampf(float(file.get_value("audio", "music_volume", music_volume)), 0.0, 1.0)
 	sfx_volume = clampf(float(file.get_value("audio", "sfx_volume", sfx_volume)), 0.0, 1.0)
@@ -263,6 +271,7 @@ func save_settings() -> void:
 	file.set_value("video", "camera_shake", camera_shake)
 	file.set_value("video", "visual_intensity", visual_intensity)
 	file.set_value("video", "fullscreen", fullscreen)
+	file.set_value("gameplay", "game_speed", game_speed)
 	file.set_value("audio", "master_volume", master_volume)
 	file.set_value("audio", "music_volume", music_volume)
 	file.set_value("audio", "sfx_volume", sfx_volume)

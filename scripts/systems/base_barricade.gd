@@ -9,7 +9,7 @@ signal damaged(amount: float)
 signal broken
 signal repaired
 
-const MAX_HEALTH := 250.0
+const MAX_HEALTH := 350.0
 
 var max_health: float = MAX_HEALTH
 var health: float = MAX_HEALTH

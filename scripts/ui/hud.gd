@@ -69,6 +69,7 @@ func setup(player: Player, controller: MatchController) -> void:
 	player.shield_broken.connect(_on_shield_broken)
 	player.landed_hit.connect(_on_landed_hit)
 	player.shot_fired.connect(_on_shot_fired)
+	player.aiming_changed.connect(func(is_aiming: bool) -> void: _crosshair.set_scoped(is_aiming))
 	player.tagged_out.connect(_on_player_tagged)
 	player.respawned.connect(func(_actor: Actor) -> void: _hide_banner())
 	player.ammo_collected.connect(func(_amount: int) -> void: _refill_left = 0.5)
@@ -385,6 +386,8 @@ func _on_shield_broken(_actor: Actor) -> void:
 
 
 func _on_weapon_changed(state: WeaponState) -> void:
+	if _crosshair != null:
+		_crosshair.set_scoped(false)
 	if state == null:
 		return
 	_weapon_label.text = state.data.display_name.to_upper()
@@ -410,6 +413,8 @@ func _on_landed_hit(_victim: Actor, was_tag: bool, _was_ricochet: bool) -> void:
 
 
 func _on_player_tagged(_victim: Actor, attacker: Actor, _weapon: WeaponData, _ricochet: bool) -> void:
+	if _crosshair != null:
+		_crosshair.set_scoped(false)
 	var by := " by %s" % attacker.display_name if attacker != null else ""
 	_show_banner("TAGGED!", "You were tagged%s" % by, 0.0)
 
@@ -716,17 +721,20 @@ func _build_siege_ui(siege: ZombieSiegeMode) -> void:
 	core_panel.add_theme_stylebox_override("panel", UiKit.panel_style(UiKit.NAVY_DARK, 0.9, 10, 2, UiKit.BLUE, 2))
 	_siege_box.add_child(core_panel)
 
+	var init_max := siege.base_core.max_health if siege.base_core != null else BaseCore.MAX_HEALTH
+	var init_curr := siege.base_core.health if siege.base_core != null else init_max
+
 	_core_bar = ProgressBar.new()
 	_core_bar.min_value = 0.0
-	_core_bar.max_value = 1000.0
-	_core_bar.value = 1000.0
+	_core_bar.max_value = init_max
+	_core_bar.value = init_curr
 	_core_bar.show_percentage = false
 	_core_bar.custom_minimum_size = Vector2(356, 22)
 	_core_bar.add_theme_stylebox_override("background", UiKit.panel_style(Color(0.05, 0.1, 0.2), 0.8, 8))
 	_core_bar.add_theme_stylebox_override("fill", UiKit.panel_style(UiKit.SKY, 1.0, 8))
 	core_panel.add_child(_core_bar)
 
-	_core_label = UiKit.label("BASE CORE: 1000 / 1000", 14, UiKit.CREAM, 4)
+	_core_label = UiKit.label("BASE CORE: %d / %d" % [int(ceilf(init_curr)), int(init_max)], 14, UiKit.CREAM, 4)
 	_core_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	core_panel.add_child(_core_label)
 

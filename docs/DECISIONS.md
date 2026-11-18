@@ -259,4 +259,14 @@ box in corners for bots, so walkways are at least 1.5 m (the dining chairs moved
 **Alternatives:** Removing ice slides entirely; reducing zombie health without addressing speed or leap mechanics; hitscan sniper buff.
 **Why:** Directly addresses authentic young player playtest feedback: game pacing felt too frantic for younger players, ice ramps launched actors out of the arena, snipers felt underwhelming, and horde modes were brutally punishing. These refinements restore joyful balance and tactical excitement while keeping gameplay completely kid-safe and non-violent.
 
+### D-040: Floor is Lava Mode, Molten Foam Hazards, and Dynamic Tides (v0.8.0)
+**Chosen:**
+1. **Dynamic Molten Foam Tides (`LavaDirector`):** Orchestrate dynamic tide states across the match: CALM (24s at $Y=-0.6\text{m}$), WARNING (5s siren countdown), RISING (4s surge interpolation), HIGH TIDE (20s peak height at $Y=1.35\text{m}$), and RECEDING (4s cooldown with +25 point Survival Bonus).
+2. **Cartoon Molten Foam Visuals (`lava_foam.gdshader`):** Use a custom voronoi animated foam shader with vertex waves, bright orange/yellow emission veins, and dark foam crust bobbing. Strictly avoid realistic gore, fire, or burning aesthetics.
+3. **Hazard Tag & Foam Shield Absorption:** Submerged actors take continuous heat tag damage (+38 dps) with sizzling audio (`&"lava_sizzle"`). Damage absorbs 100% into active `FoamShield` (`shield_points`) before damaging tag meters, rewarding players who grab shields with temporary molten immunity.
+4. **Elemental Counterplay via Obsidian Cooling:** Firing Water or Ice darts into molten lava cools the hit spot into a solid $1.4\text{m}$-radius cylindrical `ObsidianStone` platform lasting 6.0 seconds. Players can shoot stepping stones across molten gaps.
+5. **Bot Elevation AI & Panic Leaping:** Bots filter roam destinations to elevated spots ($Y > \text{lava\_height} + 0.4\text{m}$) during high tide. When submerged, bots trigger emergency jump impulses and steer toward the nearest obsidian stone or high-ground structure.
+**Alternatives:** Static instant-kill lava planes; permanent rising lava with no tides; complex volumetric smoke particles.
+**Why:** Directly delivers on the young players' primary wishlist item (#5) with thrilling parkour combat, emergent elemental mechanics, and family-friendly cartoon fun.
+
 

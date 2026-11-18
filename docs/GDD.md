@@ -104,7 +104,7 @@ The photo isn't kept in the repo (it has their names on it). This is what it ask
 | **Sniper Buff & Scope** | ✅ v0.7.1 | Longshot rifle ADS zoom (35° FOV), scoped crosshair overlay with mil-dots, tag power buffed to 85 |
 | **Zombie Pacing & Lunge** | ✅ v0.7.1 | Calibrated zombie speeds so humans can kite; added telegraphed lunge burst (+7.5 m/s) on 3.5s cooldown |
 | **Zombie Siege Rebalance** | ✅ v0.7.1 | BaseCore 1250 HP, Barricade 350 HP, 25s intermission, rebalanced wave batches, boosted scrap payouts |
-| **Wishlist: Floor is Lava mode** | ⏳ Phase 7 | Rising lava level hazard mode where low ground burns/tags players |
+| **Floor is Lava Mode** | ✅ v0.8.0 | Rising molten foam lava tides, obsidian cooling with water/ice darts, high ground parkour combat (§3.25) |
 | **Wishlist: Foam Grenade pickup** | ⏳ Phase 7 | Throwable bouncy foam canister with area-of-effect confetti burst |
 | **Wishlist: Elemental Weather** | ⏳ Phase 7 | Dynamic map events: thunder storms, flash freezing blizzards, lava seepage |
 
@@ -543,6 +543,25 @@ The main menu is the players' own drawing (§1.9), built in 3D:
   - Intermission: 25s fortification phase between waves where all ammo buckets refill, defenders collect scrap (+75 wave bonus), and repairs/rebuilds occur.
 - **Economy:** Zombie tags drop scrap (+20 standard, +35 runner, +60 brute, +150 boss, +75 wave clear bonus).
 - **Zombies AI Targeting & Lunge:** Zombies prioritize hitting the Base Core and Barricades when in range, but swarm nearby survivors (< 6m). Base zombie sprint is 8.4 m/s (runner 9.2 m/s) so sprinting defenders (9.6 m/s) can kite, offset with a sudden telegraphed lunge burst (+7.5 m/s forward impulse) when within 2.5–4.2m with line of sight on a 3.5s cooldown.
+
+### 3.25 Floor is Lava Mode *(v0.8.0)*
+- **Concept:** Pure, joyous high-energy parkour combat inspired by kids' favorite playground game. Molten cartoon foam lava rises from the ground level of the arena in dynamic cyclic tides, forcing all players and bots onto high ground, crates, tables, fort walkways, and trampolines.
+- **Dynamic Molten Foam Tides (`LavaDirector`):**
+  - Continuous cyclic tide states:
+    - **CALM (24s):** Lava recedes down to $Y = -0.6\text{m}$. Ground level is completely safe; players can roam freely to collect ammo and claim power-ups.
+    - **WARNING (5s):** Sirens blare (`&"siren"`), countdown ticks (`&"beep"`), and the HUD flashes "WARNING: LAVA RISING! RISING IN 5s!".
+    - **RISING (4s):** Molten foam surges upward from $Y = -0.6\text{m}$ to peak height $Y = 1.35\text{m}$ accompanied by a rushing surge sound (`&"whoosh"`).
+    - **HIGH TIDE (20s):** The floor is covered in bubbling molten foam. Low ground is completely submerged! High ground (crates at 1.1–2.2m, fort decks at 3.0m, treehouse decks at 4.6m, trampolines) is safe.
+    - **RECEDING (4s):** Lava recedes with cooling steam (`&"steam"`), and surviving players are awarded a **+25 point Survival Bonus**.
+- **Molten Foam Hazard & Elemental Cooling (`LavaHazard` & `ObsidianStone`):**
+  - **Lava Shader (`lava_foam.gdshader`):** Custom cartoon molten foam shader featuring animated voronoi bubbling crust, vertex wave displacement, vibrant hot orange/yellow emission veins, and gentle undulating surface bobbing. Zero gore or realistic fire; purely playful molten cheese/foam aesthetics.
+  - **Hazard Tag Damage:** Submerged actors take continuous heat tag damage (+38 dps) with crackling sizzle audio (`&"lava_sizzle"`).
+  - **Foam Shield Synergy:** `apply_hazard_tag` absorbs first into Foam Shields (`shield_points`), allowing shielded players to make daring leaps across lava lakes without taking tag damage until the shield pops!
+  - **Elemental Counterplay:** Firing a **Water Dart** (Hydro Soaker) or **Ice Dart** (Frost Ranger) into molten lava instantly cools a section into an **Obsidian Foam Stone** (`ObsidianStone`)! The stone provides a solid $1.4\text{m}$-radius stepping platform for 6.0 seconds before heating up and sinking back into the lava.
+- **Bot Elevation AI & Panic Leaping:**
+  - When lava rises, bots filter roaming destinations to elevated platforms ($Y > \text{lava\_height} + 0.4\text{m}$).
+  - If submerged or pushed into molten foam, bots trigger emergency jump impulses and steer toward the nearest obsidian stepping stone or high-ground structure.
+- **Scoring & Rewards:** Standard tags award 100 points, with a +50 bonus for tagging an opponent while they are submerged or struggling in lava, plus +25 points for every high tide cycle survived.
 
 ---
 

@@ -221,6 +221,8 @@ func _build_treehouse() -> void:
 	add_roam_point(Vector3(0.0, DECK_HEIGHT, 3.2))
 	add_roam_point(Vector3(3.2, DECK_HEIGHT, 0.0))
 	add_roam_point(Vector3(-3.2, DECK_HEIGHT, 0.0))
+	add_roam_point(Vector3(-28.0, FORT_HEIGHT, 0.0))
+	add_roam_point(Vector3(28.0, FORT_HEIGHT, 0.0))
 
 
 ## North lane: a big hedge with a corridor behind it and two angled mirrors on

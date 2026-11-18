@@ -25,9 +25,26 @@
 | **v0.5.3 Progression, Levels, Missions & Coin Shop** | ✅ Built and validated (398 tests). ⏳ UAT |
 | **v0.6.0 Tempest Treehouse Arena** | ✅ Built and validated (423 tests). ⏳ UAT |
 | **v0.7.0 Zombie Siege & Blaster Skins** | ✅ Built and validated (518 tests). ⏳ UAT |
+| **v0.7.1 Kid Feedback Calibration & Sniper Buff** | ✅ Merged (PR #13, 530 tests). ⏳ UAT |
+| **v0.8.0 Floor is Lava Mode** | ✅ Built and validated (557 tests). ⏳ UAT |
 | Phase 7 Expansion | ⏳ Not started (on purpose) |
 
-## v0.7.0: Zombie Siege & Blaster Skins (this release)
+## v0.8.0: Floor is Lava Mode (this release)
+
+Goal: Pure high-energy parkour combat where dynamic molten foam lava tides flood the arena floor, cooled into temporary obsidian stepping stones by water and ice darts.
+
+- [x] **Floor is Lava Mode (`FloorIsLavaMode`):** Solo parkour combat mode with +100 base tag points, +50 submerged kill bonus, and +25 high tide survival bonus.
+- [x] **Dynamic Molten Foam Tides (`LavaDirector`):** Continuous tide cycles: CALM (24s at $Y=-0.6\text{m}$), WARNING (5s siren countdown), RISING (4s surge interpolation), HIGH TIDE (20s peak height at $Y=1.35\text{m}$), and RECEDING (4s cooling steam).
+- [x] **Cartoon Molten Foam Visuals (`lava_foam.gdshader`):** Custom animated voronoi bubbling crust shader with vertex waves, hot yellow emission seams, and gentle surface bobbing. Zero gore or burning, family-friendly cartoon molten cheese/foam aesthetic.
+- [x] **Hazard Damage & Foam Shield Synergy:** Submerged actors take continuous heat tag damage (+38 dps); damage absorbs 100% into active `FoamShield` (`shield_points`) before damaging tag meters, enabling daring leaps across lava lakes.
+- [x] **Elemental Obsidian Cooling (`ObsidianStone`):** Water and Ice darts striking molten lava instantly create solid $1.4\text{m}$-radius cylindrical obsidian stepping platforms lasting 6.0 seconds before heating up and melting back.
+- [x] **Bot Elevation AI & Panic Leaping:** Bots filter roam destinations to elevated structures ($Y > \text{lava\_height} + 0.4\text{m}$) during high tide. When submerged, bots trigger emergency jump impulses and steer toward the nearest obsidian stepping stone or high-ground structure.
+- [x] **HUD Integration:** Lava tide status card under clock showing current tide state, warning countdowns, and high-tide remaining time.
+- [x] Automated unit and whole-match tests in `tests/test_runner.gd` (557 tests passed, 0 leaks, 0 warnings).
+
+**Acceptance:** `./tools/validate.sh` passes (**557/557 tests**) ✅.
+
+## v0.7.0: Zombie Siege & Blaster Skins
 
 Goal: Co-op base defense mode against 5 escalating zombie waves and the Mega Foam Titan Boss, combined with an anti-slop generative blaster skin pipeline.
 

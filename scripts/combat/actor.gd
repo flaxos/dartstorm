@@ -258,6 +258,38 @@ func receive_dart(dart: DartProjectile) -> void:
 		attacker.landed_hit.emit(self, out, ricochet)
 
 
+## Applies environmental hazard tag points (e.g. molten lava heat, toxic goo).
+## Foam Shield absorbs hazard damage before tag meter.
+func apply_hazard_tag(amount: float, _hazard_source: Node = null) -> void:
+	if not alive or _protect_left > 0.0 or amount <= 0.0:
+		return
+	if shield_points > 0.0:
+		if is_human:
+			var prog: Node = get_node_or_null("/root/Progression")
+			if prog != null:
+				prog.call("notify_event", &"shield_absorb", 1)
+		if amount <= shield_points:
+			shield_points -= amount
+			shield_changed.emit(shield_points, SHIELD_MAX)
+			Sfx.play_at(&"shield_hit", global_position, 1.0, 0.0, 0.1)
+			_since_hit = 0.0
+			_on_hit_received(null)
+			return
+		else:
+			amount -= shield_points
+			shield_points = 0.0
+			shield_changed.emit(0.0, SHIELD_MAX)
+			shield_broken.emit(self)
+			Sfx.play_at(&"shield_pop", global_position, 1.0, 0.0)
+
+	tag_meter = minf(tag_meter + amount, tag_meter_max)
+	_since_hit = 0.0
+	meter_changed.emit(tag_meter, tag_meter_max)
+	_on_hit_received(null)
+	if tag_meter >= tag_meter_max:
+		_tag_out(null, null, false)
+
+
 func respawn(at: Transform3D) -> void:
 	global_transform = at
 	velocity = Vector3.ZERO

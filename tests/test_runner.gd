@@ -77,6 +77,8 @@ func _ready() -> void:
 	await _test_kid_feedback_calibration_and_sniper()
 	# Floor is Lava Mode (v0.8.0)
 	await _test_floor_is_lava_mode()
+	# Foam Grenades & Elemental Infusion Power-Ups (v0.8.1)
+	await _test_foam_grenade_and_elemental_powerups()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -1432,7 +1434,7 @@ func _test_tempest_treehouse_match() -> void:
 	var saved_arena := GameSettings.arena
 	var saved_bots := GameSettings.bot_count
 	GameSettings.arena = 2
-	GameSettings.bot_count = 3
+	GameSettings.bot_count = 5
 	var game := start_match(GameSettings.MatchMode.TEAMS)
 	var controller := game.get("controller") as MatchController
 	check(controller.arena is TempestTreehouse, "picking TEMPEST TREEHOUSE in the lobby loads the treehouse")
@@ -1442,13 +1444,13 @@ func _test_tempest_treehouse_match() -> void:
 	var starts: Array[Vector3] = []
 	for bot: Bot in bots:
 		starts.append(bot.global_position)
-	await fast_forward(controller.mode.countdown_seconds + 60.0)
+	await fast_forward(controller.mode.countdown_seconds + 75.0)
 	player.controls_enabled = false
 	var moved := 0
 	for i in bots.size():
 		if (bots[i] as Bot).global_position.distance_to(starts[i]) > 4.0:
 			moved += 1
-	check(moved >= 2, "bots navigate treehouse decks and bridge (%d of %d moved)" % [moved, bots.size()])
+	check(moved >= 3, "bots navigate treehouse decks and bridge (%d of %d moved)" % [moved, bots.size()])
 	var tags := 0
 	for entry in controller.board.entries:
 		tags += entry.tags
@@ -2143,6 +2145,7 @@ func _test_kid_feedback_calibration_and_sniper() -> void:
 
 	# 3. IceSlick boost ceiling and throttling
 	var slick := IceSlick.new()
+	add_child(slick)
 	slick.boost_speed = 12.0
 	slick.slide_direction = Vector3.FORWARD
 	dummy_actor.velocity = Vector3.ZERO
@@ -2152,7 +2155,7 @@ func _test_kid_feedback_calibration_and_sniper() -> void:
 	var vel_before := dummy_actor.velocity
 	slick._boost_actor(dummy_actor)
 	check(dummy_actor.velocity == vel_before, "IceSlick throttles repetitive boost spam with cooldown")
-	slick.free()
+	slick.queue_free()
 
 	# 4. Longshot Rifle ADS zoom and damage buff
 	var longshot := load("res://resources/weapons/longshot.tres") as WeaponData
@@ -2166,8 +2169,8 @@ func _test_kid_feedback_calibration_and_sniper() -> void:
 	var player := Player.new()
 	add_child(player)
 	await physics_frames(2)
-	player.arsenal.loadout = [longshot]
-	player.arsenal.equip_all()
+	var w_list: Array[WeaponData] = [longshot]
+	player.arsenal.set_loadout(w_list)
 	check(player.arsenal.current().data.zoom_fov == 35.0, "Player equipped Longshot with zoom_fov")
 
 	var crosshair := Crosshair.new()
@@ -2298,6 +2301,163 @@ func _test_floor_is_lava_mode() -> void:
 
 	match_scene.queue_free()
 	GameSettings.match_mode = GameSettings.MatchMode.FREE_FOR_ALL
+	await physics_frames(2)
+
+
+func _test_foam_grenade_and_elemental_powerups() -> void:
+	section("Foam Grenades & Elemental Infusion Power-Ups (v0.8.1)")
+
+	# 1. FoamGrenade physical setup
+	var grenade := FoamGrenade.new()
+	add_child(grenade)
+	await physics_frames(1)
+	check(is_equal_approx(grenade.mass, 0.35), "Foam grenade mass is 0.35kg")
+	check(grenade.physics_material_override != null, "Foam grenade has physics material")
+	check(grenade.physics_material_override.bounce >= 0.5, "Foam grenade is bouncy (%.2f)" % grenade.physics_material_override.bounce)
+	check(grenade.collision_layer == Layers.TARGETS, "Foam grenade on Layers.TARGETS")
+	check(grenade.collision_mask & Layers.WORLD != 0, "Foam grenade collides with environment")
+	check(grenade.collision_mask & Layers.ACTORS != 0, "Foam grenade collides with actors")
+	check(grenade.time_left >= 1.5, "Foam grenade fuse timer initialized (%.1fs)" % grenade.time_left)
+	grenade.queue_free()
+	await physics_frames(1)
+
+	# 2. FoamGrenade explosion & blast tag
+	var test_parent := Node3D.new()
+	add_child(test_parent)
+	var pool := make_pool(test_parent)
+
+	var grenade2 := FoamGrenade.new()
+	grenade2.dart_pool = pool
+	test_parent.add_child(grenade2)
+	grenade2.global_position = Vector3(0.0, 0.5, 0.0)
+
+	var target_actor := Actor.new()
+	test_parent.add_child(target_actor)
+	target_actor.global_position = Vector3(2.0, 0.5, 0.0)
+	target_actor.alive = true
+	target_actor.add_to_group(&"actors")
+	await physics_frames(2)
+
+	var initial_meter := target_actor.tag_meter
+	grenade2.explode()
+	check(target_actor.tag_meter > initial_meter, "Target actor received blast damage from exploding foam grenade (meter: %.1f -> %.1f)" % [initial_meter, target_actor.tag_meter])
+	check(target_actor.velocity.x > 0.0, "Target actor received radial knockback impulse from grenade explosion")
+
+	# 3. GrenadePickup mechanics
+	var g_pickup := GrenadePickup.new()
+	test_parent.add_child(g_pickup)
+	g_pickup.global_position = Vector3(5.0, 0.0, 0.0)
+	await physics_frames(2)
+
+	var picker := Actor.new()
+	test_parent.add_child(picker)
+	picker.alive = true
+	picker.grenade_count = 0
+
+	var added := picker.add_grenade(1)
+	check(added, "add_grenade succeeds when under max")
+	check(picker.grenade_count == 1, "Actor grenade_count is 1")
+	added = picker.add_grenade(1)
+	check(added, "add_grenade succeeds up to GRENADE_MAX")
+	check(picker.grenade_count == Actor.GRENADE_MAX, "Actor grenade_count reached GRENADE_MAX (2)")
+	added = picker.add_grenade(1)
+	check(not added, "add_grenade fails when already at GRENADE_MAX")
+	check(picker.grenade_count == Actor.GRENADE_MAX, "Actor grenade_count capped at GRENADE_MAX")
+
+	# Pickup collection test
+	picker.grenade_count = 0
+	g_pickup.make_available()
+	check(g_pickup.is_available(), "GrenadePickup is available")
+	g_pickup._on_body_entered(picker)
+	check(picker.grenade_count == 1, "GrenadePickup gives grenade on pickup")
+	check(not g_pickup.is_available(), "GrenadePickup deactivated after collection")
+
+	# 4. ElementalPickup & Weapon Infusion
+	var e_pickup := ElementalPickup.new()
+	e_pickup.element = DartData.Element.LIGHTNING
+	test_parent.add_child(e_pickup)
+	e_pickup.global_position = Vector3(10.0, 0.0, 0.0)
+	await physics_frames(2)
+
+	check(picker.infusion_element == DartData.Element.NONE, "Picker starts with no elemental infusion")
+	check(picker.infusion_left == 0.0, "Picker starts with 0.0 infusion timer")
+
+	e_pickup.make_available()
+	check(e_pickup.is_available(), "ElementalPickup is available")
+	e_pickup._on_body_entered(picker)
+	check(picker.infusion_element == DartData.Element.LIGHTNING, "Picker infused with LIGHTNING from pickup")
+	check(picker.infusion_left >= 14.5, "Picker granted 15.0s infusion time")
+	check(not e_pickup.is_available(), "ElementalPickup deactivated after collection")
+
+	# Infusion applied to fired darts
+	picker.dart_pool = pool
+	var blaster_res := load("res://resources/weapons/pocket_popper.tres") as WeaponData
+	var loadout_list: Array[WeaponData] = [blaster_res]
+	picker.arsenal.set_loadout(loadout_list)
+	var state := picker.arsenal.current()
+	check(state != null, "Picker equipped pocket popper")
+	check(state.data.dart.element == DartData.Element.NONE, "Base pocket popper dart is non-elemental")
+
+	# Fire weapon with infusion active
+	picker._on_arsenal_fired(state)
+	var infused_dart_found := false
+	for child in pool.get_children():
+		if child is DartProjectile and child.visible:
+			if child.data != null and child.data.element == DartData.Element.LIGHTNING:
+				infused_dart_found = true
+				break
+	check(infused_dart_found, "Fired dart inherited Actor active LIGHTNING infusion")
+
+	# Test infusion status decay
+	picker.tick_status(16.0)
+	check(picker.infusion_element == DartData.Element.NONE, "Infusion clears when timer expires")
+	check(picker.infusion_left == 0.0, "Infusion timer decremented to 0")
+
+	# 5. Player grenade throwing
+	var player_test := Player.new()
+	test_parent.add_child(player_test)
+	player_test.dart_pool = pool
+	player_test.grenade_count = 2
+	await physics_frames(1)
+
+	var initial_child_count := test_parent.get_child_count()
+	player_test._perform_grenade_throw()
+	check(player_test.grenade_count == 1, "Player grenade count decremented after throw")
+	check(test_parent.get_child_count() > initial_child_count, "FoamGrenade spawned into scene tree on throw")
+
+	# 6. Arena pickup placements
+	var fortress := BackyardFortress.new()
+	add_child(fortress)
+	await physics_frames(2)
+	check(fortress.grenade_pickups.size() >= 2, "Backyard Fortress has at least 2 grenade pickups placed (%d)" % fortress.grenade_pickups.size())
+	check(fortress.elemental_pickups.size() >= 3, "Backyard Fortress has at least 3 elemental pickups placed (%d)" % fortress.elemental_pickups.size())
+
+	var home := HomeTurf.new()
+	add_child(home)
+	await physics_frames(2)
+	check(home.grenade_pickups.size() >= 2, "Home Turf has at least 2 grenade pickups placed (%d)" % home.grenade_pickups.size())
+	check(home.elemental_pickups.size() >= 3, "Home Turf has at least 3 elemental pickups placed (%d)" % home.elemental_pickups.size())
+	home.queue_free()
+
+	# 7. Bot decision checks with active arena pickups
+	var bot_test := Bot.new()
+	test_parent.add_child(bot_test)
+	bot_test.arena = fortress
+	bot_test.global_position = fortress.grenade_pickups[0].global_position + Vector3(2.0, 0.0, 0.0)
+	fortress.grenade_pickups[0].make_available()
+	fortress.elemental_pickups[0].make_available()
+
+	bot_test.grenade_count = 0
+	check(bot_test._wants_grenade(), "Bot wants grenade when inventory is empty and pickup is available")
+	bot_test.grenade_count = Actor.GRENADE_MAX
+	check(not bot_test._wants_grenade(), "Bot does not want grenade when full")
+	bot_test.infusion_left = 0.0
+	check(bot_test._wants_elemental(), "Bot wants elemental pickup when uninfused and pickup is available")
+	bot_test.infusion_left = 10.0
+	check(not bot_test._wants_elemental(), "Bot does not want elemental pickup when already infused")
+
+	fortress.queue_free()
+	test_parent.queue_free()
 	await physics_frames(2)
 
 

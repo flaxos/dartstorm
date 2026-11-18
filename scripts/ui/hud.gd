@@ -26,6 +26,9 @@ var _shield_bar: ProgressBar
 var _weapon_label: Label
 var _ammo_label: Label
 var _ammo_hint: Label
+var _grenade_label: Label
+var _infusion_label: Label
+var _infusion_bar: ProgressBar
 var _spin_bar: ProgressBar
 var _clock_label: Label
 var _mode_label: Label
@@ -76,6 +79,8 @@ func setup(player: Player, controller: MatchController) -> void:
 	player.tagged_out.connect(_on_player_tagged)
 	player.respawned.connect(func(_actor: Actor) -> void: _hide_banner())
 	player.ammo_collected.connect(func(_amount: int) -> void: _refill_left = 0.5)
+	player.grenade_count_changed.connect(_on_grenade_count_changed)
+	player.infusion_changed.connect(_on_infusion_changed)
 	player.arsenal.weapon_changed.connect(_on_weapon_changed)
 	player.arsenal.ammo_changed.connect(_on_ammo_changed)
 
@@ -91,6 +96,8 @@ func setup(player: Player, controller: MatchController) -> void:
 	_on_clock_tick(int(ceilf(controller.time_left)))
 	_refresh_score()
 	_on_weapon_changed(player.arsenal.current())
+	_on_grenade_count_changed(player.grenade_count, Actor.GRENADE_MAX)
+	_on_infusion_changed(player.infusion_element, player.infusion_left)
 
 	if controller.mode is ZombieSiegeMode:
 		_build_siege_ui(controller.mode as ZombieSiegeMode)
@@ -136,6 +143,14 @@ func _process(delta: float) -> void:
 			_set_hint("", UiKit.CREAM)
 
 	_tick_announcer(delta)
+
+	if _player != null and _infusion_bar != null and _infusion_label != null:
+		if _player.infusion_left > 0.0 and _player.infusion_element != DartData.Element.NONE:
+			_infusion_bar.value = clampf(_player.infusion_left / 15.0, 0.0, 1.0)
+			_infusion_label.text = "%s %ds" % [_get_element_name(_player.infusion_element), int(ceilf(_player.infusion_left))]
+		elif _infusion_bar.visible:
+			_infusion_bar.visible = false
+			_infusion_label.visible = false
 
 	if _lava_box != null and _controller.mode is FloorIsLavaMode:
 		var lm := _controller.mode as FloorIsLavaMode
@@ -218,6 +233,13 @@ func _build() -> void:
 	var weapon_box := VBoxContainer.new()
 	weapon_box.alignment = BoxContainer.ALIGNMENT_END
 	weapon_panel.add_child(weapon_box)
+	_infusion_label = UiKit.label("", 16, UiKit.ORANGE_HOT)
+	_infusion_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_infusion_label.visible = false
+	weapon_box.add_child(_infusion_label)
+	_infusion_bar = UiKit.bar(UiKit.ORANGE, Vector2(240, 8))
+	_infusion_bar.visible = false
+	weapon_box.add_child(_infusion_bar)
 	_ammo_hint = UiKit.label("", 16, UiKit.ORANGE_HOT)
 	_ammo_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	weapon_box.add_child(_ammo_hint)
@@ -227,6 +249,9 @@ func _build() -> void:
 	_ammo_label = UiKit.label("0", 44)
 	_ammo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	weapon_box.add_child(_ammo_label)
+	_grenade_label = UiKit.label("💣 0", 18, UiKit.CREAM)
+	_grenade_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	weapon_box.add_child(_grenade_label)
 	_spin_bar = UiKit.bar(UiKit.LIME, Vector2(240, 14))
 	_spin_bar.visible = false
 	weapon_box.add_child(_spin_bar)
@@ -435,6 +460,46 @@ func _on_ammo_changed(state: WeaponState) -> void:
 		_ammo_label.text = "BELT %s" % reserve_text
 	else:
 		_ammo_label.text = "%d | %s" % [state.magazine, reserve_text]
+
+
+func _on_grenade_count_changed(count: int, _max_val: int) -> void:
+	if _grenade_label != null:
+		_grenade_label.text = "💣 %d [G]" % count if count > 0 else "💣 0"
+		_grenade_label.add_theme_color_override("font_color", UiKit.LIME if count > 0 else UiKit.CREAM)
+
+
+func _on_infusion_changed(element: DartData.Element, time_left: float) -> void:
+	if _infusion_bar == null or _infusion_label == null:
+		return
+	var active := time_left > 0.0 and element != DartData.Element.NONE
+	_infusion_bar.visible = active
+	_infusion_label.visible = active
+	if active:
+		var col := _get_element_color(element)
+		_infusion_bar.value = clampf(time_left / 15.0, 0.0, 1.0)
+		_infusion_bar.add_theme_stylebox_override("fill", UiKit.panel_style(col, 1.0, 4))
+		_infusion_label.text = "%s %ds" % [_get_element_name(element), int(ceilf(time_left))]
+		_infusion_label.add_theme_color_override("font_color", col.lightened(0.2))
+
+
+func _get_element_name(element: DartData.Element) -> String:
+	match element:
+		DartData.Element.FIRE: return "🔥 PYRO"
+		DartData.Element.WATER: return "💧 HYDRO"
+		DartData.Element.LIGHTNING: return "⚡ VOLT"
+		DartData.Element.ICE: return "❄️ FROST"
+		DartData.Element.WIND: return "💨 GALE"
+	return "ELEMENT"
+
+
+func _get_element_color(element: DartData.Element) -> Color:
+	match element:
+		DartData.Element.FIRE: return Color(1.0, 0.45, 0.12)
+		DartData.Element.WATER: return Color(0.2, 0.75, 1.0)
+		DartData.Element.LIGHTNING: return Color(1.0, 0.95, 0.25)
+		DartData.Element.ICE: return Color(0.82, 0.96, 1.0)
+		DartData.Element.WIND: return Color(0.75, 0.95, 0.85)
+	return Color.WHITE
 
 
 func _on_shot_fired(state: WeaponState) -> void:

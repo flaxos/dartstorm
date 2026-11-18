@@ -200,12 +200,19 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
    - **Sniper Rifle Buff & ADS Scope**: Added `zoom_fov = 35.0` to Longshot rifle, buffed tag power to 85.0, registered `aim_down_sights` action, scaled mouse/controller sensitivity, hid viewmodel while scoped, and added authentic sniper scope overlay with range mil-dots.
    - **Zombie Pacing & Lunge**: Calibrated zombie speeds so humans can kite; added sudden telegraphed lunge (+7.5 m/s impulse) when within 2.5–4.2m with line-of-sight on a $\ge 3.5\text{s}$ cooldown.
    - **Zombie Siege Rebalancing**: BaseCore HP boosted to 1250, Barricade HP boosted to 350, intermission extended to 25s, rebalanced wave batches, boosted scrap economy.
+8. ✅ **Floor is Lava Mode** (v0.8.0):
+   - **Dynamic Tides**: Cyclic phases (CALM 24s, WARNING 5s siren countdown, RISING 4s, HIGH TIDE 20s at 1.35m, RECEDING 4s with +25 Survival Bonus).
+   - **Molten Foam Hazard**: Heat tag damage (+38 dps) with sizzling audio, absorbs into Foam Shield first.
+   - **Elemental Cooling**: Water and ice darts instantly cool molten lava into solid 6.0s `ObsidianStone` stepping platforms.
+   - **Bot High-Ground AI**: Bots filter roam targets to elevated platforms during high tide and leap away if submerged.
+9. ✅ **Foam Grenades & Elemental Weapon Power-Ups** (v0.8.1):
+   - **Foam Grenade (`FoamGrenade`)**: Physical bouncy 0.35kg throwable with ticking LED fuse (1.8s), 16 radial physical darts, 4.5m area blast wave (20–65 tag damage, 11.5 m/s knockback), and confetti cloud. Thrown via `G` key, middle mouse, or D-Pad Down (`throw_grenade`).
+   - **Foam Grenade Pickup (`GrenadePickup`)**: Spawns in arenas, granting +1 grenade up to `GRENADE_MAX = 2` on a 25s respawn timer.
+   - **Elemental Weapon Infusions (`ElementalPickup`)**: Canisters granting 15 seconds of Pyro, Hydro, Frost, or Volt infusion across all carried blasters.
+   - **HUD & Bot Integration**: Weapon HUD grenade counter (`💣 N [G]`) and elemental infusion timer bar with badges; bot AI incorporates grenade and infusion seeking into decisions.
 
 ## Later (Phase 7 / Wishlist from Young Players)
-- **Floor is Lava Mode**: Dynamic rising lava hazard where ground level becomes dangerous and players must parkour across backyard forts, furniture, and rooftops.
-- **Foam Grenade Pickup Item**: Throwable bouncing canister that detonates into a multi-dart area-of-effect foam burst with festive confetti.
 - **Elemental Weather & Map Disasters**: Lightning storms electrifying puddles, flash freezing blizzards creating ice slicks, and wind whirlwinds.
-- **Elemental Weapon Power-Ups**: Temporary pickups providing fire, lightning, water, and ice dart infusions to any standard blaster.
 - Weapon customisation and mastery (cosmetic or sidegrades only, D-028)
 - Smarter bots (cover, wind awareness, team play)
 - Local split-screen or online multiplayer (DECISIONS D-008)

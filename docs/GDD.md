@@ -105,7 +105,8 @@ The photo isn't kept in the repo (it has their names on it). This is what it ask
 | **Zombie Pacing & Lunge** | ✅ v0.7.1 | Calibrated zombie speeds so humans can kite; added telegraphed lunge burst (+7.5 m/s) on 3.5s cooldown |
 | **Zombie Siege Rebalance** | ✅ v0.7.1 | BaseCore 1250 HP, Barricade 350 HP, 25s intermission, rebalanced wave batches, boosted scrap payouts |
 | **Floor is Lava Mode** | ✅ v0.8.0 | Rising molten foam lava tides, obsidian cooling with water/ice darts, high ground parkour combat (§3.25) |
-| **Wishlist: Foam Grenade pickup** | ⏳ Phase 7 | Throwable bouncy foam canister with area-of-effect confetti burst |
+| **Foam Grenade Pickup** | ✅ v0.8.1 | Throwable bouncy foam canister, ticking LED fuse, 16-dart radial burst, knockback & confetti (§3.26) |
+| **Elemental Weapon Power-Ups** | ✅ v0.8.1 | 15s elemental infusion pickups (Fire, Ice, Water, Lightning) powering all equipped blasters (§3.26) |
 | **Wishlist: Elemental Weather** | ⏳ Phase 7 | Dynamic map events: thunder storms, flash freezing blizzards, lava seepage |
 
 ## 2. Brief traceability
@@ -562,6 +563,31 @@ The main menu is the players' own drawing (§1.9), built in 3D:
   - When lava rises, bots filter roaming destinations to elevated platforms ($Y > \text{lava\_height} + 0.4\text{m}$).
   - If submerged or pushed into molten foam, bots trigger emergency jump impulses and steer toward the nearest obsidian stepping stone or high-ground structure.
 - **Scoring & Rewards:** Standard tags award 100 points, with a +50 bonus for tagging an opponent while they are submerged or struggling in lava, plus +25 points for every high tide cycle survived.
+
+### 3.26 Foam Grenades & Elemental Weapon Infusion Pickups *(v0.8.1)*
+- **Concept:** Direct fulfillment of wishlist items from young playtesters: a throwable cartoon foam grenade ("Nerf Grenade") and elemental weapon pickups that infuse any carried blaster with fire, ice, water, or lightning.
+- **Foam Grenade (`FoamGrenade`):**
+  - **Physical Throwable (`RigidBody3D`):** Light 0.35kg bouncy cylinder with high-vis safety orange foam body, dark rubber shock-absorbing end caps, and a physics material with 0.58 bounciness.
+  - **Ticking LED Fuse:** Blinks and beeps (`&"fuse_beep"`) with accelerating frequency across a 1.8-second fuse timer.
+  - **Playful Detonation:** 100% non-violent and family-friendly. Explodes into:
+    1. **Radial Barrage:** 16 physical foam darts launched outwards in a 360-degree Fibonacci spherical distribution (`DartPool`).
+    2. **Squishy Air Shockwave:** Area blast wave ($4.5\text{m}$ radius) dealing distance-attenuated tag damage ($20.0$ to $65.0$) and an $11.5\text{m/s}$ physics knockback impulse. Absorbs cleanly into shields first.
+    3. **Celebratory Confetti Cloud:** Colorful foam burst particles scattering across the impact area.
+  - **Controls:** Thrown with `G` key, middle mouse click, or Controller D-Pad Down (`throw_grenade`). Max capacity of 2 grenades per player/bot.
+- **Foam Grenade Pickup (`GrenadePickup`):**
+  - Hovering safety orange grenade model floating inside a warm orange beacon of light with rotating 3D billboard label.
+  - Grants +1 Foam Grenade up to `GRENADE_MAX = 2`. Respawns every 25 seconds.
+- **Elemental Infusion Pickups (`ElementalPickup`):**
+  - Floating illuminated elemental canisters inside colored pillar beacons: Fire (orange), Ice (frost cyan), Water (deep blue), Lightning (electric yellow).
+  - Collecting an elemental canister grants **15 seconds of weapon infusion** (`apply_elemental_infusion`).
+  - **Blaster Infusion Mechanics:** While infused, every dart fired from *any* blaster (Pocket Popper, Dart Sprayer, Chainstorm, Longshot, etc.) inherits that element (`DartData.Element`). This activates all existing status effects and elemental combos:
+    - **Hydro:** Heavy water pushback, wet soaking status, instantly cools lava into obsidian stepping stones.
+    - **Pyro:** Burning tag damage over time, melts frost status, steam combo on wet targets.
+    - **Frost:** 35% movement slow, makes targets slip and slide on ice.
+    - **Volt:** Chain lightning zap leaping across clustered rivals.
+- **HUD & Bot Integration:**
+  - Weapon HUD displays grenade inventory counter (`💣 N [G]`) and an elemental infusion timer bar with element badge name and countdown seconds.
+  - Bots actively seek available grenade and elemental pickups when inventory is depleted or uninfused, and lob grenades at rival groups.
 
 ---
 

@@ -263,6 +263,11 @@ func _build_patio() -> void:
 	add_ice_slick(Vector3(22.05, PATIO_ROOF_TOP * 0.5, -22.0), Vector3(14.2, 0.2, 3.8), Vector3(1.0, -0.45, 0.0), Vector3(0.0, 0.0, 24.0))
 	# Shield pickup up on the patio roof fort
 	add_shield_pickup(Vector3(6.5, PATIO_ROOF_TOP, -22.5))
+	add_grenade_pickup(Vector3(12.0, PATIO_ROOF_TOP, -22.5))
+	add_grenade_pickup(Vector3(0.0, 0.0, 0.0))
+	add_elemental_pickup(Vector3(-14.0, 0.0, -12.0), DartData.Element.WATER)
+	add_elemental_pickup(Vector3(14.0, 0.0, 12.0), DartData.Element.LIGHTNING)
+	add_elemental_pickup(Vector3(0.0, 0.0, -18.0), DartData.Element.FIRE)
 	add_roam_point(Vector3(7.5, PATIO_ROOF_TOP, -22.5))
 
 	# Barbecue, outdoor table and benches, pot plants.

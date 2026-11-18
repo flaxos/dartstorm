@@ -167,6 +167,9 @@ func _physics_process(delta: float) -> void:
 					lunge(wish.normalized(), 6.0)
 		else:
 			arsenal.set_trigger(fire_held)
+
+		if Input.is_action_just_pressed(&"throw_grenade") and not is_zombie and grenade_count > 0:
+			_perform_grenade_throw()
 	else:
 		if is_aiming_down_sights:
 			is_aiming_down_sights = false
@@ -329,6 +332,15 @@ func _look(yaw: float, pitch: float) -> void:
 	rotate_y(yaw)
 	_pitch = clampf(_pitch + (-pitch if GameSettings.invert_y else pitch), -1.5, 1.5)
 	head.rotation.x = _pitch
+
+
+func _perform_grenade_throw() -> void:
+	var toss_origin := camera.global_position + -camera.global_transform.basis.z * 0.45 + Vector3.DOWN * 0.15
+	var toss_dir := (-camera.global_transform.basis.z + Vector3.UP * 0.22).normalized()
+	throw_grenade(toss_origin, toss_dir, 17.5)
+	_punch = -0.04
+	_dip_vel = 0.06
+	Sfx.play(&"whoosh", 1.25, -2.0)
 
 
 func respawn(at: Transform3D) -> void:

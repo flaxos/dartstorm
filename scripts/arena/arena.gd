@@ -40,6 +40,7 @@ var shield_pickups: Array[ShieldPickup] = []
 var puddles: Array[WaterPuddle] = []
 var ice_slicks: Array[IceSlick] = []
 var vents: Array[WindVent] = []
+var lava_hazard: LavaHazard = null
 
 var _spawn_root: Node3D
 var _clouds: Node3D

@@ -57,6 +57,9 @@ var _core_label: Label
 var _wave_label: Label
 var _intermission_label: Label
 var _scrap_label: Label
+var _lava_box: VBoxContainer
+var _lava_status_label: Label
+var _lava_timer_label: Label
 
 
 func setup(player: Player, controller: MatchController) -> void:
@@ -91,6 +94,9 @@ func setup(player: Player, controller: MatchController) -> void:
 
 	if controller.mode is ZombieSiegeMode:
 		_build_siege_ui(controller.mode as ZombieSiegeMode)
+
+	if controller.mode is FloorIsLavaMode:
+		_build_lava_ui(controller.mode as FloorIsLavaMode)
 
 
 func _process(delta: float) -> void:
@@ -130,6 +136,33 @@ func _process(delta: float) -> void:
 			_set_hint("", UiKit.CREAM)
 
 	_tick_announcer(delta)
+
+	if _lava_box != null and _controller.mode is FloorIsLavaMode:
+		var lm := _controller.mode as FloorIsLavaMode
+		if lm.lava_director != null:
+			var ld := lm.lava_director
+			var sec := maxi(0, int(ceilf(ld.time_left)))
+			match ld.phase:
+				LavaDirector.Phase.CALM:
+					_lava_status_label.text = "FLOOR SAFE"
+					_lava_status_label.add_theme_color_override("font_color", UiKit.LIME)
+					_lava_timer_label.text = "NEXT TIDE IN %ds" % sec
+				LavaDirector.Phase.WARNING:
+					_lava_status_label.text = "WARNING: LAVA RISING!"
+					_lava_status_label.add_theme_color_override("font_color", UiKit.ORANGE_HOT)
+					_lava_timer_label.text = "RISING IN %ds!" % sec
+				LavaDirector.Phase.RISING:
+					_lava_status_label.text = "LAVA RISING!"
+					_lava_status_label.add_theme_color_override("font_color", UiKit.ORANGE_HOT)
+					_lava_timer_label.text = "SEEK HIGH GROUND!"
+				LavaDirector.Phase.HIGH_TIDE:
+					_lava_status_label.text = "HIGH TIDE — STAY HIGH!"
+					_lava_status_label.add_theme_color_override("font_color", UiKit.ORANGE_HOT)
+					_lava_timer_label.text = "%ds REMAINING" % sec
+				LavaDirector.Phase.RECEDING:
+					_lava_status_label.text = "LAVA RECEDING..."
+					_lava_status_label.add_theme_color_override("font_color", UiKit.SKY)
+					_lava_timer_label.text = "COOLING DOWN"
 
 	# Respawn countdown while tagged out.
 	if not _player.alive and not _match_over:
@@ -767,3 +800,31 @@ func _build_siege_ui(siege: ZombieSiegeMode) -> void:
 			_scrap_label.text = "🔧 %d SCRAP" % current_scrap
 		)
 		_scrap_label.text = "🔧 %d SCRAP" % hd.scrap
+
+
+func _build_lava_ui(_lava_mode: FloorIsLavaMode) -> void:
+	_team_strip.visible = false
+	_lava_box = VBoxContainer.new()
+	_lava_box.add_theme_constant_override("separation", 2)
+	_lava_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	_lava_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_lava_box)
+	UiKit.pin(_lava_box, Vector2(0.5, 0.0), Vector2(0, 96), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(280, 48)
+	panel.add_theme_stylebox_override("panel", UiKit.panel_style(UiKit.NAVY_DARK, 0.9, 12, 2, UiKit.ORANGE_HOT, 2))
+	_lava_box.add_child(panel)
+
+	var inner_box := VBoxContainer.new()
+	inner_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	inner_box.add_theme_constant_override("separation", 2)
+	panel.add_child(inner_box)
+
+	_lava_status_label = UiKit.label("FLOOR SAFE", 18, UiKit.LIME, 4)
+	_lava_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	inner_box.add_child(_lava_status_label)
+
+	_lava_timer_label = UiKit.label("NEXT TIDE IN 24s", 14, UiKit.CREAM, 2)
+	_lava_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	inner_box.add_child(_lava_timer_label)

@@ -152,6 +152,16 @@ func _physics_process(delta: float) -> void:
 				_has_goal = false
 		else:
 			_stuck_for = 0.0
+
+		# Floor is Lava: panic when submerged or near molten foam
+		if arena != null and arena.lava_hazard != null and arena.lava_hazard.current_lava_y > -0.4:
+			var lava_y := arena.lava_hazard.current_lava_y
+			if global_position.y <= lava_y + 0.35:
+				if is_on_floor():
+					jump = true
+				var escape_dir := _get_lava_escape_direction(lava_y)
+				if escape_dir.length_squared() > 0.01:
+					wish = escape_dir
 	else:
 		arsenal.set_trigger(false)
 
@@ -426,7 +436,56 @@ func _nearest_bucket(stocked_only: bool) -> AmmoBucket:
 func _random_roam_point() -> Vector3:
 	if arena == null or arena.roam_points.is_empty():
 		return global_position + Vector3(randf_range(-10.0, 10.0), 0.0, randf_range(-10.0, 10.0))
+	if arena.lava_hazard != null and arena.lava_hazard.current_lava_y > -0.4:
+		var safe_points := arena.roam_points.filter(func(p: Vector3) -> bool: return p.y > arena.lava_hazard.current_lava_y + 0.5)
+		if not safe_points.is_empty():
+			return safe_points[randi() % safe_points.size()]
+		var highest := arena.roam_points[0]
+		for p in arena.roam_points:
+			if p.y > highest.y:
+				highest = p
+		return highest
 	return arena.roam_points[randi() % arena.roam_points.size()]
+
+
+func _get_lava_escape_direction(lava_y: float) -> Vector3:
+	if arena == null:
+		return Vector3.ZERO
+
+	if arena.lava_hazard != null and not arena.lava_hazard.active_stones.is_empty():
+		var best_stone: ObsidianStone = null
+		var best_dist := INF
+		for stone in arena.lava_hazard.active_stones:
+			if is_instance_valid(stone) and stone.lifetime > 0.5:
+				var d := global_position.distance_to(stone.global_position)
+				if d < best_dist and d < 18.0:
+					best_dist = d
+					best_stone = stone
+		if best_stone != null:
+			var dir := best_stone.global_position - global_position
+			dir.y = 0.0
+			return dir.normalized()
+
+	var safe_points := arena.roam_points.filter(func(p: Vector3) -> bool: return p.y > lava_y + 0.5)
+	if not safe_points.is_empty():
+		var best_point: Vector3 = safe_points[0]
+		var best_dist := INF
+		for p: Vector3 in safe_points:
+			var d := global_position.distance_to(p)
+			if d < best_dist:
+				best_dist = d
+				best_point = p
+		var dir := best_point - global_position
+		dir.y = 0.0
+		return dir.normalized()
+
+	for base in arena.team_bases:
+		if base.y > lava_y + 0.5:
+			var dir := base - global_position
+			dir.y = 0.0
+			return dir.normalized()
+
+	return Vector3.ZERO
 
 
 func _set_goal(point: Vector3) -> void:

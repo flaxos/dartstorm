@@ -28,6 +28,7 @@ const MODE_PATHS := [
 	"res://resources/modes/blue_vs_orange.tres",
 	"res://resources/modes/zombies.tres",
 	"res://resources/modes/zombie_siege.tres",
+	"res://resources/modes/floor_is_lava.tres",
 ]
 ## Indexed by GameSettings.bot_difficulty.
 const DIFFICULTY_PATHS := [
@@ -58,6 +59,8 @@ var podium: Podium
 var power_up: PowerUpPickup
 var base_core: BaseCore
 var horde_director: HordeDirector
+var lava_hazard: LavaHazard
+var lava_director: LavaDirector
 
 
 ## Loads a resource without ever crashing: returns null if the file is missing
@@ -231,6 +234,24 @@ func _ready() -> void:
 		horde_director.all_waves_cleared.connect(controller.end_match)
 		horde_director.defeat.connect(controller.end_match)
 		horde_director.start()
+
+	if mode is FloorIsLavaMode:
+		var lava_mode := mode as FloorIsLavaMode
+		lava_hazard = LavaHazard.new()
+		lava_hazard.name = "LavaHazard"
+		arena.add_child(lava_hazard)
+		arena.lava_hazard = lava_hazard
+		lava_mode.lava_hazard = lava_hazard
+
+		lava_director = LavaDirector.new()
+		lava_director.name = "LavaDirector"
+		add_child(lava_director)
+		lava_director.setup(lava_hazard, controller)
+		lava_mode.lava_director = lava_director
+		lava_director.high_tide_survived.connect(func(_count: int) -> void:
+			lava_mode.on_high_tide_survived(controller.board)
+		)
+		lava_director.start()
 
 	if mode.uses_power_up() and not arena.power_up_spots.is_empty():
 		_create_power_up(mode)

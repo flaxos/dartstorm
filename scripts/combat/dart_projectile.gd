@@ -206,9 +206,15 @@ func _on_hit(hit: Dictionary) -> void:
 		retire()
 		return
 
-	if collider != null and collider.has_method(&"on_dart_hit"):
+	var target_collider: Object = collider
+	if target_collider != null and not target_collider.has_method(&"on_dart_hit") and target_collider is Node:
+		var parent := (target_collider as Node).get_parent()
+		if parent != null and parent.has_method(&"on_dart_hit"):
+			target_collider = parent
+
+	if target_collider != null and target_collider.has_method(&"on_dart_hit"):
 		global_position = point
-		collider.call(&"on_dart_hit", self, point)
+		target_collider.call(&"on_dart_hit", self, point)
 		_report(Impact.TARGET, point, normal)
 		retire()
 		return

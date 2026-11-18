@@ -458,6 +458,8 @@ func _build_bank() -> void:
 	_register(&"shield_pop", _mix([_tone(0.18, 400.0, 120.0, Wave.SINE, 0.7), _noise(0.20, 5000.0, 1000.0, 0.45, 1.8), _tone(0.15, 800.0, 1600.0, Wave.TRIANGLE, 0.3)]))
 	_register(&"shield_pickup", _melody([659.0, 880.0, 1174.0, 1568.0], 0.05, Wave.TRIANGLE, 0.35))
 	_register(&"ice_slide", _mix([_noise(0.35, 3800.0, 1200.0, 0.38, 1.3), _tone(0.3, 300.0, 550.0, Wave.SINE, 0.25)]))
+	_register(&"lava_sizzle", _mix([_noise(0.28, 4200.0, 1100.0, 0.45, 1.4, 0.04), _tone(0.18, 260.0, 140.0, Wave.TRIANGLE, 0.3)]))
+	_register(&"siren", _sequence([_tone(0.22, 650.0, 880.0, Wave.SAW, 0.35), _tone(0.22, 880.0, 650.0, Wave.SAW, 0.35)]))
 	# Handling.
 	_register(&"reload", _sequence([_tone(0.03, 900.0, 700.0, Wave.SQUARE, 0.3, 0.5), _silence(0.08), _tone(0.04, 1200.0, 900.0, Wave.SQUARE, 0.3, 0.5)]))
 	_register(&"dry", _tone(0.03, 300.0, 250.0, Wave.SQUARE, 0.25, 0.6))

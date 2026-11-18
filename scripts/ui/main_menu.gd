@@ -17,6 +17,7 @@ const MODE_ORDER: Array[int] = [
 	GameSettings.MatchMode.GUN_GAME,
 	GameSettings.MatchMode.ZOMBIES,
 	GameSettings.MatchMode.ZOMBIE_SIEGE,
+	GameSettings.MatchMode.FLOOR_IS_LAVA,
 ]
 ## The lobby island floats just south of the yard, so the backyard fills the background.
 const STAGE := Vector3(0.0, 9.0, 38.0)

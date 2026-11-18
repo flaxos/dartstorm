@@ -75,6 +75,8 @@ func _ready() -> void:
 	await _test_zombie_siege_match()
 	# Feedback, Pacing, Sniper ADS & Zombie Lunge (v0.7.1)
 	await _test_kid_feedback_calibration_and_sniper()
+	# Floor is Lava Mode (v0.8.0)
+	await _test_floor_is_lava_mode()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -1220,7 +1222,7 @@ func _test_lobby() -> void:
 	check(squad.size() == 3, "your 3 bots stand on platforms around you")
 	var play := menu.get("_play_button") as Button
 	check(play != null and play.has_focus(), "the big PLAY button has focus (A on a controller starts a match)")
-	check((menu.get("_mode_buttons") as Array).size() == 6, "six mode cards: SOLO, DUOS, TEAMS, GUN GAME, ZOMBIES, SIEGE")
+	check((menu.get("_mode_buttons") as Array).size() == 7, "seven mode cards: SOLO, DUOS, TEAMS, GUN GAME, ZOMBIES, SIEGE, LAVA")
 
 	menu.call("_pick_mode", GameSettings.MatchMode.TEAMS)
 	await physics_frames(1)
@@ -2190,5 +2192,112 @@ func _test_kid_feedback_calibration_and_sniper() -> void:
 
 	dummy_actor.queue_free()
 	player.queue_free()
+
+
+func _test_floor_is_lava_mode() -> void:
+	section("Floor is Lava Mode (v0.8.0)")
+
+	# 1. Mode Resource and Settings Verification
+	const LAVA_MODE_PATH := "res://resources/modes/floor_is_lava.tres"
+	var mode := load(LAVA_MODE_PATH) as FloorIsLavaMode
+	check(mode != null, "floor_is_lava.tres loaded as FloorIsLavaMode")
+	check(mode.id == &"floor_is_lava", "Mode id is floor_is_lava")
+	check(mode.display_name == "Floor is Lava", "Mode display_name is 'Floor is Lava'")
+	check(GameSettings.MatchMode.FLOOR_IS_LAVA == 6, "GameSettings.MatchMode enum has FLOOR_IS_LAVA")
+	check(MatchScene.MODE_PATHS.has(LAVA_MODE_PATH), "MatchScene.MODE_PATHS includes floor_is_lava.tres")
+
+	# 2. Actor Hazard Tag & Foam Shield Absorption
+	var actor := Actor.new()
+	add_child(actor)
+	await physics_frames(1)
+	actor.shield_points = 50.0
+	actor.tag_meter = 0.0
+	actor.apply_hazard_tag(30.0, null)
+	check(actor.shield_points == 20.0 and actor.tag_meter == 0.0, "apply_hazard_tag absorbs into shield first")
+	actor.apply_hazard_tag(35.0, null)
+	check(actor.shield_points == 0.0 and actor.tag_meter == 15.0, "apply_hazard_tag overflows depleted shield into tag meter")
+	actor.queue_free()
+
+	# 3. Lava Hazard Initialization & Height Setting
+	var stage := Node3D.new()
+	add_child(stage)
+	var hazard := LavaHazard.new()
+	stage.add_child(hazard)
+	await physics_frames(2)
+	check(is_equal_approx(hazard.current_lava_y, -0.6), "LavaHazard starts at calm height -0.6m")
+	hazard.set_lava_height(1.35)
+	check(is_equal_approx(hazard.current_lava_y, 1.35) and is_equal_approx(hazard.position.y, 1.35), "set_lava_height updates current_lava_y and position.y")
+
+	# 4. Elemental Water/Ice Obsidian Stone Formation
+	var water_dart := DartProjectile.new()
+	var water_data := DartData.new()
+	water_data.element = DartData.Element.WATER
+	water_dart.data = water_data
+	hazard.on_dart_hit(water_dart, Vector3(5.0, 1.35, 2.0))
+	check(hazard.active_stones.size() == 1, "Water dart hit creates obsidian stepping stone")
+	var stone := hazard.active_stones[0]
+	check(stone is ObsidianStone, "Spawned stone is ObsidianStone instance")
+	check(stone.position.x == 5.0 and stone.position.z == 2.0, "ObsidianStone positioned at hit coordinates")
+	check(stone.collision_layer == Layers.WORLD, "ObsidianStone is solid walkable geometry in Layers.WORLD")
+
+	var ice_dart := DartProjectile.new()
+	var ice_data := DartData.new()
+	ice_data.element = DartData.Element.ICE
+	ice_dart.data = ice_data
+	hazard.on_dart_hit(ice_dart, Vector3(-4.0, 1.35, 1.0))
+	check(hazard.active_stones.size() == 2, "Ice dart hit creates second obsidian stepping stone")
+
+	water_dart.free()
+	ice_dart.free()
+	stage.queue_free()
+
+	# 5. Lava Director Tide Phase Transitions
+	var director := LavaDirector.new()
+	add_child(director)
+	director.setup(null, null)
+	director.start()
+	check(director.phase == LavaDirector.Phase.CALM, "LavaDirector starts in CALM phase")
+	check(is_equal_approx(director.time_left, LavaDirector.CALM_DURATION), "CALM duration initialized correctly")
+
+	director._set_phase(LavaDirector.Phase.WARNING)
+	check(director.phase == LavaDirector.Phase.WARNING, "Phase transitions to WARNING")
+
+	director._set_phase(LavaDirector.Phase.HIGH_TIDE)
+	check(director.phase == LavaDirector.Phase.HIGH_TIDE and is_equal_approx(director.current_height, LavaDirector.PEAK_HEIGHT),
+			"Phase transitions to HIGH_TIDE at PEAK_HEIGHT 1.35m")
+
+	var survived_emitted := [false]
+	director.high_tide_survived.connect(func(_count: int) -> void: survived_emitted[0] = true)
+	director._set_phase(LavaDirector.Phase.RECEDING)
+	check(survived_emitted[0], "Entering RECEDING phase emits high_tide_survived signal")
+	director.queue_free()
+
+	# 6. MatchScene & HUD Integration
+	GameSettings.match_mode = GameSettings.MatchMode.FLOOR_IS_LAVA
+	GameSettings.bot_count = 2
+
+	var match_scene := MatchScene.new()
+	add_child(match_scene)
+	await physics_frames(10)
+
+	check(match_scene.lava_hazard != null, "MatchScene created LavaHazard")
+	check(match_scene.lava_director != null, "MatchScene created LavaDirector")
+	check(match_scene.arena.lava_hazard == match_scene.lava_hazard, "Arena holds reference to LavaHazard")
+	check(match_scene.hud._lava_box != null, "HUD created lava UI panel")
+	check(match_scene.hud._lava_status_label != null, "HUD created lava status label")
+	check(match_scene.hud._lava_timer_label != null, "HUD created lava timer label")
+	check(match_scene.hud._lava_status_label.text == "FLOOR SAFE", "Lava HUD begins with 'FLOOR SAFE'")
+
+	# Verify bot high-ground roam selection during high tide
+	match_scene.lava_director._set_phase(LavaDirector.Phase.HIGH_TIDE)
+	await physics_frames(4)
+	if not match_scene.bots.is_empty():
+		var bot := match_scene.bots[0]
+		var roam := bot._random_roam_point()
+		check(roam.y > match_scene.lava_hazard.current_lava_y + 0.4, "Bot filters roam goals to elevated platforms during high tide")
+
+	match_scene.queue_free()
+	GameSettings.match_mode = GameSettings.MatchMode.FREE_FOR_ALL
+	await physics_frames(2)
 
 

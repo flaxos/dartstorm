@@ -12,6 +12,8 @@ signal ammo_collected(amount: int)
 signal turned_zombie(actor: Actor)
 signal shield_changed(current: float, max_val: float)
 signal shield_broken(actor: Actor)
+signal grenade_count_changed(count: int, max_val: int)
+signal infusion_changed(element: DartData.Element, time_left: float)
 
 const GRAVITY := 20.0
 const BODY_RADIUS := 0.4
@@ -19,6 +21,7 @@ const BODY_HEIGHT := 1.8
 const KILL_PLANE_Y := -25.0
 const SHIELD_MAX := 50.0
 const MAX_HORIZONTAL_SPEED := 24.0
+const GRENADE_MAX := 2
 
 @export var display_name: String = "Actor"
 @export var walk_speed: float = 6.4
@@ -49,6 +52,9 @@ var damage_scale: float = 1.0
 var is_human: bool = false
 var is_zombie: bool = false
 var shield_points: float = 0.0
+var grenade_count: int = 0
+var infusion_element: DartData.Element = DartData.Element.NONE
+var infusion_left: float = 0.0
 
 var arsenal: Arsenal
 var dart_pool: DartPool
@@ -290,12 +296,85 @@ func apply_hazard_tag(amount: float, _hazard_source: Node = null) -> void:
 		_tag_out(null, null, false)
 
 
+func add_grenade(amount: int = 1) -> bool:
+	if grenade_count >= GRENADE_MAX:
+		return false
+	grenade_count = mini(grenade_count + amount, GRENADE_MAX)
+	grenade_count_changed.emit(grenade_count, GRENADE_MAX)
+	return true
+
+
+func throw_grenade(launch_pos: Vector3, launch_dir: Vector3, impulse: float = 16.0) -> FoamGrenade:
+	if grenade_count <= 0:
+		return null
+	grenade_count -= 1
+	grenade_count_changed.emit(grenade_count, GRENADE_MAX)
+	var grenade := FoamGrenade.new()
+	grenade.thrower = self
+	grenade.team_id = team_id
+	grenade.dart_pool = dart_pool
+	var parent_node := get_parent()
+	if parent_node != null:
+		parent_node.add_child(grenade)
+	else:
+		get_tree().root.add_child(grenade)
+	grenade.launch(launch_pos, launch_dir, impulse)
+	return grenade
+
+
+func apply_elemental_infusion(p_element: DartData.Element, duration: float = 15.0) -> void:
+	infusion_element = p_element
+	infusion_left = duration
+	infusion_changed.emit(infusion_element, infusion_left)
+
+
+func apply_blast_tag(amount: float, attacker: Actor = null) -> void:
+	if not alive or _protect_left > 0.0:
+		return
+	if attacker != null and not accepts_dart_from(attacker.team_id):
+		return
+	var power := amount * (attacker.damage_scale if attacker != null else 1.0)
+	if shield_points > 0.0:
+		if is_human:
+			var prog: Node = get_node_or_null("/root/Progression")
+			if prog != null:
+				prog.call("notify_event", &"shield_absorb", 1)
+		if power <= shield_points:
+			shield_points -= power
+			shield_changed.emit(shield_points, SHIELD_MAX)
+			Sfx.play_at(&"shield_hit", global_position, 1.0, 0.0, 0.1)
+			_since_hit = 0.0
+			_on_hit_received(attacker)
+			return
+		else:
+			power -= shield_points
+			shield_points = 0.0
+			shield_changed.emit(0.0, SHIELD_MAX)
+			shield_broken.emit(self)
+			Sfx.play_at(&"shield_pop", global_position, 1.0, 0.0)
+
+	tag_meter = minf(tag_meter + power, tag_meter_max)
+	_since_hit = 0.0
+	meter_changed.emit(tag_meter, tag_meter_max)
+	var out := tag_meter >= tag_meter_max
+	_on_hit_received(attacker)
+	if attacker != null:
+		attacker.landed_hit.emit(self, out, false)
+	if out:
+		_tag_out(attacker, null, false)
+
+
 func respawn(at: Transform3D) -> void:
 	global_transform = at
 	velocity = Vector3.ZERO
 	tag_meter = 0.0
 	shield_points = 0.0
 	shield_changed.emit(0.0, SHIELD_MAX)
+	grenade_count = 0
+	grenade_count_changed.emit(0, GRENADE_MAX)
+	infusion_element = DartData.Element.NONE
+	infusion_left = 0.0
+	infusion_changed.emit(infusion_element, 0.0)
 	_since_hit = 0.0
 	_protect_left = spawn_protection
 	alive = true
@@ -318,6 +397,11 @@ func tick_status(delta: float) -> void:
 	if tag_meter > 0.0 and _since_hit >= regen_delay:
 		tag_meter = maxf(tag_meter - regen_rate * delta, 0.0)
 		meter_changed.emit(tag_meter, tag_meter_max)
+	if infusion_left > 0.0:
+		infusion_left = maxf(infusion_left - delta, 0.0)
+		if infusion_left <= 0.0:
+			infusion_element = DartData.Element.NONE
+			infusion_changed.emit(infusion_element, 0.0)
 	if global_position.y < KILL_PLANE_Y:
 		_tag_out(null, null, false)
 
@@ -355,9 +439,14 @@ func _on_arsenal_fired(state: WeaponState) -> void:
 	var origin := get_muzzle_position()
 	var aim := get_aim_direction(origin)
 	var exclude: Array[RID] = [hitbox.get_rid(), get_rid()]
+	var dart_data := weapon.dart
+	if infusion_left > 0.0 and infusion_element != DartData.Element.NONE:
+		if dart_data.element != infusion_element:
+			dart_data = dart_data.duplicate() as DartData
+			dart_data.element = infusion_element
 	for i in weapon.darts_per_shot:
 		var direction := spread(aim, weapon.spread_degrees + get_extra_spread_degrees())
-		dart_pool.fire(weapon.dart, origin, direction, self, weapon, color, exclude)
+		dart_pool.fire(dart_data, origin, direction, self, weapon, color, exclude)
 
 
 ## Random direction inside a cone of `degrees` around `direction`.

@@ -23,6 +23,7 @@ static func ensure_actions() -> void:
 	_add(&"sprint", [_key(KEY_SHIFT), _pad(JOY_BUTTON_LEFT_STICK), _axis(JOY_AXIS_TRIGGER_LEFT, 1.0)])
 	_add(&"fire", [_mouse(MOUSE_BUTTON_LEFT), _axis(JOY_AXIS_TRIGGER_RIGHT, 1.0)])
 	_add(&"aim_down_sights", [_mouse(MOUSE_BUTTON_RIGHT), _axis(JOY_AXIS_TRIGGER_LEFT, 1.0)])
+	_add(&"throw_grenade", [_key(KEY_G), _mouse(MOUSE_BUTTON_MIDDLE), _pad(JOY_BUTTON_DPAD_DOWN)])
 	_add(&"reload", [_key(KEY_R), _pad(JOY_BUTTON_X)])
 	_add(&"weapon_1", [_key(KEY_1)])
 	_add(&"weapon_2", [_key(KEY_2)])

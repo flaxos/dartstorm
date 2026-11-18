@@ -267,6 +267,13 @@ box in corners for bots, so walkways are at least 1.5 m (the dining chairs moved
 4. **Elemental Counterplay via Obsidian Cooling:** Firing Water or Ice darts into molten lava cools the hit spot into a solid $1.4\text{m}$-radius cylindrical `ObsidianStone` platform lasting 6.0 seconds. Players can shoot stepping stones across molten gaps.
 5. **Bot Elevation AI & Panic Leaping:** Bots filter roam destinations to elevated spots ($Y > \text{lava\_height} + 0.4\text{m}$) during high tide. When submerged, bots trigger emergency jump impulses and steer toward the nearest obsidian stone or high-ground structure.
 **Alternatives:** Static instant-kill lava planes; permanent rising lava with no tides; complex volumetric smoke particles.
-**Why:** Directly delivers on the young players' primary wishlist item (#5) with thrilling parkour combat, emergent elemental mechanics, and family-friendly cartoon fun.
-
-
+**Why:** Directly delivers on the young players' primary wishlist item (#5) with thrilling parkour combat, emergent elemental mechanics, and family-friendly cartoon fun.### D-041: Foam Grenades and Elemental Weapon Infusion Pickups (v0.8.1)
+**Chosen:**
+1. **Foam Grenade (`FoamGrenade`):** A physical throwable `RigidBody3D` (0.35kg, 0.58 bounce) styled as a toy high-vis safety orange foam canister with dark rubber caps and a flashing LED apex. Blinks and beeps (`&"fuse_beep"`) with accelerating pitch over a 1.8-second fuse before detonating into 16 radial physical darts (`DartPool`), an area shockwave (4.5m radius, 20.0–65.0 tag damage, 11.5 m/s knockback), and a colorful confetti burst. Thrown with `G`, middle mouse click, or Controller D-Pad Down.
+2. **Foam Grenade Pickup (`GrenadePickup`):** A hovering grenade in an orange light beam granting +1 grenade (up to 2 maximum) on a 25-second respawn timer.
+3. **Elemental Weapon Infusion Pickups (`ElementalPickup`):** Floating elemental canisters (Fire, Ice, Water, Lightning) inside illuminated light pillars that grant 15 seconds of weapon infusion (`apply_elemental_infusion`).
+4. **Universal Blaster Infusion:** In `Actor._on_arsenal_fired()`, all darts fired by an infused actor inherit that element, applying status effects (water knockback/obsidian creation, fire burns/melts, ice slows/slides, lightning chain shocks) across any blaster in the player's or bot's arsenal.
+5. **HUD Integration:** Added a grenade counter label (`💣 N [G]`) and an infusion timer bar with badge text (`🔥 PYRO 15s`) to the weapon cluster.
+6. **Bot Pickup AI:** Bots proactively evaluate grenade and elemental pickup availability, incorporate them into roaming goals, and throw grenades at clustered opponents during firefights.
+**Alternatives:** Impact-detonated shrapnel grenades; permanent elemental blaster variants cluttering inventory; separate button per element.
+**Why:** Directly fulfills the young players' #1 and #2 wishlist items ("nerf grenade pickup" and "elemental weapon power-ups") in a fun, non-violent, family-friendly manner while seamlessly integrating with existing elemental combo and status effect systems.

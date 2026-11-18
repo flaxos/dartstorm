@@ -1,3 +1,4 @@
+class_name BackyardFortress
 extends Arena
 ## BACKYARD FORTRESS: the classic blue-versus-orange backyard.
 ##
@@ -210,6 +211,12 @@ func _build_treehouse() -> void:
 	add_water_puddle(Vector3(-11.5, 0.0, 6.0), 2.6)
 	# Updraft wind vent near the central walkway
 	add_wind_vent(Vector3(8.5, 0.0, 0.0), 1.8, 14.5)
+	# Foam Grenades and Elemental Infusion pickups
+	add_grenade_pickup(Vector3(-14.0, 0.0, -14.0))
+	add_grenade_pickup(Vector3(14.0, 0.0, 14.0))
+	add_elemental_pickup(Vector3(0.0, 0.0, 14.0), DartData.Element.FIRE)
+	add_elemental_pickup(Vector3(3.2, DECK_HEIGHT, 0.0), DartData.Element.ICE)
+	add_elemental_pickup(Vector3(0.0, 0.0, -14.0), DartData.Element.LIGHTNING)
 
 	# Trampolines that bounce you onto the deck corners.
 	add_jump_pad(Vector3(6.8, 0.0, -6.8))

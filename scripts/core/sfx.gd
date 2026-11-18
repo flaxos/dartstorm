@@ -460,6 +460,11 @@ func _build_bank() -> void:
 	_register(&"ice_slide", _mix([_noise(0.35, 3800.0, 1200.0, 0.38, 1.3), _tone(0.3, 300.0, 550.0, Wave.SINE, 0.25)]))
 	_register(&"lava_sizzle", _mix([_noise(0.28, 4200.0, 1100.0, 0.45, 1.4, 0.04), _tone(0.18, 260.0, 140.0, Wave.TRIANGLE, 0.3)]))
 	_register(&"siren", _sequence([_tone(0.22, 650.0, 880.0, Wave.SAW, 0.35), _tone(0.22, 880.0, 650.0, Wave.SAW, 0.35)]))
+	_register(&"fuse_beep", _tone(0.04, 1800.0, 2200.0, Wave.SQUARE, 0.22, 0.0, 0.002, 1.0))
+	_register(&"grenade_bounce", _mix([_tone(0.08, 220.0, 90.0, Wave.TRIANGLE, 0.5), _noise(0.06, 800.0, 200.0, 0.3, 1.2)]))
+	_register(&"grenade_blast", _mix([_tone(0.28, 280.0, 60.0, Wave.SINE, 0.75), _noise(0.35, 3500.0, 400.0, 0.6, 1.6), _tone(0.18, 550.0, 1100.0, Wave.TRIANGLE, 0.35)]))
+	_register(&"powerup_pickup", _melody([440.0, 660.0, 880.0, 1320.0], 0.05, Wave.SQUARE, 0.3))
+	_register(&"pickup", _melody([440.0, 660.0, 880.0, 1320.0], 0.05, Wave.SQUARE, 0.3))
 	# Handling.
 	_register(&"reload", _sequence([_tone(0.03, 900.0, 700.0, Wave.SQUARE, 0.3, 0.5), _silence(0.08), _tone(0.04, 1200.0, 900.0, Wave.SQUARE, 0.3, 0.5)]))
 	_register(&"dry", _tone(0.03, 300.0, 250.0, Wave.SQUARE, 0.25, 0.6))

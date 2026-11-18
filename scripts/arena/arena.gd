@@ -41,6 +41,8 @@ var puddles: Array[WaterPuddle] = []
 var ice_slicks: Array[IceSlick] = []
 var vents: Array[WindVent] = []
 var lava_hazard: LavaHazard = null
+var grenade_pickups: Array[GrenadePickup] = []
+var elemental_pickups: Array[ElementalPickup] = []
 
 var _spawn_root: Node3D
 var _clouds: Node3D
@@ -214,6 +216,25 @@ func add_shield_pickup(at: Vector3) -> ShieldPickup:
 	pickup.position = at
 	add_child(pickup)
 	shield_pickups.append(pickup)
+	roam_points.append(at)
+	return pickup
+
+
+func add_grenade_pickup(at: Vector3) -> GrenadePickup:
+	var pickup := GrenadePickup.new()
+	pickup.position = at
+	add_child(pickup)
+	grenade_pickups.append(pickup)
+	roam_points.append(at)
+	return pickup
+
+
+func add_elemental_pickup(at: Vector3, p_element: DartData.Element = DartData.Element.FIRE) -> ElementalPickup:
+	var pickup := ElementalPickup.new()
+	pickup.element = p_element
+	pickup.position = at
+	add_child(pickup)
+	elemental_pickups.append(pickup)
 	roam_points.append(at)
 	return pickup
 

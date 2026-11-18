@@ -281,9 +281,24 @@ func _think() -> void:
 			_set_goal(sp.global_position)
 			return
 
+	if _wants_grenade():
+		var gp := _nearest_grenade_pickup()
+		if gp != null:
+			_mood = Mood.ROAM
+			_set_goal(gp.global_position)
+			return
+
+	if _wants_elemental():
+		var ep := _nearest_elemental_pickup()
+		if ep != null:
+			_mood = Mood.ROAM
+			_set_goal(ep.global_position)
+			return
+
 	if _target != null:
 		_mood = Mood.FIGHT
 		_choose_weapon()
+		_consider_grenade_throw()
 		return
 
 	_mood = Mood.ROAM
@@ -394,6 +409,63 @@ func _nearest_shield_pickup() -> ShieldPickup:
 				best_dist = d
 				best = sp
 	return best
+
+
+func _wants_grenade() -> bool:
+	if is_zombie or grenade_count >= GRENADE_MAX or arena == null or arena.grenade_pickups.is_empty():
+		return false
+	var nearest := _nearest_grenade_pickup()
+	if nearest == null or not nearest.is_available():
+		return false
+	return _target == null or global_position.distance_to(nearest.global_position) < 18.0
+
+
+func _nearest_grenade_pickup() -> GrenadePickup:
+	if arena == null:
+		return null
+	var best: GrenadePickup = null
+	var best_dist := INF
+	for gp in arena.grenade_pickups:
+		if gp != null and gp.is_available():
+			var d := global_position.distance_to(gp.global_position)
+			if d < best_dist:
+				best_dist = d
+				best = gp
+	return best
+
+
+func _wants_elemental() -> bool:
+	if is_zombie or infusion_left > 3.0 or arena == null or arena.elemental_pickups.is_empty():
+		return false
+	var nearest := _nearest_elemental_pickup()
+	if nearest == null or not nearest.is_available():
+		return false
+	return _target == null or global_position.distance_to(nearest.global_position) < 18.0
+
+
+func _nearest_elemental_pickup() -> ElementalPickup:
+	if arena == null:
+		return null
+	var best: ElementalPickup = null
+	var best_dist := INF
+	for ep in arena.elemental_pickups:
+		if ep != null and ep.is_available():
+			var d := global_position.distance_to(ep.global_position)
+			if d < best_dist:
+				best_dist = d
+				best = ep
+	return best
+
+
+func _consider_grenade_throw() -> void:
+	if is_zombie or grenade_count <= 0 or _target == null or not is_instance_valid(_target) or not _target.alive:
+		return
+	var to_target := _target.global_position - global_position
+	var dist := to_target.length()
+	if dist >= 5.0 and dist <= 19.0 and randf() < 0.3:
+		var toss_origin := global_position + Vector3.UP * 1.5 + _aim * 0.4
+		var toss_dir := (Vector3(to_target.x, 0.0, to_target.z).normalized() + Vector3.UP * 0.35).normalized()
+		throw_grenade(toss_origin, toss_dir, clampf(dist * 1.25, 12.0, 20.0))
 
 
 func _wants_resupply() -> bool:

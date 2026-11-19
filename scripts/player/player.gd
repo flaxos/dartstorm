@@ -170,6 +170,9 @@ func _physics_process(delta: float) -> void:
 
 		if Input.is_action_just_pressed(&"throw_grenade") and not is_zombie and grenade_count > 0:
 			_perform_grenade_throw()
+
+		if Input.is_action_just_pressed(&"ping"):
+			_perform_ping()
 	else:
 		if is_aiming_down_sights:
 			is_aiming_down_sights = false
@@ -341,6 +344,45 @@ func _perform_grenade_throw() -> void:
 	_punch = -0.04
 	_dip_vel = 0.06
 	Sfx.play(&"whoosh", 1.25, -2.0)
+
+
+func _perform_ping() -> void:
+	var eye := head.global_transform
+	var forward := -eye.basis.z
+	_aim_query.from = eye.origin
+	_aim_query.to = eye.origin + forward * 60.0
+	_aim_query.collision_mask = Layers.WORLD | Layers.HITBOX | Layers.TARGETS
+	_aim_query.collide_with_areas = true
+	_aim_query.exclude = [get_rid(), hitbox.get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(_aim_query)
+	var ping_pos: Vector3
+	var ping_type := PingBeacon.Type.REGROUP
+	if not hit.is_empty():
+		ping_pos = hit["position"]
+		var collider: Object = hit.get("collider")
+		if collider is Hitbox and (collider as Hitbox).actor != null:
+			var target_actor: Actor = (collider as Hitbox).actor
+			if target_actor.accepts_dart_from(team_id):
+				ping_type = PingBeacon.Type.RIVAL
+		elif collider is Node:
+			var n := collider as Node
+			if n.is_in_group(&"ammo_buckets") or n is AmmoBucket:
+				ping_type = PingBeacon.Type.AMMO
+			elif n.is_in_group(&"shield_pickups") or n is ShieldPickup or n is GrenadePickup or n is ElementalPickup or n is PowerUpPickup:
+				ping_type = PingBeacon.Type.POWERUP
+			elif n is FoamGrenade or n.is_in_group(&"hazard"):
+				ping_type = PingBeacon.Type.DANGER
+	else:
+		ping_pos = eye.origin + forward * 16.0
+
+	var parent: Node = get_parent()
+	if parent != null:
+		var beacon := PingBeacon.spawn(parent, ping_pos, ping_type, self)
+		Sfx.play(&"ping")
+		for node in get_tree().get_nodes_in_group(&"bots"):
+			var b := node as Bot
+			if b != null and b.team_id == team_id and b != self:
+				b.on_squad_ping(beacon)
 
 
 func respawn(at: Transform3D) -> void:

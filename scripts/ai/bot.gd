@@ -58,6 +58,7 @@ var _sight_query: PhysicsRayQueryParameters3D
 
 
 func _ready() -> void:
+	add_to_group(&"bots")
 	hitbox_radius = 0.6
 	super._ready()
 	if difficulty == null:
@@ -517,6 +518,17 @@ func _random_roam_point() -> Vector3:
 			if p.y > highest.y:
 				highest = p
 		return highest
+
+	# In DUOS / Teams, bias roaming toward living buddy so teammates stick together
+	if buddy_actor != null and is_instance_valid(buddy_actor) and buddy_actor.alive:
+		var buddy_pos := buddy_actor.global_position
+		var buddy_near := arena.roam_points.filter(func(p: Vector3) -> bool:
+			var d := p.distance_to(buddy_pos)
+			return d >= 5.0 and d <= 18.0
+		)
+		if not buddy_near.is_empty() and randf() < 0.75:
+			return buddy_near[randi() % buddy_near.size()]
+
 	return arena.roam_points[randi() % arena.roam_points.size()]
 
 
@@ -681,6 +693,10 @@ func _fight_direction(delta: float) -> Vector3:
 		_strafe_sign = -_strafe_sign
 	var strafe := toward.cross(Vector3.UP) * _strafe_sign
 
+	# Low-health defensive retreat: fall back from target to avoid tag-out
+	if tag_meter >= tag_meter_max * 0.70:
+		return (-toward + strafe * 0.4).limit_length(1.0)
+
 	var advance := Vector3.ZERO
 	if distance > ideal + 4.0:
 		advance = _path_direction(_target.global_position)
@@ -771,3 +787,39 @@ func _set_body_visible(shown: bool) -> void:
 func _on_zombie_state_changed(enabled: bool) -> void:
 	if _model != null:
 		_model.set_zombie(enabled)
+
+
+## Responds to an interactive tactical ping from a teammate or player.
+func on_squad_ping(beacon: PingBeacon) -> void:
+	if beacon == null or not is_instance_valid(beacon):
+		return
+	if is_zombie or not alive:
+		return
+
+	if global_position.distance_to(beacon.global_position) < 30.0:
+		Sfx.play_at(&"ping_ack", global_position, randf_range(0.95, 1.05), -2.0)
+
+	match beacon.type:
+		PingBeacon.Type.REGROUP:
+			_set_goal(beacon.global_position + Vector3(randf_range(-2.0, 2.0), 0.0, randf_range(-2.0, 2.0)))
+			_mood = Mood.ROAM
+		PingBeacon.Type.RIVAL:
+			var to_ping := (beacon.global_position - global_position).normalized()
+			to_ping.y = 0.0
+			_aim = to_ping
+			if _target == null:
+				_set_goal(beacon.global_position)
+				_mood = Mood.FIGHT
+		PingBeacon.Type.AMMO:
+			if _wants_resupply():
+				_set_goal(beacon.global_position)
+				_mood = Mood.RESUPPLY
+		PingBeacon.Type.POWERUP:
+			if _wants_shield() or _wants_grenade() or _wants_elemental():
+				_set_goal(beacon.global_position)
+				_mood = Mood.ROAM
+		PingBeacon.Type.DANGER:
+			if global_position.distance_to(beacon.global_position) < 8.0:
+				var away := (global_position - beacon.global_position).normalized()
+				_set_goal(global_position + away * 10.0)
+				_mood = Mood.ROAM

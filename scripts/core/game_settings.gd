@@ -25,6 +25,7 @@ const DEFAULTS := {
 	"camera_shake": 1.0,
 	"visual_intensity": 1.0,
 	"game_speed": 0.90,
+	"weather_events": true,
 	"master_volume": 0.8,
 	"music_volume": 0.6,
 	"sfx_volume": 1.0,
@@ -75,6 +76,8 @@ var bot_count: int = 3
 var bot_difficulty: int = 1
 ## Backyard Battle only: the Chainstorm is a map power-up instead of a starting blaster.
 var chainstorm_powerup: bool = false
+## Dynamic weather events (thunderstorms, blizzards, gale gusts, heatwaves).
+var weather_events: bool = true
 ## Index into MatchScene.ARENAS: 0 Backyard Fortress, 1 Home Turf.
 var arena: int = 0
 
@@ -256,6 +259,7 @@ func load_settings() -> void:
 	bot_count = clampi(int(file.get_value("match", "bot_count", bot_count)), MIN_BOTS, MAX_BOTS)
 	bot_difficulty = clampi(int(file.get_value("match", "bot_difficulty", bot_difficulty)), 0, 2)
 	chainstorm_powerup = bool(file.get_value("match", "chainstorm_powerup", chainstorm_powerup))
+	weather_events = bool(file.get_value("match", "weather_events", weather_events))
 	arena = maxi(int(file.get_value("match", "arena", arena)), 0)  # MatchScene clamps it to the arenas that exist.
 
 
@@ -283,6 +287,7 @@ func save_settings() -> void:
 	file.set_value("match", "bot_count", bot_count)
 	file.set_value("match", "bot_difficulty", bot_difficulty)
 	file.set_value("match", "chainstorm_powerup", chainstorm_powerup)
+	file.set_value("match", "weather_events", weather_events)
 	file.set_value("match", "arena", arena)
 	var err := file.save(SAVE_PATH)
 	if err != OK:

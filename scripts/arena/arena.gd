@@ -43,6 +43,7 @@ var vents: Array[WindVent] = []
 var lava_hazard: LavaHazard = null
 var grenade_pickups: Array[GrenadePickup] = []
 var elemental_pickups: Array[ElementalPickup] = []
+var weather_director: Node = null
 
 var _spawn_root: Node3D
 var _clouds: Node3D

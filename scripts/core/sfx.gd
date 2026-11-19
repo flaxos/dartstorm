@@ -465,6 +465,11 @@ func _build_bank() -> void:
 	_register(&"grenade_blast", _mix([_tone(0.28, 280.0, 60.0, Wave.SINE, 0.75), _noise(0.35, 3500.0, 400.0, 0.6, 1.6), _tone(0.18, 550.0, 1100.0, Wave.TRIANGLE, 0.35)]))
 	_register(&"powerup_pickup", _melody([440.0, 660.0, 880.0, 1320.0], 0.05, Wave.SQUARE, 0.3))
 	_register(&"pickup", _melody([440.0, 660.0, 880.0, 1320.0], 0.05, Wave.SQUARE, 0.3))
+	# Weather & Disasters
+	_register(&"thunder", _mix([_tone(0.65, 85.0, 40.0, Wave.SINE, 0.75, 0.05, 0.08, 1.3), _noise(0.55, 1200.0, 180.0, 0.5, 1.4, 0.04)]))
+	_register(&"lightning_strike", _mix([_tone(0.12, 1900.0, 320.0, Wave.SAW, 0.65), _noise(0.35, 4500.0, 300.0, 0.7, 1.5), _tone(0.4, 120.0, 45.0, Wave.SINE, 0.8)]))
+	_register(&"blizzard_wind", _mix([_noise(0.6, 2800.0, 600.0, 0.45, 1.3, 0.05), _tone(0.5, 240.0, 420.0, Wave.SINE, 0.35)]))
+	_register(&"tornado_whirl", _mix([_noise(0.45, 3600.0, 800.0, 0.5, 1.4), _tone(0.35, 180.0, 520.0, Wave.TRIANGLE, 0.45)]))
 	# Handling.
 	_register(&"reload", _sequence([_tone(0.03, 900.0, 700.0, Wave.SQUARE, 0.3, 0.5), _silence(0.08), _tone(0.04, 1200.0, 900.0, Wave.SQUARE, 0.3, 0.5)]))
 	_register(&"dry", _tone(0.03, 300.0, 250.0, Wave.SQUARE, 0.25, 0.6))

@@ -61,6 +61,7 @@ var base_core: BaseCore
 var horde_director: HordeDirector
 var lava_hazard: LavaHazard
 var lava_director: LavaDirector
+var weather_director: WeatherDirector
 
 
 ## Loads a resource without ever crashing: returns null if the file is missing
@@ -252,6 +253,15 @@ func _ready() -> void:
 			lava_mode.on_high_tide_survived(controller.board)
 		)
 		lava_director.start()
+
+	if GameSettings.weather_events and not mode is FloorIsLavaMode:
+		weather_director = WeatherDirector.new()
+		weather_director.name = "WeatherDirector"
+		add_child(weather_director)
+		weather_director.setup(arena, controller)
+		if arena != null:
+			arena.weather_director = weather_director
+		weather_director.start()
 
 	if mode.uses_power_up() and not arena.power_up_spots.is_empty():
 		_create_power_up(mode)

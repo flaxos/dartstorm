@@ -79,6 +79,8 @@ func _ready() -> void:
 	await _test_floor_is_lava_mode()
 	# Foam Grenades & Elemental Infusion Power-Ups (v0.8.1)
 	await _test_foam_grenade_and_elemental_powerups()
+	# Elemental Weather & Dynamic Map Disasters (v0.9.0)
+	await _test_elemental_weather_and_disasters()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -2458,6 +2460,98 @@ func _test_foam_grenade_and_elemental_powerups() -> void:
 
 	fortress.queue_free()
 	test_parent.queue_free()
+	await physics_frames(2)
+
+
+func _test_elemental_weather_and_disasters() -> void:
+	section("Elemental Weather & Dynamic Map Disasters (v0.9.0)")
+
+	# 1. WhirlwindVortex physics & launch
+	var whirlwind := WhirlwindVortex.new()
+	add_child(whirlwind)
+	whirlwind.global_position = Vector3(0.0, 0.0, 0.0)
+	await physics_frames(1)
+
+	var actor := Actor.new()
+	add_child(actor)
+	actor.global_position = Vector3(0.5, 0.0, 0.5)
+	actor.alive = true
+	whirlwind._launch_actor(actor)
+	check(actor.velocity.y >= WhirlwindVortex.LAUNCH_FORCE, "Whirlwind vortex launches actor upwards into the air (vel y: %.1f)" % actor.velocity.y)
+	whirlwind.queue_free()
+	actor.queue_free()
+	await physics_frames(1)
+
+	# 2. WeatherDirector Setup & Transitions
+	var arena := BackyardFortress.new()
+	add_child(arena)
+	await physics_frames(2)
+
+	var director := WeatherDirector.new()
+	arena.add_child(director)
+	director.setup(arena, null)
+	director.start()
+	check(director.current_weather == WeatherDirector.Weather.CALM, "Weather director starts in CALM weather")
+	check(director.time_left == WeatherDirector.CALM_DURATION, "CALM duration initialized correctly (%.1fs)" % director.time_left)
+
+	# 3. Thunderstorm & Lightning strike puddle electrification
+	director._set_weather(WeatherDirector.Weather.THUNDERSTORM)
+	check(director.current_weather == WeatherDirector.Weather.THUNDERSTORM, "Weather transitioned to THUNDERSTORM")
+	check(director.effects != null and director.effects._particles_rain.emitting, "Rain precipitation particles enabled during thunderstorm")
+
+	var puddle := WaterPuddle.new()
+	arena.add_child(puddle)
+	puddle.global_position = Vector3(0.0, 0.0, 0.0)
+	arena.puddles.append(puddle)
+	await physics_frames(2)
+
+	check(not puddle.is_electrified(), "Puddle starts unelectrified")
+	director.trigger_lightning_strike(Vector3(0.5, 0.0, 0.5))
+	check(puddle.is_electrified(), "Lightning strike in radius electrifies water puddle")
+
+	# 4. Blizzard & Dynamic temporary ice slicks
+	director._set_weather(WeatherDirector.Weather.BLIZZARD)
+	check(director.current_weather == WeatherDirector.Weather.BLIZZARD, "Weather transitioned to BLIZZARD")
+	check(director.effects != null and director.effects._particles_snow.emitting, "Snow flurry particles enabled during blizzard")
+	check(not director._temporary_ice_slicks.is_empty(), "Blizzard spawned temporary ice slicks on arena walkways (%d spawned)" % director._temporary_ice_slicks.size())
+
+	# 5. Gale Gusts & Wind Field drift
+	director._set_weather(WeatherDirector.Weather.GALE_GUSTS)
+	check(director.current_weather == WeatherDirector.Weather.GALE_GUSTS, "Weather transitioned to GALE_GUSTS")
+	check(director.effects != null and director.effects._particles_leaves.emitting, "Leaves and wind particles enabled during gale gusts")
+	check(director._active_whirlwind != null, "Whirlwind vortex spawned in arena during gale gusts")
+	director._process(0.1)
+	check(arena.wind_field.global_wind.length() > 20.0, "Arena global wind velocity accelerated by gale gusts (%.1f m/s)" % arena.wind_field.global_wind.length())
+
+	# 6. Heatwave & Ice slick melting
+	var test_slick := IceSlick.new()
+	arena.add_child(test_slick)
+	arena.ice_slicks.append(test_slick)
+	await physics_frames(1)
+
+	director._set_weather(WeatherDirector.Weather.HEATWAVE)
+	check(director.current_weather == WeatherDirector.Weather.HEATWAVE, "Weather transitioned to HEATWAVE")
+	check(test_slick.is_melted(), "Heatwave melted arena ice slick into water")
+
+	# 7. Return to Calm & Cleanup
+	director._set_weather(WeatherDirector.Weather.CALM)
+	check(director.current_weather == WeatherDirector.Weather.CALM, "Weather returned to CALM")
+	check(director._temporary_ice_slicks.is_empty(), "Temporary blizzard ice slicks cleaned up")
+	check(director._active_whirlwind == null, "Whirlwind vortex cleaned up")
+
+	# 8. Bot avoidance of electrified puddles
+	var bot := Bot.new()
+	arena.add_child(bot)
+	bot.arena = arena
+	bot.global_position = puddle.global_position + Vector3(1.5, 0.0, 0.0)
+	puddle.electrify(3.0)
+	var steer_wish := bot._choose_direction(0.016)
+	check(steer_wish.x > 0.0, "Bot steers away from electrified puddle (+X safe push: %.2f)" % steer_wish.x)
+
+	# 9. GameSettings weather_events configuration
+	check(GameSettings.weather_events == true, "GameSettings.weather_events defaults to true")
+
+	arena.queue_free()
 	await physics_frames(2)
 
 

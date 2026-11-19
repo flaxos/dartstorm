@@ -633,25 +633,36 @@ func _update_trigger(delta: float) -> void:
 # --- Moving -----------------------------------------------------------------
 
 func _choose_direction(delta: float) -> Vector3:
+	var wish := Vector3.ZERO
 	if is_zombie:
 		if _target != null and is_instance_valid(_target) and _target.alive:
-			return _path_direction(_target.global_position)
-		if _has_goal:
-			return _path_direction(_goal)
-		return Vector3.ZERO
-	match _mood:
-		Mood.FIGHT:
-			if _target == null:
-				return Vector3.ZERO
-			return _fight_direction(delta)
-		Mood.RESUPPLY:
-			if global_position.distance_to(_goal) < 1.3:
-				return Vector3.ZERO
-			return _path_direction(_goal)
-		_:
-			if not _has_goal:
-				return Vector3.ZERO
-			return _path_direction(_goal)
+			wish = _path_direction(_target.global_position)
+		elif _has_goal:
+			wish = _path_direction(_goal)
+	else:
+		match _mood:
+			Mood.FIGHT:
+				if _target != null:
+					wish = _fight_direction(delta)
+			Mood.RESUPPLY:
+				if global_position.distance_to(_goal) >= 1.3:
+					wish = _path_direction(_goal)
+			_:
+				if _has_goal:
+					wish = _path_direction(_goal)
+
+	# Avoid stepping into electrified puddles during thunderstorms
+	if arena != null and not arena.puddles.is_empty():
+		for puddle in arena.puddles:
+			if puddle != null and is_instance_valid(puddle) and puddle.is_electrified():
+				var to_puddle := puddle.global_position - global_position
+				to_puddle.y = 0.0
+				var safe_dist := puddle.radius + 1.2
+				if to_puddle.length_squared() < safe_dist * safe_dist:
+					var avoid_dir := -to_puddle.normalized()
+					wish = (wish + avoid_dir * 1.6).normalized()
+					break
+	return wish
 
 
 func _fight_direction(delta: float) -> Vector3:

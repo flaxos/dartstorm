@@ -63,6 +63,9 @@ var _scrap_label: Label
 var _lava_box: VBoxContainer
 var _lava_status_label: Label
 var _lava_timer_label: Label
+var _weather_panel: PanelContainer
+var _weather_icon_label: Label
+var _weather_text_label: Label
 
 
 func setup(player: Player, controller: MatchController) -> void:
@@ -178,6 +181,26 @@ func _process(delta: float) -> void:
 					_lava_status_label.text = "LAVA RECEDING..."
 					_lava_status_label.add_theme_color_override("font_color", UiKit.SKY)
 					_lava_timer_label.text = "COOLING DOWN"
+
+	# Weather status
+	if _weather_panel != null:
+		var wd: WeatherDirector = _controller.arena.weather_director if _controller != null and _controller.arena != null else null
+		if wd != null and wd.is_inside_tree():
+			_weather_panel.visible = true
+			if wd.is_warning:
+				_weather_icon_label.text = wd.get_weather_icon(wd.next_weather)
+				_weather_text_label.text = "WARN: %ds" % maxi(0, int(ceilf(wd.time_left)))
+				_weather_text_label.add_theme_color_override("font_color", UiKit.ORANGE_HOT)
+			elif wd.current_weather != WeatherDirector.Weather.CALM:
+				_weather_icon_label.text = wd.get_weather_icon()
+				_weather_text_label.text = "%s %ds" % [wd.get_weather_title(), maxi(0, int(ceilf(wd.time_left)))]
+				_weather_text_label.add_theme_color_override("font_color", UiKit.SKY)
+			else:
+				_weather_icon_label.text = "🌤️"
+				_weather_text_label.text = "CALM"
+				_weather_text_label.add_theme_color_override("font_color", UiKit.CREAM)
+		else:
+			_weather_panel.visible = false
 
 	# Respawn countdown while tagged out.
 	if not _player.alive and not _match_over:
@@ -295,6 +318,18 @@ func _build() -> void:
 	_wind_label = UiKit.label("CALM", 20, UiKit.SKY)
 	_wind_label.custom_minimum_size.x = 110
 	wind_box.add_child(_wind_label)
+
+	_weather_panel = UiKit.panel()
+	_weather_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	left_box.add_child(_weather_panel)
+	var weather_box := HBoxContainer.new()
+	weather_box.add_theme_constant_override("separation", 8)
+	_weather_panel.add_child(weather_box)
+	_weather_icon_label = UiKit.label("🌤️", 18)
+	weather_box.add_child(_weather_icon_label)
+	_weather_text_label = UiKit.label("CALM", 16, UiKit.CREAM)
+	_weather_text_label.custom_minimum_size.x = 120
+	weather_box.add_child(_weather_text_label)
 
 	# Top right: who tagged whom.
 	_feed = VBoxContainer.new()

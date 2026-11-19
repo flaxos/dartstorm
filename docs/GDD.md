@@ -4,8 +4,8 @@
 
 | | |
 |---|---|
-| **Game version** | 0.7.1 (Kid Feedback: Calibration, Sniper Buff, and Zombie Pacing) |
-| **Status** | v0.1.0 **passed UAT** on 2026-11-15; v0.1.1–v0.7.1 validated and awaiting UAT with young players (see [UAT.md](UAT.md)) |
+| **Game version** | 0.9.0 (Elemental Weather & Dynamic Map Disasters) |
+| **Status** | v0.1.0 **passed UAT** on 2026-11-15; v0.1.1–v0.9.0 validated and awaiting UAT with young players (see [UAT.md](UAT.md)) |
 | **Platform** | Linux first (the target machine runs Linux). Windows is deferred until needed. |
 | **Authority** | This GDD is the authoritative description of the game. Numbers mirror the `.tres` files in `resources/`. If they ever disagree, the `.tres` file is what the game uses, so fix this doc. |
 | **Source vision** | [CONCEPT_BRIEF.md](CONCEPT_BRIEF.md), the original brief, archived verbatim (personal details redacted). §1 summarises it and §2 tracks it. §1.9 records the young players' own design sketch. |
@@ -107,7 +107,7 @@ The photo isn't kept in the repo (it has their names on it). This is what it ask
 | **Floor is Lava Mode** | ✅ v0.8.0 | Rising molten foam lava tides, obsidian cooling with water/ice darts, high ground parkour combat (§3.25) |
 | **Foam Grenade Pickup** | ✅ v0.8.1 | Throwable bouncy foam canister, ticking LED fuse, 16-dart radial burst, knockback & confetti (§3.26) |
 | **Elemental Weapon Power-Ups** | ✅ v0.8.1 | 15s elemental infusion pickups (Fire, Ice, Water, Lightning) powering all equipped blasters (§3.26) |
-| **Wishlist: Elemental Weather** | ⏳ Phase 7 | Dynamic map events: thunder storms, flash freezing blizzards, lava seepage |
+| **Wishlist: Elemental Weather** | ✅ v0.9.0 | Dynamic map events: thunderstorms, lightning puddle zaps, blizzards with ice slicks, gale gusts with whirlwinds, heatwaves (§3.27) |
 
 ## 2. Brief traceability
 
@@ -588,6 +588,18 @@ The main menu is the players' own drawing (§1.9), built in 3D:
 - **HUD & Bot Integration:**
   - Weapon HUD displays grenade inventory counter (`💣 N [G]`) and an elemental infusion timer bar with element badge name and countdown seconds.
   - Bots actively seek available grenade and elemental pickups when inventory is depleted or uninfused, and lob grenades at rival groups.
+
+### 3.27 Elemental Weather & Dynamic Map Disasters *(v0.9.0)*
+- **Concept:** Cyclic elemental weather events that sweep across the arena, dynamically transforming surfaces and hazard interactions:
+  - **Phases:** CALM (28s), FORECAST_WARNING (5s countdown with HUD audio chime), active weather event (20s).
+  - **Thunderstorms (`THUNDERSTORM`):** Rain precipitation streaks (`WeatherEffects`), thunder sound fx (`&"thunder"`), and periodic lightning strikes (`trigger_lightning_strike`). Strikes targeting or striking near `WaterPuddle` surfaces dynamically electrify the water (`puddle.electrify(4.0)`), zapping any players standing inside.
+  - **Flash-Freeze Blizzards (`BLIZZARD`):** Drifting snow flurries, blizzard howling winds (`&"blizzard_wind"`), and dynamic spawning of temporary `IceSlick` patches across arena walkways that boost actors down pathways with frictionless sliding.
+  - **Gale Gusts (`GALE_GUSTS`):** Tumbling leaf particles, arena `WindField.global_wind` accelerated up to $26\text{ m/s}$ in rotating vectors, and a mobile cartoon dust devil `WhirlwindVortex` roving between roam points that spring-launches any actor stepping into it $+14.5\text{ m/s}$ straight into the air!
+  - **Heatwaves (`HEATWAVE`):** Blazing summer heat that instantly melts active ice slicks into water pools (`slick.melt(5.0)`) and makes puddles sizzle with steam puffs.
+- **HUD & Settings:**
+  - HUD weather badge icon (`⛈️`, `❄️`, `🌪️`, `☀️`, `🌤️`) and countdown timer in top status row.
+  - `GameSettings.weather_events: bool` toggle in settings (default `true`) allows turning off dynamic disasters.
+  - Bot navigation AI steers around electrified puddles (`is_electrified()`).
 
 ---
 

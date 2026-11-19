@@ -277,3 +277,16 @@ box in corners for bots, so walkways are at least 1.5 m (the dining chairs moved
 6. **Bot Pickup AI:** Bots proactively evaluate grenade and elemental pickup availability, incorporate them into roaming goals, and throw grenades at clustered opponents during firefights.
 **Alternatives:** Impact-detonated shrapnel grenades; permanent elemental blaster variants cluttering inventory; separate button per element.
 **Why:** Directly fulfills the young players' #1 and #2 wishlist items ("nerf grenade pickup" and "elemental weapon power-ups") in a fun, non-violent, family-friendly manner while seamlessly integrating with existing elemental combo and status effect systems.
+
+### D-042: Elemental Weather and Dynamic Map Disasters (v0.9.0)
+**Chosen:**
+1. **Dynamic Weather Lifecycle (`WeatherDirector`):** Continuous cyclic environmental phases: CALM (28s baseline), FORECAST_WARNING (5s alert with HUD icons and chime countdown), and active weather events (20s duration):
+   - **THUNDERSTORM:** Rain streaks (`WeatherEffects` with `CPUParticles3D`), thunder audio (`&"thunder"`), and periodic lightning strikes (`trigger_lightning_strike`). Lightning strikes contacting or within proximity of `WaterPuddle` surfaces dynamically electrify the water (`puddle.electrify(4.0)`), shocking and tagging any players standing inside.
+   - **BLIZZARD:** Snow flurries, blizzard howling sound (`&"blizzard_wind"`), and dynamic spawning of temporary `IceSlick` patches across walkway roam points that boost actors down pathways with frictionless sliding.
+   - **GALE GUSTS:** Swirling leaf particles, arena `WindField.global_wind` accelerated up to 26 m/s in rotating angular vectors, and a mobile cartoon dust devil `WhirlwindVortex` roving between roam points that spring-launches any actor stepping into it +14.5 m/s straight into the air!
+   - **HEATWAVE:** Scorching summer heat that instantly melts active ice slicks into water pools (`slick.melt(5.0)`) and makes puddles sizzle with steam puffs.
+2. **Safe Visuals & Zero-Leak Architecture:** Particle systems implemented with lightweight `CPUParticles3D` and box/cylinder meshes to eliminate GPU dummy texture resource leaks in headless validation. Decoupled circular class references between `Arena` and `WeatherDirector` using base Node typing.
+3. **HUD Weather Status:** Persistent badge with animated weather icon (`⛈️`, `❄️`, `🌪️`, `☀️`, `🌤️`) and time remaining countdown.
+4. **Bot Navigation Safety:** Bots query `puddle.is_electrified()` and add strong repulsive steering vectors during navigation to avoid zapping hazards.
+**Alternatives:** Static skybox texture changes; instant-kill lightning bolts; full-screen blinding blizzard overlays.
+**Why:** Directly fulfills the young players' final core wishlist item ("elemental weather / map features: lightning, fire, water, wind, lava") while reinforcing the physical, cartoon, kid-safe design pillars with zero gore and zero violence.

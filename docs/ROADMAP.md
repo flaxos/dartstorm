@@ -210,9 +210,17 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
    - **Foam Grenade Pickup (`GrenadePickup`)**: Spawns in arenas, granting +1 grenade up to `GRENADE_MAX = 2` on a 25s respawn timer.
    - **Elemental Weapon Infusions (`ElementalPickup`)**: Canisters granting 15 seconds of Pyro, Hydro, Frost, or Volt infusion across all carried blasters.
    - **HUD & Bot Integration**: Weapon HUD grenade counter (`💣 N [G]`) and elemental infusion timer bar with badges; bot AI incorporates grenade and infusion seeking into decisions.
+10. ✅ **Elemental Weather & Dynamic Map Disasters** (v0.9.0):
+   - **Weather Director (`WeatherDirector`)**: Cyclic weather progression (CALM 28s, FORECAST_WARNING 5s with HUD countdown chime, active disaster 20s).
+   - **Thunderstorm**: Rain precipitation particles, rolling thunder sounds (`&"thunder"`), and lightning strikes that dynamically electrify `WaterPuddle`s (`puddle.electrify(4.0)`).
+   - **Blizzard**: Snow flurries, howling wind (`&"blizzard_wind"`), and dynamic spawning of temporary `IceSlick` patches on arena walkways.
+   - **Gale Gusts**: Swirling leaves, global wind acceleration up to 26 m/s, and a roving cartoon `WhirlwindVortex` that spring-launches players +14.5 m/s into the air.
+   - **Heatwave**: Summer heatwave that melts ice slicks into water pools and causes puddles to sizzle with steam.
+   - **HUD & Settings**: Persistent weather badge icon (`⛈️`, `❄️`, `🌪️`, `☀️`, `🌤️`) with countdown timer, and `GameSettings.weather_events` toggle.
+   - **Bot Navigation**: Bots dynamically detect electrified puddles and steer away to avoid getting zapped.
+   - **Validation**: 625 automated tests passing with zero errors, zero warnings, and zero leaks.
 
 ## Later (Phase 7 / Wishlist from Young Players)
-- **Elemental Weather & Map Disasters**: Lightning storms electrifying puddles, flash freezing blizzards creating ice slicks, and wind whirlwinds.
 - Weapon customisation and mastery (cosmetic or sidegrades only, D-028)
 - Smarter bots (cover, wind awareness, team play)
 - Local split-screen or online multiplayer (DECISIONS D-008)

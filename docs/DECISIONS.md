@@ -290,3 +290,14 @@ box in corners for bots, so walkways are at least 1.5 m (the dining chairs moved
 4. **Bot Navigation Safety:** Bots query `puddle.is_electrified()` and add strong repulsive steering vectors during navigation to avoid zapping hazards.
 **Alternatives:** Static skybox texture changes; instant-kill lightning bolts; full-screen blinding blizzard overlays.
 **Why:** Directly fulfills the young players' final core wishlist item ("elemental weather / map features: lightning, fire, water, wind, lava") while reinforcing the physical, cartoon, kid-safe design pillars with zero gore and zero violence.
+
+### D-043: Coordinated DUOS Spawning, Tactical Squad Pings, and Bot Teamplay (v0.9.1)
+**Chosen:**
+1. **Coordinated DUOS Buddy Spawning:** In `DUOS` mode, link each actor to their teammate (`actor.buddy_actor`). In `MatchController._choose_spawn()`, calculate a proximity bonus (`maxf(0.0, 32.0 - dist_to_buddy) * 2.0`) for spawn markers near a living teammate while preserving minimum clearance (`SPAWN_CLEARANCE = 2.5m`). At match start and on respawn, buddy pairs spawn side-by-side at adjacent launch points, directly resolving the known issue.
+2. **Tactical Squad Ping System (`PingBeacon`):** An in-world 3D marker spawned via `T` key, Middle Mouse Button, or Controller D-Pad Up (`ping`). Uses forward eye raycasting (up to 60m) to identify target context: Ammo Buckets (`"📦 AMMO"`), Pickups (`"✨ POWER-UP"`), Rivals (`"⚠️ RIVAL"`), Hazards (`"💥 DANGER"`), or Scenery (`"📍 REGROUP"`). Displays an animated pulsing ground ring, vertical light beam, and billboard label fading smoothly over 4.5 seconds with procedural audio (`&"ping"` and `&"ping_ack"`).
+3. **Smarter Bot Teamplay & Cover:**
+   - **Buddy Proximity Roaming:** In `Bot._random_roam_point()`, bias 75% of roam choices to points within 5m–18m of a living buddy, keeping partners in supporting distance without doorway bunching.
+   - **Ping Reaction:** Teammate bots listen to pings via `on_squad_ping()`, re-orienting aim toward reported rivals, routing toward ammo/power-up beacons, or moving to regroup pins.
+   - **Low-Health Defensive Retreat:** When a bot's tag meter exceeds 70% (danger threshold), `_fight_direction()` prioritizes backing away from threats to seek cover and regenerate.
+**Alternatives:** Full voice chat (unsafe for young kids); compass-only 2D HUD pings without 3D world markers; rigid following that blocks doorways.
+**Why:** Elevates cooperative play, resolves a longstanding DUOS spawning bug, and fosters tactical communication and bot teamwork entirely through friendly cartoon mechanics.

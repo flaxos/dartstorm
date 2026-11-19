@@ -81,6 +81,8 @@ func _ready() -> void:
 	await _test_foam_grenade_and_elemental_powerups()
 	# Elemental Weather & Dynamic Map Disasters (v0.9.0)
 	await _test_elemental_weather_and_disasters()
+	# DUOS Buddy Spawning, Tactical Pings & Bot Teamplay (v0.9.1)
+	await _test_duos_buddy_spawning_and_pings()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -2551,6 +2553,92 @@ func _test_elemental_weather_and_disasters() -> void:
 	# 9. GameSettings weather_events configuration
 	check(GameSettings.weather_events == true, "GameSettings.weather_events defaults to true")
 
+	arena.queue_free()
+	await physics_frames(2)
+
+
+func _test_duos_buddy_spawning_and_pings() -> void:
+	section("DUOS Buddy Spawning, Tactical Pings & Bot Teamplay (v0.9.1)")
+
+	# 1. Buddy linking
+	var actor_a := Actor.new()
+	var actor_b := Actor.new()
+	actor_a.team_id = 0
+	actor_b.team_id = 0
+	actor_a.buddy_actor = actor_b
+	actor_b.buddy_actor = actor_a
+	check(actor_a.buddy_actor == actor_b and actor_b.buddy_actor == actor_a, "DUOS actors link to their assigned buddy")
+
+	# 2. Coordinated Buddy Spawning Proximity in MatchController
+	var arena := BackyardFortress.new()
+	add_child(arena)
+	arena.add_child(actor_a)
+	arena.add_child(actor_b)
+	await physics_frames(2)
+
+	var duos_mode := load("res://resources/modes/duos.tres") as GameMode
+	var controller := MatchController.new()
+	controller.setup(duos_mode, arena)
+	add_child(controller)
+
+	controller.register(actor_a)
+	controller.register(actor_b)
+
+	var spawn_a := arena.spawn_points[0]
+	actor_a.global_transform = spawn_a.global_transform
+	actor_a.alive = true
+
+	var spawn_b_xform := controller._choose_spawn(actor_b)
+	var buddy_dist := spawn_b_xform.origin.distance_to(actor_a.global_position)
+	check(buddy_dist > MatchController.SPAWN_CLEARANCE, "Buddy spawn respects minimum spawn clearance (dist: %.1fm)" % buddy_dist)
+	check(buddy_dist < 22.0, "Buddy spawns in close tactical proximity to living teammate (dist: %.1fm)" % buddy_dist)
+
+	# 3. Tactical Ping Beacon
+	var beacon := PingBeacon.spawn(arena, Vector3(4.0, 0.0, 4.0), PingBeacon.Type.REGROUP, actor_a)
+	check(beacon != null and beacon.is_inside_tree(), "PingBeacon spawned into scene tree")
+	check(beacon.type == PingBeacon.Type.REGROUP, "PingBeacon type initialized to REGROUP")
+	check(beacon._text_for_type(PingBeacon.Type.AMMO) == "📦 AMMO", "PingBeacon formats AMMO label correctly")
+	check(beacon._text_for_type(PingBeacon.Type.POWERUP) == "✨ POWER-UP", "PingBeacon formats POWERUP label correctly")
+	check(beacon._text_for_type(PingBeacon.Type.RIVAL) == "⚠️ RIVAL", "PingBeacon formats RIVAL label correctly")
+	check(beacon._text_for_type(PingBeacon.Type.DANGER) == "💥 DANGER", "PingBeacon formats DANGER label correctly")
+
+	# 4. Bot Squad Ping Reaction
+	var bot := Bot.new()
+	arena.add_child(bot)
+	bot.arena = arena
+	bot.team_id = 0
+	bot.buddy_actor = actor_a
+	bot.global_position = Vector3(0.0, 0.0, 0.0)
+	await physics_frames(1)
+
+	bot.on_squad_ping(beacon)
+	check(bot._mood == Bot.Mood.ROAM, "Bot accepts squad ping and transitions mood to ROAM")
+	check(bot._goal.distance_to(beacon.global_position) < 3.5, "Bot sets navigation goal toward ping location (dist: %.1fm)" % bot._goal.distance_to(beacon.global_position))
+
+	# 5. Bot Proximity Roaming in DUOS
+	var roam_pt := bot._random_roam_point()
+	var dist_to_buddy_roam := roam_pt.distance_to(actor_a.global_position)
+	check(dist_to_buddy_roam < 25.0, "Bot roam selection biases toward living buddy position (dist: %.1fm)" % dist_to_buddy_roam)
+
+	# 6. Bot Low-Health Defensive Retreat
+	var enemy := Actor.new()
+	enemy.team_id = 1
+	enemy.alive = true
+	arena.add_child(enemy)
+	enemy.global_position = Vector3(0.0, 0.0, 8.0)
+	bot._target = enemy
+	bot.tag_meter = bot.tag_meter_max * 0.85
+	var retreat_dir := bot._fight_direction(0.016)
+	var to_enemy := (enemy.global_position - bot.global_position).normalized()
+	check(retreat_dir.dot(to_enemy) < 0.0, "Low-health bot retreats away from enemy under danger threshold (dot: %.2f)" % retreat_dir.dot(to_enemy))
+
+	# 7. Cleanup
+	beacon.queue_free()
+	enemy.queue_free()
+	bot.queue_free()
+	actor_a.queue_free()
+	actor_b.queue_free()
+	controller.queue_free()
 	arena.queue_free()
 	await physics_frames(2)
 

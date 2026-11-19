@@ -324,7 +324,8 @@ func _equip(actor: Actor) -> void:
 
 
 ## Picks a spawn point far from rivals, with a little randomness. In Blue vs
-## Orange you always come back at your own end of the yard.
+## Orange you always come back at your own end of the yard. In DUOS you spawn
+## near your buddy.
 func _choose_spawn(actor: Actor) -> Transform3D:
 	if arena == null or arena.spawn_points.is_empty():
 		return actor.global_transform
@@ -336,8 +337,9 @@ func _choose_spawn(actor: Actor) -> Transform3D:
 		markers = arena.spawn_points
 	var scored: Array = []
 	var free := 0
+	var buddy := actor.buddy_actor if actor.buddy_actor != null and actor.buddy_actor.alive else null
 	for marker in markers:
-		var nearest := 999.0
+		var nearest_rival := 999.0
 		var taken := false
 		for other in actors:
 			if other == actor or not other.alive:
@@ -347,12 +349,16 @@ func _choose_spawn(actor: Actor) -> Transform3D:
 			# pushed apart by the physics, which can fling them into the sky.
 			taken = taken or distance < SPAWN_CLEARANCE
 			if other.team_id != actor.team_id:
-				nearest = minf(nearest, distance)
+				nearest_rival = minf(nearest_rival, distance)
 		if taken:
-			nearest = -1.0  # Only if every spot is taken.
+			scored.append([-1.0, marker])
 		else:
 			free += 1
-		scored.append([nearest, marker])
+			var score := nearest_rival
+			if buddy != null:
+				var dist_to_buddy := marker.global_position.distance_to(buddy.global_position)
+				score += maxf(0.0, 32.0 - dist_to_buddy) * 2.0
+			scored.append([score, marker])
 	scored.sort_custom(func(a: Array, b: Array) -> bool: return a[0] > b[0])
-	var pick: Marker3D = scored[randi() % clampi(free, 1, 3)][1]
+	var pick: Marker3D = scored[randi() % clampi(free, 1, min(free, 2))][1]
 	return pick.global_transform

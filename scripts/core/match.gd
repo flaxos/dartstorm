@@ -199,6 +199,14 @@ func _ready() -> void:
 			if actor != bot:
 				bot.rivals.append(actor)
 
+	# In DUOS, link teammates together as buddies for coordinated spawning and support
+	if mode.teams == GameMode.Teams.DUOS:
+		for actor in controller.actors:
+			for other in controller.actors:
+				if other != actor and other.team_id == actor.team_id:
+					actor.buddy_actor = other
+					break
+
 	if mode is ZombieMode:
 		var alpha: Actor = player
 		if not bots.is_empty():

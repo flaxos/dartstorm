@@ -219,10 +219,15 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
    - **HUD & Settings**: Persistent weather badge icon (`⛈️`, `❄️`, `🌪️`, `☀️`, `🌤️`) with countdown timer, and `GameSettings.weather_events` toggle.
    - **Bot Navigation**: Bots dynamically detect electrified puddles and steer away to avoid getting zapped.
    - **Validation**: 625 automated tests passing with zero errors, zero warnings, and zero leaks.
+11. ✅ **DUOS Buddy Spawning, Tactical Pings & Bot Teamplay** (v0.9.1):
+   - **Coordinated DUOS Spawns**: Teammate pairs spawn at adjacent spawn points (6m–20m) at match start and on respawn.
+   - **Tactical Squad Ping System (`PingBeacon`)**: Interactive in-world 3D marker with context raycast (Ammo, Power-Up, Rival, Danger, Regroup) triggered by `T` key, Middle Mouse, or Controller D-Pad Up (`ping`).
+   - **Smarter Bot Teamplay**: Bots bias roaming toward living buddy (5m–18m pocket), acknowledge and react to squad pings, and fall back into defensive retreat when tag meter exceeds 70%.
+   - **Resolved Known Issue**: Fixed DUOS spawn distribution bug where buddies spawned apart across the yard.
+   - **Validation**: 638 automated tests passing with zero errors, zero warnings, and zero leaks.
 
 ## Later (Phase 7 / Wishlist from Young Players)
 - Weapon customisation and mastery (cosmetic or sidegrades only, D-028)
-- Smarter bots (cover, wind awareness, team play)
 - Local split-screen or online multiplayer (DECISIONS D-008)
 - Accessibility: key remapping, a colour-blind team palette option
 
@@ -231,10 +236,9 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
 - Windows is deferred (the target machine runs Linux).
 - The music is simple chiptune made in code; real recordings could replace it later.
 - Bots ignore wind (deliberate, see GDD §3.9) and can briefly snag on geometry before the unstick hop kicks in.
-- Gun Game has 7 of the 10 planned rungs.
-- In DUOS, spawns don't put buddies together; you'll often start apart from your buddy.
 
 *Resolved in v0.1.1:* the navmesh load hitch, the "ObjectDB instances leaked at exit" warning, and the integer-division
 warnings in the HUD.
 *Resolved in v0.5.3:* the lobby shows Player Level, XP progress, and Coins; Backyard Missions and Coin Shop are live.
 *Resolved in v0.7.1:* the physics yeet velocity runaway bug, gameplay pacing calibrated with UAT slider, Longshot sniper rifle ADS scope buff, and zombie horde pacing and lunge mechanics rebalanced.
+*Resolved in v0.9.1:* the DUOS spawning bug where teammates spawned apart; now spawn side-by-side at adjacent launch points; tactical ping system and bot teamplay added.

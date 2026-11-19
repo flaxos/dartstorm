@@ -55,6 +55,7 @@ var shield_points: float = 0.0
 var grenade_count: int = 0
 var infusion_element: DartData.Element = DartData.Element.NONE
 var infusion_left: float = 0.0
+var buddy_actor: Actor = null
 
 var arsenal: Arsenal
 var dart_pool: DartPool

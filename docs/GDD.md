@@ -4,8 +4,8 @@
 
 | | |
 |---|---|
-| **Game version** | 0.9.0 (Elemental Weather & Dynamic Map Disasters) |
-| **Status** | v0.1.0 **passed UAT** on 2026-11-15; v0.1.1–v0.9.0 validated and awaiting UAT with young players (see [UAT.md](UAT.md)) |
+| **Game version** | 0.9.1 (DUOS Buddy Spawning, Tactical Pings & Bot Teamplay) |
+| **Status** | v0.1.0 **passed UAT** on 2026-11-15; v0.1.1–v0.9.1 validated and awaiting UAT with young players (see [UAT.md](UAT.md)) |
 | **Platform** | Linux first (the target machine runs Linux). Windows is deferred until needed. |
 | **Authority** | This GDD is the authoritative description of the game. Numbers mirror the `.tres` files in `resources/`. If they ever disagree, the `.tres` file is what the game uses, so fix this doc. |
 | **Source vision** | [CONCEPT_BRIEF.md](CONCEPT_BRIEF.md), the original brief, archived verbatim (personal details redacted). §1 summarises it and §2 tracks it. §1.9 records the young players' own design sketch. |
@@ -600,6 +600,26 @@ The main menu is the players' own drawing (§1.9), built in 3D:
   - HUD weather badge icon (`⛈️`, `❄️`, `🌪️`, `☀️`, `🌤️`) and countdown timer in top status row.
   - `GameSettings.weather_events: bool` toggle in settings (default `true`) allows turning off dynamic disasters.
   - Bot navigation AI steers around electrified puddles (`is_electrified()`).
+
+### 3.28 Tactical Squad Ping System & Buddy Coordination *(v0.9.1)*
+- **Coordinated DUOS Buddy Spawning:**
+  - In `DUOS` mode, teammates are linked together (`actor.buddy_actor`).
+  - Spawning coordinates partners to appear at adjacent launch markers (within 6m–20m) rather than opposite ends of the arena, resolving the known issue.
+  - Respawning during the match prioritizes safe spawn points proximate to a living teammate while maintaining minimum clearance (`SPAWN_CLEARANCE = 2.5m`).
+- **Tactical Squad Ping System (`PingBeacon`):**
+  - Players and bots can mark points of interest by pressing `T`, Middle Mouse Button, or Controller D-Pad Up (`ping`).
+  - Casts an immediate eye raycast (up to 60m) that identifies what you are looking at:
+    - **Ammo Buckets:** Places a lime `"📦 AMMO"` ping beacon.
+    - **Pickups (Shield, Grenade, Elemental, Power-Up):** Places a gold `"✨ POWER-UP"` beacon.
+    - **Rival Actors:** Places an orange-hot `"⚠️ RIVAL"` beacon.
+    - **Hazards & Foam Grenades:** Places a danger red `"💥 DANGER"` beacon.
+    - **Scenery & Walkways:** Places a cyan `"📍 REGROUP"` beacon.
+  - Features an animated pulsing ground ring, vertical light beam, and floating billboard label that gently fades over 4.5 seconds.
+  - Accompanied by procedural sound effects: `&"ping"` (electronic chirp) and `&"ping_ack"` (friendly radio acknowledgment).
+- **Smarter Bot Teamplay & Defensive Retreat:**
+  - **Buddy Tethering:** When roaming in DUOS or TEAMS, bots bias 75% of roam decisions toward points within support distance (5m–18m) of their living buddy.
+  - **Squad Ping Reaction:** Bots on the same team evaluate ping types: turning aim toward reported rivals, routing toward ammo/power-up pings when needed, and moving toward regroup markers.
+  - **Low-Health Defensive Retreat:** When a bot's tag meter exceeds 70% (danger threshold), it falls back defensively from combat instead of pressing aggressive forward rushes.
 
 ---
 

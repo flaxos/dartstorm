@@ -50,6 +50,9 @@ func _build() -> void:
 			func(on: bool) -> void: GameSettings.vibration = on)
 	_slider(controls, "Game speed", 0.70, 1.10, 0.05, GameSettings.game_speed,
 			func(value: float) -> void: GameSettings.game_speed = value)
+	_touch_picker(controls)
+	_slider(controls, "Touch look speed", 0.4, 2.5, 0.05, GameSettings.touch_look_sensitivity,
+			func(value: float) -> void: GameSettings.touch_look_sensitivity = value)
 	var bindings_btn := UiKit.small_button("CUSTOM CONTROLS...", Vector2(240, 42))
 	bindings_btn.pressed.connect(_open_bindings)
 	controls.add_child(bindings_btn)
@@ -121,6 +124,28 @@ func _palette_picker(parent: Control) -> void:
 		button.text = GameMode.PALETTE_NAMES[p_idx[0]]
 		s0.color = GameMode.team_color(0)
 		s1.color = GameMode.team_color(1)
+		GameSettings.apply()
+		Sfx.play(&"click"))
+
+
+func _touch_picker(parent: Control) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	parent.add_child(row)
+	var name_label := UiKit.label("Touch Controls", 20, UiKit.CREAM, 4)
+	name_label.custom_minimum_size.x = 220
+	row.add_child(name_label)
+
+	var modes := ["Auto", "Always On", "Off"]
+	var t_idx := [GameSettings.touch_controls_mode]
+	var current_name: String = modes[clampi(t_idx[0], 0, modes.size() - 1)]
+	var button := UiKit.small_button(current_name, Vector2(210, 40))
+	row.add_child(button)
+
+	button.pressed.connect(func() -> void:
+		t_idx[0] = (t_idx[0] + 1) % modes.size()
+		GameSettings.touch_controls_mode = t_idx[0]
+		button.text = modes[t_idx[0]]
 		GameSettings.apply()
 		Sfx.play(&"click"))
 

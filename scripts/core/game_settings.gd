@@ -32,6 +32,8 @@ const DEFAULTS := {
 	"fullscreen": false,
 	"team_palette": 0,
 	"split_screen_horizontal": true,
+	"touch_controls_mode": 0,
+	"touch_look_sensitivity": 1.0,
 }
 const NOTICE_SECONDS := 3.0
 ## The bots slider on the menu. Team modes may add one more to even the teams.
@@ -40,6 +42,7 @@ const MAX_BOTS := 7
 
 ## Saved as numbers, so only ever add to the end.
 enum MatchMode { FREE_FOR_ALL, GUN_GAME, DUOS, TEAMS, ZOMBIES, ZOMBIE_SIEGE, FLOOR_IS_LAVA }
+enum TouchMode { AUTO, ALWAYS, OFF }
 
 # --- Preferences ---
 var mouse_sensitivity: float = 1.0
@@ -65,6 +68,10 @@ var sfx_volume: float = 1.0
 var fullscreen: bool = false
 ## Colorblind team color palette (GameMode.TeamPalette).
 var team_palette: int = 0
+## Touch controls on-screen overlay mode (Auto, Always On, Off)
+var touch_controls_mode: int = TouchMode.AUTO
+var touch_look_sensitivity: float = 1.0
+var _touch_detected: bool = false
 
 # --- Your player (Player 1) ---
 ## Empty means "You".
@@ -177,6 +184,28 @@ func display_name_p2() -> String:
 
 func color_p2() -> Color:
 	return Cosmetics.color_at(player2_color)
+
+
+## Whether on-screen touch controls should be shown and active.
+func is_touch_active() -> bool:
+	match touch_controls_mode:
+		TouchMode.ALWAYS:
+			return true
+		TouchMode.OFF:
+			return false
+		TouchMode.AUTO:
+			return _touch_detected \
+				or DisplayServer.is_touchscreen_available() \
+				or OS.has_feature("mobile") \
+				or OS.has_feature("web_android") \
+				or OS.has_feature("web_ios")
+	return false
+
+
+func register_touch_event() -> void:
+	if not _touch_detected:
+		_touch_detected = true
+		changed.emit()
 
 
 ## Puts every preference (not your look or the match options) back to its
@@ -294,6 +323,8 @@ func load_settings() -> void:
 	var skin2 := StringName(str(file.get_value("player2", "skin", player2_skin)))
 	player2_skin = skin2 if Cosmetics.has_skin(skin2) else &"default"
 	team_palette = clampi(int(file.get_value("accessibility", "team_palette", team_palette)), 0, GameMode.TeamPalette.size() - 1)
+	touch_controls_mode = clampi(int(file.get_value("controls", "touch_controls_mode", touch_controls_mode)), 0, TouchMode.size() - 1)
+	touch_look_sensitivity = clampf(float(file.get_value("controls", "touch_look_sensitivity", touch_look_sensitivity)), 0.2, 3.0)
 	if file.has_section("bindings"):
 		var raw_bindings: Dictionary = {}
 		for action: String in file.get_section_keys("bindings"):
@@ -309,6 +340,8 @@ func save_settings() -> void:
 	file.set_value("controls", "invert_y", invert_y)
 	file.set_value("controls", "aim_assist", aim_assist)
 	file.set_value("controls", "vibration", vibration)
+	file.set_value("controls", "touch_controls_mode", touch_controls_mode)
+	file.set_value("controls", "touch_look_sensitivity", touch_look_sensitivity)
 	file.set_value("video", "fov", fov)
 	file.set_value("video", "camera_shake", camera_shake)
 	file.set_value("video", "visual_intensity", visual_intensity)

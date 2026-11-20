@@ -348,4 +348,25 @@ box in corners for bots, so walkways are at least 1.5 m (the dining chairs moved
 **Alternatives:** Separate local networked instances (requires network sync and duplicate memory); top-down camera shared screen (loses immersive first-person blaster perspective).
 **Why:** Brings the ultimate local multiplayer couch experience to DARTSTORM, achieving the full v1.0.0 milestone vision while maintaining 60 FPS, 0 warnings, and 0 memory leaks.
 
+### D-046: Web Browser (Mobile & Desktop) & Android APK Universal Accessibility (v1.1.0)
+**Chosen:**
+1. **Mobile Touch Controls Architecture (`TouchControls` & `VirtualJoystick`):**
+   - **Virtual Joystick (Left Thumb):** On-screen analog joystick (`VirtualJoystick`) providing 360-degree analog vector generation, deadzone filtering (0.12), and smooth proportional action synthesis (`move_left`, `move_right`, `move_forward`, `move_back`).
+   - **Swipe-Look Aim Zone (Right Half Screen):** Seamless drag surface on the right 65% of the screen feeding into `player.look_relative(delta)` with zoom compensation when aiming down sights (ADS).
+   - **Tactile Action Buttons:** Circular arcade buttons with minimum 56x56 dp hit targets: `FIRE` (prominent 88x88 button), `JUMP`, `RUN` (sprint), `AIM` (ADS), `RELOAD`, `BOMB` (grenade), `SWAP` (weapon cycle), and `||` (`PAUSE` in top-right corner to allow pausing on mobile without a physical Escape key).
+   - **Multitouch Tracking:** Independent touch index routing for joystick, swipe aiming, and action buttons ensuring simultaneous multi-finger inputs without conflicts.
+   - **Activation & Settings:** `GameSettings.touch_controls_mode` supporting `AUTO` (auto-detects touchscreens, mobile web tags, and first touch event), `ALWAYS ON`, and `OFF`, with touch sensitivity slider in `SettingsPanel`.
+2. **Universal Rendering Backend (`gl_compatibility`):**
+   - Configured `rendering/renderer/rendering_method.web="gl_compatibility"` (WebGL 2.0) and `rendering/renderer/rendering_method.mobile="gl_compatibility"` (OpenGL ES 3.0) in `project.godot`, while retaining `rendering_method="forward_plus"` on desktop Linux.
+   - Guarded Forward+-only environment features (SSAO, SSR) in `scripts/arena/arena.gd` with `if RenderingServer.get_rendering_device() != null:` to eliminate warnings under WebGL and GLES3.
+   - Enabled `rendering/textures/vram_compression/import_etc2_astc=true` for mobile texture memory efficiency.
+3. **Web Browser Export Pipeline (`tools/export_web.sh` & `tools/serve_web.py`):**
+   - Non-threaded Web export preset in `export_presets.cfg` using `web_nothreads_release.zip`, allowing the game to run on ANY standard web server or static host without COOP/COEP cross-origin isolation requirements.
+   - Local test server (`tools/serve_web.py`) with proper MIME types for WASM, PCK, and JS.
+4. **Android Signed APK Export Pipeline (`tools/export_apk.sh`):**
+   - Android APK preset in `export_presets.cfg` targeting Android SDK 34 (`org.flaxos.dartstorm`), arm64-v8a architecture, and debug keystore signing.
+   - Automated export script (`tools/export_apk.sh`) verifying SDK paths, template files, and package badging.
+**Alternatives:** Separate mobile engine port; forcing Forward+ on mobile/web (fails on mobile GPUs); third-party touch plugins with heavy asset dependencies.
+**Why:** Unlocks full cross-platform access across desktop web browsers, mobile web browsers (Safari, Chrome, Firefox), and Android devices with 0 warnings, 0 leaks, and native 60 FPS performance.
+
 

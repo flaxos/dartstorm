@@ -108,11 +108,14 @@ func _build_sky_and_sun(sun_pitch: float = -52.0, warm_fill: float = 0.0) -> voi
 	environment.glow_enabled = true
 	environment.glow_intensity = 0.4
 	environment.glow_bloom = 0.05
-	environment.ssao_enabled = true
-	environment.ssao_radius = 1.2
-	environment.ssao_intensity = 1.4
-	environment.ssr_enabled = true
-	environment.ssr_max_steps = 32
+	# SSAO and SSR require a RenderingDevice (Forward+ / Mobile Vulkan).
+	# Guard them so the Compatibility (WebGL2 / OpenGL ES3) renderer stays warning-free.
+	if RenderingServer.get_rendering_device() != null:
+		environment.ssao_enabled = true
+		environment.ssao_radius = 1.2
+		environment.ssao_intensity = 1.4
+		environment.ssr_enabled = true
+		environment.ssr_max_steps = 32
 	var world := WorldEnvironment.new()
 	world.environment = environment
 	add_child(world)

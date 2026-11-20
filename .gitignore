@@ -23,6 +23,7 @@ export/
 *.x86_64
 *.dmg
 *.app/
+*.apk
 
 # Logs and transient reports
 *.log

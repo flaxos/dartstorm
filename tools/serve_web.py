@@ -37,20 +37,54 @@ class DartstormHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         return super().guess_type(path)
 
 
+def get_local_ips():
+    ips = []
+    try:
+        import subprocess
+        output = subprocess.check_output(["hostname", "-I"], text=True)
+        for ip in output.split():
+            if ip and not ip.startswith("172.") and not ip.startswith("127.") and not ":" in ip:
+                ips.append(ip)
+    except Exception:
+        pass
+    return ips
+
+
 def main():
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_PORT
+    target_port = int(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_PORT
     if not os.path.exists(os.path.join(WEB_DIR, "index.html")):
         print(f"ERROR: Web build not found at {WEB_DIR}/index.html.")
         print("Run './tools/export_web.sh' first to build the web export.")
         sys.exit(1)
 
     socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", port), DartstormHTTPRequestHandler) as httpd:
-        print(f"============================================================")
-        print(f"  DARTSTORM Web Server running at: http://localhost:{port}/")
+    httpd = None
+    port = target_port
+    for candidate in [target_port, 8910, 8090, 8085, 9000]:
+        try:
+            httpd = socketserver.TCPServer(("", candidate), DartstormHTTPRequestHandler)
+            port = candidate
+            break
+        except OSError:
+            if len(sys.argv) > 1:
+                print(f"ERROR: Requested port {candidate} is already in use.")
+                sys.exit(1)
+            continue
+
+    if httpd is None:
+        print("ERROR: Could not find an open port to bind HTTP server.")
+        sys.exit(1)
+
+    ips = get_local_ips()
+    with httpd:
+        print("============================================================")
+        print("  DARTSTORM Web Server is LIVE!")
+        print(f"  Local access:   http://localhost:{port}/")
+        for ip in ips:
+            print(f"  Network access: http://{ip}:{port}/")
         print(f"  Serving files from: {WEB_DIR}")
-        print(f"  Press Ctrl+C to stop.")
-        print(f"============================================================")
+        print("  Press Ctrl+C to stop.")
+        print("============================================================")
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
@@ -59,3 +93,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

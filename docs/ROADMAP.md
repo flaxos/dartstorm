@@ -33,9 +33,40 @@
 | **v0.9.2 Settings & Accessibility** | ✅ Built and validated (669 tests). ⏳ UAT |
 | **v1.0.0 Local Couch Co-Op / Split-Screen (2 Players)** | ✅ Built and validated (706 tests). ⏳ UAT |
 | **v1.1.0 Web & Android Mobile Universal Accessibility** | ✅ Built and validated (741 tests). ⏳ UAT |
+| **v1.2.0 Environment & Lighting Uplift & Splat Decals** | ✅ Built and validated (776 tests). ⏳ UAT |
 | Phase 7 Expansion | ⏳ Not started (on purpose) |
 
-## v1.1.0: Web Browser (Mobile & Desktop) & Android APK Universal Accessibility (this release)
+## v1.2.0: Environment & Lighting Uplift (Tactile PBR Shaders, Splat Decals, Golden-Hour Sun & Atmospheric Glow) (this release)
+
+Goal: Elevate arena visuals to tactile, vibrant cartoon quality with procedural backyard timber and lawn shaders, Splatoon-style popping foam dart splat decals, golden-hour sunlight with soft contact shadows, filmic color grading, and bloom.
+
+- [x] **Tactile PBR Surface Shaders (`ArenaKit.SurfaceType`):**
+  - Procedural backyard timber plank shader (`toy_wood.gdshader`) with board striations, micro-bevel seams, and warm satin finish.
+  - Upgraded lawn grass shader (`lawn.gdshader`) with soft mower stripes, tuft noise, and velvet rim Fresnel sheen.
+  - Molded toy plastic PBR surfaces with subtle gloss, specular highlights, and edge sheen (`roughness = 0.32`, `rim = 0.42`).
+  - Brushed toy metal surfaces (`metallic = 0.85`, `roughness = 0.24`).
+  - Applied tactile surface types across Backyard Fortress, Home Turf, and Tempest Treehouse geometry.
+- [x] **Cartoon Foam Splat Decals (`FoamSplat` & `foam_splat.gdshader`):**
+  - High-impact cartoon splatter decal with central puddle blob, 5 radiating satellite droplets, and white specular highlight.
+  - QuadMesh normal-oriented placement at `point + normal * 0.015` facing outward, eliminating Z-fighting across desktop, WebGL2, and mobile.
+  - Organic spring pop-in spawn animation (`scale` pops to 1.12x before settling).
+  - Foam bubble fizz-out dissolve decay at end of lifetime or under memory pressure.
+  - Strict FIFO ring-buffer memory cap (`MAX_ALIVE = 48`, scaled by `visual_intensity`) ensuring 0 memory leaks and zero performance degradation during intense firefights.
+  - Integrated into `CombatFx` on `DartProjectile.Impact.WORLD` and `DartProjectile.Impact.TARGET`.
+- [x] **Golden-Hour Atmospheric Lighting & Post-Processing (`Arena._build_sky_and_sun`):**
+  - Rich procedural sky gradient (deep zenith azure `#3370e0`, warm apricot horizon `#dcbca0`, warm earth tones).
+  - Filmic tone mapping (`Environment.TONE_MAPPER_FILMIC`) with +16% saturation and 1.06 contrast boost.
+  - Warm directional sunlight (`light_color = #ffeed1`, `energy = 1.35`) with soft contact shadows (`shadow_bias = 0.02`, `shadow_normal_bias = 1.2`, `blend_splits = true`).
+  - Soft glow bloom (`intensity = 0.45`, `bloom = 0.10`) for shields, energy hazards, and elemental power-ups.
+  - Volumetric atmospheric sunbeams and fog for Forward+ / Mobile Vulkan renderers (guarded for Web compatibility).
+- [x] **Test Isolation & Automated Test Suite:**
+  - Added `_test_environment_and_splat_decals()` in `tests/test_runner.gd` verifying shader generation, surface caching, lighting adjustments, splat lifecycle, and FIFO budget capping.
+  - Hardened test runner with pristine defaults initialization ensuring test isolation from local disk settings.
+  - All 776 automated tests pass with 0 errors, 0 warnings, and 0 memory leaks.
+
+**Acceptance:** `./tools/validate.sh` passes (**776/776 tests**), `./tools/export_web.sh` compiles cleanly, and local web server is live ✅.
+
+## v1.1.0: Web Browser (Mobile & Desktop) & Android APK Universal Accessibility
 
 Goal: Full universal accessibility across desktop web browsers, mobile web browsers (Chrome, Safari, Firefox), and Android devices via signed APK, with on-screen mobile touch controls, WebGL2/GLES3 compatibility rendering, and automated export pipelines.
 

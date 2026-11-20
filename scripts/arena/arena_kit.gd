@@ -4,6 +4,16 @@ extends RefCounted
 ## Everything collidable goes on the WORLD layer so darts, actors and the
 ## navigation bake all see the same geometry.
 
+enum SurfaceType {
+	DEFAULT,
+	PLASTIC,
+	WOOD,
+	METAL,
+	CARDBOARD,
+}
+
+const WOOD_SHADER := preload("res://assets/materials/toy_wood.gdshader")
+
 const TRUNK := Color(0.45, 0.3, 0.18)
 const LEAF := Color(0.25, 0.65, 0.25)
 const LEAF_LIGHT := Color(0.38, 0.78, 0.3)
@@ -11,37 +21,77 @@ const LEAF_LIGHT := Color(0.38, 0.78, 0.3)
 static var _materials: Dictionary = {}
 
 
-## Cached flat-colour material. Sharing materials keeps draw calls low.
-static func mat(color: Color, roughness: float = 0.85, metallic: float = 0.0,
-		emission: float = 0.0) -> StandardMaterial3D:
-	var key := "%s|%.2f|%.2f|%.2f" % [color.to_html(), roughness, metallic, emission]
+## Cached tactile material. Supports molded toy plastic, procedural timber, and brushed metal.
+static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
+		roughness: float = -1.0, metallic: float = -1.0, emission: float = 0.0) -> Material:
+	var key := "%s|%d|%.2f|%.2f|%.2f" % [color.to_html(), surface, roughness, metallic, emission]
 	if _materials.has(key):
 		return _materials[key]
+
+	if surface == SurfaceType.WOOD:
+		var sm := ShaderMaterial.new()
+		sm.shader = WOOD_SHADER
+		sm.set_shader_parameter(&"wood_tint", color)
+		sm.set_shader_parameter(&"roughness", 0.72 if roughness < 0.0 else roughness)
+		sm.set_shader_parameter(&"rim_strength", 0.32)
+		_materials[key] = sm
+		return sm
+
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
-	material.roughness = roughness
-	material.metallic = metallic
 	material.diffuse_mode = BaseMaterial3D.DIFFUSE_BURLEY
 	material.rim_enabled = true
-	material.rim = 0.28
-	material.rim_tint = 0.35
+
+	match surface:
+		SurfaceType.PLASTIC:
+			material.roughness = 0.32 if roughness < 0.0 else roughness
+			material.metallic = 0.05 if metallic < 0.0 else metallic
+			material.specular = 0.55
+			material.rim = 0.42
+			material.rim_tint = 0.45
+		SurfaceType.METAL:
+			material.roughness = 0.24 if roughness < 0.0 else roughness
+			material.metallic = 0.85 if metallic < 0.0 else metallic
+			material.specular = 0.7
+			material.rim = 0.2
+			material.rim_tint = 0.2
+		SurfaceType.CARDBOARD:
+			material.roughness = 0.88 if roughness < 0.0 else roughness
+			material.metallic = 0.0 if metallic < 0.0 else metallic
+			material.specular = 0.15
+			material.rim = 0.25
+			material.rim_tint = 0.2
+		_:
+			# DEFAULT: High-quality vibrant toy surface
+			material.roughness = 0.75 if roughness < 0.0 else roughness
+			material.metallic = 0.0 if metallic < 0.0 else metallic
+			material.rim = 0.35
+			material.rim_tint = 0.35
+
 	if color.a < 0.999:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	if emission > 0.0:
 		material.emission_enabled = true
 		material.emission = Color(color.r, color.g, color.b)
 		material.emission_energy_multiplier = emission
+
 	_materials[key] = material
 	return material
 
 
+## Cached flat-colour material. Sharing materials keeps draw calls low.
+static func mat(color: Color, roughness: float = 0.75, metallic: float = 0.0,
+		emission: float = 0.0) -> StandardMaterial3D:
+	return mat_styled(color, SurfaceType.DEFAULT, roughness, metallic, emission) as StandardMaterial3D
+
+
 ## Solid coloured box. `pos` is the box centre.
 static func box(parent: Node, size: Vector3, pos: Vector3, color: Color,
-		rot_deg: Vector3 = Vector3.ZERO) -> StaticBody3D:
+		rot_deg: Vector3 = Vector3.ZERO, surface: int = SurfaceType.DEFAULT) -> StaticBody3D:
 	var body := _body(pos, rot_deg)
 	var mesh := BoxMesh.new()
 	mesh.size = size
-	_add_mesh(body, mesh, color)
+	_add_mesh(body, mesh, color, surface)
 	var shape := BoxShape3D.new()
 	shape.size = size
 	_add_shape(body, shape)
@@ -51,7 +101,7 @@ static func box(parent: Node, size: Vector3, pos: Vector3, color: Color,
 
 ## Solid upright cylinder. `pos` is its centre.
 static func cylinder(parent: Node, radius: float, height: float, pos: Vector3,
-		color: Color) -> StaticBody3D:
+		color: Color, surface: int = SurfaceType.DEFAULT) -> StaticBody3D:
 	var body := _body(pos, Vector3.ZERO)
 	var mesh := CylinderMesh.new()
 	mesh.top_radius = radius
@@ -59,7 +109,7 @@ static func cylinder(parent: Node, radius: float, height: float, pos: Vector3,
 	mesh.height = height
 	mesh.radial_segments = 16
 	mesh.rings = 1
-	_add_mesh(body, mesh, color)
+	_add_mesh(body, mesh, color, surface)
 	var shape := CylinderShape3D.new()
 	shape.radius = radius
 	shape.height = height
@@ -71,7 +121,7 @@ static func cylinder(parent: Node, radius: float, height: float, pos: Vector3,
 ## A walkable slab whose top surface runs from `low` to `high` (centre line).
 ## Used for ramps, slides and sloped walkways.
 static func ramp(parent: Node, low: Vector3, high: Vector3, width: float, color: Color,
-		thickness: float = 0.3) -> StaticBody3D:
+		thickness: float = 0.3, surface: int = SurfaceType.DEFAULT) -> StaticBody3D:
 	var along := (high - low).normalized()
 	var side := Vector3.UP.cross(along).normalized()
 	var up := along.cross(side).normalized()
@@ -83,7 +133,7 @@ static func ramp(parent: Node, low: Vector3, high: Vector3, width: float, color:
 	var size := Vector3(width, thickness, length)
 	var mesh := BoxMesh.new()
 	mesh.size = size
-	_add_mesh(body, mesh, color)
+	_add_mesh(body, mesh, color, surface)
 	var shape := BoxShape3D.new()
 	shape.size = size
 	_add_shape(body, shape)
@@ -103,10 +153,10 @@ static func blocker(parent: Node, size: Vector3, pos: Vector3) -> StaticBody3D:
 
 ## Decoration with no collision.
 static func deco(parent: Node, mesh: Mesh, pos: Vector3, color: Color,
-		rot_deg: Vector3 = Vector3.ZERO, emission: float = 0.0) -> MeshInstance3D:
+		rot_deg: Vector3 = Vector3.ZERO, emission: float = 0.0, surface: int = SurfaceType.DEFAULT) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh
-	instance.material_override = mat(color, 0.85, 0.0, emission)
+	instance.material_override = mat_styled(color, surface, -1.0, -1.0, emission)
 	instance.position = pos
 	instance.rotation_degrees = rot_deg
 	parent.add_child(instance)
@@ -114,31 +164,31 @@ static func deco(parent: Node, mesh: Mesh, pos: Vector3, color: Color,
 
 
 static func deco_box(parent: Node, size: Vector3, pos: Vector3, color: Color,
-		rot_deg: Vector3 = Vector3.ZERO, emission: float = 0.0) -> MeshInstance3D:
+		rot_deg: Vector3 = Vector3.ZERO, emission: float = 0.0, surface: int = SurfaceType.DEFAULT) -> MeshInstance3D:
 	var mesh := BoxMesh.new()
 	mesh.size = size
-	return deco(parent, mesh, pos, color, rot_deg, emission)
+	return deco(parent, mesh, pos, color, rot_deg, emission, surface)
 
 
 static func deco_sphere(parent: Node, radius: float, pos: Vector3, color: Color,
-		squash: float = 1.0, emission: float = 0.0) -> MeshInstance3D:
+		squash: float = 1.0, emission: float = 0.0, surface: int = SurfaceType.DEFAULT) -> MeshInstance3D:
 	var mesh := SphereMesh.new()
 	mesh.radius = radius
 	mesh.height = radius * 2.0 * squash
 	mesh.radial_segments = 16
 	mesh.rings = 8
-	return deco(parent, mesh, pos, color, Vector3.ZERO, emission)
+	return deco(parent, mesh, pos, color, Vector3.ZERO, emission, surface)
 
 
 static func deco_cylinder(parent: Node, radius: float, height: float, pos: Vector3, color: Color,
-		rot_deg: Vector3 = Vector3.ZERO, top_radius: float = -1.0) -> MeshInstance3D:
+		rot_deg: Vector3 = Vector3.ZERO, top_radius: float = -1.0, surface: int = SurfaceType.DEFAULT) -> MeshInstance3D:
 	var mesh := CylinderMesh.new()
 	mesh.bottom_radius = radius
 	mesh.top_radius = radius if top_radius < 0.0 else top_radius
 	mesh.height = height
 	mesh.radial_segments = 16
 	mesh.rings = 1
-	return deco(parent, mesh, pos, color, rot_deg)
+	return deco(parent, mesh, pos, color, rot_deg, 0.0, surface)
 
 
 ## Text painted in the world (signs, labels).
@@ -170,7 +220,7 @@ static func house(parent: Node, at: Vector3, size: Vector3, wall: Color, roof: C
 
 ## A round cartoon tree (looks only).
 static func tree(parent: Node, at: Vector3, tree_scale: float) -> void:
-	deco_cylinder(parent, 0.5 * tree_scale, 5.0 * tree_scale, at + Vector3(0.0, 2.5 * tree_scale, 0.0), TRUNK)
+	deco_cylinder(parent, 0.5 * tree_scale, 5.0 * tree_scale, at + Vector3(0.0, 2.5 * tree_scale, 0.0), TRUNK, Vector3.ZERO, -1.0, SurfaceType.WOOD)
 	deco_sphere(parent, 3.2 * tree_scale, at + Vector3(0.0, 6.5 * tree_scale, 0.0), LEAF)
 	deco_sphere(parent, 2.3 * tree_scale, at + Vector3(1.2, 8.3, -0.6) * tree_scale, LEAF_LIGHT)
 
@@ -184,11 +234,11 @@ static func _body(pos: Vector3, rot_deg: Vector3) -> StaticBody3D:
 	return body
 
 
-static func _add_mesh(body: Node3D, mesh: Mesh, color: Color) -> void:
+static func _add_mesh(body: Node3D, mesh: Mesh, color: Color, surface: int = SurfaceType.DEFAULT) -> void:
 	var instance := MeshInstance3D.new()
 	instance.name = "Mesh"
 	instance.mesh = mesh
-	instance.material_override = mat(color)
+	instance.material_override = mat_styled(color, surface)
 	body.add_child(instance)
 
 

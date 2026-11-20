@@ -106,7 +106,7 @@ func _build_ground_and_trees() -> void:
 
 func _build_giant_tree(at: Vector3, radius: float, height: float) -> void:
 	# Solid trunk
-	ArenaKit.cylinder(geometry, radius, height, at + Vector3(0.0, height * 0.5, 0.0), TRUNK)
+	ArenaKit.cylinder(geometry, radius, height, at + Vector3(0.0, height * 0.5, 0.0), TRUNK, ArenaKit.SurfaceType.WOOD)
 	# Massive canopy leafy domes
 	var dome1 := ArenaKit.deco_sphere(decor, radius * 3.4, at + Vector3(0.0, height - 1.0, 0.0), LEAF, 0.75)
 	var dome2 := ArenaKit.deco_sphere(decor, radius * 2.8, at + Vector3(1.5, height + 2.0, -1.0), LEAF_LIGHT, 0.7)
@@ -117,7 +117,7 @@ func _build_giant_tree(at: Vector3, radius: float, height: float) -> void:
 
 
 func _build_root_cover(at: Vector3, size: Vector3, rot_y: float) -> void:
-	ArenaKit.box(geometry, size, at + Vector3(0.0, size.y * 0.5, 0.0), TRUNK, Vector3(0.0, rot_y, 0.0))
+	ArenaKit.box(geometry, size, at + Vector3(0.0, size.y * 0.5, 0.0), TRUNK, Vector3(0.0, rot_y, 0.0), ArenaKit.SurfaceType.WOOD)
 
 
 # --- Canopy Forts ---
@@ -131,17 +131,17 @@ func _build_canopy_forts() -> void:
 	_build_fort_deck(Vector3(16.0, DECK_Y, 0.0), c1, c1.darkened(0.25), "%s CANOPY FORT" % GameMode.team_name(1))
 
 	# Ramps from ground up to mid-decks
-	ArenaKit.ramp(geometry, Vector3(-16.0, 0.0, 14.0), Vector3(-16.0, DECK_Y, 6.0), 2.8, WOOD)
-	ArenaKit.ramp(geometry, Vector3(16.0, 0.0, 14.0), Vector3(16.0, DECK_Y, 6.0), 2.8, WOOD)
+	ArenaKit.ramp(geometry, Vector3(-16.0, 0.0, 14.0), Vector3(-16.0, DECK_Y, 6.0), 2.8, WOOD, 0.3, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.ramp(geometry, Vector3(16.0, 0.0, 14.0), Vector3(16.0, DECK_Y, 6.0), 2.8, WOOD, 0.3, ArenaKit.SurfaceType.WOOD)
 
 	# Railings along ramps
-	ArenaKit.deco_box(decor, Vector3(0.2, 1.0, 9.0), Vector3(-14.4, DECK_Y * 0.5 + 0.5, 10.0), WOOD_DARK, Vector3(-20.0, 0.0, 0.0))
-	ArenaKit.deco_box(decor, Vector3(0.2, 1.0, 9.0), Vector3(14.4, DECK_Y * 0.5 + 0.5, 10.0), WOOD_DARK, Vector3(-20.0, 0.0, 0.0))
+	ArenaKit.deco_box(decor, Vector3(0.2, 1.0, 9.0), Vector3(-14.4, DECK_Y * 0.5 + 0.5, 10.0), WOOD_DARK, Vector3(-20.0, 0.0, 0.0), 0.0, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.deco_box(decor, Vector3(0.2, 1.0, 9.0), Vector3(14.4, DECK_Y * 0.5 + 0.5, 10.0), WOOD_DARK, Vector3(-20.0, 0.0, 0.0), 0.0, ArenaKit.SurfaceType.WOOD)
 
 
 func _build_fort_deck(at: Vector3, tint: Color, tint_dark: Color, sign_title: String) -> void:
 	var deck_size := Vector3(12.0, 0.6, 12.0)
-	ArenaKit.box(geometry, deck_size, at - Vector3(0.0, 0.3, 0.0), WOOD)
+	ArenaKit.box(geometry, deck_size, at - Vector3(0.0, 0.3, 0.0), WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 
 	# Perimeter railings
 	var rail_h := 1.1

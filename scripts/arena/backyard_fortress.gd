@@ -97,20 +97,20 @@ func _build_ground_and_fence() -> void:
 
 	var height := 4.0
 	var thick := 0.5
-	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, height, thick), Vector3(0.0, height * 0.5, -HALF_Z - thick * 0.5), FENCE)
-	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, height, thick), Vector3(0.0, height * 0.5, HALF_Z + thick * 0.5), FENCE)
-	ArenaKit.box(geometry, Vector3(thick, height, HALF_Z * 2.0), Vector3(-HALF_X - thick * 0.5, height * 0.5, 0.0), FENCE)
-	ArenaKit.box(geometry, Vector3(thick, height, HALF_Z * 2.0), Vector3(HALF_X + thick * 0.5, height * 0.5, 0.0), FENCE)
+	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, height, thick), Vector3(0.0, height * 0.5, -HALF_Z - thick * 0.5), FENCE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, height, thick), Vector3(0.0, height * 0.5, HALF_Z + thick * 0.5), FENCE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.box(geometry, Vector3(thick, height, HALF_Z * 2.0), Vector3(-HALF_X - thick * 0.5, height * 0.5, 0.0), FENCE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.box(geometry, Vector3(thick, height, HALF_Z * 2.0), Vector3(HALF_X + thick * 0.5, height * 0.5, 0.0), FENCE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	# Posts and a top rail so it reads as a garden fence, not a wall.
 	var x := -HALF_X
 	while x <= HALF_X + 0.01:
 		for z_side: float in [-1.0, 1.0]:
-			ArenaKit.deco_box(decor, Vector3(0.45, height + 0.5, 0.75), Vector3(x, (height + 0.5) * 0.5, z_side * (HALF_Z + thick * 0.5)), FENCE_POST)
+			ArenaKit.deco_box(decor, Vector3(0.45, height + 0.5, 0.75), Vector3(x, (height + 0.5) * 0.5, z_side * (HALF_Z + thick * 0.5)), FENCE_POST, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.WOOD)
 		x += 4.0
 	var z := -HALF_Z
 	while z <= HALF_Z + 0.01:
 		for x_side: float in [-1.0, 1.0]:
-			ArenaKit.deco_box(decor, Vector3(0.75, height + 0.5, 0.45), Vector3(x_side * (HALF_X + thick * 0.5), (height + 0.5) * 0.5, z), FENCE_POST)
+			ArenaKit.deco_box(decor, Vector3(0.75, height + 0.5, 0.45), Vector3(x_side * (HALF_X + thick * 0.5), (height + 0.5) * 0.5, z), FENCE_POST, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.WOOD)
 		z += 4.0
 	# Invisible walls above the fence so nobody trampolines into next door.
 	var sky_wall := 14.0
@@ -129,12 +129,12 @@ func _build_fort(side: float, main: Color, dark: Color, title: String) -> void:
 	var top := FORT_HEIGHT
 
 	# Raised platform.
-	ArenaKit.box(geometry, Vector3(8.0, FORT_HEIGHT, 12.0), Vector3(centre_x, FORT_HEIGHT * 0.5, 0.0), main)
-	ArenaKit.deco_box(decor, Vector3(8.1, 0.25, 12.1), Vector3(centre_x, FORT_HEIGHT - 0.1, 0.0), WOOD)
+	ArenaKit.box(geometry, Vector3(8.0, FORT_HEIGHT, 12.0), Vector3(centre_x, FORT_HEIGHT * 0.5, 0.0), main, Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
+	ArenaKit.deco_box(decor, Vector3(8.1, 0.25, 12.1), Vector3(centre_x, FORT_HEIGHT - 0.1, 0.0), WOOD, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.WOOD)
 
 	# Two ramps down toward the middle of the yard.
 	for ramp_z: float in [-4.5, 4.5]:
-		ArenaKit.ramp(geometry, Vector3(side * 17.5, 0.0, ramp_z), Vector3(front, top, ramp_z), 3.0, WOOD)
+		ArenaKit.ramp(geometry, Vector3(side * 17.5, 0.0, ramp_z), Vector3(front, top, ramp_z), 3.0, WOOD, 0.3, ArenaKit.SurfaceType.WOOD)
 
 	# Battlements: low walls to duck behind, with gaps to shoot through.
 	var wall_y := top + 0.5
@@ -160,18 +160,18 @@ func _build_fort(side: float, main: Color, dark: Color, title: String) -> void:
 
 func _build_treehouse() -> void:
 	# Trunk and deck.
-	ArenaKit.cylinder(geometry, 1.5, 10.0, Vector3(0.0, 5.0, 0.0), TRUNK)
-	ArenaKit.box(geometry, Vector3(DECK_HALF * 2.0, 0.4, DECK_HALF * 2.0), Vector3(0.0, DECK_HEIGHT - 0.2, 0.0), WOOD)
+	ArenaKit.cylinder(geometry, 1.5, 10.0, Vector3(0.0, 5.0, 0.0), TRUNK, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.box(geometry, Vector3(DECK_HALF * 2.0, 0.4, DECK_HALF * 2.0), Vector3(0.0, DECK_HEIGHT - 0.2, 0.0), WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	for post_x: float in [-4.1, 4.1]:
 		for post_z: float in [-4.1, 4.1]:
-			ArenaKit.cylinder(geometry, 0.25, DECK_HEIGHT - 0.4, Vector3(post_x, (DECK_HEIGHT - 0.4) * 0.5, post_z), WOOD_DARK)
+			ArenaKit.cylinder(geometry, 0.25, DECK_HEIGHT - 0.4, Vector3(post_x, (DECK_HEIGHT - 0.4) * 0.5, post_z), WOOD_DARK, ArenaKit.SurfaceType.WOOD)
 
 	# Railings with a gap in the middle of each side for the four ways up.
 	var rail_y := DECK_HEIGHT + 0.5
 	for edge: float in [-1.0, 1.0]:
 		for piece: float in [-2.95, 2.95]:
-			ArenaKit.box(geometry, Vector3(0.2, 1.0, 3.1), Vector3(edge * (DECK_HALF - 0.1), rail_y, piece), WOOD_DARK)
-			ArenaKit.box(geometry, Vector3(3.1, 1.0, 0.2), Vector3(piece, rail_y, edge * (DECK_HALF - 0.1)), WOOD_DARK)
+			ArenaKit.box(geometry, Vector3(0.2, 1.0, 3.1), Vector3(edge * (DECK_HALF - 0.1), rail_y, piece), WOOD_DARK, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+			ArenaKit.box(geometry, Vector3(3.1, 1.0, 0.2), Vector3(piece, rail_y, edge * (DECK_HALF - 0.1)), WOOD_DARK, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 
 	# Leafy canopy: the landmark you can see from anywhere.
 	var leaves := [
@@ -186,22 +186,22 @@ func _build_treehouse() -> void:
 	for side: float in [-1.0, 1.0]:
 		var low := Vector3(side * 24.0, FORT_HEIGHT, 0.0)
 		var high := Vector3(side * DECK_HALF, DECK_HEIGHT, 0.0)
-		ArenaKit.ramp(geometry, low, high, 2.6, WOOD)
+		ArenaKit.ramp(geometry, low, high, 2.6, WOOD, 0.3, ArenaKit.SurfaceType.WOOD)
 		for rail_z: float in [-1.3, 1.3]:
 			var lift := Vector3(0.0, 0.7, rail_z)
-			ArenaKit.ramp(geometry, low + lift, high + lift, 0.15, WOOD_DARK, 0.7)
+			ArenaKit.ramp(geometry, low + lift, high + lift, 0.15, WOOD_DARK, 0.7, ArenaKit.SurfaceType.WOOD)
 		for post_x: float in [10.0, 17.0]:
 			var deck_y := lerpf(DECK_HEIGHT, FORT_HEIGHT, (post_x - DECK_HALF) / (24.0 - DECK_HALF))
-			ArenaKit.cylinder(geometry, 0.22, deck_y - 0.3, Vector3(side * post_x, (deck_y - 0.3) * 0.5, 0.0), WOOD_DARK)
+			ArenaKit.cylinder(geometry, 0.22, deck_y - 0.3, Vector3(side * post_x, (deck_y - 0.3) * 0.5, 0.0), WOOD_DARK, ArenaKit.SurfaceType.WOOD)
 
 	# South: a wooden ramp. North: a bright yellow slide.
-	ArenaKit.ramp(geometry, Vector3(0.0, 0.0, 14.5), Vector3(0.0, DECK_HEIGHT, DECK_HALF), 2.8, WOOD_DARK)
+	ArenaKit.ramp(geometry, Vector3(0.0, 0.0, 14.5), Vector3(0.0, DECK_HEIGHT, DECK_HALF), 2.8, WOOD_DARK, 0.3, ArenaKit.SurfaceType.WOOD)
 	var slide_low := Vector3(0.0, 0.0, -14.0)
 	var slide_high := Vector3(0.0, DECK_HEIGHT, -DECK_HALF)
-	ArenaKit.ramp(geometry, slide_low, slide_high, 2.4, SLIDE)
+	ArenaKit.ramp(geometry, slide_low, slide_high, 2.4, SLIDE, 0.3, ArenaKit.SurfaceType.PLASTIC)
 	for rail_x: float in [-1.25, 1.25]:
 		var lift := Vector3(rail_x, 0.35, 0.0)
-		ArenaKit.ramp(geometry, slide_low + lift, slide_high + lift, 0.12, SLIDE.darkened(0.2), 0.35)
+		ArenaKit.ramp(geometry, slide_low + lift, slide_high + lift, 0.12, SLIDE.darkened(0.2), 0.35, ArenaKit.SurfaceType.PLASTIC)
 
 	# Environmental hazards and power-ups:
 	# Ice slick down the yellow slide!

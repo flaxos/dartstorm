@@ -88,11 +88,12 @@ func _process(delta: float) -> void:
 ## light for warm light, so shaded areas (indoors) don't look cold.
 func _build_sky_and_sun(sun_pitch: float = -52.0, warm_fill: float = 0.0) -> void:
 	var sky_material := ProceduralSkyMaterial.new()
-	sky_material.sky_top_color = Color(0.18, 0.47, 0.95)
-	sky_material.sky_horizon_color = Color(0.66, 0.86, 1.0)
-	sky_material.ground_horizon_color = Color(0.66, 0.86, 1.0)
-	sky_material.ground_bottom_color = Color(0.3, 0.55, 0.3)
-	sky_material.sun_angle_max = 30.0
+	sky_material.sky_top_color = Color(0.20, 0.44, 0.88)
+	sky_material.sky_horizon_color = Color(0.86, 0.74, 0.62)
+	sky_material.ground_horizon_color = Color(0.72, 0.68, 0.58)
+	sky_material.ground_bottom_color = Color(0.28, 0.48, 0.24)
+	sky_material.sun_angle_max = 24.0
+	sky_material.sun_curve = 0.08
 	var sky := Sky.new()
 	sky.sky_material = sky_material
 	var environment := Environment.new()
@@ -105,28 +106,40 @@ func _build_sky_and_sun(sun_pitch: float = -52.0, warm_fill: float = 0.0) -> voi
 		environment.ambient_light_sky_contribution = 1.0 - warm_fill
 		environment.ambient_light_energy = 1.0 + warm_fill * 0.3
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	environment.adjustment_enabled = true
+	environment.adjustment_contrast = 1.06
+	environment.adjustment_saturation = 1.16
 	environment.glow_enabled = true
-	environment.glow_intensity = 0.4
-	environment.glow_bloom = 0.05
-	# SSAO and SSR require a RenderingDevice (Forward+ / Mobile Vulkan).
+	environment.glow_intensity = 0.45
+	environment.glow_bloom = 0.1
+	environment.glow_hdr_threshold = 1.0
+	# SSAO, SSR and Volumetric Fog require a RenderingDevice (Forward+ / Mobile Vulkan).
 	# Guard them so the Compatibility (WebGL2 / OpenGL ES3) renderer stays warning-free.
 	if RenderingServer.get_rendering_device() != null:
 		environment.ssao_enabled = true
-		environment.ssao_radius = 1.2
-		environment.ssao_intensity = 1.4
+		environment.ssao_radius = 1.4
+		environment.ssao_intensity = 1.6
+		environment.ssao_detail = 0.5
 		environment.ssr_enabled = true
 		environment.ssr_max_steps = 32
+		environment.volumetric_fog_enabled = true
+		environment.volumetric_fog_density = 0.005
+		environment.volumetric_fog_albedo = Color(0.96, 0.90, 0.80)
+		environment.volumetric_fog_ambient_inject = 0.15
 	var world := WorldEnvironment.new()
 	world.environment = environment
 	add_child(world)
 
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(sun_pitch, 38.0, 0.0)
-	sun.light_energy = 1.25
-	sun.light_color = Color(1.0, 0.97, 0.9)
+	sun.light_energy = 1.35
+	sun.light_color = Color(1.0, 0.93, 0.82)
 	sun.shadow_enabled = true
-	sun.shadow_blur = 1.2
-	sun.directional_shadow_max_distance = 110.0
+	sun.shadow_blur = 1.4
+	sun.directional_shadow_blend_splits = true
+	sun.directional_shadow_max_distance = 120.0
+	sun.shadow_bias = 0.02
+	sun.shadow_normal_bias = 1.2
 	add_child(sun)
 
 	_clouds = Node3D.new()

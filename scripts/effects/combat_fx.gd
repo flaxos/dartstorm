@@ -32,6 +32,7 @@ func _on_impact(kind: int, at: Vector3, normal: Vector3, tint: Color) -> void:
 	match kind:
 		DartProjectile.Impact.WORLD:
 			FoamBurst.spawn(self, at, tint, 3, 2.5, normal)
+			FoamSplat.spawn(self, at, normal, tint, 1.0)
 		DartProjectile.Impact.ACTOR:
 			FoamBurst.spawn(self, at, tint, 8, 4.0, normal)
 			Sfx.play_at(&"hit", at, 1.0, -2.0, 0.15)
@@ -40,6 +41,7 @@ func _on_impact(kind: int, at: Vector3, normal: Vector3, tint: Color) -> void:
 			Sfx.play_at(&"ricochet", at, 1.0, -3.0, 0.12)
 		DartProjectile.Impact.TARGET:
 			FoamBurst.spawn(self, at, CONFETTI[randi() % CONFETTI.size()], 16, 5.0, normal)
+			FoamSplat.spawn(self, at, normal, tint, 1.15)
 
 
 func _on_elemental_impact(element: DartData.Element, _kind: int, at: Vector3, normal: Vector3, _tint: Color) -> void:

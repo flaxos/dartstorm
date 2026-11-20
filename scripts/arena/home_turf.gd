@@ -99,17 +99,17 @@ func _build_lot() -> void:
 	# Timber fence round the back and sides (toy scale, so it towers over you).
 	var fence_z := (LOT_NORTH + FENCE_FRONT) * 0.5
 	var fence_len := FENCE_FRONT - LOT_NORTH
-	ArenaKit.box(geometry, Vector3(width + WALL_THICK, FENCE_HEIGHT, 0.5), Vector3(centre.x, FENCE_HEIGHT * 0.5, LOT_NORTH), FENCE)
-	ArenaKit.box(geometry, Vector3(0.5, FENCE_HEIGHT, fence_len), Vector3(LOT_WEST, FENCE_HEIGHT * 0.5, fence_z), FENCE)
-	ArenaKit.box(geometry, Vector3(0.5, FENCE_HEIGHT, fence_len), Vector3(LOT_EAST, FENCE_HEIGHT * 0.5, fence_z), FENCE)
+	ArenaKit.box(geometry, Vector3(width + WALL_THICK, FENCE_HEIGHT, 0.5), Vector3(centre.x, FENCE_HEIGHT * 0.5, LOT_NORTH), FENCE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.box(geometry, Vector3(0.5, FENCE_HEIGHT, fence_len), Vector3(LOT_WEST, FENCE_HEIGHT * 0.5, fence_z), FENCE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.box(geometry, Vector3(0.5, FENCE_HEIGHT, fence_len), Vector3(LOT_EAST, FENCE_HEIGHT * 0.5, fence_z), FENCE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	var x := LOT_WEST
 	while x <= LOT_EAST + 0.01:
-		ArenaKit.deco_box(decor, Vector3(0.5, FENCE_HEIGHT + 0.4, 0.8), Vector3(x, (FENCE_HEIGHT + 0.4) * 0.5, LOT_NORTH), FENCE.darkened(0.15))
+		ArenaKit.deco_box(decor, Vector3(0.5, FENCE_HEIGHT + 0.4, 0.8), Vector3(x, (FENCE_HEIGHT + 0.4) * 0.5, LOT_NORTH), FENCE.darkened(0.15), Vector3.ZERO, 0.0, ArenaKit.SurfaceType.WOOD)
 		x += 4.0
 	var z := LOT_NORTH
 	while z <= FENCE_FRONT + 0.01:
 		for side: float in [LOT_WEST, LOT_EAST]:
-			ArenaKit.deco_box(decor, Vector3(0.8, FENCE_HEIGHT + 0.4, 0.5), Vector3(side, (FENCE_HEIGHT + 0.4) * 0.5, z), FENCE.darkened(0.15))
+			ArenaKit.deco_box(decor, Vector3(0.8, FENCE_HEIGHT + 0.4, 0.5), Vector3(side, (FENCE_HEIGHT + 0.4) * 0.5, z), FENCE.darkened(0.15), Vector3.ZERO, 0.0, ArenaKit.SurfaceType.WOOD)
 		z += 4.0
 	# Invisible walls: above the fences, along the open front-yard sides, and across the far side of the street.
 	var sky := 30.0
@@ -140,9 +140,9 @@ func _build_street() -> void:
 
 func _build_house() -> void:
 	# Floors (looks only; everyone stands on the yard's ground underneath).
-	_floor(Rect2(-12.0, -36.0, 12.0, 38.0), WOOD_FLOOR)         # Family, kitchen and lounge.
-	_floor(Rect2(-17.0, -36.0, 5.0, 30.0), WOOD_FLOOR.darkened(0.08))  # Hallway.
-	_floor(Rect2(-26.0, -6.0, 14.0, 10.0), WOOD_FLOOR)           # Dining.
+	_floor(Rect2(-12.0, -36.0, 12.0, 38.0), WOOD_FLOOR, 0.03, ArenaKit.SurfaceType.WOOD)         # Family, kitchen and lounge.
+	_floor(Rect2(-17.0, -36.0, 5.0, 30.0), WOOD_FLOOR.darkened(0.08), 0.03, ArenaKit.SurfaceType.WOOD)  # Hallway.
+	_floor(Rect2(-26.0, -6.0, 14.0, 10.0), WOOD_FLOOR, 0.03, ArenaKit.SurfaceType.WOOD)           # Dining.
 	_floor(Rect2(-12.0, 2.0, 12.0, 16.0), Color(0.78, 0.72, 0.66))  # Entry tiles.
 	_floor(Rect2(-26.0, -36.0, 9.0, 10.0), Color(0.55, 0.78, 0.55))  # Bedroom 3 (green carpet).
 	_floor(Rect2(-26.0, -26.0, 9.0, 10.0), TILE)                 # Laundry and bathroom.
@@ -233,32 +233,33 @@ func _window(at: Vector3, width: float, along_x: bool) -> void:
 
 
 ## A flat floor finish (looks only). `rect` is x, z, width (x), depth (z).
-func _floor(rect: Rect2, color: Color, lift: float = 0.03) -> void:
+func _floor(rect: Rect2, color: Color, lift: float = 0.03, surface: int = ArenaKit.SurfaceType.DEFAULT) -> void:
 	ArenaKit.deco_box(decor, Vector3(rect.size.x, 0.06, rect.size.y),
-			Vector3(rect.position.x + rect.size.x * 0.5, lift, rect.position.y + rect.size.y * 0.5), color)
+			Vector3(rect.position.x + rect.size.x * 0.5, lift, rect.position.y + rect.size.y * 0.5), color,
+			Vector3.ZERO, 0.0, surface)
 
 
 # --- Patio and garage --------------------------------------------------------------
 
 func _build_patio() -> void:
-	_floor(Rect2(0.0, -36.0, 15.0, 27.0), DECKING)
+	_floor(Rect2(0.0, -36.0, 15.0, 27.0), DECKING, 0.03, ArenaKit.SurfaceType.WOOD)
 	# The roof is a platform: reach it up the toy race-track ramp from the east lawn.
 	var roof_thick := 0.4
 	ArenaKit.box(geometry, Vector3(15.0, roof_thick, 27.0), Vector3(7.8, PATIO_ROOF_TOP - roof_thick * 0.5, -22.5), Color(0.44, 0.49, 0.57))
 	# Toys that ended up on the roof (as they do): cover for rooftop fights.
-	ArenaKit.cylinder(geometry, 1.3, 2.6, Vector3(4.5, PATIO_ROOF_TOP + 1.3, -30.0), Color(1.0, 0.55, 0.15))
-	ArenaKit.deco_sphere(decor, 1.45, Vector3(4.5, PATIO_ROOF_TOP + 1.3, -30.0), Color(1.0, 0.55, 0.15))
-	ArenaKit.cylinder(geometry, 1.8, 0.5, Vector3(10.5, PATIO_ROOF_TOP + 0.25, -15.0), Color(1.0, 0.3, 0.5))
-	ArenaKit.box(geometry, Vector3(5.0, 1.6, 1.2), Vector3(6.0, PATIO_ROOF_TOP + 0.8, -18.5), Color(0.96, 0.96, 0.9), Vector3(0.0, 25.0, 0.0))
+	ArenaKit.cylinder(geometry, 1.3, 2.6, Vector3(4.5, PATIO_ROOF_TOP + 1.3, -30.0), Color(1.0, 0.55, 0.15), ArenaKit.SurfaceType.PLASTIC)
+	ArenaKit.deco_sphere(decor, 1.45, Vector3(4.5, PATIO_ROOF_TOP + 1.3, -30.0), Color(1.0, 0.55, 0.15), 1.0, 0.0, ArenaKit.SurfaceType.PLASTIC)
+	ArenaKit.cylinder(geometry, 1.8, 0.5, Vector3(10.5, PATIO_ROOF_TOP + 0.25, -15.0), Color(1.0, 0.3, 0.5), ArenaKit.SurfaceType.PLASTIC)
+	ArenaKit.box(geometry, Vector3(5.0, 1.6, 1.2), Vector3(6.0, PATIO_ROOF_TOP + 0.8, -18.5), Color(0.96, 0.96, 0.9), Vector3(0.0, 25.0, 0.0), ArenaKit.SurfaceType.PLASTIC)
 	for post: Vector3 in [Vector3(14.6, 0.0, -35.6), Vector3(14.6, 0.0, -22.5), Vector3(14.6, 0.0, -9.6), Vector3(7.5, 0.0, -35.6)]:
-		ArenaKit.box(geometry, Vector3(0.6, PATIO_ROOF_TOP - roof_thick, 0.6), post + Vector3(0.0, (PATIO_ROOF_TOP - roof_thick) * 0.5, 0.0), Color(0.95, 0.95, 0.95))
+		ArenaKit.box(geometry, Vector3(0.6, PATIO_ROOF_TOP - roof_thick, 0.6), post + Vector3(0.0, (PATIO_ROOF_TOP - roof_thick) * 0.5, 0.0), Color(0.95, 0.95, 0.95), Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	# A low rim so the roof reads as a roof.
 	ArenaKit.box(geometry, Vector3(15.0, 0.6, 0.3), Vector3(7.8, PATIO_ROOF_TOP + 0.3, -35.85), Color(0.75, 0.75, 0.8))
 	var ramp_colour := Color(1.0, 0.5, 0.1)
-	ArenaKit.ramp(geometry, Vector3(29.0, 0.0, -22.0), Vector3(15.1, PATIO_ROOF_TOP, -22.0), 4.0, ramp_colour)
+	ArenaKit.ramp(geometry, Vector3(29.0, 0.0, -22.0), Vector3(15.1, PATIO_ROOF_TOP, -22.0), 4.0, ramp_colour, 0.3, ArenaKit.SurfaceType.PLASTIC)
 	for side: float in [-1.0, 1.0]:
 		ArenaKit.ramp(geometry, Vector3(29.0, 0.35, -22.0 + side * 2.1), Vector3(15.1, PATIO_ROOF_TOP + 0.35, -22.0 + side * 2.1),
-				0.3, Color(1.0, 0.85, 0.2), 0.7)
+				0.3, Color(1.0, 0.85, 0.2), 0.7, ArenaKit.SurfaceType.PLASTIC)
 	# Ice slick down the toy race-track ramp!
 	add_ice_slick(Vector3(22.05, PATIO_ROOF_TOP * 0.5, -22.0), Vector3(14.2, 0.2, 3.8), Vector3(1.0, -0.45, 0.0), Vector3(0.0, 0.0, 24.0))
 	# Shield pickup up on the patio roof fort
@@ -275,7 +276,7 @@ func _build_patio() -> void:
 	ArenaKit.deco_box(decor, Vector3(3.7, 0.5, 2.1), Vector3(12.0, 3.05, -33.8), Color(0.15, 0.15, 0.18))
 	_table(Vector3(7.5, 0.0, -22.5), Vector2(3.6, 7.0), 2.25, FURNITURE_LIGHT)
 	for side: float in [-1.0, 1.0]:
-		ArenaKit.box(geometry, Vector3(1.4, 1.2, 6.0), Vector3(7.5 + side * 3.2, 0.6, -22.5), FURNITURE)
+		ArenaKit.box(geometry, Vector3(1.4, 1.2, 6.0), Vector3(7.5 + side * 3.2, 0.6, -22.5), FURNITURE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	for pot: Vector3 in [Vector3(13.8, 0.0, -12.0), Vector3(1.6, 0.0, -34.4), Vector3(13.8, 0.0, -28.5)]:
 		ArenaKit.cylinder(geometry, 0.9, 1.8, pot + Vector3(0.0, 0.9, 0.0), Color(0.8, 0.45, 0.3))
 		ArenaKit.deco_sphere(decor, 1.3, pot + Vector3(0.0, 2.6, 0.0), Color(0.25, 0.65, 0.3))
@@ -289,7 +290,7 @@ func _build_garage() -> void:
 	_car(Vector3(6.0, 0.0, -0.5), Color(0.9, 0.22, 0.25), 0.0)
 	_car(Vector3(13.7, 0.0, 0.5), Color(0.1, 0.72, 0.7), 0.0)
 	# Workbench with a dartboard over it.
-	ArenaKit.box(geometry, Vector3(4.6, 2.7, 1.6), Vector3(16.2, 1.35, -7.9), FURNITURE)
+	ArenaKit.box(geometry, Vector3(4.6, 2.7, 1.6), Vector3(16.2, 1.35, -7.9), FURNITURE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	ArenaKit.sign_text(decor, "HOME TURF", Vector3(9.5, 7.6, 8.35), Vector3.ZERO, Color(1.0, 0.6, 0.15), 150, 0.014)
 
 
@@ -299,8 +300,8 @@ func _car(at: Vector3, color: Color, yaw: float) -> void:
 	car.position = at
 	car.rotation_degrees.y = yaw
 	geometry.add_child(car)
-	ArenaKit.box(car, Vector3(5.4, 2.2, 12.0), Vector3(0.0, 1.3, 0.0), color)
-	ArenaKit.box(car, Vector3(4.8, 1.8, 6.4), Vector3(0.0, 3.3, 0.6), color.lightened(0.1))
+	ArenaKit.box(car, Vector3(5.4, 2.2, 12.0), Vector3(0.0, 1.3, 0.0), color, Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
+	ArenaKit.box(car, Vector3(4.8, 1.8, 6.4), Vector3(0.0, 3.3, 0.6), color.lightened(0.1), Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
 	for side: float in [-1.0, 1.0]:
 		ArenaKit.deco_box(car, Vector3(0.1, 1.2, 5.4), Vector3(side * 2.42, 3.4, 0.6), WINDOW)
 		for end: float in [-1.0, 1.0]:
@@ -333,8 +334,8 @@ func _build_furniture() -> void:
 	ArenaKit.box(geometry, Vector3(0.8, 2.6, 8.0), Vector3(-10.8, 1.3, -6.5), COUCH.darkened(0.15))
 	for end: float in [-1.0, 1.0]:
 		ArenaKit.box(geometry, Vector3(3.4, 1.9, 0.8), Vector3(-9.3, 0.95, -6.5 + end * 4.2), COUCH.darkened(0.15))
-	ArenaKit.box(geometry, Vector3(2.4, 1.2, 4.5), Vector3(-5.0, 0.6, -6.5), FURNITURE_LIGHT)
-	ArenaKit.box(geometry, Vector3(1.4, 1.8, 4.4), Vector3(-1.1, 0.9, -7.3), FURNITURE)
+	ArenaKit.box(geometry, Vector3(2.4, 1.2, 4.5), Vector3(-5.0, 0.6, -6.5), FURNITURE_LIGHT, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.box(geometry, Vector3(1.4, 1.8, 4.4), Vector3(-1.1, 0.9, -7.3), FURNITURE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	ArenaKit.deco_box(decor, Vector3(0.2, 2.8, 4.2), Vector3(-0.7, 3.4, -7.3), Color(0.08, 0.08, 0.12), Vector3.ZERO, 0.1)
 	_rug(Vector3(-6.0, 0.0, -6.5), Vector2(9.0, 9.0), Color(0.45, 0.75, 0.95))
 
@@ -348,7 +349,7 @@ func _build_furniture() -> void:
 	ArenaKit.box(geometry, Vector3(3.4, 0.4, 6.6), Vector3(-24.0, 4.4, -31.0), Color(0.95, 0.45, 0.6))
 	for corner: Vector2 in [Vector2(-25.5, -34.1), Vector2(-22.5, -34.1), Vector2(-25.5, -27.9), Vector2(-22.5, -27.9)]:
 		ArenaKit.box(geometry, Vector3(0.4, 4.2, 0.4), Vector3(corner.x, 2.1, corner.y), FURNITURE_LIGHT)
-	ArenaKit.box(geometry, Vector3(2.4, 1.6, 2.4), Vector3(-24.0, 0.8, -31.0), Color(0.95, 0.75, 0.2))  # Toy box under the loft.
+	ArenaKit.box(geometry, Vector3(2.4, 1.6, 2.4), Vector3(-24.0, 0.8, -31.0), Color(0.95, 0.75, 0.2), Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)  # Toy box under the loft.
 	_trampoline(Vector3(-20.6, 0.0, -31.0), 1.5, 14.0, Color(0.3, 0.8, 0.4))
 
 	# Bathroom: bathtub, and a mirror for ricochets.
@@ -358,19 +359,19 @@ func _build_furniture() -> void:
 
 	# Bedroom 2: a bed trampoline and a wardrobe.
 	_bed(Vector3(-23.7, 0.0, -10.2), Vector2(4.0, 6.4), Color(0.4, 0.55, 0.95), 12.0)
-	ArenaKit.box(geometry, Vector3(5.4, 6.3, 1.8), Vector3(-23.0, 3.15, -14.8), FURNITURE_LIGHT)
+	ArenaKit.box(geometry, Vector3(5.4, 6.3, 1.8), Vector3(-23.0, 3.15, -14.8), FURNITURE_LIGHT, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 
 	# Study: desk with a chair step, bookshelf, and a dartboard.
 	_table(Vector3(-24.3, 0.0, 8.5), Vector2(2.6, 6.0), 2.25, FURNITURE)
 	_chair(Vector3(-21.6, 0.0, 8.5), -90.0)
-	ArenaKit.box(geometry, Vector3(6.0, 6.6, 1.4), Vector3(-17.0, 3.3, 12.0), FURNITURE)
+	ArenaKit.box(geometry, Vector3(6.0, 6.6, 1.4), Vector3(-17.0, 3.3, 12.0), FURNITURE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	for shelf in 3:
 		ArenaKit.deco_box(decor, Vector3(5.6, 1.2, 0.1), Vector3(-17.0, 1.4 + shelf * 2.0, 11.27), Color(0.9, 0.3 + shelf * 0.2, 0.35))
 
 	# Main bedroom: a big bed trampoline, bedside tables, a mirror wardrobe.
 	_bed(Vector3(-19.0, 0.0, 22.4), Vector2(6.6, 6.6), Color(0.95, 0.6, 0.7), 13.0)
 	for x: float in [-23.4, -14.6]:
-		ArenaKit.box(geometry, Vector3(1.6, 1.8, 1.6), Vector3(x, 0.9, 24.8), FURNITURE_LIGHT)
+		ArenaKit.box(geometry, Vector3(1.6, 1.8, 1.6), Vector3(x, 0.9, 24.8), FURNITURE_LIGHT, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	add_mirror(Vector3(-25.35, 3.4, 22.0), 90.0, Vector2(4.6, 5.0))
 
 	# Ensuite: vanity and mirror.
@@ -378,16 +379,16 @@ func _build_furniture() -> void:
 	add_mirror(Vector3(-25.35, 5.2, 15.6), 90.0, Vector2(2.8, 2.2))
 
 	# Entry: hall table and a shoe rack.
-	ArenaKit.box(geometry, Vector3(1.6, 2.4, 5.0), Vector3(-1.1, 1.2, 12.5), FURNITURE)
-	ArenaKit.box(geometry, Vector3(3.4, 1.4, 1.2), Vector3(-10.0, 0.7, 17.0), FURNITURE_LIGHT)
+	ArenaKit.box(geometry, Vector3(1.6, 2.4, 5.0), Vector3(-1.1, 1.2, 12.5), FURNITURE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.box(geometry, Vector3(3.4, 1.4, 1.2), Vector3(-10.0, 0.7, 17.0), FURNITURE_LIGHT, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 
 
 func _table(at: Vector3, top: Vector2, height: float, color: Color) -> void:
-	ArenaKit.box(geometry, Vector3(top.x, 0.3, top.y), at + Vector3(0.0, height - 0.15, 0.0), color)
+	ArenaKit.box(geometry, Vector3(top.x, 0.3, top.y), at + Vector3(0.0, height - 0.15, 0.0), color, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	for sx: float in [-1.0, 1.0]:
 		for sz: float in [-1.0, 1.0]:
 			var leg := at + Vector3(sx * (top.x * 0.5 - 0.45), (height - 0.3) * 0.5, sz * (top.y * 0.5 - 0.45))
-			ArenaKit.box(geometry, Vector3(0.45, height - 0.3, 0.45), leg, color.darkened(0.15))
+			ArenaKit.box(geometry, Vector3(0.45, height - 0.3, 0.45), leg, color.darkened(0.15), Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 
 
 ## A chair seat (a step up), with its back on the side facing away from `yaw`.
@@ -396,8 +397,8 @@ func _chair(at: Vector3, yaw: float) -> void:
 	chair.position = at
 	chair.rotation_degrees.y = yaw
 	geometry.add_child(chair)
-	ArenaKit.box(chair, Vector3(1.6, 1.2, 1.6), Vector3(0.0, 0.6, 0.0), FURNITURE_LIGHT)
-	ArenaKit.box(chair, Vector3(1.6, 1.9, 0.3), Vector3(0.0, 2.15, -0.65), FURNITURE_LIGHT)
+	ArenaKit.box(chair, Vector3(1.6, 1.2, 1.6), Vector3(0.0, 0.6, 0.0), FURNITURE_LIGHT, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.box(chair, Vector3(1.6, 1.9, 0.3), Vector3(0.0, 2.15, -0.65), FURNITURE_LIGHT, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 
 
 ## A bed: a mattress you can hop onto that bounces you high (it's a trampoline!).
@@ -445,8 +446,8 @@ func _build_yards() -> void:
 	prism.size = Vector3(9.8, 2.2, 7.6)
 	ArenaKit.deco(decor, prism, Vector3(24.0, 7.1, -46.0), Color(0.45, 0.3, 0.25))
 	_floor(Rect2(-18.0, -48.0, 9.0, 7.0), Color(0.95, 0.85, 0.55), 0.06)
-	ArenaKit.box(geometry, Vector3(4.6, 2.6, 2.6), Vector3(-13.5, 1.3, -44.5), Color(1.0, 0.75, 0.1))
-	ArenaKit.box(geometry, Vector3(2.0, 1.4, 2.6), Vector3(-10.9, 3.3, -44.5), Color(0.95, 0.35, 0.2))
+	ArenaKit.box(geometry, Vector3(4.6, 2.6, 2.6), Vector3(-13.5, 1.3, -44.5), Color(1.0, 0.75, 0.1), Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
+	ArenaKit.box(geometry, Vector3(2.0, 1.4, 2.6), Vector3(-10.9, 3.3, -44.5), Color(0.95, 0.35, 0.2), Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
 	_yard_tree(Vector3(-27.0, 0.0, -44.0), 1.5)
 	for bush: Vector3 in [Vector3(6.0, 0.0, -49.0), Vector3(15.0, 0.0, -40.0), Vector3(-31.0, 0.0, -34.0), Vector3(27.0, 0.0, -30.0)]:
 		_bush(bush, 1.4)
@@ -458,7 +459,7 @@ func _build_yards() -> void:
 
 
 func _yard_tree(at: Vector3, tree_scale: float) -> void:
-	ArenaKit.cylinder(geometry, 0.7 * tree_scale, 6.0 * tree_scale, at + Vector3(0.0, 3.0 * tree_scale, 0.0), ArenaKit.TRUNK)
+	ArenaKit.cylinder(geometry, 0.7 * tree_scale, 6.0 * tree_scale, at + Vector3(0.0, 3.0 * tree_scale, 0.0), ArenaKit.TRUNK, ArenaKit.SurfaceType.WOOD)
 	ArenaKit.deco_sphere(decor, 3.8 * tree_scale, at + Vector3(0.0, 7.6 * tree_scale, 0.0), ArenaKit.LEAF)
 	ArenaKit.deco_sphere(decor, 2.6 * tree_scale, at + Vector3(1.6, 9.2, -0.8) * tree_scale, ArenaKit.LEAF_LIGHT)
 

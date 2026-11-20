@@ -21,6 +21,13 @@ var _section: String = ""
 
 
 func _ready() -> void:
+	# Ensure test suite runs in pristine default state regardless of user config
+	GameSettings.reset_to_defaults()
+	GameSettings.split_screen = false
+	GameSettings.arena = 0
+	GameSettings.bot_count = 3
+	GameSettings.match_mode = GameSettings.MatchMode.FREE_FOR_ALL
+	GameSettings.apply()
 	await _test_resources()
 	await _test_dart_gravity()
 	await _test_dart_wind()
@@ -89,6 +96,8 @@ func _ready() -> void:
 	await _test_splitscreen_coop()
 	# Web & Android Mobile Universal Accessibility
 	await _test_touch_controls_and_mobile_export()
+	# Environment & Lighting Uplift: Tactile PBR Shaders, Splat Decals & Golden Hour (v1.2.0)
+	await _test_environment_and_splat_decals()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -3034,3 +3043,107 @@ func _test_touch_controls_and_mobile_export() -> void:
 	GameSettings.touch_look_sensitivity = saved_sens
 	GameSettings.save_settings()
 	await physics_frames(1)
+
+
+## Environment & Lighting Uplift: Tactile PBR surface shaders, foam splat decals, golden-hour sky and atmospheric glow
+func _test_environment_and_splat_decals() -> void:
+	section("Milestone v1.2.0: Environment & Lighting Uplift & Splat Decals")
+
+	# 1. Tactile PBR Surface Shaders & Material Caching
+	var wood_mat := ArenaKit.mat_styled(Color(0.8, 0.6, 0.4), ArenaKit.SurfaceType.WOOD)
+	check(wood_mat is ShaderMaterial, "Wood surface type generates a ShaderMaterial")
+	if wood_mat is ShaderMaterial:
+		check(wood_mat.shader == ArenaKit.WOOD_SHADER, "Wood material uses toy_wood.gdshader")
+
+	var plastic_mat := ArenaKit.mat_styled(Color(1.0, 0.2, 0.2), ArenaKit.SurfaceType.PLASTIC)
+	check(plastic_mat is StandardMaterial3D, "Plastic surface type generates StandardMaterial3D")
+	if plastic_mat is StandardMaterial3D:
+		check(is_equal_approx(plastic_mat.roughness, 0.32), "Plastic surface has satin roughness 0.32")
+		check(plastic_mat.rim_enabled, "Plastic surface has rim Fresnel sheen enabled")
+
+	var metal_mat := ArenaKit.mat_styled(Color(0.8, 0.8, 0.8), ArenaKit.SurfaceType.METAL)
+	check(metal_mat is StandardMaterial3D, "Metal surface type generates StandardMaterial3D")
+	if metal_mat is StandardMaterial3D:
+		check(is_equal_approx(metal_mat.metallic, 0.85), "Metal surface has metallic 0.85")
+
+	# Verify caching
+	var cached_wood := ArenaKit.mat_styled(Color(0.8, 0.6, 0.4), ArenaKit.SurfaceType.WOOD)
+	check(cached_wood == wood_mat, "ArenaKit caches styled materials to keep draw calls low")
+
+	# 2. Golden-Hour Atmospheric Lighting & Sun Shadows
+	var stage := make_stage()
+	var arena := BackyardFortress.new()
+	stage.add_child(arena)
+	await physics_frames(2)
+
+	var world_env: WorldEnvironment = null
+	var sun_light: DirectionalLight3D = null
+	for child in arena.get_children():
+		if child is WorldEnvironment:
+			world_env = child
+		elif child is DirectionalLight3D:
+			sun_light = child
+
+	check(world_env != null and world_env.environment != null, "Arena instantiates WorldEnvironment")
+	if world_env != null and world_env.environment != null:
+		var env := world_env.environment
+		check(env.background_mode == Environment.BG_SKY, "Sky background mode is active")
+		check(env.tonemap_mode == Environment.TONE_MAPPER_FILMIC, "Filmic tonemapping is enabled")
+		check(env.adjustment_enabled, "Color adjustments enabled")
+		check(env.adjustment_saturation >= 1.15, "Filmic saturation boost active (1.16)")
+		check(env.glow_enabled, "Glow bloom is enabled for energy and shield effects")
+
+	check(sun_light != null, "Arena instantiates DirectionalLight3D sun")
+	if sun_light != null:
+		check(sun_light.shadow_enabled, "Sun directional shadows enabled")
+		check(sun_light.directional_shadow_blend_splits, "Soft directional shadow blend splits enabled")
+		check(sun_light.shadow_normal_bias > 1.0, "Contact shadow normal bias configured to eliminate shadow acne")
+
+	# 3. Foam Splat Decals Lifecycle & Pop-in
+	FoamSplat.clear_all()
+	check(FoamSplat.live_count() == 0, "FoamSplat.clear_all() empties active splats")
+
+	var splat := FoamSplat.spawn(stage, Vector3(0.0, 1.0, 0.0), Vector3.UP, Color(0.1, 0.8, 1.0), 1.2)
+	check(splat != null, "FoamSplat.spawn() successfully instantiates splat")
+	check(FoamSplat.live_count() == 1, "FoamSplat increments live count")
+	check(splat.color == Color(0.1, 0.8, 1.0), "FoamSplat preserves dart tint color")
+	check(splat.get_child_count() > 0 and splat.get_child(0) is MeshInstance3D, "FoamSplat contains quad MeshInstance3D")
+
+	# Process splat animation
+	splat._process(0.05)
+	check(splat.scale.x > 0.0, "FoamSplat scales up on pop-in animation")
+
+	# Test fizz-out trigger
+	splat.start_fizz()
+	check(splat._fizzing, "start_fizz() initiates fizz-out dissolve")
+	splat._process(FoamSplat.FIZZ_DURATION + 0.1)
+	await physics_frames(2)
+	check(FoamSplat.live_count() == 0, "Fizzed-out splat is automatically queued for freeing and unregisters")
+
+	# 4. Splat Decal Budget & FIFO Retirement
+	var saved_intensity := GameSettings.visual_intensity
+	GameSettings.visual_intensity = 1.0
+	for i in 60:
+		FoamSplat.spawn(stage, Vector3(i * 0.1, 1.0, 0.0), Vector3.UP, Color.YELLOW)
+	check(FoamSplat.live_count() <= FoamSplat.MAX_ALIVE, "Active splats remain strictly capped under budget (%d <= %d)" % [FoamSplat.live_count(), FoamSplat.MAX_ALIVE])
+
+	# 5. Combat FX Integration (Impact.WORLD and Impact.TARGET spawn splats)
+	FoamSplat.clear_all()
+	var cfx := CombatFx.new()
+	stage.add_child(cfx)
+	cfx._on_impact(DartProjectile.Impact.WORLD, Vector3(0.0, 1.0, 0.0), Vector3.UP, Color.MAGENTA)
+	check(FoamSplat.live_count() == 1, "CombatFX._on_impact on WORLD impact spawns a FoamSplat decal")
+	cfx._on_impact(DartProjectile.Impact.TARGET, Vector3(0.0, 1.0, 0.0), Vector3.UP, Color.ORANGE)
+	check(FoamSplat.live_count() == 2, "CombatFX._on_impact on TARGET impact spawns a FoamSplat decal")
+	cfx._on_impact(DartProjectile.Impact.ACTOR, Vector3(0.0, 1.0, 0.0), Vector3.UP, Color.GREEN)
+	check(FoamSplat.live_count() == 2, "CombatFX._on_impact on ACTOR impact does not spawn a surface splat decal")
+
+	# Clean up
+	FoamSplat.clear_all()
+	cfx.queue_free()
+	arena.queue_free()
+	stage.queue_free()
+	GameSettings.visual_intensity = saved_intensity
+	await physics_frames(2)
+	check(FoamSplat.live_count() == 0, "Zero foam splats remain active after stage cleanup")
+

@@ -194,11 +194,12 @@ func is_touch_active() -> bool:
 		TouchMode.OFF:
 			return false
 		TouchMode.AUTO:
-			return _touch_detected \
-				or DisplayServer.is_touchscreen_available() \
-				or OS.has_feature("mobile") \
+			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+				return false
+			return OS.has_feature("mobile") \
 				or OS.has_feature("web_android") \
-				or OS.has_feature("web_ios")
+				or OS.has_feature("web_ios") \
+				or _touch_detected
 	return false
 
 
@@ -208,10 +209,17 @@ func register_touch_event() -> void:
 		changed.emit()
 
 
+func reset_touch_detection() -> void:
+	if _touch_detected:
+		_touch_detected = false
+		changed.emit()
+
+
 ## Puts every preference (not your look or the match options) back to its
 ## factory value. Call apply() afterwards; saving happens when the settings
 ## screen closes.
 func reset_to_defaults() -> void:
+	_touch_detected = false
 	for key: String in DEFAULTS:
 		set(key, DEFAULTS[key])
 	InputSetup.reset_to_defaults()

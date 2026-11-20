@@ -2936,6 +2936,8 @@ func _test_touch_controls_and_mobile_export() -> void:
 	GameSettings.touch_controls_mode = GameSettings.TouchMode.AUTO
 	GameSettings.register_touch_event()
 	check(GameSettings.is_touch_active(), "TouchControls active in AUTO once touch event is registered")
+	GameSettings.reset_touch_detection()
+	check(not GameSettings.is_touch_active(), "TouchControls inactive in AUTO when no touch is registered on desktop")
 
 	# 5. VirtualJoystick Component
 	var stage := make_stage()
@@ -3003,6 +3005,23 @@ func _test_touch_controls_and_mobile_export() -> void:
 	var initial_rot := player.rotation.y
 	touch_ui._handle_look(Vector2(50.0, 0.0))
 	check(player.rotation.y != initial_rot, "player.look_relative() rotates player camera from touch swipe")
+
+	# 8. Desktop Captured Mouse Look & Click-to-Capture
+	section("Web & Desktop: mouse look and capture")
+	player.mouse_captured_override = true
+	var player_rot_before := player.rotation.y
+	var motion_ev := InputEventMouseMotion.new()
+	motion_ev.relative = Vector2(25.0, 0.0)
+	player._unhandled_input(motion_ev)
+	check(player.rotation.y != player_rot_before, "Free mouse motion rotates player camera without holding left click")
+
+	player.mouse_captured_override = false
+	var click_ev := InputEventMouseButton.new()
+	click_ev.button_index = MOUSE_BUTTON_LEFT
+	click_ev.pressed = true
+	player._unhandled_input(click_ev)
+	check(player.mouse_captured_override, "Left click captures mouse on desktop")
+	check(player._fire_blocked_until_release, "Mouse capture click suppresses initial fire shot until released")
 
 	# Clean up
 	touch_ui.queue_free()

@@ -397,7 +397,7 @@ func _ready() -> void:
 			pause_menu.open())
 
 	controller.match_ended.connect(_on_match_ended)
-	if not GameSettings.is_touch_active() and not OS.has_feature("mobile"):
+	if not OS.has_feature("mobile") and not OS.has_feature("web_android") and not OS.has_feature("web_ios") and GameSettings.touch_controls_mode != GameSettings.TouchMode.ALWAYS:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	else:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

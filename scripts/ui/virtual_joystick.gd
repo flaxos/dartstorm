@@ -58,7 +58,7 @@ func _gui_input(event: InputEvent) -> void:
 		if drag.index == _touch_id:
 			_update_from_pos(drag.position)
 			accept_event()
-	elif event is InputEventMouseButton:
+	elif event is InputEventMouseButton and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT:
 			if mb.pressed and _touch_id == -1:

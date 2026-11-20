@@ -397,7 +397,10 @@ func _ready() -> void:
 			pause_menu.open())
 
 	controller.match_ended.connect(_on_match_ended)
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if not GameSettings.is_touch_active() and not OS.has_feature("mobile"):
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	else:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	Sfx.play_music(&"match")
 	controller.begin()
 

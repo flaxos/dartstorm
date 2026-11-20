@@ -50,7 +50,7 @@ func _gui_input(event: InputEvent) -> void:
 			_touch_id = touch.index
 			_update_from_pos(touch.position)
 			accept_event()
-		elif not touch.pressed and touch.index == _touch_id:
+		elif (not touch.pressed or touch.canceled) and touch.index == _touch_id:
 			_release()
 			accept_event()
 	elif event is InputEventScreenDrag:
@@ -73,6 +73,35 @@ func _gui_input(event: InputEvent) -> void:
 		if _touch_id == -2:
 			_update_from_pos(mm.position)
 			accept_event()
+
+
+func _input(event: InputEvent) -> void:
+	if _touch_id == -1:
+		return
+	if event is InputEventScreenDrag:
+		var drag := event as InputEventScreenDrag
+		if drag.index == _touch_id:
+			var local_pos: Vector2 = get_global_transform().affine_inverse() * drag.position
+			_update_from_pos(local_pos)
+			get_viewport().set_input_as_handled()
+	elif event is InputEventScreenTouch:
+		var touch := event as InputEventScreenTouch
+		if touch.index == _touch_id and (not touch.pressed or touch.canceled):
+			_release()
+			get_viewport().set_input_as_handled()
+	elif _touch_id == -2:
+		if event is InputEventMouseMotion:
+			var mm := event as InputEventMouseMotion
+			if (mm.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
+				var local_pos: Vector2 = get_global_transform().affine_inverse() * mm.position
+				_update_from_pos(local_pos)
+				get_viewport().set_input_as_handled()
+		elif event is InputEventMouseButton:
+			var mb := event as InputEventMouseButton
+			if mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
+				_release()
+				get_viewport().set_input_as_handled()
+
 
 
 func _update_from_pos(pos: Vector2) -> void:

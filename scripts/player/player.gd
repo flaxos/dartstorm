@@ -111,16 +111,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		GameSettings.register_touch_event()
 	var motion := event as InputEventMouseMotion
 	if motion != null and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and player_index == 0:
+		if GameSettings.is_touch_active():
+			return  # Touch look is handled via TouchControls look_relative()
 		var zoom_ratio := camera.fov / maxf(GameSettings.fov, 1.0) if is_aiming_down_sights else 1.0
 		var scale_factor := MOUSE_RADIANS_PER_PIXEL * GameSettings.mouse_sensitivity * zoom_ratio
 		_look(-motion.relative.x * scale_factor, -motion.relative.y * scale_factor)
 		_sway_vel += Vector2(-motion.relative.x, motion.relative.y) * (0.0012 * zoom_ratio)
 		return
 	# Clicking back into the window after alt-tab grabs the mouse again
-	# instead of firing a surprise shot.
+	# instead of firing a surprise shot (desktop keyboard/mouse only).
 	if event is InputEventMouseButton and event.is_action_pressed(_act(&"fire")) \
 			and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and controls_enabled \
-			and not get_tree().paused and player_index == 0:
+			and not get_tree().paused and player_index == 0 and not GameSettings.is_touch_active():
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		_fire_blocked_until_release = true
 		get_viewport().set_input_as_handled()

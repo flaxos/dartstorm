@@ -44,6 +44,10 @@ window/stretch/aspect="expand"
 
 pointing/emulate_touch_from_mouse=true
 
+[physics]
+
+common/max_physics_steps_per_frame=4
+
 [rendering]
 
 renderer/rendering_method="forward_plus"
@@ -51,4 +55,7 @@ renderer/rendering_method.mobile="gl_compatibility"
 renderer/rendering_method.web="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
 anti_aliasing/quality/msaa_3d=2
+anti_aliasing/quality/msaa_3d.mobile=0
+anti_aliasing/quality/msaa_3d.web=0
+
 

@@ -260,8 +260,6 @@ func _build_patio() -> void:
 	for side: float in [-1.0, 1.0]:
 		ArenaKit.ramp(geometry, Vector3(29.0, 0.35, -22.0 + side * 2.1), Vector3(15.1, PATIO_ROOF_TOP + 0.35, -22.0 + side * 2.1),
 				0.3, Color(1.0, 0.85, 0.2), 0.7, ArenaKit.SurfaceType.PLASTIC)
-	# Ice slick down the toy race-track ramp!
-	add_ice_slick(Vector3(22.05, PATIO_ROOF_TOP * 0.5, -22.0), Vector3(14.2, 0.2, 3.8), Vector3(1.0, -0.45, 0.0), Vector3(0.0, 0.0, 24.0))
 	# Shield pickup up on the patio roof fort
 	add_shield_pickup(Vector3(6.5, PATIO_ROOF_TOP, -22.5))
 	add_grenade_pickup(Vector3(12.0, PATIO_ROOF_TOP, -22.5))

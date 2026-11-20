@@ -13,6 +13,20 @@ enum Teams {
 	BLUE_VS_ORANGE,
 }
 
+enum TeamPalette {
+	DEFAULT,
+	COBALT_SUNBURST,
+	MAGENTA_MINT,
+	HIGH_CONTRAST,
+}
+
+const PALETTE_NAMES: Array[String] = [
+	"Default (Blue / Orange)",
+	"Cobalt & Sunburst",
+	"Magenta & Mint",
+	"High Contrast",
+]
+
 ## Team names and colours, by team number. Blue and orange match the forts.
 const TEAM_INFO: Array[Dictionary] = [
 	{"name": "BLUE", "color": Color(0.15, 0.45, 1.0)},
@@ -20,6 +34,28 @@ const TEAM_INFO: Array[Dictionary] = [
 	{"name": "GREEN", "color": Color(0.3, 0.82, 0.25)},
 	{"name": "PURPLE", "color": Color(0.66, 0.4, 1.0)},
 ]
+
+const TEAM_PALETTES := {
+	TeamPalette.DEFAULT: TEAM_INFO,
+	TeamPalette.COBALT_SUNBURST: [
+		{"name": "COBALT", "color": Color(0.1, 0.4, 0.95)},
+		{"name": "SUNBURST", "color": Color(1.0, 0.82, 0.1)},
+		{"name": "EMERALD", "color": Color(0.2, 0.85, 0.45)},
+		{"name": "AMETHYST", "color": Color(0.7, 0.35, 1.0)},
+	],
+	TeamPalette.MAGENTA_MINT: [
+		{"name": "MAGENTA", "color": Color(0.96, 0.22, 0.62)},
+		{"name": "MINT", "color": Color(0.25, 0.9, 0.68)},
+		{"name": "CORAL", "color": Color(1.0, 0.52, 0.38)},
+		{"name": "LAVENDER", "color": Color(0.68, 0.55, 0.98)},
+	],
+	TeamPalette.HIGH_CONTRAST: [
+		{"name": "CYAN", "color": Color(0.05, 0.85, 1.0)},
+		{"name": "HOT ORANGE", "color": Color(1.0, 0.32, 0.08)},
+		{"name": "LIME", "color": Color(0.65, 0.95, 0.15)},
+		{"name": "VIOLET", "color": Color(0.85, 0.25, 1.0)},
+	],
+}
 
 @export var id: StringName = &"free_for_all"
 @export var display_name: String = "Free-For-All"
@@ -100,12 +136,23 @@ func team_for(index: int) -> int:
 	return index
 
 
+static func get_palette_info() -> Array:
+	var p: int = GameSettings.team_palette if (GameSettings != null and is_instance_valid(GameSettings)) else int(TeamPalette.DEFAULT)
+	return TEAM_PALETTES.get(p, TEAM_INFO)
+
+
 static func team_name(team: int) -> String:
-	return TEAM_INFO[team % TEAM_INFO.size()]["name"] if team >= 0 else ""
+	if team < 0:
+		return ""
+	var palette := get_palette_info()
+	return str(palette[team % palette.size()]["name"])
 
 
 static func team_color(team: int) -> Color:
-	return TEAM_INFO[team % TEAM_INFO.size()]["color"] if team >= 0 else Color.WHITE
+	if team < 0:
+		return Color.WHITE
+	var palette := get_palette_info()
+	return palette[team % palette.size()]["color"] as Color
 
 
 func get_team_name(team: int) -> String:

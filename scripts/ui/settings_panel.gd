@@ -7,6 +7,7 @@ signal closed
 
 var _box: VBoxContainer
 var _done: Button
+var _bindings_panel: BindingsPanel
 
 
 func _ready() -> void:
@@ -16,6 +17,9 @@ func _ready() -> void:
 
 ## Grabs keyboard/gamepad focus so the panel works without a mouse.
 func focus_default() -> void:
+	if _bindings_panel != null and _bindings_panel.visible:
+		_bindings_panel.focus_default()
+		return
 	if _done != null:
 		_done.grab_focus()
 
@@ -46,6 +50,10 @@ func _build() -> void:
 			func(on: bool) -> void: GameSettings.vibration = on)
 	_slider(controls, "Game speed", 0.70, 1.10, 0.05, GameSettings.game_speed,
 			func(value: float) -> void: GameSettings.game_speed = value)
+	var bindings_btn := UiKit.small_button("CUSTOM CONTROLS...", Vector2(240, 42))
+	bindings_btn.pressed.connect(_open_bindings)
+	controls.add_child(bindings_btn)
+
 	var video := _column(columns, "VIDEO & SOUND")
 	_slider(video, "Field of view", 60.0, 110.0, 1.0, GameSettings.fov,
 			func(value: float) -> void: GameSettings.fov = value)
@@ -61,6 +69,7 @@ func _build() -> void:
 			func(value: float) -> void: GameSettings.music_volume = value)
 	_slider(video, "Sound effects", 0.0, 1.0, 0.05, GameSettings.sfx_volume,
 			func(value: float) -> void: GameSettings.sfx_volume = value)
+	_palette_picker(video)
 
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -74,6 +83,63 @@ func _build() -> void:
 	buttons.add_child(_done)
 
 
+func _palette_picker(parent: Control) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	parent.add_child(row)
+	var name_label := UiKit.label("Team Colors", 20, UiKit.CREAM, 4)
+	name_label.custom_minimum_size.x = 220
+	row.add_child(name_label)
+
+	var p_idx := [GameSettings.team_palette]
+	var current_name: String = GameMode.PALETTE_NAMES[p_idx[0]] if p_idx[0] < GameMode.PALETTE_NAMES.size() else "Default"
+	var button := UiKit.small_button(current_name, Vector2(210, 40))
+	row.add_child(button)
+
+	var swatch_box := HBoxContainer.new()
+	swatch_box.add_theme_constant_override("separation", 6)
+	swatch_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(swatch_box)
+
+	var s0 := ColorRect.new()
+	s0.custom_minimum_size = Vector2(20, 20)
+	s0.color = GameMode.team_color(0)
+	swatch_box.add_child(s0)
+
+	var s1 := ColorRect.new()
+	s1.custom_minimum_size = Vector2(20, 20)
+	s1.color = GameMode.team_color(1)
+	swatch_box.add_child(s1)
+
+	button.pressed.connect(func() -> void:
+		p_idx[0] = (p_idx[0] + 1) % GameMode.TeamPalette.size()
+		GameSettings.team_palette = p_idx[0]
+		button.text = GameMode.PALETTE_NAMES[p_idx[0]]
+		s0.color = GameMode.team_color(0)
+		s1.color = GameMode.team_color(1)
+		GameSettings.apply()
+		Sfx.play(&"click"))
+
+
+func _open_bindings() -> void:
+	if _box != null:
+		_box.visible = false
+	if _bindings_panel == null:
+		_bindings_panel = BindingsPanel.new()
+		add_child(_bindings_panel)
+		_bindings_panel.closed.connect(_on_bindings_closed)
+	_bindings_panel.visible = true
+	_bindings_panel.focus_default()
+
+
+func _on_bindings_closed() -> void:
+	if _bindings_panel != null:
+		_bindings_panel.visible = false
+	if _box != null:
+		_box.visible = true
+	focus_default()
+
+
 func _reset() -> void:
 	GameSettings.reset_to_defaults()
 	GameSettings.apply()
@@ -83,11 +149,16 @@ func _reset() -> void:
 
 ## Saves and leaves the panel (DONE button, or B / Esc).
 func close() -> void:
+	if _bindings_panel != null and _bindings_panel.visible:
+		_bindings_panel.close()
+		return
 	GameSettings.save_settings()
 	closed.emit()
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _bindings_panel != null and _bindings_panel.visible:
+		return
 	if is_visible_in_tree() and event.is_action_pressed(&"ui_cancel"):
 		close()
 		get_viewport().set_input_as_handled()

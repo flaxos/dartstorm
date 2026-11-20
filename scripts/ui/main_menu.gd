@@ -93,6 +93,7 @@ var _mode_buttons: Array[Button] = []
 var _mode_blurb: Label
 var _bots_value: Label
 var _teams_info: Label
+var _players_button: Button
 var _difficulty_button: Button
 var _arena_button: Button
 var _storm_row: HBoxContainer
@@ -273,20 +274,28 @@ func _rebuild_squad() -> void:
 	player_model.set_weapon(load(BLASTERS[2]) as WeaponData, GameSettings.player_skin)
 
 	var count := MatchScene.team_bot_count(mode, GameSettings.bot_count)
-	var colors := MatchScene.bot_colors(GameSettings.color(), count)
+	var colors := MatchScene.bot_colors(GameSettings.color(), count, GameSettings.color_p2() if GameSettings.split_screen else Color.TRANSPARENT)
+	var spot_offset := 0
+	if GameSettings.split_screen and not SQUAD_SPOTS.is_empty():
+		spot_offset = 1
+		var p2_team := mode.team_for(1)
+		var p2_color: Color = GameMode.team_color(p2_team) if teams and not _customise.visible else GameSettings.color_p2()
+		_add_squad_member(GameSettings.display_name_p2(), p2_color, GameSettings.player2_hat, SQUAD_SPOTS[0], 0)
+
+	var bot_offset := 2 if GameSettings.split_screen else 1
 	# Team-mates first, so they stand right beside you.
 	var order: Array[int] = []
 	for i in count:
-		if mode.team_for(i + 1) == my_team:
+		if mode.team_for(i + bot_offset) == my_team:
 			order.append(i)
 	for i in count:
 		if not order.has(i):
 			order.append(i)
-	for slot in mini(order.size(), SQUAD_SPOTS.size()):
+	for slot in mini(order.size(), SQUAD_SPOTS.size() - spot_offset):
 		var i := order[slot]
-		var team := mode.team_for(i + 1)
+		var team := mode.team_for(i + bot_offset)
 		var tint: Color = GameMode.team_color(team) if teams else colors[i]
-		var member := _add_squad_member(MatchScene.BOT_ROSTER[i]["name"], tint, MatchScene.BOT_ROSTER[i]["hat"], SQUAD_SPOTS[slot], i)
+		var member := _add_squad_member(MatchScene.BOT_ROSTER[i]["name"], tint, MatchScene.BOT_ROSTER[i]["hat"], SQUAD_SPOTS[slot + spot_offset], i)
 		if mode is ZombieMode and i == count - 1:
 			member.set_zombie(true)
 	_show_squad(not _customise.visible)
@@ -478,6 +487,12 @@ func _build_mode_picker() -> void:
 	_teams_info = UiKit.label("", 16, UiKit.SKY, 4)
 	box.add_child(_teams_info)
 
+	var players_row := _option_row(box, "PLAYERS")
+	_players_button = UiKit.small_button("", Vector2(180, 44))
+	_players_button.tooltip_text = "1 PLAYER: Solo against bots.\n2 PLAYERS: Local Couch Co-Op split-screen (Keyboard + Pad, or dual Gamepads)!"
+	_players_button.pressed.connect(_toggle_players)
+	players_row.add_child(_players_button)
+
 	var arena_row := _option_row(box, "ARENA")
 	_arena_button = UiKit.small_button("", Vector2(180, 44))
 	_arena_button.tooltip_text = "BACKYARD: the forts, the treehouse and Windy Way.\nHOME TURF: a whole house, and you're toy-sized!\nTEMPEST TREEHOUSE: high canopy decks, rope bridge, jump-pads and ice slides."
@@ -591,11 +606,13 @@ func _refresh_options() -> void:
 		_mode_buttons[i].add_theme_stylebox_override("normal",
 				UiKit.panel_style(UiKit.ORANGE if chosen else UiKit.BLUE, 1.0, 12, 3 if chosen else 0, UiKit.CREAM, 8))
 	_mode_blurb.text = mode.description
-	_play_mode_label.text = "%s  -  %s" % [mode.display_name.to_upper(),
-			MatchScene.ARENAS[clampi(GameSettings.arena, 0, MatchScene.ARENAS.size() - 1)]["name"]]
+	_players_button.text = "2 PLAYERS (SPLIT)" if GameSettings.split_screen else "1 PLAYER"
+	_play_mode_label.text = "%s  -  %s%s" % [mode.display_name.to_upper(),
+			MatchScene.ARENAS[clampi(GameSettings.arena, 0, MatchScene.ARENAS.size() - 1)]["name"],
+			"  [2 PLAYERS]" if GameSettings.split_screen else ""]
 	_bots_value.text = str(GameSettings.bot_count)
 	var bots := MatchScene.team_bot_count(mode, GameSettings.bot_count)
-	var players := bots + 1
+	var players := bots + (2 if GameSettings.split_screen else 1)
 	var info := ""
 	if mode is ZombieMode:
 		info = "1 ALPHA ZOMBIE vs %d SURVIVORS" % (players - 1)
@@ -606,7 +623,7 @@ func _refresh_options() -> void:
 			GameMode.Teams.BLUE_VS_ORANGE:
 				info = "%d v %d" % [players >> 1, players >> 1]
 			_:
-				info = "YOU + %d BOTS" % bots
+				info = ("2 PLAYERS + %d BOTS" if GameSettings.split_screen else "YOU + %d BOTS") % bots
 		if bots > GameSettings.bot_count:
 			info += "  (+1 BOT TO EVEN THE TEAMS)"
 	_teams_info.text = info
@@ -614,6 +631,13 @@ func _refresh_options() -> void:
 	_difficulty_button.text = DIFFICULTY_NAMES[clampi(GameSettings.bot_difficulty, 0, DIFFICULTY_NAMES.size() - 1)]
 	_storm_row.visible = not mode is GunGameMode and not mode is ZombieMode
 	_storm_button.text = "POWER-UP" if GameSettings.chainstorm_powerup else "EVERYONE"
+
+
+func _toggle_players() -> void:
+	GameSettings.split_screen = not GameSettings.split_screen
+	GameSettings.save_settings()
+	_refresh_options()
+	_rebuild_squad()
 
 
 func _pick_mode(mode_index: int) -> void:

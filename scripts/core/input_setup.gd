@@ -245,3 +245,87 @@ static func reset_to_defaults() -> void:
 			InputMap.erase_action(action)
 	ensure_actions()
 
+
+## Configures dedicated p1_* and p2_* input actions for 2-player split-screen.
+static func setup_split_screen_actions(p1_is_pad: bool = false, p2_device: int = 0) -> void:
+	clear_split_screen_actions()
+
+	var pads := Input.get_connected_joypads()
+	if pads.size() >= 2:
+		p1_is_pad = true
+		p2_device = 1
+	elif pads.size() == 1:
+		p1_is_pad = false
+		p2_device = 0
+
+	var core_actions := [
+		&"move_forward", &"move_back", &"move_left", &"move_right",
+		&"jump", &"sprint", &"fire", &"aim_down_sights", &"throw_grenade",
+		&"ping", &"reload", &"weapon_1", &"weapon_2", &"weapon_3",
+		&"weapon_next", &"weapon_prev", &"scoreboard",
+		&"look_left", &"look_right", &"look_up", &"look_down"
+	]
+
+	# Build Player 1 actions (p1_*)
+	for act in core_actions:
+		var p1_act := StringName("p1_" + String(act))
+		var deadzone := LOOK_DEADZONE if act.begins_with(&"look_") else DEFAULT_DEADZONE
+		InputMap.add_action(p1_act, deadzone)
+
+		# Add keyboard & mouse events from base action
+		if InputMap.has_action(act):
+			for event in InputMap.action_get_events(act):
+				if event is InputEventKey or event is InputEventMouseButton:
+					InputMap.action_add_event(p1_act, event.duplicate())
+				elif p1_is_pad and (event is InputEventJoypadButton or event is InputEventJoypadMotion):
+					var pad_event: InputEvent = event.duplicate()
+					pad_event.device = 0
+					InputMap.action_add_event(p1_act, pad_event)
+
+	# Build Player 2 actions (p2_*)
+	for act in core_actions:
+		var p2_act := StringName("p2_" + String(act))
+		var deadzone := LOOK_DEADZONE if act.begins_with(&"look_") else DEFAULT_DEADZONE
+		InputMap.add_action(p2_act, deadzone)
+
+		# Add gamepad events mapped to p2_device
+		if InputMap.has_action(act):
+			for event in InputMap.action_get_events(act):
+				if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+					var pad_event: InputEvent = event.duplicate()
+					pad_event.device = p2_device
+					InputMap.action_add_event(p2_act, pad_event)
+
+	# Add testing fallback keyboard bindings for Player 2
+	_add_event(&"p2_move_forward", _key(KEY_UP))
+	_add_event(&"p2_move_back", _key(KEY_DOWN))
+	_add_event(&"p2_move_left", _key(KEY_LEFT))
+	_add_event(&"p2_move_right", _key(KEY_RIGHT))
+	_add_event(&"p2_jump", _key(KEY_KP_0))
+	_add_event(&"p2_fire", _key(KEY_KP_ENTER))
+	_add_event(&"p2_aim_down_sights", _key(KEY_KP_PERIOD))
+	_add_event(&"p2_reload", _key(KEY_KP_1))
+	_add_event(&"p2_throw_grenade", _key(KEY_KP_2))
+	_add_event(&"p2_ping", _key(KEY_KP_3))
+	_add_event(&"p2_weapon_next", _key(KEY_KP_ADD))
+	_add_event(&"p2_weapon_prev", _key(KEY_KP_SUBTRACT))
+	_add_event(&"p2_sprint", _key(KEY_KP_5))
+	_add_event(&"p2_scoreboard", _key(KEY_KP_7))
+	_add_event(&"p2_look_left", _key(KEY_J))
+	_add_event(&"p2_look_right", _key(KEY_L))
+	_add_event(&"p2_look_up", _key(KEY_I))
+	_add_event(&"p2_look_down", _key(KEY_K))
+
+
+static func _add_event(action: StringName, event: InputEvent) -> void:
+	if InputMap.has_action(action) and not InputMap.action_has_event(action, event):
+		InputMap.action_add_event(action, event)
+
+
+## Erases any split-screen p1_* and p2_* actions from InputMap.
+static func clear_split_screen_actions() -> void:
+	for action in InputMap.get_actions():
+		if action.begins_with(&"p1_") or action.begins_with(&"p2_"):
+			InputMap.erase_action(action)
+
+

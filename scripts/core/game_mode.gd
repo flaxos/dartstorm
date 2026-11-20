@@ -120,7 +120,8 @@ func is_team_mode() -> bool:
 ## How many bots to bring so the teams come out even: in Duos and Blue vs
 ## Orange an odd number of players gets one extra bot.
 func bots_for(requested: int) -> int:
-	if is_team_mode() and (requested + 1) % 2 == 1:
+	var humans := 2 if (GameSettings != null and GameSettings.split_screen) else 1
+	if is_team_mode() and (requested + humans) % 2 == 1:
 		return requested + 1
 	return requested
 

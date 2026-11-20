@@ -31,6 +31,7 @@ const DEFAULTS := {
 	"sfx_volume": 1.0,
 	"fullscreen": false,
 	"team_palette": 0,
+	"split_screen_horizontal": true,
 }
 const NOTICE_SECONDS := 3.0
 ## The bots slider on the menu. Team modes may add one more to even the teams.
@@ -65,12 +66,18 @@ var fullscreen: bool = false
 ## Colorblind team color palette (GameMode.TeamPalette).
 var team_palette: int = 0
 
-# --- Your player ---
+# --- Your player (Player 1) ---
 ## Empty means "You".
 var player_name: String = ""
 var player_color: int = 0
 var player_hat: StringName = &"cap"
 var player_skin: StringName = &"default"
+
+# --- Player 2 (Local Split-Screen) ---
+var player2_name: String = "Player 2"
+var player2_color: int = 1
+var player2_hat: StringName = &"beanie"
+var player2_skin: StringName = &"default"
 
 # --- Match options (picked on the main menu) ---
 var match_mode: int = MatchMode.FREE_FOR_ALL
@@ -83,6 +90,10 @@ var chainstorm_powerup: bool = false
 var weather_events: bool = true
 ## Index into MatchScene.ARENAS: 0 Backyard Fortress, 1 Home Turf.
 var arena: int = 0
+## 2-player local split-screen couch co-op/versus.
+var split_screen: bool = false
+## Horizontal (top/bottom) if true, Vertical (side-by-side) if false.
+var split_screen_horizontal: bool = true
 
 ## True while the last input came from a controller.
 var using_controller: bool = false
@@ -157,6 +168,15 @@ func display_name() -> String:
 
 func color() -> Color:
 	return Cosmetics.color_at(player_color)
+
+
+func display_name_p2() -> String:
+	var clean := Cosmetics.sanitize_name(player2_name)
+	return clean if not clean.is_empty() else "Player 2"
+
+
+func color_p2() -> Color:
+	return Cosmetics.color_at(player2_color)
 
 
 ## Puts every preference (not your look or the match options) back to its
@@ -265,6 +285,14 @@ func load_settings() -> void:
 	chainstorm_powerup = bool(file.get_value("match", "chainstorm_powerup", chainstorm_powerup))
 	weather_events = bool(file.get_value("match", "weather_events", weather_events))
 	arena = maxi(int(file.get_value("match", "arena", arena)), 0)  # MatchScene clamps it to the arenas that exist.
+	split_screen = bool(file.get_value("split_screen", "enabled", split_screen))
+	split_screen_horizontal = bool(file.get_value("split_screen", "horizontal", split_screen_horizontal))
+	player2_name = Cosmetics.sanitize_name(str(file.get_value("player2", "name", player2_name)))
+	player2_color = clampi(int(file.get_value("player2", "color", player2_color)), 0, Cosmetics.COLORS.size() - 1)
+	var hat2 := StringName(str(file.get_value("player2", "hat", player2_hat)))
+	player2_hat = hat2 if Cosmetics.has_hat(hat2) else &"beanie"
+	var skin2 := StringName(str(file.get_value("player2", "skin", player2_skin)))
+	player2_skin = skin2 if Cosmetics.has_skin(skin2) else &"default"
 	team_palette = clampi(int(file.get_value("accessibility", "team_palette", team_palette)), 0, GameMode.TeamPalette.size() - 1)
 	if file.has_section("bindings"):
 		var raw_bindings: Dictionary = {}
@@ -293,12 +321,18 @@ func save_settings() -> void:
 	file.set_value("player", "color", player_color)
 	file.set_value("player", "hat", String(player_hat))
 	file.set_value("player", "skin", String(player_skin))
+	file.set_value("player2", "name", Cosmetics.sanitize_name(player2_name))
+	file.set_value("player2", "color", player2_color)
+	file.set_value("player2", "hat", String(player2_hat))
+	file.set_value("player2", "skin", String(player2_skin))
 	file.set_value("match", "mode", match_mode)
 	file.set_value("match", "bot_count", bot_count)
 	file.set_value("match", "bot_difficulty", bot_difficulty)
 	file.set_value("match", "chainstorm_powerup", chainstorm_powerup)
 	file.set_value("match", "weather_events", weather_events)
 	file.set_value("match", "arena", arena)
+	file.set_value("split_screen", "enabled", split_screen)
+	file.set_value("split_screen", "horizontal", split_screen_horizontal)
 	file.set_value("accessibility", "team_palette", team_palette)
 	var serialized_bindings := InputSetup.serialize_bindings()
 	for action: String in serialized_bindings:

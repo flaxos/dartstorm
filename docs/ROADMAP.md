@@ -31,9 +31,43 @@
 | **v0.9.0 Elemental Weather & Dynamic Disasters** | ✅ Built and validated (616 tests). ⏳ UAT |
 | **v0.9.1 DUOS Buddy Spawning & Squad Pings** | ✅ Built and validated (638 tests). ⏳ UAT |
 | **v0.9.2 Settings & Accessibility** | ✅ Built and validated (669 tests). ⏳ UAT |
+| **v1.0.0 Local Couch Co-Op / Split-Screen (2 Players)** | ✅ Built and validated (706 tests). ⏳ UAT |
 | Phase 7 Expansion | ⏳ Not started (on purpose) |
 
-## v0.9.2: Settings & Accessibility: Controls Remapping & Colorblind Palettes (this release)
+## v1.0.0: Local Couch Co-Op / Split-Screen (2 Players) (this release)
+
+Goal: Full 2-player local couch co-op / split-screen on one machine (Keyboard + Gamepad or dual Gamepads) across all game modes (Versus/Free-For-All, Duos, Blue vs Orange, Zombie Siege, Floor is Lava, Gun Game).
+
+- [x] **Dual Viewport & Shared World3D Architecture (`MatchScene`):**
+  - Responsive `SplitContainer` with dual `SubViewport`s (`SubViewport1` & `SubViewport2`).
+  - Configurable split orientation (Horizontal top/bottom default, or Vertical side-by-side).
+  - Shared `World3D` ensures single unified physics and actor simulation without state duplication or desyncs.
+  - Dedicated 3D audio listener assignment prevents audio listener conflicts.
+- [x] **In-World 3D Character Models & Layer Culling:**
+  - Both players render full in-world 3D `CharacterModel`s with movement animations, aim pitch, overhead name tags, shield bubbles, and equipped blasters.
+  - Visual layer mask culling: Camera 1 culls Player 1 body (layer 2) and Player 2 viewmodel (layer 16); Camera 2 culls Player 2 body (layer 4) and Player 1 viewmodel (layer 8).
+- [x] **Input Device Routing & Action Isolation:**
+  - Automatic hardware input routing via `InputSetup.setup_split_screen_actions()`: 1 pad maps Player 1 to KBM and Player 2 to Gamepad 0; 2 pads map Player 1 to Pad 0 and Player 2 to Pad 1.
+  - Testing keyboard fallbacks for Player 2 (Arrow keys, Keypad Enter, Keypad 0, Keypad 1, IJKL look keys).
+  - Full input isolation across all 14 actions and scoreboard toggles.
+- [x] **Per-Player Viewport HUDs:**
+  - Independent `Hud` instances mounted directly inside each subviewport, confining reticles, ammo, health, shields, and popups cleanly to each player's half of the screen.
+- [x] **Universal Match Mode Integration:**
+  - DUOS: Players 1 and 2 assigned to Team 0 as buddy teammates with adjacent buddy spawning.
+  - Blue vs Orange: Player 1 on Blue team, Player 2 on Orange team.
+  - Zombie Siege & Zombies: Both players collaborate as co-op defenders / survivors.
+  - FFA, Gun Game, Floor is Lava: Competitive rivalry.
+  - Progression rewards tags and victories earned by both players to the profile.
+- [x] **Lobby UI & Persistence:**
+  - Lobby match options toggle: `PLAYERS: 1 PLAYER / 2 PLAYERS`.
+  - 3D lobby preview displays Player 2 standing beside Player 1 on the squad island platform.
+  - Full Player 2 customization and split-screen settings persisted cleanly in `user://settings.cfg`.
+- [x] Automated unit and whole-match tests in `tests/test_runner.gd` (706 tests passed, 0 leaks, 0 warnings).
+
+**Acceptance:** `./tools/validate.sh` passes (**706/706 tests**) ✅.
+
+## v0.9.2: Settings & Accessibility: Controls Remapping & Colorblind Palettes
+
 
 Goal: Comprehensive in-game key and gamepad button remapping with full cancellation protection, coupled with high-contrast colorblind accessibility palettes for team colors with live swatches and dynamic map fort theming.
 

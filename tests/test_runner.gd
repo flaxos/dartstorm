@@ -1250,6 +1250,9 @@ func _test_lobby() -> void:
 	var play := menu.get("_play_button") as Button
 	check(play != null and play.has_focus(), "the big PLAY button has focus (A on a controller starts a match)")
 	check((menu.get("_mode_buttons") as Array).size() == 7, "seven mode cards: SOLO, DUOS, TEAMS, GUN GAME, ZOMBIES, SIEGE, LAVA")
+	var right_col: Node = (menu.get("_menu") as Control).get_node_or_null("RightCol")
+	check(right_col != null and play.is_ancestor_of(right_col) == false and right_col.is_ancestor_of(play),
+			"the mode picker and PLAY button are unified in RightCol to prevent overlap")
 
 	menu.call("_pick_mode", GameSettings.MatchMode.TEAMS)
 	await physics_frames(1)
@@ -1344,6 +1347,10 @@ func _test_home_turf() -> void:
 	check(reachable == arena.roam_points.size(), "every room and yard is reachable from the driveway (%d/%d) %s" % [reachable, arena.roam_points.size(), ", ".join(missing)])
 	var roof := NavigationServer3D.map_get_path(map, start, Vector3(7.5, HomeTurf.PATIO_ROOF_TOP, -22.5), true)
 	check(roof.size() >= 2 and roof[-1].y > HomeTurf.PATIO_ROOF_TOP - 0.5, "bots can walk up the race-track ramp onto the patio roof")
+	var patio_ice := arena.find_children("*", "IceSlick", true, false).filter(
+		func(slick: Node3D) -> bool: return slick.global_position.distance_to(Vector3(22.05, HomeTurf.PATIO_ROOF_TOP * 0.5, -22.0)) < 5.0
+	)
+	check(patio_ice.is_empty(), "patio roof ramp has no ice slick blocking access")
 	arena.queue_free()
 	await physics_frames(2)
 

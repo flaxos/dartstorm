@@ -369,19 +369,6 @@ func _build_menu() -> void:
 	_build_mode_picker()
 	_build_logo()
 
-	# Bottom right: the big PLAY button.
-	var play_box := VBoxContainer.new()
-	play_box.add_theme_constant_override("separation", 4)
-	_menu.add_child(play_box)
-	UiKit.pin(play_box, Vector2(1.0, 1.0), Vector2(-32, -28), Control.GROW_DIRECTION_BEGIN, Control.GROW_DIRECTION_BEGIN)
-	_play_mode_label = UiKit.label("", 20, UiKit.CREAM, 6)
-	_play_mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	play_box.add_child(_play_mode_label)
-	_play_button = UiKit.button("PLAY", 64, Vector2(300, 104))
-	_play_button.add_theme_constant_override("outline_size", 12)
-	_play_button.pressed.connect(_play)
-	play_box.add_child(_play_button)
-
 	_refresh_options()
 	_play_button.grab_focus()
 
@@ -446,69 +433,92 @@ func _build_player_card() -> void:
 	_refresh_card()
 
 
-## Top right: the mode cards and the match options.
+## Top right: the mode cards, match options, and PLAY button in a unified vertical column.
 func _build_mode_picker() -> void:
-	var panel := UiKit.panel(UiKit.NAVY, 0.9, 18, 4, UiKit.SKY, 16)
-	_menu.add_child(panel)
-	UiKit.pin(panel, Vector2(1.0, 0.0), Vector2(-28, 24), Control.GROW_DIRECTION_BEGIN, Control.GROW_DIRECTION_END)
+	var right_col := VBoxContainer.new()
+	right_col.name = "RightCol"
+	right_col.add_theme_constant_override("separation", 6)
+	_menu.add_child(right_col)
+	UiKit.pin(right_col, Vector2(1.0, 0.0), Vector2(-28, 16), Control.GROW_DIRECTION_BEGIN, Control.GROW_DIRECTION_END)
+
+	var panel := UiKit.panel(UiKit.NAVY, 0.9, 14, 3, UiKit.SKY, 10)
+	right_col.add_child(panel)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 10)
+	box.add_theme_constant_override("separation", 4)
 	panel.add_child(box)
-	box.add_child(UiKit.label("PICK A MODE", 24, UiKit.SKY, 6))
+	box.add_child(UiKit.label("PICK A MODE", 20, UiKit.SKY, 5))
 	var cards := GridContainer.new()
 	cards.columns = 2
-	cards.add_theme_constant_override("h_separation", 10)
-	cards.add_theme_constant_override("v_separation", 10)
+	cards.add_theme_constant_override("h_separation", 6)
+	cards.add_theme_constant_override("v_separation", 4)
 	box.add_child(cards)
 	for mode_index in MODE_ORDER:
 		var mode := MatchScene.resolve_mode(mode_index)
-		var card := UiKit.small_button(mode.short_name, Vector2(170, 56))
-		card.add_theme_font_size_override("font_size", 26)
+		var card := UiKit.small_button(mode.short_name, Vector2(170, 34))
+		card.add_theme_font_size_override("font_size", 18)
 		card.name = mode.short_name.replace(" ", "")
 		card.pressed.connect(_pick_mode.bind(mode_index))
 		cards.add_child(card)
 		_mode_buttons.append(card)
-	_mode_blurb = UiKit.label("", 16, UiKit.CREAM, 4)
+	_mode_blurb = UiKit.label("", 14, UiKit.CREAM, 3)
 	_mode_blurb.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_mode_blurb.custom_minimum_size = Vector2(350, 44)
+	_mode_blurb.custom_minimum_size = Vector2(346, 32)
 	box.add_child(_mode_blurb)
 
 	var bots_row := _option_row(box, "BOTS")
-	var fewer := UiKit.small_button("-")
+	var fewer := UiKit.small_button("-", Vector2(40, 30))
+	fewer.add_theme_font_size_override("font_size", 18)
 	fewer.pressed.connect(_change_bots.bind(-1))
 	bots_row.add_child(fewer)
-	_bots_value = UiKit.label("", 28, UiKit.ORANGE_HOT)
+	_bots_value = UiKit.label("", 22, UiKit.ORANGE_HOT)
 	_bots_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_bots_value.custom_minimum_size.x = 50
+	_bots_value.custom_minimum_size.x = 44
 	bots_row.add_child(_bots_value)
-	var more := UiKit.small_button("+")
+	var more := UiKit.small_button("+", Vector2(40, 30))
+	more.add_theme_font_size_override("font_size", 18)
 	more.pressed.connect(_change_bots.bind(1))
 	bots_row.add_child(more)
-	_teams_info = UiKit.label("", 16, UiKit.SKY, 4)
+	_teams_info = UiKit.label("", 14, UiKit.SKY, 3)
 	box.add_child(_teams_info)
 
 	var players_row := _option_row(box, "PLAYERS")
-	_players_button = UiKit.small_button("", Vector2(180, 44))
+	_players_button = UiKit.small_button("", Vector2(210, 30))
+	_players_button.add_theme_font_size_override("font_size", 15)
 	_players_button.tooltip_text = "1 PLAYER: Solo against bots.\n2 PLAYERS: Local Couch Co-Op split-screen (Keyboard + Pad, or dual Gamepads)!"
 	_players_button.pressed.connect(_toggle_players)
 	players_row.add_child(_players_button)
 
 	var arena_row := _option_row(box, "ARENA")
-	_arena_button = UiKit.small_button("", Vector2(180, 44))
+	_arena_button = UiKit.small_button("", Vector2(210, 30))
+	_arena_button.add_theme_font_size_override("font_size", 15)
 	_arena_button.tooltip_text = "BACKYARD: the forts, the treehouse and Windy Way.\nHOME TURF: a whole house, and you're toy-sized!\nTEMPEST TREEHOUSE: high canopy decks, rope bridge, jump-pads and ice slides."
 	_arena_button.pressed.connect(_cycle_arena)
 	arena_row.add_child(_arena_button)
 
 	var difficulty_row := _option_row(box, "BOT SKILL")
-	_difficulty_button = UiKit.small_button("", Vector2(180, 44))
+	_difficulty_button = UiKit.small_button("", Vector2(210, 30))
+	_difficulty_button.add_theme_font_size_override("font_size", 15)
 	_difficulty_button.pressed.connect(_cycle_difficulty)
 	difficulty_row.add_child(_difficulty_button)
 
 	_storm_row = _option_row(box, "CHAINSTORM")
-	_storm_button = UiKit.small_button("", Vector2(180, 44))
+	_storm_button = UiKit.small_button("", Vector2(210, 30))
+	_storm_button.add_theme_font_size_override("font_size", 15)
 	_storm_button.tooltip_text = "EVERYONE: all players start with it.\nPOWER-UP: it lands on the treehouse; grab it first!"
 	_storm_button.pressed.connect(_toggle_storm)
 	_storm_row.add_child(_storm_button)
+
+	# Bottom of column: PLAY button
+	var play_box := VBoxContainer.new()
+	play_box.add_theme_constant_override("separation", 3)
+	right_col.add_child(play_box)
+	_play_mode_label = UiKit.label("", 16, UiKit.CREAM, 4)
+	_play_mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	play_box.add_child(_play_mode_label)
+	_play_button = UiKit.button("PLAY", 50, Vector2(366, 68))
+	_play_button.add_theme_constant_override("outline_size", 10)
+	_play_button.pressed.connect(_play)
+	play_box.add_child(_play_button)
 
 
 ## Bottom middle: the DARTSTORM logo with blue swooshes.
@@ -530,10 +540,10 @@ func _build_logo() -> void:
 
 func _option_row(parent: Control, text: String) -> HBoxContainer:
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 8)
 	parent.add_child(row)
-	var label := UiKit.label(text, 22, UiKit.CREAM, 4)
-	label.custom_minimum_size.x = 150
+	var label := UiKit.label(text, 18, UiKit.CREAM, 4)
+	label.custom_minimum_size.x = 125
 	row.add_child(label)
 	return row
 

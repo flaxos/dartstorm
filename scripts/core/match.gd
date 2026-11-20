@@ -392,6 +392,9 @@ func _ready() -> void:
 	pause_menu.setup(controller)
 	pause_menu.restart_requested.connect(restart)
 	pause_menu.menu_requested.connect(quit_to_menu)
+	hud.pause_requested.connect(func() -> void:
+		if pause_menu != null and not pause_menu.is_open():
+			pause_menu.open())
 
 	controller.match_ended.connect(_on_match_ended)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED

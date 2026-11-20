@@ -6,6 +6,7 @@ extends CanvasLayer
 
 signal restart_requested
 signal menu_requested
+signal pause_requested
 
 const FEED_LIMIT := 5
 const FEED_SECONDS := 5.0
@@ -18,6 +19,7 @@ var _controller: MatchController
 
 var _root: Control
 var _crosshair: Crosshair
+var _touch_controls: TouchControls
 var _meter_bar: ProgressBar
 var _meter_label: Label
 var _shield_box: HBoxContainer
@@ -107,6 +109,26 @@ func setup(player: Player, controller: MatchController) -> void:
 
 	if controller.mode is FloorIsLavaMode:
 		_build_lava_ui(controller.mode as FloorIsLavaMode)
+
+	_setup_touch_controls()
+	GameSettings.changed.connect(_update_touch_controls_visibility)
+
+
+func _setup_touch_controls() -> void:
+	if _touch_controls != null:
+		return
+	if _player != null and _player.player_index == 0:
+		_touch_controls = TouchControls.new()
+		_touch_controls.player = _player
+		_touch_controls.pause_requested.connect(func() -> void:
+			pause_requested.emit())
+		_root.add_child(_touch_controls)
+		_update_touch_controls_visibility()
+
+
+func _update_touch_controls_visibility() -> void:
+	if _touch_controls != null:
+		_touch_controls.visible = GameSettings.is_touch_active() and not _match_over
 
 
 func _process(delta: float) -> void:

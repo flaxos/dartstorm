@@ -107,6 +107,8 @@ func _exit_tree() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		GameSettings.register_touch_event()
 	var motion := event as InputEventMouseMotion
 	if motion != null and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and player_index == 0:
 		var zoom_ratio := camera.fov / maxf(GameSettings.fov, 1.0) if is_aiming_down_sights else 1.0
@@ -358,6 +360,16 @@ func _look(yaw: float, pitch: float) -> void:
 	rotate_y(yaw)
 	_pitch = clampf(_pitch + (-pitch if GameSettings.invert_y else pitch), -1.5, 1.5)
 	head.rotation.x = _pitch
+
+
+## Applies relative look delta from touch swipe or virtual controls.
+func look_relative(delta: Vector2) -> void:
+	if not alive or not controls_enabled:
+		return
+	var zoom_ratio := camera.fov / maxf(GameSettings.fov, 1.0) if is_aiming_down_sights else 1.0
+	var scale_factor := MOUSE_RADIANS_PER_PIXEL * GameSettings.touch_look_sensitivity * zoom_ratio * 1.5
+	_look(-delta.x * scale_factor, -delta.y * scale_factor)
+	_sway_vel += Vector2(-delta.x, delta.y) * (0.0012 * zoom_ratio)
 
 
 func _perform_grenade_throw() -> void:

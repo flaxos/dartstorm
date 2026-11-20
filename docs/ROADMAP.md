@@ -32,9 +32,35 @@
 | **v0.9.1 DUOS Buddy Spawning & Squad Pings** | ✅ Built and validated (638 tests). ⏳ UAT |
 | **v0.9.2 Settings & Accessibility** | ✅ Built and validated (669 tests). ⏳ UAT |
 | **v1.0.0 Local Couch Co-Op / Split-Screen (2 Players)** | ✅ Built and validated (706 tests). ⏳ UAT |
+| **v1.1.0 Web & Android Mobile Universal Accessibility** | ✅ Built and validated (741 tests). ⏳ UAT |
 | Phase 7 Expansion | ⏳ Not started (on purpose) |
 
-## v1.0.0: Local Couch Co-Op / Split-Screen (2 Players) (this release)
+## v1.1.0: Web Browser (Mobile & Desktop) & Android APK Universal Accessibility (this release)
+
+Goal: Full universal accessibility across desktop web browsers, mobile web browsers (Chrome, Safari, Firefox), and Android devices via signed APK, with on-screen mobile touch controls, WebGL2/GLES3 compatibility rendering, and automated export pipelines.
+
+- [x] **Mobile Touch Controls Architecture (`TouchControls` & `VirtualJoystick`):**
+  - Left-thumb `VirtualJoystick` with smooth 360-degree analog output, deadzone filtering (0.12), and analog action synthesis (`move_left`, `move_right`, `move_forward`, `move_back`).
+  - Right-screen swipe look zone feeding into `player.look_relative(delta)` with zoom compensation.
+  - Large arcade action touch buttons: `FIRE`, `JUMP`, `RUN` (sprint), `AIM` (ADS), `RELOAD`, `BOMB` (grenade), `SWAP` (weapon cycle), and `||` (`PAUSE` in top-right corner).
+  - Multitouch support with independent touch index tracking for concurrent moving, aiming, and firing.
+  - Auto-detection (`DisplayServer.is_touchscreen_available()`, mobile OS tags, first touch) and Settings toggle (`AUTO` / `ALWAYS ON` / `OFF`).
+- [x] **Universal Compatibility Rendering (`gl_compatibility`):**
+  - Configured `gl_compatibility` for Web (WebGL2) and Mobile (OpenGL ES3) in `project.godot`.
+  - Guarded SSAO and SSR in `scripts/arena/arena.gd` with `RenderingServer.get_rendering_device() != null` to eliminate WebGL warnings.
+  - Enabled mobile ETC2/ASTC texture compression.
+  - Enabled touch emulation from mouse for testing.
+- [x] **Web Export Pipeline:**
+  - Configured Web preset in `export_presets.cfg` without threads (`web_nothreads_release.zip`) for static host compatibility.
+  - Automated build script (`tools/export_web.sh`) and local server (`tools/serve_web.py`).
+- [x] **Android APK Export Pipeline:**
+  - Configured Android preset in `export_presets.cfg` (`org.flaxos.dartstorm`, arm64-v8a, signed).
+  - Automated export and verification script (`tools/export_apk.sh`).
+- [x] Automated unit and integration tests in `tests/test_runner.gd` (741 tests passed, 0 leaks, 0 warnings).
+
+**Acceptance:** `./tools/validate.sh` passes (**741/741 tests**), `./tools/export_web.sh` generates valid HTML5/WASM bundle, and `./tools/export_apk.sh` generates verified signed APK ✅.
+
+## v1.0.0: Local Couch Co-Op / Split-Screen (2 Players)
 
 Goal: Full 2-player local couch co-op / split-screen on one machine (Keyboard + Gamepad or dual Gamepads) across all game modes (Versus/Free-For-All, Duos, Blue vs Orange, Zombie Siege, Floor is Lava, Gun Game).
 

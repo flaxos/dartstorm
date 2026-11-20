@@ -119,8 +119,10 @@ func close() -> void:
 	GameSettings.save_settings()
 	_dim.visible = false
 	get_tree().paused = false
-	Sfx.duck_music(false)
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if not OS.has_feature("mobile") and not OS.has_feature("web_android") and not OS.has_feature("web_ios") and GameSettings.touch_controls_mode != GameSettings.TouchMode.ALWAYS:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	else:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
 func _show_settings(shown: bool) -> void:

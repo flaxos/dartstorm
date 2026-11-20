@@ -170,20 +170,6 @@ func _on_look_zone_input(event: InputEvent) -> void:
 		if drag.index == _look_touch_id:
 			_handle_look(drag.relative)
 			accept_event()
-	elif event is InputEventMouseButton:
-		var mb := event as InputEventMouseButton
-		if mb.button_index == MOUSE_BUTTON_LEFT:
-			if mb.pressed and _look_touch_id == -1:
-				_look_touch_id = -2
-				accept_event()
-			elif not mb.pressed and _look_touch_id == -2:
-				_look_touch_id = -1
-				accept_event()
-	elif event is InputEventMouseMotion:
-		var mm := event as InputEventMouseMotion
-		if _look_touch_id == -2:
-			_handle_look(mm.relative)
-			accept_event()
 
 
 func _input(event: InputEvent) -> void:
@@ -199,17 +185,6 @@ func _input(event: InputEvent) -> void:
 		if touch.index == _look_touch_id and (not touch.pressed or touch.canceled):
 			_look_touch_id = -1
 			get_viewport().set_input_as_handled()
-	elif _look_touch_id == -2:
-		if event is InputEventMouseMotion:
-			var mm := event as InputEventMouseMotion
-			if (mm.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
-				_handle_look(mm.relative)
-				get_viewport().set_input_as_handled()
-		elif event is InputEventMouseButton:
-			var mb := event as InputEventMouseButton
-			if mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
-				_look_touch_id = -1
-				get_viewport().set_input_as_handled()
 
 
 
@@ -322,7 +297,7 @@ class TouchButton:
 				_touch_id = -1
 				_set_pressed(false)
 				accept_event()
-		elif event is InputEventMouseButton:
+		elif event is InputEventMouseButton and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 			var mb := event as InputEventMouseButton
 			if mb.button_index == MOUSE_BUTTON_LEFT:
 				if mb.pressed and _touch_id == -1:

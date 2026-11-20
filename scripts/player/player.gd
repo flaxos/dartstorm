@@ -60,6 +60,7 @@ var _time: float = 0.0
 var _aim_query: PhysicsRayQueryParameters3D
 ## Set when a click was used to re-capture the mouse, so that click never fires.
 var _fire_blocked_until_release: bool = false
+var mouse_captured_override: bool = false
 var _assist_query: PhysicsRayQueryParameters3D
 ## Shown once per life when the Chainstorm reaches full spin.
 var storm_mode_announced: bool = false
@@ -107,12 +108,11 @@ func _exit_tree() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch:
+	if event is InputEventScreenTouch and (OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios")):
 		GameSettings.register_touch_event()
 	var motion := event as InputEventMouseMotion
-	if motion != null and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and player_index == 0:
-		if GameSettings.is_touch_active():
-			return  # Touch look is handled via TouchControls look_relative()
+	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED or mouse_captured_override
+	if motion != null and captured and player_index == 0:
 		var zoom_ratio := camera.fov / maxf(GameSettings.fov, 1.0) if is_aiming_down_sights else 1.0
 		var scale_factor := MOUSE_RADIANS_PER_PIXEL * GameSettings.mouse_sensitivity * zoom_ratio
 		_look(-motion.relative.x * scale_factor, -motion.relative.y * scale_factor)
@@ -120,11 +120,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	# Clicking back into the window after alt-tab grabs the mouse again
 	# instead of firing a surprise shot (desktop keyboard/mouse only).
-	if event is InputEventMouseButton and event.is_action_pressed(_act(&"fire")) \
-			and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and controls_enabled \
-			and not get_tree().paused and player_index == 0 and not GameSettings.is_touch_active():
+	if event is InputEventMouseButton and event.pressed \
+			and not captured and controls_enabled \
+			and not get_tree().paused and player_index == 0 \
+			and not OS.has_feature("mobile") and not OS.has_feature("web_android") and not OS.has_feature("web_ios"):
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-		_fire_blocked_until_release = true
+		mouse_captured_override = true
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			_fire_blocked_until_release = true
 		get_viewport().set_input_as_handled()
 		return
 	if not alive or not controls_enabled or is_zombie:

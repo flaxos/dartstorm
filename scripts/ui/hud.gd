@@ -128,10 +128,13 @@ func _setup_touch_controls() -> void:
 
 func _update_touch_controls_visibility() -> void:
 	if _touch_controls != null:
-		_touch_controls.visible = GameSettings.is_touch_active() and not _match_over
+		var touch_should_be_visible: bool = GameSettings.is_touch_active() and not _match_over and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED
+		if _touch_controls.visible != touch_should_be_visible:
+			_touch_controls.visible = touch_should_be_visible
 
 
 func _process(delta: float) -> void:
+	_update_touch_controls_visibility()
 	if _player == null:
 		return
 	# Wind compass, relative to where the player is facing.

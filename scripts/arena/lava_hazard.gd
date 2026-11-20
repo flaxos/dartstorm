@@ -8,7 +8,7 @@ signal stone_created(stone: ObsidianStone)
 
 const LAVA_SHADER := preload("res://assets/materials/lava_foam.gdshader")
 
-@export var size: Vector2 = Vector2(85.0, 85.0)
+@export var size: Vector2 = Vector2(240.0, 240.0)
 @export var current_lava_y: float = -0.6
 @export var heat_dps: float = 38.0
 
@@ -17,6 +17,7 @@ var active_stones: Array[ObsidianStone] = []
 var _mesh_instance: MeshInstance3D
 var _area: Area3D
 var _collision_shape: CollisionShape3D
+var _particles: GPUParticles3D
 var _sizzle_timer: float = 0.0
 
 
@@ -25,13 +26,14 @@ func _ready() -> void:
 	position.y = current_lava_y
 	_build_visuals()
 	_build_area()
+	_build_particles()
 
 
 func _build_visuals() -> void:
 	var plane := PlaneMesh.new()
 	plane.size = size
-	plane.subdivide_width = 36
-	plane.subdivide_depth = 36
+	plane.subdivide_width = 96
+	plane.subdivide_depth = 96
 
 	var mat := ShaderMaterial.new()
 	mat.shader = LAVA_SHADER
@@ -41,6 +43,43 @@ func _build_visuals() -> void:
 	_mesh_instance.material_override = mat
 	_mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_mesh_instance)
+
+
+func _build_particles() -> void:
+	_particles = GPUParticles3D.new()
+	_particles.name = "LavaEmbers"
+	_particles.amount = 72
+	_particles.lifetime = 2.0
+	_particles.visibility_aabb = AABB(Vector3(-size.x * 0.5, -2.0, -size.y * 0.5), Vector3(size.x, 8.0, size.y))
+
+	var pmat := ParticleProcessMaterial.new()
+	pmat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pmat.emission_box_extents = Vector3(size.x * 0.48, 0.1, size.y * 0.48)
+	pmat.direction = Vector3.UP
+	pmat.spread = 25.0
+	pmat.initial_velocity_min = 0.8
+	pmat.initial_velocity_max = 2.2
+	pmat.gravity = Vector3(0.0, 0.35, 0.0)
+	pmat.scale_min = 0.08
+	pmat.scale_max = 0.22
+	pmat.color = Color(1.0, 0.88, 0.3, 0.85)
+	_particles.process_material = pmat
+
+	var draw_mesh := SphereMesh.new()
+	draw_mesh.radius = 0.08
+	draw_mesh.height = 0.16
+	draw_mesh.radial_segments = 6
+	draw_mesh.rings = 3
+
+	var draw_mat := StandardMaterial3D.new()
+	draw_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	draw_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	draw_mat.albedo_color = Color(1.0, 0.82, 0.2, 0.8)
+	draw_mesh.material = draw_mat
+
+	_particles.draw_pass_1 = draw_mesh
+	_particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_particles)
 
 
 class LavaArea extends Area3D:
@@ -60,12 +99,12 @@ func _build_area() -> void:
 	_area.monitoring = true
 
 	var box := BoxShape3D.new()
-	box.size = Vector3(size.x, 3.0, size.y)
+	box.size = Vector3(size.x, 4.0, size.y)
 
 	_collision_shape = CollisionShape3D.new()
 	_collision_shape.shape = box
 	# Area extends slightly below and up to the lava surface
-	_collision_shape.position = Vector3(0.0, -1.2, 0.0)
+	_collision_shape.position = Vector3(0.0, -1.6, 0.0)
 	_area.add_child(_collision_shape)
 	add_child(_area)
 

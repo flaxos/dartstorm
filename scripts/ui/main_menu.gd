@@ -101,6 +101,7 @@ var _storm_button: Button
 var _name_edit: LineEdit
 var _swatches: Array[Button] = []
 var _hat_buttons: Array[Button] = []
+var _skin_buttons: Array[Button] = []
 var _play_button: Button
 var _play_mode_label: Label
 var _bolts: Array[Node3D] = []
@@ -785,6 +786,19 @@ func _build_customise() -> void:
 		hats.add_child(hat_button)
 		_hat_buttons.append(hat_button)
 
+	box.add_child(UiKit.label("BLASTER SKIN / STICKERS", 20, UiKit.SKY, 4))
+	var skins_grid := GridContainer.new()
+	skins_grid.columns = 4
+	skins_grid.add_theme_constant_override("h_separation", 8)
+	skins_grid.add_theme_constant_override("v_separation", 8)
+	box.add_child(skins_grid)
+	for skin in Cosmetics.SKINS:
+		var skin_button := UiKit.small_button(String(skin["name"]).to_upper(), Vector2(120, 38))
+		skin_button.add_theme_font_size_override("font_size", 15)
+		skin_button.pressed.connect(_pick_skin.bind(skin["id"]))
+		skins_grid.add_child(skin_button)
+		_skin_buttons.append(skin_button)
+
 	var btn_row := HBoxContainer.new()
 	btn_row.add_theme_constant_override("separation", 14)
 	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -843,6 +857,17 @@ func _pick_hat(id: StringName) -> void:
 	_refresh_customise()
 
 
+func _pick_skin(id: StringName) -> void:
+	var prog: Node = get_node_or_null("/root/Progression")
+	if prog != null and not bool(prog.call("is_unlocked", &"skin", id)) and not Cosmetics.is_default_skin(id):
+		GameSettings.notify("Skin locked! Visit the Coin Shop (🪙 %d)" % Cosmetics.skin_cost(id))
+		return
+	GameSettings.player_skin = id
+	if player_model != null:
+		player_model.set_weapon(load(BLASTERS[2]) as WeaponData, id)
+	_refresh_customise()
+
+
 func _refresh_customise() -> void:
 	if not _name_edit.has_focus() and _name_edit.text != GameSettings.player_name:
 		_name_edit.text = GameSettings.player_name
@@ -867,6 +892,16 @@ func _refresh_customise() -> void:
 		var style := UiKit.panel_style(bg_col, 1.0, 12, 3 if chosen else 0, UiKit.CREAM if unlocked else UiKit.GREY, 8)
 		_hat_buttons[i].add_theme_stylebox_override("normal", style)
 		_hat_buttons[i].tooltip_text = hat_name + ("" if unlocked else " (Locked - 🪙 %d)" % Cosmetics.hat_cost(hat_id))
+	for i in _skin_buttons.size():
+		var skin_id: StringName = Cosmetics.SKINS[i]["id"]
+		var skin_name: String = Cosmetics.SKINS[i]["name"]
+		var chosen: bool = skin_id == GameSettings.player_skin
+		var unlocked := prog == null or bool(prog.call("is_unlocked", &"skin", skin_id)) or Cosmetics.is_default_skin(skin_id)
+		_skin_buttons[i].text = (skin_name if unlocked else "🔒 " + skin_name).to_upper()
+		var bg_col := (UiKit.ORANGE if chosen else UiKit.BLUE) if unlocked else UiKit.NAVY_DARK
+		var style := UiKit.panel_style(bg_col, 1.0, 12, 3 if chosen else 0, UiKit.CREAM if unlocked else UiKit.GREY, 8)
+		_skin_buttons[i].add_theme_stylebox_override("normal", style)
+		_skin_buttons[i].tooltip_text = skin_name + ("" if unlocked else " (Locked - 🪙 %d)" % Cosmetics.skin_cost(skin_id))
 
 
 ## The three blue ")))" swooshes beside the logo in the drawing.

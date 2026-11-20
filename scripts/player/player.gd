@@ -66,6 +66,15 @@ var _assist_query: PhysicsRayQueryParameters3D
 var storm_mode_announced: bool = false
 var _zombie_arms: Node3D
 var _zombie_swipe: float = 0.0
+var _fp_arms: Node3D
+var _fp_left_arm: Node3D
+var _fp_right_arm: Node3D
+var _sleeve_mat: StandardMaterial3D
+var _skin_mat: StandardMaterial3D
+var _reloading: bool = false
+var _reload_time: float = 0.0
+var _reload_duration: float = 0.8
+var _reload_slapped: bool = false
 var is_aiming_down_sights: bool = false
 
 
@@ -96,8 +105,8 @@ func _ready() -> void:
 
 	arsenal.weapon_changed.connect(_on_weapon_changed)
 	arsenal.dry_fired.connect(func(_state: WeaponState) -> void: Sfx.play(&"dry"))
-	arsenal.reload_started.connect(func(_state: WeaponState, _seconds: float) -> void: Sfx.play(&"reload", 0.9))
-	arsenal.reload_finished.connect(func(_state: WeaponState) -> void: Sfx.play(&"reload", 1.2))
+	arsenal.reload_started.connect(_on_reload_started)
+	arsenal.reload_finished.connect(_on_reload_finished)
 	landed_hit.connect(_on_landed_hit)
 	ammo_collected.connect(func(_amount: int) -> void: Sfx.play(&"ammo", 1.0, -6.0, 0.1))
 	respawned.connect(func(_actor: Actor) -> void: storm_mode_announced = false)
@@ -285,9 +294,46 @@ func _process(delta: float) -> void:
 		var swipe_down := -sin(_zombie_swipe * PI) * 0.08
 		_zombie_arms.position = Vector3(0.0, swipe_down, -swipe_forward)
 		_zombie_arms.rotation = Vector3(-sin(_zombie_swipe * PI) * 0.35, 0.0, 0.0)
+
+	var reload_offset := Vector3.ZERO
+	var reload_rot := Vector3.ZERO
+	if _reloading:
+		_reload_time = minf(_reload_time + delta, _reload_duration)
+		var p := _reload_time / _reload_duration
+		if p < 0.28:
+			var t := p / 0.28
+			var ease_t := sin(t * PI * 0.5)
+			reload_offset = Vector3(-0.04, -0.06, 0.06) * ease_t
+			reload_rot = Vector3(0.35, -0.25, 0.25) * ease_t
+			if _fp_left_arm != null:
+				_fp_left_arm.position = Vector3(-0.06, -0.22 * ease_t, 0.15 * ease_t)
+				_fp_left_arm.rotation = Vector3(-0.4 * ease_t, 0.0, 0.0)
+		elif p < 0.68:
+			var t := (p - 0.28) / 0.40
+			var slap := sin(t * PI)
+			if t >= 0.5 and not _reload_slapped:
+				_reload_slapped = true
+				_punch = -0.045
+				_recoil = minf(_recoil + 0.35, 1.2)
+				add_trauma(0.08)
+				Sfx.play(&"ui_click", 1.35, -2.0)
+			reload_offset = Vector3(-0.04, -0.06 - slap * 0.035, 0.06 - slap * 0.02)
+			reload_rot = Vector3(0.35 - slap * 0.18, -0.25, 0.25 - slap * 0.12)
+			if _fp_left_arm != null:
+				_fp_left_arm.position = Vector3(-0.02, -0.08 * (1.0 - t), -0.02 + slap * 0.04)
+				_fp_left_arm.rotation = Vector3(0.2 * slap, 0.0, 0.1 * slap)
+		else:
+			var t := (p - 0.68) / 0.32
+			var ease_out := cos(t * PI * 0.5)
+			reload_offset = Vector3(-0.04, -0.06, 0.06) * ease_out
+			reload_rot = Vector3(0.35, -0.25, 0.25) * ease_out
+			if _fp_left_arm != null:
+				_fp_left_arm.position = Vector3(-0.04 * ease_out, -0.05 * ease_out, 0.0)
+				_fp_left_arm.rotation = Vector3.ZERO
+
 	_view_root.visible = alive and not (is_aiming_down_sights and camera.fov < GameSettings.fov - 10.0)
-	_view_root.position = _view_offset + bob + idle + sprint_offset + rattle + Vector3(_sway_pos.x, -_sway_pos.y - 0.35 * _swap - _dip_pos, _recoil * 0.07)
-	_view_root.rotation = Vector3(_recoil * 0.12 - _swap * 0.6 + sprint_rot.x - _dip_pos * 1.2, VIEW_YAW - _sway_pos.x * 0.5 + sprint_rot.y, sprint_rot.z - _sway_pos.x * 0.3)
+	_view_root.position = _view_offset + bob + idle + sprint_offset + rattle + reload_offset + Vector3(_sway_pos.x, -_sway_pos.y - 0.35 * _swap - _dip_pos, _recoil * 0.07)
+	_view_root.rotation = Vector3(_recoil * 0.12 - _swap * 0.6 + sprint_rot.x - _dip_pos * 1.2, VIEW_YAW - _sway_pos.x * 0.5 + sprint_rot.y, sprint_rot.z - _sway_pos.x * 0.3) + reload_rot
 
 	if body_model != null:
 		var horiz := Vector2(velocity.x, velocity.z).length()
@@ -444,6 +490,8 @@ func _on_weapon_changed(state: WeaponState) -> void:
 		_view_model.queue_free()
 		_view_model = null
 	if is_zombie:
+		if _fp_arms != null:
+			_fp_arms.visible = false
 		if _zombie_arms == null:
 			_build_zombie_arms()
 		_zombie_arms.visible = true
@@ -452,8 +500,16 @@ func _on_weapon_changed(state: WeaponState) -> void:
 	if _zombie_arms != null:
 		_zombie_arms.visible = false
 	if state == null:
+		if _fp_arms != null:
+			_fp_arms.visible = false
 		return
-	_view_model = BlasterModel.create(state.data, true)
+	if _fp_arms == null:
+		_build_fp_arms()
+	_fp_arms.visible = true
+	if _sleeve_mat != null:
+		_sleeve_mat.albedo_color = color
+	var skin: StringName = GameSettings.player2_skin if player_index == 1 else GameSettings.player_skin
+	_view_model = BlasterModel.create(state.data, true, skin)
 	_view_root.add_child(_view_model)
 	if view_layer_mask != 1:
 		_set_model_layers(_view_model, view_layer_mask)
@@ -461,7 +517,6 @@ func _on_weapon_changed(state: WeaponState) -> void:
 	_swap = 1.0
 	_recoil = 0.0
 	if body_model != null:
-		var skin: StringName = GameSettings.player2_skin if player_index == 1 else GameSettings.player_skin
 		body_model.set_weapon(state.data, skin)
 	Sfx.play(&"swap")
 
@@ -529,6 +584,63 @@ func _perform_zombie_swipe() -> void:
 		GameSettings.vibrate(0.7, 0.7, 0.2)
 	else:
 		Sfx.play(&"whoosh", 1.2, -4.0, 0.05)
+
+
+func _on_reload_started(_state: WeaponState, seconds: float) -> void:
+	_reloading = true
+	_reload_time = 0.0
+	_reload_duration = maxf(seconds, 0.1)
+	_reload_slapped = false
+	Sfx.play(&"reload", 0.9)
+
+
+func _on_reload_finished(_state: WeaponState) -> void:
+	_reloading = false
+	_reload_time = 0.0
+	_reload_slapped = false
+	if _fp_left_arm != null:
+		_fp_left_arm.position = Vector3.ZERO
+		_fp_left_arm.rotation = Vector3.ZERO
+	Sfx.play(&"reload", 1.2)
+
+
+func _build_fp_arms() -> void:
+	if _fp_arms != null:
+		return
+	_fp_arms = Node3D.new()
+	_fp_arms.name = "FirstPersonArms"
+	_view_root.add_child(_fp_arms)
+
+	_sleeve_mat = ArenaKit.mat(color, 0.7)
+	_skin_mat = ArenaKit.mat(Color(0.96, 0.78, 0.65), 0.55)
+
+	# Right Arm: reaches forward to grip handle and trigger
+	_fp_right_arm = Node3D.new()
+	_fp_right_arm.name = "RightArm"
+	_fp_arms.add_child(_fp_right_arm)
+	# Forearm sleeve
+	var r_sleeve := _capsule_arm(_fp_right_arm, 0.048, 0.28, Vector3(0.12, -0.22, 0.16), _sleeve_mat)
+	r_sleeve.rotation_degrees = Vector3(48.0, -18.0, 15.0)
+	# Hand wrapping handle
+	var r_hand := ArenaKit.deco_box(_fp_right_arm, Vector3(0.065, 0.08, 0.065), Vector3(0.015, -0.11, 0.06), Color(0.96, 0.78, 0.65), Vector3(-14.0, 0.0, 0.0))
+	r_hand.material_override = _skin_mat
+	# Thumb over grip
+	var r_thumb := ArenaKit.deco_box(_fp_right_arm, Vector3(0.03, 0.04, 0.05), Vector3(-0.02, -0.09, 0.07), Color(0.96, 0.78, 0.65), Vector3(-14.0, 20.0, 0.0))
+	r_thumb.material_override = _skin_mat
+
+	# Left Arm: reaches forward to support barrel / under-barrel forend
+	_fp_left_arm = Node3D.new()
+	_fp_left_arm.name = "LeftArm"
+	_fp_arms.add_child(_fp_left_arm)
+	# Forearm sleeve
+	var l_sleeve := _capsule_arm(_fp_left_arm, 0.046, 0.30, Vector3(-0.16, -0.24, 0.14), _sleeve_mat)
+	l_sleeve.rotation_degrees = Vector3(54.0, 32.0, -22.0)
+	# Hand supporting receiver / forend
+	var l_hand := ArenaKit.deco_box(_fp_left_arm, Vector3(0.075, 0.06, 0.07), Vector3(-0.03, -0.13, -0.12), Color(0.96, 0.78, 0.65), Vector3(10.0, 25.0, 0.0))
+	l_hand.material_override = _skin_mat
+
+	if view_layer_mask != 1:
+		_set_model_layers(_fp_arms, view_layer_mask)
 
 
 func _build_zombie_arms() -> void:

@@ -208,7 +208,8 @@ func _process(delta: float) -> void:
 		_banner_sub.text = "Back in %d..." % int(ceilf(left)) if left > 0.0 else ""
 
 	if not _match_over:
-		var show_board := Input.is_action_pressed(&"scoreboard")
+		var sb_action := StringName(_player.action_prefix + "scoreboard") if (_player != null and not _player.action_prefix.is_empty()) else &"scoreboard"
+		var show_board := Input.is_action_pressed(sb_action)
 		if show_board and not _board_panel.visible:
 			_rebuild_board("SCOREBOARD")
 		_board_panel.visible = show_board

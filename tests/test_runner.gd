@@ -85,6 +85,8 @@ func _ready() -> void:
 	await _test_duos_buddy_spawning_and_pings()
 	# Settings & Accessibility: Controls Remapping & Colorblind Palettes (v0.9.2)
 	await _test_settings_and_accessibility()
+	# Milestone v1.0.0: Local Couch Co-Op / Split-Screen (2 Players)
+	await _test_splitscreen_coop()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -1104,6 +1106,10 @@ func _entry(team: int, score: int, tags: int) -> ScoreEntry:
 
 func _test_team_rules() -> void:
 	section("Team modes: rules")
+	var saved_palette := GameSettings.team_palette
+	var saved_split := GameSettings.split_screen
+	GameSettings.team_palette = int(GameMode.TeamPalette.DEFAULT)
+	GameSettings.split_screen = false
 	var duos := MatchScene.resolve_mode(GameSettings.MatchMode.DUOS)
 	var teams := MatchScene.resolve_mode(GameSettings.MatchMode.TEAMS)
 	check(duos.teams == GameMode.Teams.DUOS and duos.short_name == "DUOS", "DUOS loads from its mode file")
@@ -1132,6 +1138,8 @@ func _test_team_rules() -> void:
 	var level := Scoreboard.new()
 	level.entries.assign([_entry(0, 100, 1), _entry(1, 100, 1)])
 	check(teams.winning_team(level) == -1, "level scores are a draw")
+	GameSettings.team_palette = saved_palette
+	GameSettings.split_screen = saved_split
 	await physics_frames(1)
 
 
@@ -2771,6 +2779,114 @@ func _test_settings_and_accessibility() -> void:
 	InputSetup.reset_to_defaults()
 	GameSettings.apply()
 	await physics_frames(2)
+
+
+## Milestone v1.0.0: Local Couch Co-Op / Split-Screen (2 Players)
+func _test_splitscreen_coop() -> void:
+	section("v1.0.0: Local Couch Co-Op / Split-Screen (2 Players)")
+	var saved_split := GameSettings.split_screen
+	var saved_horiz := GameSettings.split_screen_horizontal
+	var saved_mode := GameSettings.match_mode
+	var saved_p2_name := GameSettings.player2_name
+	var saved_p2_color := GameSettings.player2_color
+	var saved_p2_hat := GameSettings.player2_hat
+
+	# 1. GameSettings Split-Screen Properties & Persistence
+	GameSettings.split_screen = true
+	GameSettings.split_screen_horizontal = true
+	GameSettings.player2_name = "Buddy"
+	GameSettings.player2_color = 2
+	GameSettings.player2_hat = &"bunny"
+	check(GameSettings.display_name_p2() == "Buddy", "GameSettings.display_name_p2() reflects configured name")
+	check(GameSettings.color_p2() == Cosmetics.COLORS[2]["color"], "GameSettings.color_p2() reflects configured color")
+
+	GameSettings.save_settings()
+	GameSettings.load_settings()
+	check(GameSettings.split_screen == true, "split_screen boolean persists across save/load")
+	check(GameSettings.split_screen_horizontal == true, "split_screen_horizontal boolean persists across save/load")
+	check(GameSettings.player2_name == "Buddy", "player2_name persists across save/load")
+	check(GameSettings.player2_color == 2, "player2_color persists across save/load")
+	check(GameSettings.player2_hat == &"bunny", "player2_hat persists across save/load")
+
+	# 2. InputSetup Split-Screen Actions
+	InputSetup.setup_split_screen_actions(false, 0)
+	check(InputMap.has_action(&"p1_fire") and InputMap.has_action(&"p2_fire"), "setup_split_screen_actions() registers p1_* and p2_* actions")
+	check(InputMap.has_action(&"p1_move_forward") and InputMap.has_action(&"p2_move_forward"), "movement actions mapped for both players")
+	check(InputMap.has_action(&"p1_scoreboard") and InputMap.has_action(&"p2_scoreboard"), "scoreboard actions mapped for both players")
+	check(InputMap.action_has_event(&"p2_move_forward", InputSetup._key(KEY_UP)), "Player 2 has keyboard fallback for move_forward (Arrow Up)")
+	check(InputMap.action_has_event(&"p2_fire", InputSetup._key(KEY_KP_ENTER)), "Player 2 has keyboard fallback for fire (Keypad Enter)")
+
+	# 3. MatchScene Split-Screen Viewports, Dual Players, and Shared World3D
+	GameSettings.match_mode = GameSettings.MatchMode.DUOS
+	var game := (load("res://scenes/game/match.tscn") as PackedScene).instantiate() as MatchScene
+	add_child(game)
+	await physics_frames(5)
+
+	check(game.split_container != null and game.split_container is VBoxContainer, "MatchScene instantiates horizontal VBoxContainer for split-screen")
+	check(game.viewport1 != null and game.viewport2 != null, "MatchScene instantiates SubViewport1 and SubViewport2")
+	check(game.viewport1.world_3d == game.viewport2.world_3d, "SubViewport1 and SubViewport2 share the exact same World3D")
+	check(game.viewport1.audio_listener_enable_3d and not game.viewport2.audio_listener_enable_3d, "3D audio listener enabled only on Player 1 to prevent listener conflicts")
+
+	check(game.player != null and game.player.player_index == 0, "Player 1 instantiated with index 0")
+	check(game.player.action_prefix == "p1_", "Player 1 action prefix set to 'p1_'")
+	check(game.player2 != null and game.player2.player_index == 1, "Player 2 instantiated with index 1")
+	check(game.player2.action_prefix == "p2_", "Player 2 action prefix set to 'p2_'")
+
+	# Character 3D models and layer culling
+	check(game.player.body_model != null, "Player 1 has in-world 3D character body model")
+	check(game.player2.body_model != null, "Player 2 has in-world 3D character body model")
+	check((game.player.camera.cull_mask & 2) == 0, "Player 1 camera culls own body model (layer 2)")
+	check((game.player.camera.cull_mask & 16) == 0, "Player 1 camera culls Player 2 viewmodel (layer 16)")
+	check((game.player2.camera.cull_mask & 4) == 0, "Player 2 camera culls own body model (layer 4)")
+	check((game.player2.camera.cull_mask & 8) == 0, "Player 2 camera culls Player 1 viewmodel (layer 8)")
+	check((game.player.camera.cull_mask & 4) != 0, "Player 1 camera can see Player 2 body model (layer 4)")
+	check((game.player2.camera.cull_mask & 2) != 0, "Player 2 camera can see Player 1 body model (layer 2)")
+
+	# Dual HUDs
+	check(game.hud != null and game.hud.get_parent() == game.viewport1, "HUD 1 lives inside SubViewport1")
+	check(game.hud2 != null and game.hud2.get_parent() == game.viewport2, "HUD 2 lives inside SubViewport2")
+
+	# Controller & Board registration
+	check(game.controller.actors.has(game.player) and game.controller.actors.has(game.player2), "Both players registered in MatchController")
+	check(game.controller.board.entry_for(game.player) != null, "Scoreboard contains entry for Player 1")
+	check(game.controller.board.entry_for(game.player2) != null, "Scoreboard contains entry for Player 2")
+
+	# Duos buddy linking
+	check(game.player.team_id == game.player2.team_id, "In DUOS mode, Player 1 and Player 2 share the same team")
+	check(game.player.buddy_actor == game.player2 and game.player2.buddy_actor == game.player, "In DUOS mode, Player 1 and Player 2 are linked as buddies")
+
+	# 4. Input Routing Isolation
+	var p1_pre_pos := game.player.global_position
+
+	# Simulate move forward on Player 2 only (p2_move_forward)
+	var p2_event := InputEventAction.new()
+	p2_event.action = &"p2_move_forward"
+	p2_event.pressed = true
+	Input.parse_input_event(p2_event)
+	await physics_frames(10)
+	p2_event.pressed = false
+	Input.parse_input_event(p2_event)
+	await physics_frames(2)
+
+	# Verify Player 1 was not moved by Player 2's action
+	check(game.player.global_position.distance_to(p1_pre_pos) < 0.05, "Player 2 input does not cause Player 1 to move")
+
+	# 5. Clean teardown
+	game.queue_free()
+	await physics_frames(3)
+	InputSetup.clear_split_screen_actions()
+	check(not InputMap.has_action(&"p1_fire") and not InputMap.has_action(&"p2_fire"), "clear_split_screen_actions() erases split actions")
+
+	# Restore settings
+	GameSettings.split_screen = saved_split
+	GameSettings.split_screen_horizontal = saved_horiz
+	GameSettings.match_mode = saved_mode
+	GameSettings.player2_name = saved_p2_name
+	GameSettings.player2_color = saved_p2_color
+	GameSettings.player2_hat = saved_p2_hat
+	GameSettings.save_settings()
+	await physics_frames(2)
+
 
 
 

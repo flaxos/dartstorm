@@ -322,3 +322,30 @@ box in corners for bots, so walkways are at least 1.5 m (the dining chairs moved
 **Alternatives:** External configuration file editing only; post-processing color grading shaders that distort map scenery.
 **Why:** Unlocks tailored accessibility for players with color vision deficiencies and varied motor control or controller preferences, while preserving clear visual identity and vibrant cartoon charm.
 
+### D-045: Local Couch Co-Op / Split-Screen (2 Players) (v1.0.0)
+**Chosen:**
+1. **Viewport & Shared World3D Architecture (`MatchScene`):**
+   - Dual `SubViewport` instances (`SubViewport1` and `SubViewport2`) embedded in a responsive `BoxContainer` (`VBoxContainer` for horizontal top/bottom split by default, or `HBoxContainer` for vertical side-by-side).
+   - Both subviewports share the exact same 3D physics and rendering world via `viewport2.world_3d = viewport1.world_3d = get_viewport().find_world_3d()`, completely avoiding duplicate simulations or desync issues.
+   - Dedicated 3D audio listener assignment (`viewport1.audio_listener_enable_3d = true`, `viewport2.audio_listener_enable_3d = false`) to eliminate Godot audio listener conflicts.
+2. **Layer Culling & 3D Character Models:**
+   - Both human players instantiate full in-world 3D character models (`body_model`) with run animations, aim pitch, overhead name tags, shield bubbles, and equipped blasters.
+   - Visual layer culling prevents clipping into your own head or viewing the other player's first-person viewmodel:
+     - Layer 2: Player 1 body (culled from Camera 1 via `cull_mask & ~2`, visible to Camera 2).
+     - Layer 3 (bit 4): Player 2 body (culled from Camera 2 via `cull_mask & ~4`, visible to Camera 1).
+     - Layer 4 (bit 8): Player 1 viewmodel (visible to Camera 1, culled from Camera 2).
+     - Layer 5 (bit 16): Player 2 viewmodel (visible to Camera 2, culled from Camera 1).
+3. **Input Device Routing & Action Isolation:**
+   - Distinct `p1_*` and `p2_*` action maps generated in `InputSetup.setup_split_screen_actions()`.
+   - Automatic hardware routing: KBM + Gamepad 0 for 1-pad setups; Gamepad 0 + Gamepad 1 for dual-gamepad setups; secondary keyboard bindings (Arrow keys, Keypad Enter, Keypad 0, IJKL look) for testing without physical controllers.
+4. **Per-Player HUD Subviewports:**
+   - Individual `Hud` instances parented to their respective `SubViewport`, confining reticles, ammo, health, shields, and popups cleanly to each player's half of the screen.
+5. **Universal Match Mode Integration:**
+   - Supports all match modes seamlessly: DUOS (co-op buddy spawning on Team 0), Blue vs Orange (rivalry on opposing teams), FFA / Gun Game / Floor is Lava (rivals), Zombie Siege / Zombies (co-op survivor defense).
+6. **Lobby & Persistence:**
+   - Lobby options toggle `1 PLAYER` / `2 PLAYERS`, previewing both characters side-by-side on the squad island platform.
+   - Player 2 customization (name, color, hat, skin) and split-screen orientation persisted cleanly in `user://settings.cfg`.
+**Alternatives:** Separate local networked instances (requires network sync and duplicate memory); top-down camera shared screen (loses immersive first-person blaster perspective).
+**Why:** Brings the ultimate local multiplayer couch experience to DARTSTORM, achieving the full v1.0.0 milestone vision while maintaining 60 FPS, 0 warnings, and 0 memory leaks.
+
+

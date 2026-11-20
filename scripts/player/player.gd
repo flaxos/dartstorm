@@ -19,8 +19,24 @@ const AIM_DISTANCE := 60.0
 ## The held blaster is turned slightly inward so you can see its side and tip.
 const VIEW_YAW := 0.07
 
+@export var player_index: int = 0
+@export var action_prefix: String = ""
+var body_model: CharacterModel = null
+var view_layer_mask: int = 1
+
+
+func set_view_layer(mask: int) -> void:
+	view_layer_mask = mask
+	if _view_root != null:
+		_set_model_layers(_view_root, mask)
+
+
 var head: Node3D
 var camera: Camera3D
+
+
+func _act(base: StringName) -> StringName:
+	return StringName(action_prefix + String(base)) if not action_prefix.is_empty() else base
 
 var _view_root: Node3D
 var _view_model: BlasterModel
@@ -92,7 +108,7 @@ func _exit_tree() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	var motion := event as InputEventMouseMotion
-	if motion != null and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+	if motion != null and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and player_index == 0:
 		var zoom_ratio := camera.fov / maxf(GameSettings.fov, 1.0) if is_aiming_down_sights else 1.0
 		var scale_factor := MOUSE_RADIANS_PER_PIXEL * GameSettings.mouse_sensitivity * zoom_ratio
 		_look(-motion.relative.x * scale_factor, -motion.relative.y * scale_factor)
@@ -100,26 +116,26 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	# Clicking back into the window after alt-tab grabs the mouse again
 	# instead of firing a surprise shot.
-	if event is InputEventMouseButton and event.is_action_pressed(&"fire") \
+	if event is InputEventMouseButton and event.is_action_pressed(_act(&"fire")) \
 			and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and controls_enabled \
-			and not get_tree().paused:
+			and not get_tree().paused and player_index == 0:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		_fire_blocked_until_release = true
 		get_viewport().set_input_as_handled()
 		return
 	if not alive or not controls_enabled or is_zombie:
 		return
-	if event.is_action_pressed(&"weapon_next"):
+	if event.is_action_pressed(_act(&"weapon_next")):
 		arsenal.cycle(1)
-	elif event.is_action_pressed(&"weapon_prev"):
+	elif event.is_action_pressed(_act(&"weapon_prev")):
 		arsenal.cycle(-1)
-	elif event.is_action_pressed(&"weapon_1"):
+	elif event.is_action_pressed(_act(&"weapon_1")):
 		arsenal.select(0)
-	elif event.is_action_pressed(&"weapon_2"):
+	elif event.is_action_pressed(_act(&"weapon_2")):
 		arsenal.select(1)
-	elif event.is_action_pressed(&"weapon_3"):
+	elif event.is_action_pressed(_act(&"weapon_3")):
 		arsenal.select(2)
-	elif event.is_action_pressed(&"reload"):
+	elif event.is_action_pressed(_act(&"reload")):
 		arsenal.request_reload()
 
 
@@ -129,7 +145,7 @@ func _physics_process(delta: float) -> void:
 		arsenal.set_trigger(false)
 		return
 
-	var pad_look := Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
+	var pad_look := Input.get_vector(_act(&"look_left"), _act(&"look_right"), _act(&"look_up"), _act(&"look_down"))
 	if pad_look.length_squared() > 0.0:
 		var turn := pad_look_step(pad_look, delta)
 		_look(turn.x, turn.y)
@@ -138,12 +154,12 @@ func _physics_process(delta: float) -> void:
 	var jump := false
 	_sprinting = false
 	if controls_enabled:
-		var input := Input.get_vector(&"move_left", &"move_right", &"move_forward", &"move_back")
+		var input := Input.get_vector(_act(&"move_left"), _act(&"move_right"), _act(&"move_forward"), _act(&"move_back"))
 		wish = (global_transform.basis * Vector3(input.x, 0.0, input.y)).limit_length(1.0)
-		_sprinting = Input.is_action_pressed(&"sprint") and input.y < -0.1
-		if Input.is_action_just_pressed(&"jump"):
+		_sprinting = Input.is_action_pressed(_act(&"sprint")) and input.y < -0.1
+		if Input.is_action_just_pressed(_act(&"jump")):
 			_jump_buffer_left = JUMP_BUFFER
-		var fire_held := Input.is_action_pressed(&"fire")
+		var fire_held := Input.is_action_pressed(_act(&"fire"))
 		if _fire_blocked_until_release:
 			if fire_held:
 				fire_held = false
@@ -151,7 +167,7 @@ func _physics_process(delta: float) -> void:
 				_fire_blocked_until_release = false
 
 		var current_w := arsenal.current()
-		var wants_aim := Input.is_action_pressed(&"aim_down_sights") and not is_zombie and not _sprinting and current_w != null and current_w.data.zoom_fov > 0.0
+		var wants_aim := Input.is_action_pressed(_act(&"aim_down_sights")) and not is_zombie and not _sprinting and current_w != null and current_w.data.zoom_fov > 0.0
 		if wants_aim != is_aiming_down_sights:
 			is_aiming_down_sights = wants_aim
 			aiming_changed.emit(is_aiming_down_sights)
@@ -161,17 +177,17 @@ func _physics_process(delta: float) -> void:
 				is_aiming_down_sights = false
 				aiming_changed.emit(false)
 			arsenal.set_trigger(false)
-			if Input.is_action_just_pressed(&"fire") and not _fire_blocked_until_release:
+			if Input.is_action_just_pressed(_act(&"fire")) and not _fire_blocked_until_release:
 				_perform_zombie_swipe()
 				if wish.length_squared() > 0.05:
 					lunge(wish.normalized(), 6.0)
 		else:
 			arsenal.set_trigger(fire_held)
 
-		if Input.is_action_just_pressed(&"throw_grenade") and not is_zombie and grenade_count > 0:
+		if Input.is_action_just_pressed(_act(&"throw_grenade")) and not is_zombie and grenade_count > 0:
 			_perform_grenade_throw()
 
-		if Input.is_action_just_pressed(&"ping"):
+		if Input.is_action_just_pressed(_act(&"ping")):
 			_perform_ping()
 	else:
 		if is_aiming_down_sights:
@@ -265,6 +281,13 @@ func _process(delta: float) -> void:
 	_view_root.visible = alive and not (is_aiming_down_sights and camera.fov < GameSettings.fov - 10.0)
 	_view_root.position = _view_offset + bob + idle + sprint_offset + rattle + Vector3(_sway_pos.x, -_sway_pos.y - 0.35 * _swap - _dip_pos, _recoil * 0.07)
 	_view_root.rotation = Vector3(_recoil * 0.12 - _swap * 0.6 + sprint_rot.x - _dip_pos * 1.2, VIEW_YAW - _sway_pos.x * 0.5 + sprint_rot.y, sprint_rot.z - _sway_pos.x * 0.3)
+
+	if body_model != null:
+		var horiz := Vector2(velocity.x, velocity.z).length()
+		body_model.animate(horiz, delta)
+		body_model.set_aim_pitch(_pitch)
+		body_model.set_meter(tag_meter / maxf(tag_meter_max, 1.0))
+		body_model.set_shield_visible(shield_points > 0.0)
 
 
 ## Adds camera shake. `amount` 0..1; scaled by the player's shake setting.
@@ -415,9 +438,14 @@ func _on_weapon_changed(state: WeaponState) -> void:
 		return
 	_view_model = BlasterModel.create(state.data, true)
 	_view_root.add_child(_view_model)
+	if view_layer_mask != 1:
+		_set_model_layers(_view_model, view_layer_mask)
 	_view_offset = state.data.view_offset
 	_swap = 1.0
 	_recoil = 0.0
+	if body_model != null:
+		var skin: StringName = GameSettings.player2_skin if player_index == 1 else GameSettings.player_skin
+		body_model.set_weapon(state.data, skin)
 	Sfx.play(&"swap")
 
 
@@ -497,6 +525,8 @@ func _build_zombie_arms() -> void:
 		var arm := _capsule_arm(_zombie_arms, 0.065, 0.42, Vector3(side * 0.22, -0.16, -0.36), mat)
 		arm.rotation_degrees = Vector3(70.0, side * -12.0, 0.0)
 		ArenaKit.deco_sphere(_zombie_arms, 0.05, Vector3(side * 0.22, -0.06, -0.52), Color(0.48, 0.82, 0.38))
+	if view_layer_mask != 1:
+		_set_model_layers(_zombie_arms, view_layer_mask)
 
 
 func _capsule_arm(parent: Node3D, radius: float, height: float, pos: Vector3, material: Material) -> MeshInstance3D:
@@ -511,3 +541,30 @@ func _capsule_arm(parent: Node3D, radius: float, height: float, pos: Vector3, ma
 	instance.position = pos
 	parent.add_child(instance)
 	return instance
+
+
+func enable_body_model(layer_mask: int = 2) -> void:
+	if body_model == null:
+		body_model = CharacterModel.new()
+		add_child(body_model)
+		body_model.setup(display_name, color, hat_id)
+		body_model.show_overhead(true)
+		var current_w := arsenal.current()
+		if current_w != null:
+			var skin: StringName = GameSettings.player2_skin if player_index == 1 else GameSettings.player_skin
+			body_model.set_weapon(current_w.data, skin)
+		_set_model_layers(body_model, layer_mask)
+
+
+func _set_model_layers(node: Node, mask: int) -> void:
+	if node is VisualInstance3D:
+		(node as VisualInstance3D).layers = mask
+	for child in node.get_children():
+		_set_model_layers(child, mask)
+
+
+func set_zombie(enabled: bool) -> void:
+	super.set_zombie(enabled)
+	if body_model != null:
+		body_model.set_zombie(enabled)
+

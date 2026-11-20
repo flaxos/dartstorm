@@ -70,6 +70,10 @@ func _build() -> void:
 	_slider(video, "Sound effects", 0.0, 1.0, 0.05, GameSettings.sfx_volume,
 			func(value: float) -> void: GameSettings.sfx_volume = value)
 	_palette_picker(video)
+	_toggle(video, "Split-screen co-op", GameSettings.split_screen,
+			func(on: bool) -> void: GameSettings.split_screen = on)
+	_toggle(video, "Split horizontal (top/bottom)", GameSettings.split_screen_horizontal,
+			func(on: bool) -> void: GameSettings.split_screen_horizontal = on)
 
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER

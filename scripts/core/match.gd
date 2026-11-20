@@ -52,8 +52,13 @@ var arena: Arena
 var controller: MatchController
 var dart_pool: DartPool
 var player: Player
+var player2: Player
 var bots: Array[Bot] = []
 var hud: Hud
+var hud2: Hud
+var split_container: BoxContainer
+var viewport1: SubViewport
+var viewport2: SubViewport
 var pause_menu: PauseMenu
 var podium: Podium
 var power_up: PowerUpPickup
@@ -93,12 +98,17 @@ static func resolve_mode(index: int) -> GameMode:
 
 ## Colours for the bots: their usual colour, unless it's too close to the
 ## player's. Then they borrow an unused one from the palette.
-static func bot_colors(player_color: Color, count: int) -> Array[Color]:
+static func bot_colors(player_color: Color, count: int, second_player_color: Color = Color.TRANSPARENT) -> Array[Color]:
 	var taken: Array[Color] = [player_color]
+	if second_player_color != Color.TRANSPARENT:
+		taken.append(second_player_color)
 	var out: Array[Color] = []
 	for i in count:
 		var wanted: Color = BOT_ROSTER[i]["color"]
-		if Cosmetics.too_similar(wanted, player_color):
+		var conflicts := false
+		for used in taken:
+			conflicts = conflicts or Cosmetics.too_similar(wanted, used)
+		if conflicts:
 			for option in Cosmetics.COLORS:
 				var candidate: Color = option["color"]
 				var free := true
@@ -168,24 +178,99 @@ func _ready() -> void:
 	controller.setup(mode, arena)
 	add_child(controller)
 
-	player = PLAYER_SCENE.instantiate() as Player
-	player.display_name = GameSettings.display_name()
-	player.hat_id = GameSettings.player_hat
-	player.team_id = mode.team_for(0)
-	# In team modes everyone wears their team's colour, so friends are easy to spot.
-	player.color = GameMode.team_color(player.team_id) if mode.is_team_mode() else GameSettings.color()
-	player.dart_pool = dart_pool
-	add_child(player)
-	fx.watch_actor(player)
-	controller.register(player)
+	if GameSettings.split_screen:
+		InputSetup.setup_split_screen_actions()
+
+		if GameSettings.split_screen_horizontal:
+			split_container = VBoxContainer.new()
+		else:
+			split_container = HBoxContainer.new()
+		split_container.name = "SplitContainer"
+		split_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+		split_container.add_theme_constant_override("separation", 4)
+		add_child(split_container)
+
+		var cont1 := SubViewportContainer.new()
+		cont1.name = "ViewportContainer1"
+		cont1.stretch = true
+		cont1.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		cont1.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		split_container.add_child(cont1)
+
+		viewport1 = SubViewport.new()
+		viewport1.name = "SubViewport1"
+		viewport1.world_3d = get_viewport().find_world_3d()
+		viewport1.audio_listener_enable_3d = true
+		cont1.add_child(viewport1)
+
+		var cont2 := SubViewportContainer.new()
+		cont2.name = "ViewportContainer2"
+		cont2.stretch = true
+		cont2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		cont2.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		split_container.add_child(cont2)
+
+		viewport2 = SubViewport.new()
+		viewport2.name = "SubViewport2"
+		viewport2.world_3d = viewport1.world_3d
+		viewport2.audio_listener_enable_3d = false
+		cont2.add_child(viewport2)
+
+		player = PLAYER_SCENE.instantiate() as Player
+		player.player_index = 0
+		player.action_prefix = "p1_"
+		player.display_name = GameSettings.display_name()
+		player.hat_id = GameSettings.player_hat
+		player.team_id = mode.team_for(0)
+		player.color = GameMode.team_color(player.team_id) if mode.is_team_mode() else GameSettings.color()
+		player.dart_pool = dart_pool
+		viewport1.add_child(player)
+		player.enable_body_model(2)
+		player.set_view_layer(8)
+		player.camera.cull_mask = 0xFFFFFFFF & ~2 & ~16
+		fx.watch_actor(player)
+		controller.register(player)
+
+		player2 = PLAYER_SCENE.instantiate() as Player
+		player2.player_index = 1
+		player2.action_prefix = "p2_"
+		player2.display_name = GameSettings.display_name_p2()
+		player2.hat_id = GameSettings.player2_hat
+		if mode.teams == GameMode.Teams.DUOS:
+			player2.team_id = mode.team_for(0)
+		elif mode.teams == GameMode.Teams.BLUE_VS_ORANGE:
+			player2.team_id = 1
+		elif mode is ZombieMode or mode is ZombieSiegeMode:
+			player2.team_id = mode.team_for(0)
+		else:
+			player2.team_id = mode.team_for(1)
+		player2.color = GameMode.team_color(player2.team_id) if mode.is_team_mode() else GameSettings.color_p2()
+		player2.dart_pool = dart_pool
+		viewport2.add_child(player2)
+		player2.enable_body_model(4)
+		player2.set_view_layer(16)
+		player2.camera.cull_mask = 0xFFFFFFFF & ~4 & ~8
+		fx.watch_actor(player2)
+		controller.register(player2)
+	else:
+		player = PLAYER_SCENE.instantiate() as Player
+		player.display_name = GameSettings.display_name()
+		player.hat_id = GameSettings.player_hat
+		player.team_id = mode.team_for(0)
+		player.color = GameMode.team_color(player.team_id) if mode.is_team_mode() else GameSettings.color()
+		player.dart_pool = dart_pool
+		add_child(player)
+		fx.watch_actor(player)
+		controller.register(player)
 
 	var bot_count := team_bot_count(mode, GameSettings.bot_count)
-	var colors := bot_colors(player.color, bot_count)
+	var colors := bot_colors(player.color, bot_count, player2.color if player2 != null else Color.TRANSPARENT)
+	var bot_team_offset := 2 if GameSettings.split_screen else 1
 	for i in bot_count:
 		var bot := BOT_SCENE.instantiate() as Bot
 		bot.display_name = BOT_ROSTER[i]["name"]
 		bot.hat_id = BOT_ROSTER[i]["hat"]
-		bot.team_id = mode.team_for(i + 1)
+		bot.team_id = mode.team_for(i + bot_team_offset)
 		bot.color = GameMode.team_color(bot.team_id) if mode.is_team_mode() else colors[i]
 		bot.difficulty = difficulty
 		bot.arena = arena
@@ -287,10 +372,20 @@ func _ready() -> void:
 			target.hit.connect(controller.award_target_hit)
 
 	hud = HUD_SCENE.instantiate() as Hud
-	add_child(hud)
+	if viewport1 != null:
+		viewport1.add_child(hud)
+	else:
+		add_child(hud)
 	hud.setup(player, controller)
 	hud.restart_requested.connect(restart)
 	hud.menu_requested.connect(quit_to_menu)
+
+	if GameSettings.split_screen and player2 != null and viewport2 != null:
+		hud2 = HUD_SCENE.instantiate() as Hud
+		viewport2.add_child(hud2)
+		hud2.setup(player2, controller)
+		hud2.restart_requested.connect(restart)
+		hud2.menu_requested.connect(quit_to_menu)
 
 	pause_menu = PAUSE_SCENE.instantiate() as PauseMenu
 	add_child(pause_menu)
@@ -321,6 +416,8 @@ func quit_to_menu() -> void:
 func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	Sfx.stop_music()
+	if split_container != null:
+		split_container.visible = false
 	if power_up != null:
 		power_up.active = false
 	if arena != null:
@@ -333,20 +430,26 @@ func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 	var mode := controller.mode
 
 	var prog: Node = get_node_or_null("/root/Progression")
-	if prog != null and player != null:
-		var human_entry: ScoreEntry = controller.board.entry_for(player)
-		var tags := human_entry.tags if human_entry != null else 0
-		var won := false
-		if not ranking.is_empty():
-			if not mode.is_team_mode():
-				won = ranking[0].is_human
-			else:
-				var winning_team := mode.winning_team(controller.board)
-				won = winning_team == player.team_id
-		var xp_earned: int = tags * int(prog.get("XP_PER_TAG")) + int(prog.get("XP_MATCH_FINISH")) + (int(prog.get("XP_MATCH_WIN")) if won else 0)
-		var coins_earned: int = tags * int(prog.get("COINS_PER_TAG")) + int(prog.get("COINS_MATCH_FINISH")) + (int(prog.get("COINS_MATCH_WIN")) if won else 0)
-		prog.call("add_xp", xp_earned)
-		prog.call("add_coins", coins_earned)
+	if prog != null:
+		var humans: Array[Player] = []
+		if player != null:
+			humans.append(player)
+		if player2 != null:
+			humans.append(player2)
+		for p in humans:
+			var human_entry: ScoreEntry = controller.board.entry_for(p)
+			var tags := human_entry.tags if human_entry != null else 0
+			var won := false
+			if not ranking.is_empty():
+				if not mode.is_team_mode():
+					won = ranking[0].is_human and ranking[0].actor == p
+				else:
+					var winning_team := mode.winning_team(controller.board)
+					won = winning_team == p.team_id
+			var xp_earned: int = tags * int(prog.get("XP_PER_TAG")) + int(prog.get("XP_MATCH_FINISH")) + (int(prog.get("XP_MATCH_WIN")) if won else 0)
+			var coins_earned: int = tags * int(prog.get("COINS_PER_TAG")) + int(prog.get("COINS_MATCH_FINISH")) + (int(prog.get("COINS_MATCH_WIN")) if won else 0)
+			prog.call("add_xp", xp_earned)
+			prog.call("add_coins", coins_earned)
 	if ranking.is_empty():
 		podium.show_places([], "MATCH\nOVER", UiKit.ORANGE_HOT)
 	elif not mode.is_team_mode():
@@ -383,10 +486,11 @@ func _create_power_up(mode: GameMode) -> void:
 	power_up.collected.connect(func(actor: Actor) -> void:
 		var entry := controller.board.entry_for(actor)
 		var prize := mode.power_weapon.display_name.to_upper()
-		var text := "YOU GRABBED %s!" % prize if actor.is_human else "%s GRABBED %s!" % [actor.display_name.to_upper(), prize]
+		var text := "%s GRABBED %s!" % [actor.display_name.to_upper(), prize] if (not actor.is_human or GameSettings.split_screen) else "YOU GRABBED %s!" % prize
 		controller.announce(entry, text, MatchController.color_for(entry), &"announce"))
 
 
 func _exit_tree() -> void:
 	Engine.time_scale = 1.0
+	InputSetup.clear_split_screen_actions()
 

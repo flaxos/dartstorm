@@ -41,6 +41,8 @@ const SKINS: Array[Dictionary] = [
 	{"id": &"dino", "name": "Dino Claws", "cost": 400, "tier": "Wild", "pattern": "res://assets/textures/skins/pattern_dino.png", "finish": 0},
 	{"id": &"hologram", "name": "Prism Foil", "cost": 500, "tier": "Champion", "pattern": "res://assets/textures/skins/pattern_hologram.png", "finish": 3},
 	{"id": &"slime", "name": "Toxic Slime", "cost": 600, "tier": "Outbreak", "pattern": "res://assets/textures/skins/pattern_slime.png", "finish": 1},
+	{"id": &"shark", "name": "Shark Bite", "cost": 300, "tier": "Aero", "pattern": "res://assets/textures/skins/pattern_shark.png", "finish": 1},
+	{"id": &"flames", "name": "Fire Storm", "cost": 350, "tier": "Hot Rod", "pattern": "res://assets/textures/skins/pattern_flames.png", "finish": 1},
 ]
 
 const RANDOM_NAMES: Array[String] = [

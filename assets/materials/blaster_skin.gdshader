@@ -7,7 +7,7 @@ render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_sc
 uniform vec4 body_color : source_color = vec4(0.15, 0.45, 1.0, 1.0);
 uniform vec4 accent_color : source_color = vec4(1.0, 0.85, 0.2, 1.0);
 uniform sampler2D skin_pattern : source_color, filter_linear_mipmap, repeat_enable;
-uniform float pattern_scale : hint_range(0.1, 20.0) = 4.0;
+uniform float pattern_scale : hint_range(0.1, 40.0) = 18.0;
 uniform float pattern_blend_power : hint_range(1.0, 32.0) = 12.0;
 
 // 0: MATTE, 1: GLOSS, 2: METALLIC_FLAKE, 3: HOLOGRAPHIC_IRIDESCENT
@@ -15,7 +15,7 @@ uniform int finish_mode : hint_range(0, 3) = 1;
 uniform float roughness : hint_range(0.0, 1.0) = 0.25;
 uniform float metallic : hint_range(0.0, 1.0) = 0.0;
 uniform float rim_strength : hint_range(0.0, 1.0) = 0.4;
-uniform float pattern_intensity : hint_range(0.0, 1.0) = 0.85;
+uniform float pattern_intensity : hint_range(0.0, 1.0) = 0.92;
 
 varying vec3 v_obj_pos;
 varying vec3 v_obj_normal;
@@ -40,9 +40,8 @@ void fragment() {
 
 	vec4 pattern = col_x * blend_weights.x + col_y * blend_weights.y + col_z * blend_weights.z;
 
-	// Dual-tone color modulation: pattern luminance blends between body_color and accent_color
-	vec3 themed_pattern = mix(body_color.rgb, accent_color.rgb, pattern.r);
-	vec3 base_albedo = mix(body_color.rgb, themed_pattern * pattern.rgb, pattern_intensity);
+	// Vibrant sticker decal overlay on top of molded body color
+	vec3 base_albedo = mix(body_color.rgb, pattern.rgb, pattern_intensity);
 
 	ALBEDO = base_albedo;
 	ROUGHNESS = roughness;

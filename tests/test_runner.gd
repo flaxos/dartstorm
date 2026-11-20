@@ -1272,6 +1272,8 @@ func _test_lobby() -> void:
 	await physics_frames(1)
 	var slots: Array = menu.get("_slots")
 	check(slots.all(func(slot: Node3D) -> bool: return not slot.visible), "customising clears the stage so you're alone")
+	var skin_btns: Array = menu.get("_skin_buttons")
+	check(skin_btns.size() == 10, "customise panel contains 10 blaster skin/sticker options (%d)" % skin_btns.size())
 	menu.call("_show_customise", false)
 	await physics_frames(1)
 	slots = menu.get("_slots")
@@ -1908,7 +1910,7 @@ func _test_progression_and_shop() -> void:
 
 func _test_blaster_skins_and_shader() -> void:
 	section("Blaster skins and generative shader pipeline")
-	check(Cosmetics.SKINS.size() == 8, "Cosmetics catalog defines 8 skins (%d)" % Cosmetics.SKINS.size())
+	check(Cosmetics.SKINS.size() == 10, "Cosmetics catalog defines 10 skins (%d)" % Cosmetics.SKINS.size())
 
 	# 1. Catalog integrity & pattern textures
 	for skin in Cosmetics.SKINS:
@@ -1929,6 +1931,7 @@ func _test_blaster_skins_and_shader() -> void:
 	Progression.reset_to_defaults()
 	check(Progression.is_unlocked(&"skin", &"default"), "default skin is unlocked by default")
 	check(not Progression.is_unlocked(&"skin", &"cyber"), "neon circuit skin starts locked")
+	check(not Progression.is_unlocked(&"skin", &"shark"), "shark bite skin starts locked")
 	var unlocked_cyber := Progression.unlock_item(&"skin", &"cyber")
 	check(unlocked_cyber and Progression.is_unlocked(&"skin", &"cyber"), "unlock_item successfully unlocks cyber skin")
 
@@ -1965,6 +1968,19 @@ func _test_blaster_skins_and_shader() -> void:
 	check(preserved_dark_grip, "dark grip preserves matte tactile polymer material")
 	model.queue_free()
 
+	# Default skin also uses shader with pattern_default decals
+	var model_default := BlasterModel.create(popper_data, true, &"default")
+	add_child(model_default)
+	await physics_frames(2)
+	var default_has_shader := false
+	for child in model_default.get_children():
+		var mesh_inst := child as MeshInstance3D
+		if mesh_inst != null and mesh_inst.material_override is ShaderMaterial:
+			default_has_shader = true
+			break
+	check(default_has_shader, "default skin applies shader with pattern_default toy decals")
+	model_default.queue_free()
+
 	# 5. Shop Panel skins tab
 	var shop := ShopPanel.new()
 	add_child(shop)
@@ -1975,8 +1991,38 @@ func _test_blaster_skins_and_shader() -> void:
 	for child in shop._grid_container.get_children():
 		if not child.is_queued_for_deletion():
 			active_cards += 1
-	check(active_cards == 8, "shop panel renders 8 skin cards in SKINS tab")
+	check(active_cards == 10, "shop panel renders 10 skin cards in SKINS tab")
 	shop.queue_free()
+
+	# 6. First-Person Hands & Procedural Reload Animation
+	var fp_player := Player.new()
+	add_child(fp_player)
+	await physics_frames(2)
+	fp_player.arsenal.set_loadout([popper_data])
+	await physics_frames(2)
+	var fp_arms: Node = fp_player.get("_fp_arms")
+	check(fp_arms != null and fp_arms.is_inside_tree(), "Player instantiates FirstPersonArms in first person")
+	check(fp_arms.get_node_or_null("RightArm") != null, "FirstPersonArms includes RightArm holding grip")
+	check(fp_arms.get_node_or_null("LeftArm") != null, "FirstPersonArms includes LeftArm supporting blaster")
+	check(fp_arms.get("visible") == true, "FirstPersonArms visible during normal blaster combat")
+
+	# Test procedural reload animation
+	var view_root := fp_player.get("_view_root") as Node3D
+	var initial_rot: Vector3 = view_root.rotation
+	fp_player.call("_on_reload_started", fp_player.arsenal.current(), 0.8)
+	check(bool(fp_player.get("_reloading")) == true, "Player enters _reloading state on reload started")
+	await physics_frames(10)
+	var reloading_rot: Vector3 = view_root.rotation
+	check(reloading_rot != initial_rot, "Blaster rotates/tilts during procedural reload animation")
+	fp_player.call("_on_reload_finished", fp_player.arsenal.current())
+	check(bool(fp_player.get("_reloading")) == false, "Player clears _reloading state on reload finished")
+
+	# Zombie arms switch test
+	fp_player.set_zombie(true)
+	await physics_frames(2)
+	check(fp_arms.get("visible") == false, "FirstPersonArms hides when player is zombie")
+	check(fp_player.get("_zombie_arms") != null and fp_player.get("_zombie_arms").get("visible") == true, "Zombie arms become visible when infected")
+	fp_player.queue_free()
 
 	Progression.reset_to_defaults()
 	await physics_frames(2)
@@ -2262,6 +2308,8 @@ func _test_floor_is_lava_mode() -> void:
 	check(is_equal_approx(hazard.current_lava_y, -0.6), "LavaHazard starts at calm height -0.6m")
 	hazard.set_lava_height(1.35)
 	check(is_equal_approx(hazard.current_lava_y, 1.35) and is_equal_approx(hazard.position.y, 1.35), "set_lava_height updates current_lava_y and position.y")
+	check(hazard.size.x >= 200.0 and hazard.size.y >= 200.0, "LavaHazard size is >= 200x200m to cover all arenas")
+	check(hazard.get_node_or_null("LavaEmbers") is GPUParticles3D, "LavaHazard instantiates rising LavaEmbers particles")
 
 	# 4. Elemental Water/Ice Obsidian Stone Formation
 	var water_dart := DartProjectile.new()

@@ -45,6 +45,28 @@ if ! "$GODOT" --headless --path . --export-release "Web" "$OUT/index.html" >"$LO
 	exit 1
 fi
 
+# In single-threaded mode, Secure Context (HTTPS) is not required by WebAssembly.
+# Patch index.html and index.js so local network testing over HTTP works without SSL errors.
+python3 -c "
+p = '$OUT/index.html'
+txt = open(p).read()
+old = 'const missing = Engine.getMissingFeatures({\n\t\tthreads: GODOT_THREADS_ENABLED,\n\t});'
+new = 'let missing = Engine.getMissingFeatures({\n\t\tthreads: GODOT_THREADS_ENABLED,\n\t});\n\tif (!GODOT_THREADS_ENABLED) {\n\t\tmissing = missing.filter((item) => !item.includes(\"Secure Context\"));\n\t}'
+if old in txt:
+    open(p, 'w').write(txt.replace(old, new))
+
+p_js = '$OUT/index.js'
+txt_js = open(p_js).read()
+old_js = '''\t\tif (!Features.isSecureContext()) {
+\t\t\tmissing.push('Secure Context - Check web server configuration (use HTTPS)');
+\t\t}'''
+new_js = '''\t\tif (supportsThreads && !Features.isSecureContext()) {
+\t\t\tmissing.push('Secure Context - Check web server configuration (use HTTPS)');
+\t\t}'''
+if old_js in txt_js:
+    open(p_js, 'w').write(txt_js.replace(old_js, new_js))
+"
+
 (cd "$OUT" && zip -q -r "$ROOT/$ARCHIVE" ./*)
 
 echo

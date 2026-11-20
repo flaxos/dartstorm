@@ -291,8 +291,9 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
 
 ## Later (Phase 7 / Wishlist from Young Players)
 - Weapon customisation and mastery (cosmetic or sidegrades only, D-028)
-- Local split-screen or online multiplayer (DECISIONS D-008)
+- ✅ Local split-screen (2 Players) (v1.0.0)
 - ✅ Accessibility: key remapping, a colour-blind team palette option (v0.9.2)
+- Online / LAN multiplayer (DECISIONS D-008)
 
 ## Known issues
 - Controller support is tested with simulated input only. A real pad (Xbox/PlayStation/generic) needs the UAT check.
@@ -306,3 +307,5 @@ warnings in the HUD.
 *Resolved in v0.7.1:* the physics yeet velocity runaway bug, gameplay pacing calibrated with UAT slider, Longshot sniper rifle ADS scope buff, and zombie horde pacing and lunge mechanics rebalanced.
 *Resolved in v0.9.1:* the DUOS spawning bug where teammates spawned apart; now spawn side-by-side at adjacent launch points; tactical ping system and bot teamplay added.
 *Resolved in v0.9.2:* In-game key and controller button remapping with full cancel protection, and high-contrast colorblind team palettes (Cobalt & Sunburst, Magenta & Mint, High Contrast).
+*Resolved in v1.0.0:* 2-Player Local Couch Co-Op / Split-Screen implemented across all game modes (Versus, Duos, Teams, Zombie Siege, Floor is Lava, Gun Game) with dual viewports, input device isolation, layer-culled in-world 3D character models, independent HUDs, and lobby integration.
+

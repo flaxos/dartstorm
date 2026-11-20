@@ -27,9 +27,38 @@
 | **v0.7.0 Zombie Siege & Blaster Skins** | ✅ Built and validated (518 tests). ⏳ UAT |
 | **v0.7.1 Kid Feedback Calibration & Sniper Buff** | ✅ Merged (PR #13, 530 tests). ⏳ UAT |
 | **v0.8.0 Floor is Lava Mode** | ✅ Built and validated (557 tests). ⏳ UAT |
+| **v0.8.1 Foam Grenades & Elemental Infusion** | ✅ Built and validated (595 tests). ⏳ UAT |
+| **v0.9.0 Elemental Weather & Dynamic Disasters** | ✅ Built and validated (616 tests). ⏳ UAT |
+| **v0.9.1 DUOS Buddy Spawning & Squad Pings** | ✅ Built and validated (638 tests). ⏳ UAT |
+| **v0.9.2 Settings & Accessibility** | ✅ Built and validated (669 tests). ⏳ UAT |
 | Phase 7 Expansion | ⏳ Not started (on purpose) |
 
-## v0.8.0: Floor is Lava Mode (this release)
+## v0.9.2: Settings & Accessibility: Controls Remapping & Colorblind Palettes (this release)
+
+Goal: Comprehensive in-game key and gamepad button remapping with full cancellation protection, coupled with high-contrast colorblind accessibility palettes for team colors with live swatches and dynamic map fort theming.
+
+- [x] **In-Game Input Remapping (`BindingsPanel` & `InputSetup`):**
+  - Dedicated `BindingsPanel` modal with scrollable grid for all 14 core gameplay actions (`move_forward`, `move_back`, `move_left`, `move_right`, `jump`, `sprint`, `fire`, `aim_down_sights`, `throw_grenade`, `ping`, `reload`, `weapon_next`, `weapon_prev`, `scoreboard`).
+  - Dual slots: separate remapping for Keyboard/Mouse and Gamepad.
+  - Interactive listening prompt (`[ PRESS KEY/CLICK... ]`, `[ PRESS BUTTON... ]`) with color highlight.
+  - Cancel safety via `Escape` or controller `Start/Back`.
+  - Analog stick deadzone filtering (>0.6) prevents trigger binding from being tripped by stick drift.
+  - Core system navigation keys (`ui_accept`, `ui_cancel`, `pause`, look analog sticks) strictly preserved.
+  - Persistent serialization/deserialization into `settings.cfg` under `[bindings]`.
+  - One-click `RESET TO DEFAULTS` restoring factory bindings.
+- [x] **Colorblind Team Color Palettes (`GameMode.TeamPalette`):**
+  - Four distinct palettes:
+    1. `DEFAULT`: Classic Blue (`#2673ff`) vs Orange (`#ff801a`), Green, Purple.
+    2. `COBALT_SUNBURST` (Deuteranopia / Protanopia): Cobalt (`#1a66f2`) vs Sunburst (`#ffd11a`), Emerald, Amethyst.
+    3. `MAGENTA_MINT` (Tritanopia): Magenta (`#f5389e`) vs Mint (`#40e6ad`), Coral, Lavender.
+    4. `HIGH_CONTRAST`: Cyan (`#0dd9ff`) vs Hot Orange (`#ff5214`), Lime, Violet.
+  - Live dual-color swatch preview in `SettingsPanel` alongside cycle button.
+  - Global real-time propagation across player jersey colors, bot models, HUD banners, match announcements, and scoreboard headers.
+  - Arena decor adaptation: `BackyardFortress` and `TempestTreehouse` fort structures and banners dynamically update with active team colors and names.
+- [x] Automated unit and whole-match tests in `tests/test_runner.gd` (669 tests passed, 0 leaks, 0 warnings).
+
+**Acceptance:** `./tools/validate.sh` passes (**669/669 tests**) ✅.
+
 
 Goal: Pure high-energy parkour combat where dynamic molten foam lava tides flood the arena floor, cooled into temporary obsidian stepping stones by water and ice darts.
 

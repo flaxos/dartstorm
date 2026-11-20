@@ -50,8 +50,10 @@ func _build() -> void:
 	arena_name = "Backyard Fortress"
 	_build_sky_and_sun()
 	_build_ground_and_fence()
-	_build_fort(-1.0, BLUE, BLUE_DARK, "BLUE FORT")
-	_build_fort(1.0, ORANGE, ORANGE_DARK, "ORANGE FORT")
+	var c0 := GameMode.team_color(0)
+	var c1 := GameMode.team_color(1)
+	_build_fort(-1.0, c0, c0.darkened(0.25), "%s FORT" % GameMode.team_name(0))
+	_build_fort(1.0, c1, c1.darkened(0.25), "%s FORT" % GameMode.team_name(1))
 	_build_treehouse()
 	_build_mirror_alley()
 	_build_windy_way()

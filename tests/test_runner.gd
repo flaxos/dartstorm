@@ -83,6 +83,8 @@ func _ready() -> void:
 	await _test_elemental_weather_and_disasters()
 	# DUOS Buddy Spawning, Tactical Pings & Bot Teamplay (v0.9.1)
 	await _test_duos_buddy_spawning_and_pings()
+	# Settings & Accessibility: Controls Remapping & Colorblind Palettes (v0.9.2)
+	await _test_settings_and_accessibility()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -2641,5 +2643,134 @@ func _test_duos_buddy_spawning_and_pings() -> void:
 	controller.queue_free()
 	arena.queue_free()
 	await physics_frames(2)
+
+
+## v0.9.2: Settings & Accessibility: Controls Remapping & Colorblind Palettes
+func _test_settings_and_accessibility() -> void:
+	section("v0.9.2: Settings & Accessibility")
+	var saved_palette: int = GameSettings.team_palette
+
+	# 1. Palette Switching and Dynamic Team Colors
+	GameSettings.team_palette = GameMode.TeamPalette.DEFAULT
+	check(GameMode.team_name(0) == "BLUE" and GameMode.team_name(1) == "ORANGE", "Default palette names are BLUE and ORANGE")
+	check(GameMode.team_color(0).is_equal_approx(Color(0.15, 0.45, 1.0)), "Default team 0 color is standard Blue")
+
+	GameSettings.team_palette = GameMode.TeamPalette.COBALT_SUNBURST
+	check(GameMode.team_name(0) == "COBALT" and GameMode.team_name(1) == "SUNBURST", "Cobalt & Sunburst palette names are COBALT and SUNBURST")
+	check(GameMode.team_color(0).is_equal_approx(Color(0.1, 0.4, 0.95)), "Cobalt color correctly applied")
+	check(GameMode.team_color(1).is_equal_approx(Color(1.0, 0.82, 0.1)), "Sunburst color correctly applied")
+
+	GameSettings.team_palette = GameMode.TeamPalette.MAGENTA_MINT
+	check(GameMode.team_name(0) == "MAGENTA" and GameMode.team_name(1) == "MINT", "Magenta & Mint palette names are MAGENTA and MINT")
+	check(GameMode.team_color(0).is_equal_approx(Color(0.96, 0.22, 0.62)), "Magenta color correctly applied")
+
+	GameSettings.team_palette = GameMode.TeamPalette.HIGH_CONTRAST
+	check(GameMode.team_name(0) == "CYAN" and GameMode.team_name(1) == "HOT ORANGE", "High Contrast palette names are CYAN and HOT ORANGE")
+	check(GameMode.team_color(0).is_equal_approx(Color(0.05, 0.85, 1.0)), "Cyan color correctly applied")
+
+	# Test Arena Decor using active palette
+	var backyard := BackyardFortress.new()
+	add_child(backyard)
+	backyard._build()
+	check(backyard.arena_name == "Backyard Fortress", "Backyard Fortress builds cleanly with active team palette")
+	backyard.queue_free()
+
+	# 2. Input Remapping Engine (InputSetup)
+	var orig_jump_kb := InputSetup.get_keyboard_event(&"jump")
+	check(orig_jump_kb != null and InputSetup.event_to_label(orig_jump_kb) == "Space", "Default Jump keyboard binding is Space")
+
+	# Rebind Jump to Key J
+	var new_key := InputEventKey.new()
+	new_key.physical_keycode = KEY_J
+	InputSetup.rebind_action_event(&"jump", new_key, false)
+	var rebound_jump := InputSetup.get_keyboard_event(&"jump")
+	check(rebound_jump is InputEventKey and (rebound_jump as InputEventKey).physical_keycode == KEY_J, "Jump rebound to physical KEY_J")
+	check(InputSetup.event_to_label(rebound_jump) == "J", "Event label for KEY_J is 'J'")
+
+	# Rebind Jump controller slot to Button Y
+	var new_pad := InputEventJoypadButton.new()
+	new_pad.button_index = JOY_BUTTON_Y
+	InputSetup.rebind_action_event(&"jump", new_pad, true)
+	var rebound_pad := InputSetup.get_controller_event(&"jump")
+	check(rebound_pad is InputEventJoypadButton and (rebound_pad as InputEventJoypadButton).button_index == JOY_BUTTON_Y, "Jump controller slot rebound to JOY_BUTTON_Y")
+	check(InputSetup.event_to_label(rebound_pad) == "Y / Triangle", "Event label for JOY_BUTTON_Y is 'Y / Triangle'")
+
+	# Rebind Mouse action and Axis action
+	var mouse_ev := InputEventMouseButton.new()
+	mouse_ev.button_index = MOUSE_BUTTON_MIDDLE
+	InputSetup.rebind_action_event(&"throw_grenade", mouse_ev, false)
+	check(InputSetup.event_to_label(InputSetup.get_keyboard_event(&"throw_grenade")) == "MMB", "Throw Grenade keyboard/mouse slot displays 'MMB'")
+
+	var axis_ev := InputEventJoypadMotion.new()
+	axis_ev.axis = JOY_AXIS_TRIGGER_LEFT
+	axis_ev.axis_value = 1.0
+	InputSetup.rebind_action_event(&"fire", axis_ev, true)
+	check(InputSetup.event_to_label(InputSetup.get_controller_event(&"fire")) == "LT (Left Trigger)", "Fire controller slot displays 'LT (Left Trigger)'")
+
+	# 3. Serialization & Deserialization
+	var serialized := InputSetup.serialize_bindings()
+	check(serialized.has("jump") and serialized["jump"].has("kb") and serialized["jump"]["kb"]["code"] == KEY_J, "Serialized bindings preserve custom Jump keycode")
+	check(serialized["jump"].has("pad") and serialized["jump"]["pad"]["index"] == JOY_BUTTON_Y, "Serialized bindings preserve custom Jump joypad button")
+
+	# Reset to defaults
+	InputSetup.reset_to_defaults()
+	var reset_jump := InputSetup.get_keyboard_event(&"jump")
+	check(InputSetup.event_to_label(reset_jump) == "Space", "InputSetup.reset_to_defaults() restores default Space binding")
+
+	# Apply serialized bindings
+	InputSetup.apply_serialized_bindings(serialized)
+	check(InputSetup.event_to_label(InputSetup.get_keyboard_event(&"jump")) == "J", "InputSetup.apply_serialized_bindings() successfully applies saved bindings")
+
+	# Clean reset
+	InputSetup.reset_to_defaults()
+
+	# 4. UI Panels: SettingsPanel & BindingsPanel
+	var settings := SettingsPanel.new()
+	add_child(settings)
+	await physics_frames(1)
+	check(settings.visible, "SettingsPanel instantiates and renders cleanly")
+
+	# Open BindingsPanel from SettingsPanel
+	settings._open_bindings()
+	check(settings._bindings_panel != null and settings._bindings_panel.visible, "SettingsPanel opens BindingsPanel overlay")
+	check(not settings._box.visible, "Settings main box hidden while BindingsPanel is active")
+
+	# Simulate interactive listening & binding in BindingsPanel
+	var reload_pair: Dictionary = settings._bindings_panel._action_buttons[&"reload"]
+	var reload_kb_btn: Button = reload_pair["kb"]
+	settings._bindings_panel._start_listening(&"reload", false, reload_kb_btn)
+	check(settings._bindings_panel._listening_action == &"reload", "BindingsPanel enters interactive listening mode for reload")
+	check(reload_kb_btn.text == "[ PRESS KEY/CLICK... ]", "Button text prompts for key or click input")
+
+	# Send simulated key press
+	var sim_key := InputEventKey.new()
+	sim_key.pressed = true
+	sim_key.physical_keycode = KEY_K
+	settings._bindings_panel._input(sim_key)
+	check(settings._bindings_panel._listening_action == &"", "Listening mode successfully exits after input received")
+	check(InputSetup.get_keyboard_event(&"reload") != null and (InputSetup.get_keyboard_event(&"reload") as InputEventKey).physical_keycode == KEY_K, "Reload action successfully rebound to KEY_K through UI")
+	check(reload_kb_btn.text == "K", "UI button refreshed with new key label 'K'")
+
+	# Test listening cancellation with Escape
+	settings._bindings_panel._start_listening(&"reload", true, reload_pair["pad"])
+	var esc_key := InputEventKey.new()
+	esc_key.pressed = true
+	esc_key.physical_keycode = KEY_ESCAPE
+	settings._bindings_panel._input(esc_key)
+	check(settings._bindings_panel._listening_action == &"", "Listening mode cancelled on ESC without altering gamepad binding")
+
+	# Close BindingsPanel and SettingsPanel
+	settings._bindings_panel.close()
+	check(not settings._bindings_panel.visible and settings._box.visible, "Closing BindingsPanel returns to SettingsPanel")
+
+	settings.close()
+	settings.queue_free()
+
+	# 5. Teardown
+	GameSettings.team_palette = saved_palette
+	InputSetup.reset_to_defaults()
+	GameSettings.apply()
+	await physics_frames(2)
+
 
 

@@ -123,10 +123,12 @@ func _build_root_cover(at: Vector3, size: Vector3, rot_y: float) -> void:
 # --- Canopy Forts ---
 
 func _build_canopy_forts() -> void:
-	# Blue Fort (West: -X)
-	_build_fort_deck(Vector3(-16.0, DECK_Y, 0.0), BLUE, BLUE_DARK, "BLUE CANOPY FORT")
-	# Orange Fort (East: +X)
-	_build_fort_deck(Vector3(16.0, DECK_Y, 0.0), ORANGE, ORANGE_DARK, "ORANGE CANOPY FORT")
+	var c0 := GameMode.team_color(0)
+	var c1 := GameMode.team_color(1)
+	# Team 0 Fort (West: -X)
+	_build_fort_deck(Vector3(-16.0, DECK_Y, 0.0), c0, c0.darkened(0.25), "%s CANOPY FORT" % GameMode.team_name(0))
+	# Team 1 Fort (East: +X)
+	_build_fort_deck(Vector3(16.0, DECK_Y, 0.0), c1, c1.darkened(0.25), "%s CANOPY FORT" % GameMode.team_name(1))
 
 	# Ramps from ground up to mid-decks
 	ArenaKit.ramp(geometry, Vector3(-16.0, 0.0, 14.0), Vector3(-16.0, DECK_Y, 6.0), 2.8, WOOD)

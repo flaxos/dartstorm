@@ -1071,6 +1071,35 @@ To elevate blasters beyond plain flat toy plastics while avoiding the muddy, inc
 - **Shop Integration:** Available in the Shop under the `SKINS` tab for earned Coins (100–350 Coins). Instantly equip and view on both 3D lobby weapons and third-person character models.
 
 
+## 10.4 Settings & Accessibility *(v0.9.2)*
+Ensuring all players, including younger children and players with vision or motor control differences, can comfortably configure and enjoy DARTSTORM.
+
+### 10.4.1 In-Game Key & Controller Remapping
+Settings → **CUSTOM CONTROLS...** opens the dedicated full-screen bindings panel (`BindingsPanel`).
+- **Dual-Slot Mapping:** Separate rebindable slots for Keyboard/Mouse and Gamepad for all 14 core gameplay actions:
+  - Movement: Move Forward, Backward, Strafe Left, Strafe Right, Jump, Sprint.
+  - Combat: Fire Blaster, Aim Down Sights (ADS), Throw Grenade, Reload, Tactical Ping.
+  - Inventory: Next Blaster, Previous Blaster, Scoreboard.
+- **Interactive Listening:** Clicking any slot displays `[ PRESS KEY/CLICK... ]` or `[ PRESS BUTTON... ]` with orange highlight.
+- **Cancel Protection:** Pressing `Escape` on keyboard or `Start` / `Back` on a gamepad safely cancels listening mode without modifying the binding.
+- **Stick Drift Protection:** Joypad trigger rebinding checks axis motion above $0.6$ threshold, preventing analog thumbstick drift from misinterpreting bindings.
+- **Protected Core Actions:** System menu actions (`ui_accept`, `ui_cancel`, `pause`, and look stick analog axes) are strictly reserved to ensure players never trap themselves in menus.
+- **Factory Reset:** Single-click **RESET TO DEFAULTS** immediately restores recommended factory bindings.
+
+### 10.4.2 Colorblind Accessibility Palettes
+Settings → **VIDEO & SOUND** → **Team Colors** cycle selector.
+- **4 Distinct High-Contrast Palettes:**
+  1. `Default (Blue / Orange)`: Classic Blue (`#2673ff`) vs Orange (`#ff801a`), Green (`#4dd140`), Purple (`#a866ff`).
+  2. `Cobalt & Sunburst`: Optimized for Deuteranopia & Protanopia (red-green blindness). Cobalt (`#1a66f2`) vs Sunburst (`#ffd11a`), Emerald (`#33d973`), Amethyst (`#b359ff`).
+  3. `Magenta & Mint`: Optimized for Tritanopia (blue-yellow blindness). Magenta (`#f5389e`) vs Mint (`#40e6ad`), Coral (`#ff8561`), Lavender (`#ad8cfa`).
+  4. `High Contrast`: Maximum luminance separation. Electric Cyan (`#0dd9ff`) vs Hot Orange (`#ff5214`), Lime (`#a6f226`), Violet (`#d940ff`).
+- **Live Swatch Preview:** Immediate visual feedback in the settings menu showing dual-color swatches of the active palette.
+- **Full World Integration:** Active palette automatically propagates across:
+  - Player & bot jerseys and dart trails in team modes.
+  - Match announcements, victory banners, and scoreboard team headers.
+  - Backyard Fortress and Tempest Treehouse arena structures: team fort walls, flags, and signs adapt to the active palette.
+
+
 ## 11. Glossary
 | Term | Meaning |
 |---|---|

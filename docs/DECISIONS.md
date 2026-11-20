@@ -301,3 +301,24 @@ box in corners for bots, so walkways are at least 1.5 m (the dining chairs moved
    - **Low-Health Defensive Retreat:** When a bot's tag meter exceeds 70% (danger threshold), `_fight_direction()` prioritizes backing away from threats to seek cover and regenerate.
 **Alternatives:** Full voice chat (unsafe for young kids); compass-only 2D HUD pings without 3D world markers; rigid following that blocks doorways.
 **Why:** Elevates cooperative play, resolves a longstanding DUOS spawning bug, and fosters tactical communication and bot teamwork entirely through friendly cartoon mechanics.
+
+### D-044: In-Game Input Remapping & Colorblind Accessibility Palettes (v0.9.2)
+**Chosen:**
+1. **In-Game Input Remapping Architecture (`InputSetup` & `BindingsPanel`):**
+   - Provide full dual-slot remapping (Keyboard/Mouse and Gamepad) for all 14 core gameplay actions (`move_forward`, `move_back`, `move_left`, `move_right`, `jump`, `sprint`, `fire`, `aim_down_sights`, `throw_grenade`, `ping`, `reload`, `weapon_next`, `weapon_prev`, `scoreboard`).
+   - Essential system and menu actions (`ui_accept`, `ui_cancel`, `pause`, and look stick analog axes) are strictly protected to ensure players never trap themselves in menus or break camera controls.
+   - Interactive listening mode prompts for key, mouse click, or controller button/trigger press with full escape cancellation (`KEY_ESCAPE`, `JOY_BUTTON_START`).
+   - Trigger axes (`JOY_AXIS_TRIGGER_LEFT`, `JOY_AXIS_TRIGGER_RIGHT`) are captured above a 0.6 deadzone threshold to completely protect against analog stick drift.
+   - Clean serialization/deserialization into `settings.cfg` under `[bindings]`, with a one-click factory reset button.
+2. **Colorblind Team Color Palettes (`GameMode.TeamPalette`):**
+   - Four high-contrast color palettes:
+     - `DEFAULT`: Classic Blue (`#2673ff`) vs Orange (`#ff801a`), Green (`#4dd140`), Purple (`#a866ff`).
+     - `COBALT_SUNBURST` (Deuteranopia / Protanopia): Deep Cobalt (`#1a66f2`) vs Bright Sunburst (`#ffd11a`), Emerald (`#33d973`), Amethyst (`#b359ff`).
+     - `MAGENTA_MINT` (Tritanopia): Vivid Magenta (`#f5389e`) vs Cool Mint (`#40e6ad`), Coral (`#ff8561`), Lavender (`#ad8cfa`).
+     - `HIGH_CONTRAST`: Electric Cyan (`#0dd9ff`) vs Hot Orange (`#ff5214`), Lime (`#a6f226`), Violet (`#d940ff`).
+   - Dynamic global propagation: `GameMode.team_name()` and `GameMode.team_color()` evaluate the active palette in real-time, instantly adjusting player/bot jerseys, HUD banners, match announcements, and scoreboard headers.
+   - Interactive live swatch preview in `SettingsPanel` alongside a cycle button.
+   - Arena decor integration: `BackyardFortress` and `TempestTreehouse` dynamically construct fort battlements and canopy decks with the active team colors and signage.
+**Alternatives:** External configuration file editing only; post-processing color grading shaders that distort map scenery.
+**Why:** Unlocks tailored accessibility for players with color vision deficiencies and varied motor control or controller preferences, while preserving clear visual identity and vibrant cartoon charm.
+

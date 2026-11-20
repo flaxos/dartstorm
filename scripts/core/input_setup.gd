@@ -13,6 +13,23 @@ extends RefCounted
 const LOOK_DEADZONE := 0.12
 const DEFAULT_DEADZONE := 0.3
 
+const REBINDABLE_ACTIONS: Array[Dictionary] = [
+	{"action": &"move_forward", "label": "Move Forward"},
+	{"action": &"move_back", "label": "Move Backward"},
+	{"action": &"move_left", "label": "Strafe Left"},
+	{"action": &"move_right", "label": "Strafe Right"},
+	{"action": &"jump", "label": "Jump"},
+	{"action": &"sprint", "label": "Sprint"},
+	{"action": &"fire", "label": "Fire Blaster"},
+	{"action": &"aim_down_sights", "label": "Aim Down Sights"},
+	{"action": &"throw_grenade", "label": "Throw Grenade"},
+	{"action": &"ping", "label": "Tactical Ping"},
+	{"action": &"reload", "label": "Reload"},
+	{"action": &"weapon_next", "label": "Next Blaster"},
+	{"action": &"weapon_prev", "label": "Previous Blaster"},
+	{"action": &"scoreboard", "label": "Scoreboard"},
+]
+
 
 static func ensure_actions() -> void:
 	_add(&"move_forward", [_key(KEY_W), _key(KEY_UP), _axis(JOY_AXIS_LEFT_Y, -1.0)])
@@ -84,3 +101,147 @@ static func _axis(axis: JoyAxis, value: float) -> InputEventJoypadMotion:
 	event.axis = axis
 	event.axis_value = value
 	return event
+
+
+static func get_keyboard_event(action: StringName) -> InputEvent:
+	if not InputMap.has_action(action):
+		return null
+	for event in InputMap.action_get_events(action):
+		if event is InputEventKey or event is InputEventMouseButton:
+			return event
+	return null
+
+
+static func get_controller_event(action: StringName) -> InputEvent:
+	if not InputMap.has_action(action):
+		return null
+	for event in InputMap.action_get_events(action):
+		if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+			return event
+	return null
+
+
+static func rebind_action_event(action: StringName, new_event: InputEvent, is_controller: bool) -> void:
+	if not InputMap.has_action(action):
+		InputMap.add_action(action, DEFAULT_DEADZONE)
+	var to_remove: Array[InputEvent] = []
+	for event in InputMap.action_get_events(action):
+		if is_controller:
+			if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+				to_remove.append(event)
+		else:
+			if event is InputEventKey or event is InputEventMouseButton:
+				to_remove.append(event)
+	for event in to_remove:
+		InputMap.action_erase_event(action, event)
+	if new_event != null:
+		InputMap.action_add_event(action, new_event)
+
+
+static func event_to_label(event: InputEvent) -> String:
+	if event == null:
+		return "-"
+	if event is InputEventKey:
+		var k: Key = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
+		match k:
+			KEY_SPACE: return "Space"
+			KEY_SHIFT: return "Shift"
+			KEY_CTRL: return "Ctrl"
+			KEY_ALT: return "Alt"
+			KEY_TAB: return "Tab"
+			KEY_ESCAPE: return "Esc"
+			KEY_ENTER: return "Enter"
+			KEY_UP: return "Up Arrow"
+			KEY_DOWN: return "Down Arrow"
+			KEY_LEFT: return "Left Arrow"
+			KEY_RIGHT: return "Right Arrow"
+			_: return OS.get_keycode_string(k)
+	if event is InputEventMouseButton:
+		match event.button_index:
+			MOUSE_BUTTON_LEFT: return "LMB"
+			MOUSE_BUTTON_RIGHT: return "RMB"
+			MOUSE_BUTTON_MIDDLE: return "MMB"
+			MOUSE_BUTTON_WHEEL_UP: return "Wheel Up"
+			MOUSE_BUTTON_WHEEL_DOWN: return "Wheel Down"
+			_: return "Mouse %d" % event.button_index
+	if event is InputEventJoypadButton:
+		match event.button_index:
+			JOY_BUTTON_A: return "A / Cross"
+			JOY_BUTTON_B: return "B / Circle"
+			JOY_BUTTON_X: return "X / Square"
+			JOY_BUTTON_Y: return "Y / Triangle"
+			JOY_BUTTON_BACK: return "Back / View"
+			JOY_BUTTON_START: return "Start / Menu"
+			JOY_BUTTON_LEFT_STICK: return "L3 (Left Stick)"
+			JOY_BUTTON_RIGHT_STICK: return "R3 (Right Stick)"
+			JOY_BUTTON_LEFT_SHOULDER: return "LB (Left Bumper)"
+			JOY_BUTTON_RIGHT_SHOULDER: return "RB (Right Bumper)"
+			JOY_BUTTON_DPAD_UP: return "D-Pad Up"
+			JOY_BUTTON_DPAD_DOWN: return "D-Pad Down"
+			JOY_BUTTON_DPAD_LEFT: return "D-Pad Left"
+			JOY_BUTTON_DPAD_RIGHT: return "D-Pad Right"
+			_: return "Button %d" % event.button_index
+	if event is InputEventJoypadMotion:
+		match event.axis:
+			JOY_AXIS_TRIGGER_LEFT: return "LT (Left Trigger)"
+			JOY_AXIS_TRIGGER_RIGHT: return "RT (Right Trigger)"
+			JOY_AXIS_LEFT_X: return "L-Stick Right" if event.axis_value > 0.0 else "L-Stick Left"
+			JOY_AXIS_LEFT_Y: return "L-Stick Down" if event.axis_value > 0.0 else "L-Stick Up"
+			JOY_AXIS_RIGHT_X: return "R-Stick Right" if event.axis_value > 0.0 else "R-Stick Left"
+			JOY_AXIS_RIGHT_Y: return "R-Stick Down" if event.axis_value > 0.0 else "R-Stick Up"
+			_: return "Axis %d" % event.axis
+	return event.as_text()
+
+
+static func serialize_bindings() -> Dictionary:
+	var out: Dictionary = {}
+	for item in REBINDABLE_ACTIONS:
+		var action: StringName = item["action"]
+		var kb := get_keyboard_event(action)
+		var pad := get_controller_event(action)
+		var entry: Dictionary = {}
+		if kb is InputEventKey:
+			var code: int = int(kb.physical_keycode if kb.physical_keycode != KEY_NONE else kb.keycode)
+			entry["kb"] = {"type": "key", "code": code}
+		elif kb is InputEventMouseButton:
+			entry["kb"] = {"type": "mouse", "button": int(kb.button_index)}
+		if pad is InputEventJoypadButton:
+			entry["pad"] = {"type": "button", "index": int(pad.button_index)}
+		elif pad is InputEventJoypadMotion:
+			entry["pad"] = {"type": "axis", "axis": int(pad.axis), "value": float(pad.axis_value)}
+		out[String(action)] = entry
+	return out
+
+
+static func apply_serialized_bindings(data: Dictionary) -> void:
+	for action_str: String in data:
+		var action := StringName(action_str)
+		if not InputMap.has_action(action):
+			continue
+		var val: Variant = data[action_str]
+		if not val is Dictionary:
+			continue
+		var entry: Dictionary = val
+		if entry.has("kb") and entry["kb"] is Dictionary:
+			var kb_data: Dictionary = entry["kb"]
+			var kb_type: String = str(kb_data.get("type", ""))
+			if kb_type == "key":
+				rebind_action_event(action, _key(kb_data.get("code", 0)), false)
+			elif kb_type == "mouse":
+				rebind_action_event(action, _mouse(kb_data.get("button", 0)), false)
+		if entry.has("pad") and entry["pad"] is Dictionary:
+			var pad_data: Dictionary = entry["pad"]
+			var pad_type: String = str(pad_data.get("type", ""))
+			if pad_type == "button":
+				rebind_action_event(action, _pad(pad_data.get("index", 0)), true)
+			elif pad_type == "axis":
+				rebind_action_event(action, _axis(pad_data.get("axis", 0), float(pad_data.get("value", 1.0))), true)
+
+
+static func reset_to_defaults() -> void:
+	for item in REBINDABLE_ACTIONS:
+		var action: StringName = item["action"]
+		if InputMap.has_action(action):
+			InputMap.erase_action(action)
+	ensure_actions()
+

@@ -30,6 +30,7 @@ const DEFAULTS := {
 	"music_volume": 0.6,
 	"sfx_volume": 1.0,
 	"fullscreen": false,
+	"team_palette": 0,
 }
 const NOTICE_SECONDS := 3.0
 ## The bots slider on the menu. Team modes may add one more to even the teams.
@@ -61,6 +62,8 @@ var master_volume: float = 0.8
 var music_volume: float = 0.6
 var sfx_volume: float = 1.0
 var fullscreen: bool = false
+## Colorblind team color palette (GameMode.TeamPalette).
+var team_palette: int = 0
 
 # --- Your player ---
 ## Empty means "You".
@@ -162,6 +165,7 @@ func color() -> Color:
 func reset_to_defaults() -> void:
 	for key: String in DEFAULTS:
 		set(key, DEFAULTS[key])
+	InputSetup.reset_to_defaults()
 
 
 ## True when every preference equals its factory value.
@@ -261,6 +265,12 @@ func load_settings() -> void:
 	chainstorm_powerup = bool(file.get_value("match", "chainstorm_powerup", chainstorm_powerup))
 	weather_events = bool(file.get_value("match", "weather_events", weather_events))
 	arena = maxi(int(file.get_value("match", "arena", arena)), 0)  # MatchScene clamps it to the arenas that exist.
+	team_palette = clampi(int(file.get_value("accessibility", "team_palette", team_palette)), 0, GameMode.TeamPalette.size() - 1)
+	if file.has_section("bindings"):
+		var raw_bindings: Dictionary = {}
+		for action: String in file.get_section_keys("bindings"):
+			raw_bindings[action] = file.get_value("bindings", action)
+		InputSetup.apply_serialized_bindings(raw_bindings)
 
 
 func save_settings() -> void:
@@ -289,6 +299,10 @@ func save_settings() -> void:
 	file.set_value("match", "chainstorm_powerup", chainstorm_powerup)
 	file.set_value("match", "weather_events", weather_events)
 	file.set_value("match", "arena", arena)
+	file.set_value("accessibility", "team_palette", team_palette)
+	var serialized_bindings := InputSetup.serialize_bindings()
+	for action: String in serialized_bindings:
+		file.set_value("bindings", action, serialized_bindings[action])
 	var err := file.save(SAVE_PATH)
 	if err != OK:
 		push_warning("Could not save settings (error %d)" % err)

@@ -258,7 +258,7 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
 ## Later (Phase 7 / Wishlist from Young Players)
 - Weapon customisation and mastery (cosmetic or sidegrades only, D-028)
 - Local split-screen or online multiplayer (DECISIONS D-008)
-- Accessibility: key remapping, a colour-blind team palette option
+- ✅ Accessibility: key remapping, a colour-blind team palette option (v0.9.2)
 
 ## Known issues
 - Controller support is tested with simulated input only. A real pad (Xbox/PlayStation/generic) needs the UAT check.
@@ -271,3 +271,4 @@ warnings in the HUD.
 *Resolved in v0.5.3:* the lobby shows Player Level, XP progress, and Coins; Backyard Missions and Coin Shop are live.
 *Resolved in v0.7.1:* the physics yeet velocity runaway bug, gameplay pacing calibrated with UAT slider, Longshot sniper rifle ADS scope buff, and zombie horde pacing and lunge mechanics rebalanced.
 *Resolved in v0.9.1:* the DUOS spawning bug where teammates spawned apart; now spawn side-by-side at adjacent launch points; tactical ping system and bot teamplay added.
+*Resolved in v0.9.2:* In-game key and controller button remapping with full cancel protection, and high-contrast colorblind team palettes (Cobalt & Sunburst, Magenta & Mint, High Contrast).

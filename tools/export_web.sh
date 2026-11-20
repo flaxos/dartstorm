@@ -46,15 +46,47 @@ if ! "$GODOT" --headless --path . --export-release "Web" "$OUT/index.html" >"$LO
 fi
 
 # In single-threaded mode, Secure Context (HTTPS) is not required by WebAssembly.
-# Patch index.html and index.js so local network testing over HTTP works without SSL errors.
+# Patch index.html and index.js so local network testing over HTTP works without SSL errors,
+# and prevent mobile browser gesture conflicts (pull-to-refresh, back swipe).
 python3 -c "
 p = '$OUT/index.html'
 txt = open(p).read()
+
+# 1. Bypass unnecessary Secure Context check
 old = 'const missing = Engine.getMissingFeatures({\n\t\tthreads: GODOT_THREADS_ENABLED,\n\t});'
 new = 'let missing = Engine.getMissingFeatures({\n\t\tthreads: GODOT_THREADS_ENABLED,\n\t});\n\tif (!GODOT_THREADS_ENABLED) {\n\t\tmissing = missing.filter((item) => !item.includes(\"Secure Context\"));\n\t}'
 if old in txt:
-    open(p, 'w').write(txt.replace(old, new))
+    txt = txt.replace(old, new)
 
+# 2. Prevent mobile browser touch gestures on canvas
+css_old = '#canvas {\n\tdisplay: block;\n}'
+css_new = '#canvas {\n\tdisplay: block;\n\ttouch-action: none;\n\toverscroll-behavior: none;\n\t-webkit-touch-callout: none;\n\t-webkit-user-select: none;\n\tuser-select: none;\n}'
+if css_old in txt:
+    txt = txt.replace(css_old, css_new)
+
+body_old = 'overflow: hidden;\n\ttouch-action: none;'
+body_new = 'overflow: hidden;\n\ttouch-action: none;\n\toverscroll-behavior: none;\n\t-webkit-user-select: none;\n\tuser-select: none;'
+if body_old in txt:
+    txt = txt.replace(body_old, body_new)
+
+canvas_tag = '<canvas id=\"canvas\">'
+gesture_block = '''<canvas id=\"canvas\">
+<script>
+(function() {
+	var c = document.getElementById(\"canvas\");
+	if (c) {
+		[\"touchstart\", \"touchmove\", \"touchend\", \"touchcancel\"].forEach(function(t) {
+			c.addEventListener(t, function(e) { e.preventDefault(); }, { passive: false });
+		});
+	}
+})();
+</script>'''
+if canvas_tag in txt and 'addEventListener(t' not in txt:
+    txt = txt.replace(canvas_tag, gesture_block, 1)
+
+open(p, 'w').write(txt)
+
+# 3. Patch index.js
 p_js = '$OUT/index.js'
 txt_js = open(p_js).read()
 old_js = '''\t\tif (!Features.isSecureContext()) {

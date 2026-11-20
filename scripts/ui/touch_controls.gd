@@ -162,7 +162,7 @@ func _on_look_zone_input(event: InputEvent) -> void:
 		if touch.pressed and _look_touch_id == -1:
 			_look_touch_id = touch.index
 			accept_event()
-		elif not touch.pressed and touch.index == _look_touch_id:
+		elif (not touch.pressed or touch.canceled) and touch.index == _look_touch_id:
 			_look_touch_id = -1
 			accept_event()
 	elif event is InputEventScreenDrag:
@@ -184,6 +184,34 @@ func _on_look_zone_input(event: InputEvent) -> void:
 		if _look_touch_id == -2:
 			_handle_look(mm.relative)
 			accept_event()
+
+
+func _input(event: InputEvent) -> void:
+	if _look_touch_id == -1:
+		return
+	if event is InputEventScreenDrag:
+		var drag := event as InputEventScreenDrag
+		if drag.index == _look_touch_id:
+			_handle_look(drag.relative)
+			get_viewport().set_input_as_handled()
+	elif event is InputEventScreenTouch:
+		var touch := event as InputEventScreenTouch
+		if touch.index == _look_touch_id and (not touch.pressed or touch.canceled):
+			_look_touch_id = -1
+			get_viewport().set_input_as_handled()
+	elif _look_touch_id == -2:
+		if event is InputEventMouseMotion:
+			var mm := event as InputEventMouseMotion
+			if (mm.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
+				_handle_look(mm.relative)
+				get_viewport().set_input_as_handled()
+		elif event is InputEventMouseButton:
+			var mb := event as InputEventMouseButton
+			if mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
+				_look_touch_id = -1
+				get_viewport().set_input_as_handled()
+
+
 
 
 func _handle_look(delta: Vector2) -> void:
@@ -290,7 +318,7 @@ class TouchButton:
 				_touch_id = touch.index
 				_set_pressed(true)
 				accept_event()
-			elif not touch.pressed and touch.index == _touch_id:
+			elif (not touch.pressed or touch.canceled) and touch.index == _touch_id:
 				_touch_id = -1
 				_set_pressed(false)
 				accept_event()
@@ -305,6 +333,25 @@ class TouchButton:
 					_touch_id = -1
 					_set_pressed(false)
 					accept_event()
+
+
+	func _input(event: InputEvent) -> void:
+		if _touch_id == -1:
+			return
+		if event is InputEventScreenTouch:
+			var touch := event as InputEventScreenTouch
+			if touch.index == _touch_id and (not touch.pressed or touch.canceled):
+				_touch_id = -1
+				_set_pressed(false)
+				get_viewport().set_input_as_handled()
+		elif _touch_id == -2 and event is InputEventMouseButton:
+			var mb := event as InputEventMouseButton
+			if mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
+				_touch_id = -1
+				_set_pressed(false)
+				get_viewport().set_input_as_handled()
+
+
 
 
 	func _set_pressed(value: bool) -> void:

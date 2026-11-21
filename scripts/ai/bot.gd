@@ -7,7 +7,7 @@ extends Actor
 ## Bots lead moving targets and aim up to allow for dart drop, but they do NOT
 ## account for wind, so a clever player can use wind zones against them.
 
-enum Mood { ROAM, FIGHT, RESUPPLY }
+enum Mood { ROAM, FIGHT, RESUPPLY, RETURN_TO_BASE }
 
 const EYE_HEIGHT := 1.5
 const THINK_INTERVAL := 0.25
@@ -86,6 +86,11 @@ func _ready() -> void:
 	meter_changed.connect(func(value: float, maximum: float) -> void: _model.set_meter(value / maximum))
 	shield_changed.connect(func(curr: float, _max: float) -> void: _model.set_shield_visible(curr > 0.0))
 	shield_broken.connect(func(_a: Actor) -> void: _model.set_shield_visible(false))
+	tagged_out_status_changed.connect(func(_a: Actor, is_out: bool) -> void:
+		_model.set_tagged_out(is_out)
+		if is_out:
+			_mood = Mood.RETURN_TO_BASE
+			_target = null)
 
 
 func _physics_process(delta: float) -> void:
@@ -216,6 +221,14 @@ func _has_line_of_sight(target_actor: Actor) -> bool:
 # --- Deciding ---------------------------------------------------------------
 
 func _think() -> void:
+	if is_tagged_out:
+		_mood = Mood.RETURN_TO_BASE
+		_target = null
+		if arena != null and not arena.team_bases.is_empty():
+			var home := arena.team_bases[team_id % arena.team_bases.size()]
+			_set_goal(home)
+		return
+
 	if is_zombie:
 		var survivor := _pick_survivor_target()
 		if survivor != null and global_position.distance_to(survivor.global_position) < 6.0:
@@ -619,7 +632,7 @@ func _ballistic_aim(target: Actor) -> Vector3:
 
 
 func _update_trigger(delta: float) -> void:
-	if is_zombie:
+	if is_zombie or is_tagged_out:
 		arsenal.set_trigger(false)
 		_trigger_clock = 0.0
 		return

@@ -14,6 +14,7 @@ signal shield_changed(current: float, max_val: float)
 signal shield_broken(actor: Actor)
 signal grenade_count_changed(count: int, max_val: int)
 signal infusion_changed(element: DartData.Element, time_left: float)
+signal tagged_out_status_changed(actor: Actor, is_out: bool)
 
 const GRAVITY := 20.0
 const BODY_RADIUS := 0.4
@@ -56,6 +57,8 @@ var grenade_count: int = 0
 var infusion_element: DartData.Element = DartData.Element.NONE
 var infusion_left: float = 0.0
 var buddy_actor: Actor = null
+var realistic_mode: bool = false
+var is_tagged_out: bool = false
 
 var arsenal: Arsenal
 var dart_pool: DartPool
@@ -215,7 +218,7 @@ func has_shield() -> bool:
 
 
 func accepts_dart_from(other_team: int) -> bool:
-	return alive and other_team != team_id
+	return alive and not is_tagged_out and other_team != team_id
 
 
 func is_protected() -> bool:
@@ -224,7 +227,7 @@ func is_protected() -> bool:
 
 ## Called by a dart that struck this actor's hitbox.
 func receive_dart(dart: DartProjectile) -> void:
-	if not alive or _protect_left > 0.0:
+	if not alive or is_tagged_out or _protect_left > 0.0:
 		return
 	var attacker: Actor = dart.shooter if is_instance_valid(dart.shooter) else null
 	var power := dart.data.tag_power * (attacker.damage_scale if attacker != null else 1.0)
@@ -369,6 +372,7 @@ func respawn(at: Transform3D) -> void:
 	global_transform = at
 	velocity = Vector3.ZERO
 	tag_meter = 0.0
+	is_tagged_out = false
 	shield_points = 0.0
 	shield_changed.emit(0.0, SHIELD_MAX)
 	grenade_count = 0
@@ -386,6 +390,7 @@ func respawn(at: Transform3D) -> void:
 	arsenal.enabled = not is_zombie
 	_set_body_visible(true)
 	meter_changed.emit(tag_meter, tag_meter_max)
+	tagged_out_status_changed.emit(self, false)
 	respawned.emit(self)
 
 
@@ -408,6 +413,16 @@ func tick_status(delta: float) -> void:
 
 
 func _tag_out(attacker: Actor, weapon: WeaponData, ricochet: bool) -> void:
+	if realistic_mode:
+		is_tagged_out = true
+		if elemental != null:
+			elemental.clear_all()
+		arsenal.set_trigger(false)
+		arsenal.enabled = false
+		tagged_out_status_changed.emit(self, true)
+		tagged_out.emit(self, attacker, weapon, ricochet)
+		return
+
 	alive = false
 	if elemental != null:
 		elemental.clear_all()
@@ -418,6 +433,19 @@ func _tag_out(attacker: Actor, weapon: WeaponData, ricochet: bool) -> void:
 	velocity = Vector3.ZERO
 	_set_body_visible(false)
 	tagged_out.emit(self, attacker, weapon, ricochet)
+
+
+## Realistic mode: revived when touching the team home base zone.
+func revive_at_base() -> void:
+	if not is_tagged_out:
+		return
+	is_tagged_out = false
+	tag_meter = 0.0
+	meter_changed.emit(tag_meter, tag_meter_max)
+	arsenal.enabled = not is_zombie
+	_protect_left = 2.0
+	tagged_out_status_changed.emit(self, false)
+	Sfx.play_at(&"powerup", global_position, 1.1, -2.0)
 
 
 # --- Ammo -------------------------------------------------------------------

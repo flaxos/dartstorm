@@ -178,7 +178,7 @@ func add_power_up_spot(at: Vector3) -> void:
 	power_up_spots.append(at)
 
 
-func add_bucket(at: Vector3, tint: Color, capacity: int = 150) -> AmmoBucket:
+func add_bucket(at: Vector3, tint: Color = Color(0.95, 0.75, 0.2), capacity: int = 150) -> AmmoBucket:
 	var bucket := AMMO_BUCKET_SCENE.instantiate() as AmmoBucket
 	bucket.position = at
 	bucket.bucket_color = tint

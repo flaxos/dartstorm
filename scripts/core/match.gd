@@ -14,6 +14,9 @@ const ARENAS: Array[Dictionary] = [
 	{"name": "BACKYARD", "path": "res://scenes/arenas/backyard_fortress.tscn"},
 	{"name": "HOME TURF", "path": "res://scenes/arenas/home_turf.tscn"},
 	{"name": "TEMPEST TREEHOUSE", "path": "res://scenes/arenas/tempest_treehouse.tscn"},
+	{"name": "PLAYGROUND", "path": "res://scenes/arenas/playground.tscn"},
+	{"name": "SUNNY PARK", "path": "res://scenes/arenas/sunny_park.tscn"},
+	{"name": "SOCCER STADIUM", "path": "res://scenes/arenas/soccer_field.tscn"},
 ]
 const PLAYER_SCENE := preload("res://scenes/player/player.tscn")
 const BOT_SCENE := preload("res://scenes/enemies/bot.tscn")
@@ -29,6 +32,7 @@ const MODE_PATHS := [
 	"res://resources/modes/zombies.tres",
 	"res://resources/modes/zombie_siege.tres",
 	"res://resources/modes/floor_is_lava.tres",
+	"res://resources/modes/realistic.tres",
 ]
 ## Indexed by GameSettings.bot_difficulty.
 const DIFFICULTY_PATHS := [
@@ -167,6 +171,8 @@ func _ready() -> void:
 	dart_pool = DartPool.new()
 	dart_pool.name = "DartPool"
 	dart_pool.wind_field = arena.wind_field
+	if mode is RealisticMode:
+		dart_pool.persists_as_pickup = true
 	add_child(dart_pool)
 
 	var fx := CombatFx.new()

@@ -153,6 +153,7 @@ static func resolve_difficulty(index: int) -> BotDifficulty:
 
 func _ready() -> void:
 	Engine.time_scale = GameSettings.game_speed
+	DartProjectile.clear_resting_pickups()
 	# A private copy, so per-match switches never leak into the shared .tres.
 	var mode := resolve_mode(GameSettings.match_mode).duplicate() as GameMode
 	var demo_powerup := OS.get_cmdline_user_args().has("--powerup")  # Screenshot runs only.
@@ -173,6 +174,8 @@ func _ready() -> void:
 	dart_pool.wind_field = arena.wind_field
 	if mode is RealisticMode:
 		dart_pool.persists_as_pickup = true
+		for b in arena.buckets:
+			b.can_regenerate = false
 	add_child(dart_pool)
 
 	var fx := CombatFx.new()
@@ -545,6 +548,7 @@ func _create_power_up(mode: GameMode) -> void:
 func _exit_tree() -> void:
 	Engine.time_scale = 1.0
 	InputSetup.clear_split_screen_actions()
+	DartProjectile.clear_resting_pickups()
 
 
 func on_network_state_received(peer_id: int, pos: Vector3, rot_y: float, pitch: float, vel: Vector3, is_aiming: bool, is_sprinting: bool) -> void:

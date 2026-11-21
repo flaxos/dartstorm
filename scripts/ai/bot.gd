@@ -328,7 +328,7 @@ func _pick_survivor_target() -> Actor:
 	var best: Actor = null
 	var best_distance := INF
 	for rival in rivals:
-		if not is_instance_valid(rival) or not rival.alive or rival.team_id == team_id or rival.is_zombie:
+		if not is_instance_valid(rival) or not rival.alive or rival.is_tagged_out or rival.team_id == team_id or rival.is_zombie:
 			continue
 		var distance := global_position.distance_squared_to(rival.global_position)
 		if distance < best_distance:
@@ -344,7 +344,7 @@ func _pick_target() -> Actor:
 	var flat_aim := Vector3(_aim.x, 0.0, _aim.z).normalized()
 	var half_fov := deg_to_rad(difficulty.fov_degrees) * 0.5
 	for rival in rivals:
-		if not is_instance_valid(rival) or not rival.alive or rival.team_id == team_id:
+		if not is_instance_valid(rival) or not rival.alive or rival.is_tagged_out or rival.team_id == team_id:
 			continue
 		var to_rival := rival.global_position - global_position
 		var distance := to_rival.length()
@@ -596,7 +596,7 @@ func _set_goal(point: Vector3) -> void:
 
 func _update_aim(delta: float) -> void:
 	var desired := _aim
-	if _target != null and is_instance_valid(_target) and _target.alive:
+	if _target != null and is_instance_valid(_target) and _target.alive and not _target.is_tagged_out:
 		desired = _ballistic_aim(_target)
 		_seen_for += delta
 	else:
@@ -660,7 +660,7 @@ func _update_trigger(delta: float) -> void:
 func _choose_direction(delta: float) -> Vector3:
 	var wish := Vector3.ZERO
 	if is_zombie:
-		if _target != null and is_instance_valid(_target) and _target.alive:
+		if _target != null and is_instance_valid(_target) and _target.alive and not _target.is_tagged_out:
 			wish = _path_direction(_target.global_position)
 		elif _has_goal:
 			wish = _path_direction(_goal)

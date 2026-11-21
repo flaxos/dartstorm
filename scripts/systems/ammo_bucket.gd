@@ -9,6 +9,7 @@ signal stock_changed(stock: int, capacity: int)
 
 @export var capacity: int = 150
 @export var regen_delay: float = 14.0
+@export var can_regenerate: bool = true
 ## Darts handed over per second while someone stands in range.
 @export var transfer_per_second: float = 90.0
 @export var radius: float = 1.9
@@ -40,6 +41,9 @@ func _physics_process(delta: float) -> void:
 	_time += delta
 	_label.position.y = 1.55 + sin(_time * 2.5) * 0.06
 	if stock <= 0:
+		if not can_regenerate:
+			_refresh()
+			return
 		_regen_left -= delta
 		if _regen_left <= 0.0:
 			stock = capacity
@@ -53,7 +57,7 @@ func _physics_process(delta: float) -> void:
 		return
 	for body in _area.get_overlapping_bodies():
 		var actor := body as Actor
-		if actor == null or not actor.alive:
+		if actor == null or not actor.alive or actor.is_tagged_out:
 			continue
 		var taken := actor.collect_ammo(mini(budget, stock))
 		if taken <= 0:

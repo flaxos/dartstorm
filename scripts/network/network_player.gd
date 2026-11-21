@@ -48,6 +48,8 @@ func setup_profile(p_peer_id: int, p_name: String, p_color: Color, p_hat: String
 
 
 func apply_network_state(pos: Vector3, rot_y: float, pitch: float, vel: Vector3, aiming: bool, sprinting: bool) -> void:
+	if not pos.is_finite() or not vel.is_finite() or not is_finite(rot_y) or not is_finite(pitch):
+		return
 	_target_position = pos
 	_target_rotation_y = rot_y
 	_target_pitch = pitch
@@ -86,7 +88,7 @@ func fire_network_dart(weapon_idx: int, origin: Vector3, dir: Vector3, charge: f
 		var cur := arsenal.current()
 		if cur != null:
 			weapon_data = cur.data
-	if weapon_data == null:
+	if weapon_data == null or weapon_data.dart == null:
 		return
 
 	# Flash weapon model
@@ -97,10 +99,15 @@ func fire_network_dart(weapon_idx: int, origin: Vector3, dir: Vector3, charge: f
 	# Audio
 	Sfx.play_at(weapon_data.sound, origin, weapon_data.sound_pitch, -4.0, 0.08)
 
-	# Launch dart projectile
+	# Launch dart projectile via dart_pool.fire()
 	var spd: float = weapon_data.speed * lerpf(1.0, 1.25, charge)
 	var elem_enum := element as DartData.Element
-	dart_pool.launch(origin, dir.normalized() * spd, self, weapon_data, elem_enum)
+	var dart_data := weapon_data.dart
+	if elem_enum != DartData.Element.NONE:
+		dart_data = dart_data.duplicate() as DartData
+		dart_data.element = elem_enum
+	var exclude: Array[RID] = [hitbox.get_rid(), get_rid()]
+	dart_pool.fire(dart_data, origin, dir.normalized() * spd, self, weapon_data, color, exclude)
 
 
 func _on_weapon_changed(state: WeaponState) -> void:

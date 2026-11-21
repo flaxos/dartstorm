@@ -27,7 +27,7 @@ import threading
 DEFAULT_HTTP_PORT = 8910
 DEFAULT_HTTPS_PORT = 8911
 WEB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "build", "web"))
-SSL_DIR = os.path.join(WEB_DIR, ".ssl")
+SSL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "build", ".ssl"))
 
 
 class DartstormHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
@@ -35,6 +35,20 @@ class DartstormHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=WEB_DIR, **kwargs)
+
+    def do_GET(self):
+        clean = self.path.split("?", 1)[0].split("#", 1)[0]
+        if any(part.startswith(".") for part in clean.split("/") if part):
+            self.send_error(404, "File not found")
+            return
+        super().do_GET()
+
+    def do_HEAD(self):
+        clean = self.path.split("?", 1)[0].split("#", 1)[0]
+        if any(part.startswith(".") for part in clean.split("/") if part):
+            self.send_error(404, "File not found")
+            return
+        super().do_HEAD()
 
     def end_headers(self):
         # Cross-origin isolation and resource sharing headers

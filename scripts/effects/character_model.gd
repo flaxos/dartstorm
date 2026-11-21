@@ -32,12 +32,29 @@ var _is_zombie: bool = false
 var _shield_bubble: MeshInstance3D
 
 
+var _raw_display_name: String = ""
+
+
 func setup(display_name: String, tint: Color, hat: StringName = &"cap") -> void:
+	_raw_display_name = display_name
 	_tint = tint
 	_hat_id = hat
 	_build()
 	_name_label.text = display_name
 	_name_label.modulate = tint.lightened(0.35)
+
+
+## Toggles tagged-out visual status (weapon hidden, overhead warning label).
+func set_tagged_out(is_out: bool) -> void:
+	if _name_label != null:
+		if is_out:
+			_name_label.text = "[TAGGED OUT - RUN TO BASE!]"
+			_name_label.modulate = Color(1.0, 0.25, 0.2)
+		else:
+			_name_label.text = _raw_display_name
+			_name_label.modulate = _tint.lightened(0.35)
+	if _weapon_mount != null:
+		_weapon_mount.visible = not is_out
 
 
 ## Swaps the hat (used by the customise screen's live preview).

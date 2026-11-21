@@ -112,6 +112,12 @@ func _ready() -> void:
 	landed_hit.connect(_on_landed_hit)
 	ammo_collected.connect(func(_amount: int) -> void: Sfx.play(&"ammo", 1.0, -6.0, 0.1))
 	respawned.connect(func(_actor: Actor) -> void: storm_mode_announced = false)
+	tagged_out_status_changed.connect(func(_a: Actor, is_out: bool) -> void:
+		if _view_root != null:
+			_view_root.visible = not is_out
+		if _fp_arms != null:
+			_fp_arms.visible = not is_out
+	)
 
 
 func _exit_tree() -> void:
@@ -190,12 +196,12 @@ func _physics_process(delta: float) -> void:
 			is_aiming_down_sights = wants_aim
 			aiming_changed.emit(is_aiming_down_sights)
 
-		if is_zombie:
+		if is_zombie or is_tagged_out:
 			if is_aiming_down_sights:
 				is_aiming_down_sights = false
 				aiming_changed.emit(false)
 			arsenal.set_trigger(false)
-			if Input.is_action_just_pressed(_act(&"fire")) and not _fire_blocked_until_release:
+			if is_zombie and Input.is_action_just_pressed(_act(&"fire")) and not _fire_blocked_until_release:
 				_perform_zombie_swipe()
 				if wish.length_squared() > 0.05:
 					lunge(wish.normalized(), 6.0)

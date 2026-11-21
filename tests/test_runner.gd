@@ -100,6 +100,8 @@ func _ready() -> void:
 	await _test_environment_and_splat_decals()
 	# Online Multiplayer, Dual Profiles, Blaster Inspector & Boss Mode (v1.3.0)
 	await _test_multiplayer_profiles_and_bossmode()
+	# Three New Arenas & Realistic Game Mode (v1.4.0)
+	await _test_new_arenas_and_realistic_mode()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -1251,7 +1253,7 @@ func _test_lobby() -> void:
 	check(squad.size() == 3, "your 3 bots stand on platforms around you")
 	var play := menu.get("_play_button") as Button
 	check(play != null and play.has_focus(), "the big PLAY button has focus (A on a controller starts a match)")
-	check((menu.get("_mode_buttons") as Array).size() == 7, "seven mode cards: SOLO, DUOS, TEAMS, GUN GAME, ZOMBIES, SIEGE, LAVA")
+	check((menu.get("_mode_buttons") as Array).size() == 8, "eight mode cards: SOLO, DUOS, TEAMS, GUN GAME, ZOMBIES, SIEGE, LAVA, REALISTIC")
 	var right_col: Node = (menu.get("_menu") as Control).get_node_or_null("RightCol")
 	check(right_col != null and play.is_ancestor_of(right_col) == false and right_col.is_ancestor_of(play),
 			"the mode picker and PLAY button are unified in RightCol to prevent overlap")
@@ -3292,4 +3294,128 @@ func _test_multiplayer_profiles_and_bossmode() -> void:
 	check(mp_ui._host_panel != null and mp_ui._host_panel.visible, "MultiplayerMenu successfully switches to HOST tab")
 	mp_ui.queue_free()
 	await physics_frames(2)
+
+
+func _test_new_arenas_and_realistic_mode() -> void:
+	section("Three New Arenas & Realistic Game Mode")
+
+	# 1. Total Registered Arenas
+	check(MatchScene.ARENAS.size() == 6, "MatchScene registers all 6 arenas (Backyard, Home Turf, Treehouse, Playground, Park, Soccer)")
+
+	# 2. Playground Arena
+	var playground_scene := load("res://scenes/arenas/playground.tscn") as PackedScene
+	check(playground_scene != null, "Playground scene loads successfully")
+	var playground := playground_scene.instantiate() as Arena
+	add_child(playground)
+	await physics_frames(2)
+	check(playground is Playground, "Playground instantiates correct Arena subclass")
+	check(playground.geometry != null and playground.geometry is NavigationRegion3D, "Playground has NavigationRegion3D geometry")
+	check(playground.spawn_points.size() >= 8, "Playground provides at least 8 balanced spawn points (%d)" % playground.spawn_points.size())
+	check(playground.roam_points.size() >= 6, "Playground provides bot roam navigation points (%d)" % playground.roam_points.size())
+	check(playground.team_bases.size() >= 2, "Playground configures Blue and Orange team home bases")
+	check(playground.buckets.size() >= 2, "Playground places stocked ammo buckets")
+	playground.queue_free()
+	await physics_frames(2)
+
+	# 3. Sunny Park Arena
+	var park_scene := load("res://scenes/arenas/sunny_park.tscn") as PackedScene
+	check(park_scene != null, "Sunny Park scene loads successfully")
+	var park := park_scene.instantiate() as Arena
+	add_child(park)
+	await physics_frames(2)
+	check(park is SunnyPark, "Sunny Park instantiates correct Arena subclass")
+	check(park.geometry != null, "Sunny Park has NavigationRegion3D geometry")
+	check(park.spawn_points.size() >= 8, "Sunny Park provides at least 8 balanced spawn points (%d)" % park.spawn_points.size())
+	check(park.roam_points.size() >= 6, "Sunny Park provides bot roam points (%d)" % park.roam_points.size())
+	check(park.team_bases.size() >= 2, "Sunny Park configures Blue and Orange team home bases")
+	park.queue_free()
+	await physics_frames(2)
+
+	# 4. Soccer Field Arena
+	var soccer_scene := load("res://scenes/arenas/soccer_field.tscn") as PackedScene
+	check(soccer_scene != null, "Soccer Stadium scene loads successfully")
+	var soccer := soccer_scene.instantiate() as Arena
+	add_child(soccer)
+	await physics_frames(2)
+	check(soccer is SoccerField, "Soccer Stadium instantiates correct Arena subclass")
+	check(soccer.geometry != null, "Soccer Stadium has NavigationRegion3D geometry")
+	check(soccer.spawn_points.size() >= 8, "Soccer Stadium provides at least 8 balanced spawn points (%d)" % soccer.spawn_points.size())
+	check(soccer.roam_points.size() >= 6, "Soccer Stadium provides bot roam points (%d)" % soccer.roam_points.size())
+	check(soccer.team_bases.size() >= 2, "Soccer Stadium configures Goal team bases")
+	soccer.queue_free()
+	await physics_frames(2)
+
+	# 5. Realistic Mode Resource & Rules
+	var realistic_res := load("res://resources/modes/realistic.tres") as RealisticMode
+	check(realistic_res != null, "Realistic mode resource loads as RealisticMode")
+	check(realistic_res.is_realistic(), "RealisticMode reports is_realistic() == true")
+	check(realistic_res.teams == GameMode.Teams.BLUE_VS_ORANGE, "Realistic mode configures two team bases")
+	check(not realistic_res.infinite_reserve, "Realistic mode enforces finite dart reserves")
+	check(not realistic_res.should_respawn(null), "Realistic mode disables auto-vanishing timer respawns")
+	check(MatchScene.MODE_PATHS.has("res://resources/modes/realistic.tres"), "MatchScene includes realistic mode in MODE_PATHS")
+
+	# 6. Tag-Out 'Run Back to Base' & Revival Mechanics
+	var stage := Node3D.new()
+	add_child(stage)
+	var actor := Actor.new()
+	stage.add_child(actor)
+	actor.realistic_mode = true
+	await physics_frames(2)
+	check(not actor.is_tagged_out, "Actor initializes in active untagged state")
+
+	# Simulate getting tagged out in realistic mode
+	actor._tag_out(null, null, false)
+	check(actor.is_tagged_out, "Tagging actor in realistic mode sets is_tagged_out == true")
+	check(actor.alive, "Tagged actor remains alive and visible on the field (does not vanish)")
+	check(not actor.arsenal.enabled, "Tagged actor cannot fire weapons while running to base")
+
+	# Simulate returning to base to touch in and revive
+	actor.revive_at_base()
+	check(not actor.is_tagged_out, "revive_at_base() clears tagged-out state")
+	check(actor.tag_meter == 0.0, "revive_at_base() completely clears tag meter")
+	check(actor.arsenal.enabled, "revive_at_base() unlocks and re-enables blaster")
+	actor.queue_free()
+	stage.queue_free()
+	await physics_frames(2)
+
+	# 7. Persisting Foam Darts & Manual Ammo Scavenging
+	var pool := DartPool.new()
+	pool.persists_as_pickup = true
+	add_child(pool)
+	await physics_frames(2)
+	check(pool.persists_as_pickup, "DartPool enables persists_as_pickup in realistic mode")
+
+	var popper := load(POPPER) as WeaponData
+	var exclude: Array[RID] = []
+	var dart := pool.fire(popper.dart, Vector3(0.0, 1.0, 0.0), Vector3.DOWN, null, popper, Color.BLUE, exclude)
+	check(dart != null and dart.active, "Pool fires dart successfully")
+	check(dart.persists_as_pickup, "Fired dart inherits persists_as_pickup from pool")
+
+	# Settle dart on floor
+	dart._settle_or_bounce(Vector3(0.0, 0.0, 0.0), Vector3.UP)
+	check(dart._resting, "Dart enters resting state on ground")
+	check(dart.scavengeable, "Resting dart becomes scavengeable pickup on the floor")
+
+	# Create a player with empty reserve to scavenge the dart
+	var scavenger := Player.new()
+	scavenger.position = Vector3(100.0, 0.0, 0.0)
+	add_child(scavenger)
+	scavenger.arsenal.set_loadout([popper], false)
+	await physics_frames(2)
+	var cur_w := scavenger.arsenal.current()
+	if cur_w != null:
+		cur_w.reserve = 0
+		cur_w.magazine = 0
+
+	# Position scavenger within 1m of the resting dart
+	scavenger.global_position = Vector3(0.4, 0.0, 0.0)
+	await physics_frames(2)
+	check(not dart.active, "Fallen dart is scavenged and retired back to pool upon player contact")
+	if cur_w != null:
+		check(cur_w.reserve > 0 or cur_w.magazine > 0, "Scavenging fallen dart successfully restocks ammunition (+1 dart)")
+
+	scavenger.queue_free()
+	pool.queue_free()
+	await physics_frames(2)
+
 

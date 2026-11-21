@@ -41,7 +41,7 @@ const MIN_BOTS := 2
 const MAX_BOTS := 7
 
 ## Saved as numbers, so only ever add to the end.
-enum MatchMode { FREE_FOR_ALL, GUN_GAME, DUOS, TEAMS, ZOMBIES, ZOMBIE_SIEGE, FLOOR_IS_LAVA }
+enum MatchMode { FREE_FOR_ALL, GUN_GAME, DUOS, TEAMS, ZOMBIES, ZOMBIE_SIEGE, FLOOR_IS_LAVA, REALISTIC }
 enum TouchMode { AUTO, ALWAYS, OFF }
 
 # --- Preferences ---

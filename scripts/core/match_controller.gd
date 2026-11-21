@@ -48,12 +48,16 @@ func setup(p_mode: GameMode, p_arena: Arena) -> void:
 	mode = p_mode
 	arena = p_arena
 	time_left = mode.duration_seconds
+	if mode is RealisticMode:
+		_build_realistic_base_zones()
 
 
 func register(actor: Actor) -> void:
 	actors.append(actor)
 	board.add_actor(actor)
 	actor.controls_enabled = false
+	if mode is RealisticMode:
+		actor.realistic_mode = true
 	actor.tagged_out.connect(_on_tagged_out)
 	actor.arsenal.fired.connect(_on_fired.bind(actor))
 	actor.landed_hit.connect(_on_landed_hit.bind(actor))
@@ -129,6 +133,8 @@ func _physics_process(delta: float) -> void:
 				elif whole == 10:
 					announce(null, "10 SECONDS!", UiKit.ORANGE_HOT, &"announce")
 			_tick_respawns(delta)
+			if mode is RealisticMode:
+				_tick_realistic_bases()
 			if time_left <= 0.0:
 				_finish()
 
@@ -362,3 +368,59 @@ func _choose_spawn(actor: Actor) -> Transform3D:
 	scored.sort_custom(func(a: Array, b: Array) -> bool: return a[0] > b[0])
 	var pick: Marker3D = scored[randi() % clampi(free, 1, min(free, 2))][1]
 	return pick.global_transform
+
+
+var _base_rings: Array[Node3D] = []
+
+
+func _build_realistic_base_zones() -> void:
+	if arena == null:
+		return
+	var bases := arena.team_bases
+	if bases.is_empty():
+		bases = [Vector3(-15.0, 0.0, 0.0), Vector3(15.0, 0.0, 0.0)]
+	for i in bases.size():
+		var b_pos := bases[i]
+		var col := GameMode.team_color(i)
+		var ring := MeshInstance3D.new()
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = 3.6
+		mesh.bottom_radius = 3.6
+		mesh.height = 0.08
+		mesh.radial_segments = 24
+		ring.mesh = mesh
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color(col.r, col.g, col.b, 0.45)
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.emission_enabled = true
+		mat.emission = Color(col.r, col.g, col.b)
+		mat.emission_energy_multiplier = 0.5
+		ring.material_override = mat
+		ring.position = b_pos + Vector3(0.0, 0.04, 0.0)
+		arena.decor.add_child(ring)
+		_base_rings.append(ring)
+
+
+func get_home_base_pos(actor: Actor) -> Vector3:
+	if arena == null or arena.team_bases.is_empty():
+		return Vector3.ZERO
+	var team := actor.team_id
+	if team >= 0 and team < arena.team_bases.size():
+		return arena.team_bases[team]
+	return arena.team_bases[0]
+
+
+func _tick_realistic_bases() -> void:
+	for actor in actors:
+		if actor != null and is_instance_valid(actor) and actor.alive and actor.is_tagged_out:
+			var home := get_home_base_pos(actor)
+			if actor.global_position.distance_to(home) <= 3.8:
+				actor.revive_at_base()
+				var entry := board.entry_for(actor)
+				if actor.is_human:
+					popup.emit(actor, "SAFE! BACK IN PLAY!", UiKit.LIME)
+					announce(entry, "REVIVED AT BASE!", UiKit.LIME, &"powerup")
+				else:
+					popup.emit(actor, "BACK IN PLAY!", UiKit.LIME)
+					announce(entry, "%s REVIVED AT BASE!" % actor.display_name.to_upper(), UiKit.LIME, &"powerup")
+

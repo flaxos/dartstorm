@@ -191,6 +191,17 @@ static func deco_cylinder(parent: Node, radius: float, height: float, pos: Vecto
 	return deco(parent, mesh, pos, color, rot_deg, 0.0, surface)
 
 
+static func deco_cone(parent: Node, radius: float, height: float, pos: Vector3, color: Color,
+		rot_deg: Vector3 = Vector3.ZERO, surface: int = SurfaceType.DEFAULT) -> MeshInstance3D:
+	var mesh := CylinderMesh.new()
+	mesh.bottom_radius = radius
+	mesh.top_radius = 0.001
+	mesh.height = height
+	mesh.radial_segments = 16
+	mesh.rings = 1
+	return deco(parent, mesh, pos, color, rot_deg, 0.0, surface)
+
+
 ## Text painted in the world (signs, labels).
 static func sign_text(parent: Node, text: String, pos: Vector3, rot_deg: Vector3, color: Color,
 		font_size: int = 96, pixel_size: float = 0.01) -> Label3D:

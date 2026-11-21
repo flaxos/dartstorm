@@ -37,6 +37,10 @@ var velocity: Vector3 = Vector3.ZERO
 var ricochet_count: int = 0
 var age: float = 0.0
 var active: bool = false
+var persists_as_pickup: bool = false
+var scavengeable: bool = false
+static var resting_pickups: Array[DartProjectile] = []
+const MAX_RESTING_PICKUPS := 120
 
 var _spent: bool = false
 var _resting: bool = false
@@ -95,6 +99,8 @@ func launch(p_data: DartData, origin: Vector3, direction: Vector3, p_shooter: Ac
 	active = true
 	_spent = false
 	_resting = false
+	persists_as_pickup = pool != null and pool.persists_as_pickup
+	scavengeable = false
 	_exclude.assign(exclude)
 	_ricochet_ignore.clear()
 	scale = Vector3.ONE
@@ -126,6 +132,9 @@ func launch(p_data: DartData, origin: Vector3, direction: Vector3, p_shooter: Ac
 func retire() -> void:
 	if not active:
 		return
+	if scavengeable:
+		resting_pickups.erase(self)
+		scavengeable = false
 	active = false
 	visible = false
 	set_physics_process(false)
@@ -136,6 +145,19 @@ func retire() -> void:
 func _physics_process(delta: float) -> void:
 	age += delta
 	if _resting:
+		if scavengeable:
+			scale = Vector3.ONE * 1.15
+			var actors: Array[Node] = get_tree().get_nodes_in_group(&"actors")
+			for a in actors:
+				var act: Actor = a as Actor
+				if act != null and is_instance_valid(act) and act.alive and not act.is_tagged_out:
+					if act.global_position.distance_to(global_position) < 1.3:
+						var added: int = act.collect_ammo(1)
+						if added > 0:
+							Sfx.play_at(&"ammo", global_position, 1.2, -6.0, 0.08)
+							retire()
+							return
+			return
 		_rest_left -= delta
 		if _rest_left <= 0.0:
 			retire()
@@ -269,6 +291,13 @@ func _settle_or_bounce(point: Vector3, normal: Vector3) -> void:
 		global_position = point + normal * (FOAM_RADIUS * data.visual_scale)
 		rotation = Vector3(0.0, randf() * TAU, 0.0)
 		_visual.rotation = Vector3.ZERO
+		if persists_as_pickup:
+			scavengeable = true
+			if resting_pickups.size() >= MAX_RESTING_PICKUPS:
+				var oldest: DartProjectile = resting_pickups.pop_front() as DartProjectile
+				if is_instance_valid(oldest) and oldest.active:
+					oldest.retire()
+			resting_pickups.append(self)
 	else:
 		velocity = velocity.bounce(normal) * SPENT_BOUNCE
 		global_position = point + normal * 0.03

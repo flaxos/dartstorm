@@ -82,6 +82,9 @@ func setup(player: Player, controller: MatchController) -> void:
 	player.shot_fired.connect(_on_shot_fired)
 	player.aiming_changed.connect(func(is_aiming: bool) -> void: _crosshair.set_scoped(is_aiming))
 	player.tagged_out.connect(_on_player_tagged)
+	player.tagged_out_status_changed.connect(func(_a: Actor, is_out: bool) -> void:
+		if not is_out:
+			_hide_banner())
 	player.respawned.connect(func(_actor: Actor) -> void: _hide_banner())
 	player.ammo_collected.connect(func(_amount: int) -> void: _refill_left = 0.5)
 	player.grenade_count_changed.connect(_on_grenade_count_changed)
@@ -575,7 +578,10 @@ func _on_player_tagged(_victim: Actor, attacker: Actor, _weapon: WeaponData, _ri
 	if _crosshair != null:
 		_crosshair.set_scoped(false)
 	var by := " by %s" % attacker.display_name if attacker != null else ""
-	_show_banner("TAGGED!", "You were tagged%s" % by, 0.0)
+	if _player != null and _player.realistic_mode:
+		_show_banner("TAGGED OUT!", "Run back to your team base to revive!", 0.0)
+	else:
+		_show_banner("TAGGED!", "You were tagged%s" % by, 0.0)
 
 
 func _on_countdown_tick(seconds_left: int) -> void:

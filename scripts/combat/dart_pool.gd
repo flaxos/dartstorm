@@ -17,6 +17,7 @@ const DART_SCENE_PATH := "res://scenes/projectiles/dart_projectile.tscn"
 
 ## Set by the match so darts can ask what the wind is doing.
 var wind_field: WindField
+var persists_as_pickup: bool = false
 
 var _idle: Array[DartProjectile] = []
 var _live: Array[DartProjectile] = []

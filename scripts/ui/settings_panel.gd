@@ -51,6 +51,8 @@ func _build() -> void:
 	_slider(controls, "Game speed", 0.70, 1.10, 0.05, GameSettings.game_speed,
 			func(value: float) -> void: GameSettings.game_speed = value)
 	_touch_picker(controls)
+	_touch_fire_mode_picker(controls)
+	_touch_btn_size_picker(controls)
 	_slider(controls, "Touch look speed", 0.4, 2.5, 0.05, GameSettings.touch_look_sensitivity,
 			func(value: float) -> void: GameSettings.touch_look_sensitivity = value)
 	var bindings_btn := UiKit.small_button("CUSTOM CONTROLS...", Vector2(240, 42))
@@ -146,6 +148,55 @@ func _touch_picker(parent: Control) -> void:
 		t_idx[0] = (t_idx[0] + 1) % modes.size()
 		GameSettings.touch_controls_mode = t_idx[0]
 		button.text = modes[t_idx[0]]
+		GameSettings.apply()
+		Sfx.play(&"click"))
+
+
+func _touch_fire_mode_picker(parent: Control) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	parent.add_child(row)
+	var name_label := UiKit.label("Touch Fire Style", 20, UiKit.CREAM, 4)
+	name_label.custom_minimum_size.x = 220
+	row.add_child(name_label)
+
+	var modes := ["Aim then Tap", "Hold-to-Aim Auto"]
+	var f_idx := [GameSettings.touch_fire_mode]
+	var current_name: String = modes[clampi(f_idx[0], 0, modes.size() - 1)]
+	var button := UiKit.small_button(current_name, Vector2(210, 40))
+	row.add_child(button)
+
+	button.pressed.connect(func() -> void:
+		f_idx[0] = (f_idx[0] + 1) % modes.size()
+		GameSettings.touch_fire_mode = f_idx[0]
+		button.text = modes[f_idx[0]]
+		GameSettings.apply()
+		Sfx.play(&"click"))
+
+
+func _touch_btn_size_picker(parent: Control) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	parent.add_child(row)
+	var name_label := UiKit.label("Fire Button Size", 20, UiKit.CREAM, 4)
+	name_label.custom_minimum_size.x = 220
+	row.add_child(name_label)
+
+	var labels := ["Compact (88px)", "Standard (104px)", "Large (120px)"]
+	var scales := [0.85, 1.0, 1.15]
+	var cur_idx := 1
+	if absf(GameSettings.touch_fire_btn_size - 0.85) < 0.05:
+		cur_idx = 0
+	elif absf(GameSettings.touch_fire_btn_size - 1.15) < 0.05:
+		cur_idx = 2
+	var s_idx := [cur_idx]
+	var button := UiKit.small_button(labels[s_idx[0]], Vector2(210, 40))
+	row.add_child(button)
+
+	button.pressed.connect(func() -> void:
+		s_idx[0] = (s_idx[0] + 1) % labels.size()
+		GameSettings.touch_fire_btn_size = scales[s_idx[0]]
+		button.text = labels[s_idx[0]]
 		GameSettings.apply()
 		Sfx.play(&"click"))
 

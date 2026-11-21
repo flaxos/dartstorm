@@ -3041,6 +3041,8 @@ func _test_touch_controls_and_mobile_export() -> void:
 	check(touch_ui.get_node_or_null("VirtualJoystick") != null, "TouchControls contains VirtualJoystick")
 	check(touch_ui.get_node_or_null("LookSwipeZone") != null, "TouchControls contains LookSwipeZone")
 	check(touch_ui.get_node_or_null("PauseButton") != null, "TouchControls contains PauseButton")
+	check(touch_ui.get_node_or_null("FireModeToggle") != null, "TouchControls contains FireModeToggle")
+	check(touch_ui.get_node_or_null("SmartFireButton") != null, "TouchControls contains SmartFireButton")
 
 	# Test Pause signal
 	var pause_signalled := [false]
@@ -3049,6 +3051,16 @@ func _test_touch_controls_and_mobile_export() -> void:
 	check(pause_btn != null, "Pause button is a TouchButton")
 	pause_btn.pressed.emit()
 	check(pause_signalled[0], "PauseButton emits pause_requested signal")
+
+	# Test Quick Fire Mode Toggle Pill
+	var mode_signalled := [-1]
+	touch_ui.fire_mode_changed.connect(func(m: int) -> void: mode_signalled[0] = m)
+	var toggle_btn := touch_ui.get_node("FireModeToggle") as TouchControls.TouchButton
+	check(toggle_btn != null, "FireModeToggle is a TouchButton")
+	var initial_fire_mode := GameSettings.touch_fire_mode
+	toggle_btn.pressed.emit()
+	check(GameSettings.touch_fire_mode != initial_fire_mode, "FireModeToggle toggles touch_fire_mode")
+	check(mode_signalled[0] == GameSettings.touch_fire_mode, "fire_mode_changed emitted with new mode")
 
 	# Test Action Button Synthesis (Fire button)
 	var fire_btn: TouchControls.TouchButton = null
@@ -3075,6 +3087,30 @@ func _test_touch_controls_and_mobile_export() -> void:
 	var initial_rot := player.rotation.y
 	touch_ui._handle_look(Vector2(50.0, 0.0))
 	check(player.rotation.y != initial_rot, "player.look_relative() rotates player camera from touch swipe")
+
+	# 7b. SmartFireButton Drag-to-Aim vs Tap Mode
+	var smart_fire := touch_ui.get_node("SmartFireButton") as TouchControls.SmartFireButton
+	check(smart_fire != null, "SmartFireButton node is accessible")
+	if smart_fire != null:
+		# Test HOLD_AND_AIM mode
+		GameSettings.touch_fire_mode = GameSettings.TouchFireMode.HOLD_AND_AIM
+		touch_ui.refresh_fire_mode()
+		var rot_start := player.rotation.y
+		smart_fire._set_pressed(true)
+		check(Input.is_action_pressed(&"fire"), "SmartFireButton fires on press")
+		smart_fire._handle_drag(Vector2(40.0, 0.0))
+		check(player.rotation.y != rot_start, "SmartFireButton in HOLD_AND_AIM mode steers player look while dragging")
+		smart_fire._set_pressed(false)
+		check(not Input.is_action_pressed(&"fire"), "SmartFireButton releases fire on release")
+
+		# Test AIM_AND_TAP mode (drag does NOT rotate player)
+		GameSettings.touch_fire_mode = GameSettings.TouchFireMode.AIM_AND_TAP
+		touch_ui.refresh_fire_mode()
+		var rot_tap := player.rotation.y
+		smart_fire._set_pressed(true)
+		smart_fire._handle_drag(Vector2(40.0, 0.0))
+		check(player.rotation.y == rot_tap, "SmartFireButton in AIM_AND_TAP mode does not steer look on drag")
+		smart_fire._set_pressed(false)
 
 	# 8. Desktop Captured Mouse Look & Click-to-Capture
 	section("Web & Desktop: mouse look and capture")

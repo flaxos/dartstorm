@@ -34,6 +34,8 @@ const DEFAULTS := {
 	"split_screen_horizontal": true,
 	"touch_controls_mode": 0,
 	"touch_look_sensitivity": 1.0,
+	"touch_fire_mode": 1,
+	"touch_fire_btn_size": 1.0,
 }
 const NOTICE_SECONDS := 3.0
 ## The bots slider on the menu. Team modes may add one more to even the teams.
@@ -43,6 +45,7 @@ const MAX_BOTS := 7
 ## Saved as numbers, so only ever add to the end.
 enum MatchMode { FREE_FOR_ALL, GUN_GAME, DUOS, TEAMS, ZOMBIES, ZOMBIE_SIEGE, FLOOR_IS_LAVA, REALISTIC }
 enum TouchMode { AUTO, ALWAYS, OFF }
+enum TouchFireMode { AIM_AND_TAP, HOLD_AND_AIM }
 
 # --- Preferences ---
 var mouse_sensitivity: float = 1.0
@@ -71,6 +74,10 @@ var team_palette: int = 0
 ## Touch controls on-screen overlay mode (Auto, Always On, Off)
 var touch_controls_mode: int = TouchMode.AUTO
 var touch_look_sensitivity: float = 1.0
+## Touch firing style: 0 = AIM_AND_TAP (split swipe + tap), 1 = HOLD_AND_AIM (hold to auto-fire & drag to aim)
+var touch_fire_mode: int = TouchFireMode.HOLD_AND_AIM
+## Multiplier for touch fire button size (0.85 = compact, 1.0 = standard 104px, 1.2 = large 120px)
+var touch_fire_btn_size: float = 1.0
 var _touch_detected: bool = false
 
 # --- Your player (Player 1) ---
@@ -333,6 +340,8 @@ func load_settings() -> void:
 	team_palette = clampi(int(file.get_value("accessibility", "team_palette", team_palette)), 0, GameMode.TeamPalette.size() - 1)
 	touch_controls_mode = clampi(int(file.get_value("controls", "touch_controls_mode", touch_controls_mode)), 0, TouchMode.size() - 1)
 	touch_look_sensitivity = clampf(float(file.get_value("controls", "touch_look_sensitivity", touch_look_sensitivity)), 0.2, 3.0)
+	touch_fire_mode = clampi(int(file.get_value("controls", "touch_fire_mode", touch_fire_mode)), 0, TouchFireMode.size() - 1)
+	touch_fire_btn_size = clampf(float(file.get_value("controls", "touch_fire_btn_size", touch_fire_btn_size)), 0.8, 1.4)
 	if file.has_section("bindings"):
 		var raw_bindings: Dictionary = {}
 		for action: String in file.get_section_keys("bindings"):
@@ -350,6 +359,8 @@ func save_settings() -> void:
 	file.set_value("controls", "vibration", vibration)
 	file.set_value("controls", "touch_controls_mode", touch_controls_mode)
 	file.set_value("controls", "touch_look_sensitivity", touch_look_sensitivity)
+	file.set_value("controls", "touch_fire_mode", touch_fire_mode)
+	file.set_value("controls", "touch_fire_btn_size", touch_fire_btn_size)
 	file.set_value("video", "fov", fov)
 	file.set_value("video", "camera_shake", camera_shake)
 	file.set_value("video", "visual_intensity", visual_intensity)

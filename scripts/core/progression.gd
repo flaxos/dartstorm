@@ -109,6 +109,8 @@ const MISSION_POOL: Array[Dictionary] = [
 
 const ACTIVE_MISSION_COUNT := 3
 
+var active_profile_index: int = 0
+var profiles: Array[Dictionary] = []
 var lifetime_xp: int = 0
 var coins: int = STARTING_COINS
 var unlocked_hats: Array[StringName] = []
@@ -196,8 +198,125 @@ func spend_coins(cost: int) -> bool:
 		return false
 	coins -= cost
 	coins_changed.emit(coins)
+	_sync_to_active_profile()
 	save_progression()
 	return true
+
+
+func _default_profile_dict(_is_p2: bool = false) -> Dictionary:
+	return {
+		"lifetime_xp": 0,
+		"coins": STARTING_COINS,
+		"unlocked_hats": DEFAULT_HATS.duplicate(),
+		"unlocked_colors": DEFAULT_COLORS.duplicate(),
+		"unlocked_skins": DEFAULT_SKINS.duplicate(),
+	}
+
+
+func _sync_active_profile() -> void:
+	if profiles.size() < 2:
+		profiles = [_default_profile_dict(false), _default_profile_dict(true)]
+	var cur: Dictionary = profiles[clampi(active_profile_index, 0, profiles.size() - 1)]
+	lifetime_xp = int(cur.get("lifetime_xp", 0))
+	coins = int(cur.get("coins", STARTING_COINS))
+	var raw_hats: Array = cur.get("unlocked_hats", DEFAULT_HATS.duplicate())
+	unlocked_hats.clear()
+	for h in raw_hats:
+		unlocked_hats.append(StringName(str(h)))
+	var raw_colors: Array = cur.get("unlocked_colors", DEFAULT_COLORS.duplicate())
+	unlocked_colors.clear()
+	for c in raw_colors:
+		unlocked_colors.append(int(c))
+	var raw_skins: Array = cur.get("unlocked_skins", DEFAULT_SKINS.duplicate())
+	unlocked_skins.clear()
+	for s in raw_skins:
+		unlocked_skins.append(StringName(str(s)))
+
+
+func _sync_to_active_profile() -> void:
+	if profiles.size() < 2:
+		profiles = [_default_profile_dict(false), _default_profile_dict(true)]
+	var cur: Dictionary = profiles[clampi(active_profile_index, 0, profiles.size() - 1)]
+	cur["lifetime_xp"] = lifetime_xp
+	cur["coins"] = coins
+	cur["unlocked_hats"] = unlocked_hats.duplicate()
+	cur["unlocked_colors"] = unlocked_colors.duplicate()
+	cur["unlocked_skins"] = unlocked_skins.duplicate()
+
+
+func get_profile_count() -> int:
+	return maxi(profiles.size(), 2)
+
+
+func set_active_profile(idx: int) -> void:
+	_sync_to_active_profile()
+	active_profile_index = clampi(idx, 0, 1)
+	_sync_active_profile()
+	coins_changed.emit(coins)
+	progression_saved.emit()
+
+
+func get_profile_data(idx: int = active_profile_index) -> Dictionary:
+	_sync_to_active_profile()
+	var p_idx := clampi(idx, 0, 1)
+	if profiles.size() < 2:
+		profiles = [_default_profile_dict(false), _default_profile_dict(true)]
+	var prof: Dictionary = profiles[p_idx].duplicate(true)
+	if p_idx == 0:
+		prof["name"] = GameSettings.display_name()
+		prof["color"] = GameSettings.player_color
+		prof["hat"] = GameSettings.player_hat
+		prof["skin"] = GameSettings.player_skin
+	else:
+		prof["name"] = GameSettings.display_name_p2()
+		prof["color"] = GameSettings.player2_color
+		prof["hat"] = GameSettings.player2_hat
+		prof["skin"] = GameSettings.player2_skin
+	prof["level"] = level_for_xp(int(prof.get("lifetime_xp", 0)))
+	return prof
+
+
+func award_match_rewards(player_idx: int, tags: int, won: bool, finished: bool) -> void:
+	var xp := (tags * XP_PER_TAG) + (XP_MATCH_FINISH if finished else 0) + (XP_MATCH_WIN if won else 0)
+	var earned_coins := (tags * COINS_PER_TAG) + (COINS_MATCH_FINISH if finished else 0) + (COINS_MATCH_WIN if won else 0)
+	if player_idx == active_profile_index:
+		add_xp(xp)
+		add_coins(earned_coins)
+	elif player_idx >= 0 and player_idx < profiles.size():
+		var p: Dictionary = profiles[player_idx]
+		p["lifetime_xp"] = int(p.get("lifetime_xp", 0)) + xp
+		p["coins"] = int(p.get("coins", STARTING_COINS)) + earned_coins
+		save_progression()
+
+
+func activate_boss_mode() -> void:
+	_sync_to_active_profile()
+	if profiles.size() < 2:
+		profiles = [_default_profile_dict(false), _default_profile_dict(true)]
+	for p in profiles:
+		p["coins"] = 99999
+		p["lifetime_xp"] = maxi(int(p.get("lifetime_xp", 0)), 5000)
+		var all_hats: Array[StringName] = []
+		for h in Cosmetics.HATS:
+			all_hats.append(h["id"])
+		p["unlocked_hats"] = all_hats
+		var all_colors: Array[int] = []
+		for ci in Cosmetics.COLORS.size():
+			all_colors.append(ci)
+		p["unlocked_colors"] = all_colors
+		var all_skins: Array[StringName] = []
+		for s in Cosmetics.SKINS:
+			all_skins.append(s["id"])
+		p["unlocked_skins"] = all_skins
+	_sync_active_profile()
+	save_progression()
+	coins_changed.emit(coins)
+	for h in Cosmetics.HATS:
+		item_unlocked.emit(&"hat", h["id"])
+	for ci in Cosmetics.COLORS.size():
+		item_unlocked.emit(&"color", ci)
+	for s in Cosmetics.SKINS:
+		item_unlocked.emit(&"skin", s["id"])
 
 
 func is_unlocked(category: StringName, id: Variant) -> bool:
@@ -322,11 +441,12 @@ func _has_pool_mission(id: StringName) -> bool:
 
 
 func reset_to_defaults() -> void:
-	lifetime_xp = 0
-	coins = STARTING_COINS
-	unlocked_hats = DEFAULT_HATS.duplicate()
-	unlocked_colors = DEFAULT_COLORS.duplicate()
-	unlocked_skins = DEFAULT_SKINS.duplicate()
+	profiles = [
+		_default_profile_dict(false),
+		_default_profile_dict(true),
+	]
+	active_profile_index = 0
+	_sync_active_profile()
 	active_missions.clear()
 	ensure_active_missions()
 	save_progression()
@@ -340,29 +460,67 @@ func load_progression() -> void:
 		progression_loaded.emit()
 		return
 
-	lifetime_xp = maxi(int(file.get_value("progression", "lifetime_xp", 0)), 0)
-	coins = maxi(int(file.get_value("progression", "coins", STARTING_COINS)), 0)
+	profiles = []
+	for p_idx in 2:
+		var sec := "profile_%d" % p_idx
+		var p_dict := _default_profile_dict(p_idx == 1)
+		if file.has_section(sec):
+			p_dict["lifetime_xp"] = maxi(int(file.get_value(sec, "lifetime_xp", 0)), 0)
+			p_dict["coins"] = maxi(int(file.get_value(sec, "coins", STARTING_COINS)), 0)
+			var s_hats: Array = file.get_value(sec, "hats", [])
+			var u_hats := DEFAULT_HATS.duplicate()
+			for h in s_hats:
+				var sh := StringName(str(h))
+				if not u_hats.has(sh) and Cosmetics.has_hat(sh):
+					u_hats.append(sh)
+			p_dict["unlocked_hats"] = u_hats
 
-	var saved_hats: Array = file.get_value("unlocks", "hats", [])
-	unlocked_hats = DEFAULT_HATS.duplicate()
-	for h in saved_hats:
-		var s := StringName(str(h))
-		if not unlocked_hats.has(s) and Cosmetics.has_hat(s):
-			unlocked_hats.append(s)
+			var s_colors: Array = file.get_value(sec, "colors", [])
+			var u_colors := DEFAULT_COLORS.duplicate()
+			for c in s_colors:
+				var ci := int(c)
+				if not u_colors.has(ci) and ci >= 0 and ci < Cosmetics.COLORS.size():
+					u_colors.append(ci)
+			p_dict["unlocked_colors"] = u_colors
 
-	var saved_colors: Array = file.get_value("unlocks", "colors", [])
-	unlocked_colors = DEFAULT_COLORS.duplicate()
-	for c in saved_colors:
-		var ci := int(c)
-		if not unlocked_colors.has(ci) and ci >= 0 and ci < Cosmetics.COLORS.size():
-			unlocked_colors.append(ci)
+			var s_skins: Array = file.get_value(sec, "skins", [])
+			var u_skins := DEFAULT_SKINS.duplicate()
+			for sk in s_skins:
+				var skid := StringName(str(sk))
+				if not u_skins.has(skid) and Cosmetics.has_skin(skid):
+					u_skins.append(skid)
+			p_dict["unlocked_skins"] = u_skins
+		elif p_idx == 0:
+			# Backwards compatibility: load from legacy sections
+			p_dict["lifetime_xp"] = maxi(int(file.get_value("progression", "lifetime_xp", 0)), 0)
+			p_dict["coins"] = maxi(int(file.get_value("progression", "coins", STARTING_COINS)), 0)
+			var s_hats: Array = file.get_value("unlocks", "hats", [])
+			var u_hats := DEFAULT_HATS.duplicate()
+			for h in s_hats:
+				var sh := StringName(str(h))
+				if not u_hats.has(sh) and Cosmetics.has_hat(sh):
+					u_hats.append(sh)
+			p_dict["unlocked_hats"] = u_hats
 
-	var saved_skins: Array = file.get_value("unlocks", "skins", [])
-	unlocked_skins = DEFAULT_SKINS.duplicate()
-	for sk in saved_skins:
-		var skid := StringName(str(sk))
-		if not unlocked_skins.has(skid) and Cosmetics.has_skin(skid):
-			unlocked_skins.append(skid)
+			var s_colors: Array = file.get_value("unlocks", "colors", [])
+			var u_colors := DEFAULT_COLORS.duplicate()
+			for c in s_colors:
+				var ci := int(c)
+				if not u_colors.has(ci) and ci >= 0 and ci < Cosmetics.COLORS.size():
+					u_colors.append(ci)
+			p_dict["unlocked_colors"] = u_colors
+
+			var s_skins: Array = file.get_value("unlocks", "skins", [])
+			var u_skins := DEFAULT_SKINS.duplicate()
+			for sk in s_skins:
+				var skid := StringName(str(sk))
+				if not u_skins.has(skid) and Cosmetics.has_skin(skid):
+					u_skins.append(skid)
+			p_dict["unlocked_skins"] = u_skins
+		profiles.append(p_dict)
+
+	active_profile_index = clampi(int(file.get_value("meta", "active_profile", 0)), 0, 1)
+	_sync_active_profile()
 
 	active_missions.clear()
 	var saved_missions: Array = file.get_value("missions", "active", [])
@@ -381,8 +539,11 @@ func load_progression() -> void:
 
 
 func save_progression() -> void:
+	_sync_to_active_profile()
 	var file := ConfigFile.new()
 	file.set_value("meta", "version", PROGRESSION_VERSION)
+	file.set_value("meta", "active_profile", active_profile_index)
+	# Legacy keys for backward compatibility
 	file.set_value("progression", "lifetime_xp", lifetime_xp)
 	file.set_value("progression", "coins", coins)
 
@@ -400,6 +561,25 @@ func save_progression() -> void:
 	for sk in unlocked_skins:
 		skins_save.append(String(sk))
 	file.set_value("unlocks", "skins", skins_save)
+
+	# Save individual profiles
+	for p_idx in profiles.size():
+		var sec := "profile_%d" % p_idx
+		var p: Dictionary = profiles[p_idx]
+		file.set_value(sec, "lifetime_xp", int(p.get("lifetime_xp", 0)))
+		file.set_value(sec, "coins", int(p.get("coins", STARTING_COINS)))
+		var p_hats: Array[String] = []
+		for h in p.get("unlocked_hats", []):
+			p_hats.append(String(h))
+		file.set_value(sec, "hats", p_hats)
+		var p_colors: Array[int] = []
+		for c in p.get("unlocked_colors", []):
+			p_colors.append(int(c))
+		file.set_value(sec, "colors", p_colors)
+		var p_skins: Array[String] = []
+		for s in p.get("unlocked_skins", []):
+			p_skins.append(String(s))
+		file.set_value(sec, "skins", p_skins)
 
 	var missions_save: Array[Dictionary] = []
 	for m in active_missions:

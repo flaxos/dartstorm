@@ -53,6 +53,7 @@ var controller: MatchController
 var dart_pool: DartPool
 var player: Player
 var player2: Player
+var remote_players: Dictionary = {}
 var bots: Array[Bot] = []
 var hud: Hud
 var hud2: Hud
@@ -221,6 +222,7 @@ func _ready() -> void:
 		player.action_prefix = "p1_"
 		player.display_name = GameSettings.display_name()
 		player.hat_id = GameSettings.player_hat
+		player.skin_id = GameSettings.player_skin
 		player.team_id = mode.team_for(0)
 		player.color = GameMode.team_color(player.team_id) if mode.is_team_mode() else GameSettings.color()
 		player.dart_pool = dart_pool
@@ -236,6 +238,7 @@ func _ready() -> void:
 		player2.action_prefix = "p2_"
 		player2.display_name = GameSettings.display_name_p2()
 		player2.hat_id = GameSettings.player2_hat
+		player2.skin_id = GameSettings.player2_skin
 		if mode.teams == GameMode.Teams.DUOS:
 			player2.team_id = mode.team_for(0)
 		elif mode.teams == GameMode.Teams.BLUE_VS_ORANGE:
@@ -252,10 +255,42 @@ func _ready() -> void:
 		player2.camera.cull_mask = 0xFFFFFFFF & ~4 & ~8
 		fx.watch_actor(player2)
 		controller.register(player2)
+	elif NetworkManager != null and NetworkManager.is_online:
+		var my_entry: Dictionary = {}
+		for entry in NetworkManager.roster:
+			if int(entry.get("peer_id", 0)) == NetworkManager.local_peer_id:
+				my_entry = entry
+				break
+		player = PLAYER_SCENE.instantiate() as Player
+		player.display_name = str(my_entry.get("name", GameSettings.display_name()))
+		player.hat_id = StringName(str(my_entry.get("hat", GameSettings.player_hat)))
+		player.skin_id = StringName(str(my_entry.get("skin", GameSettings.player_skin)))
+		player.team_id = int(my_entry.get("team_id", 0))
+		player.color = GameMode.team_color(player.team_id) if mode.is_team_mode() else Cosmetics.color_at(int(my_entry.get("color", 0)))
+		player.dart_pool = dart_pool
+		add_child(player)
+		fx.watch_actor(player)
+		controller.register(player)
+
+		for entry in NetworkManager.roster:
+			var pid := int(entry.get("peer_id", 0))
+			if pid != NetworkManager.local_peer_id:
+				var net_p := NetworkPlayer.new()
+				net_p.name = "NetPlayer_%d" % pid
+				var r_team := int(entry.get("team_id", 0))
+				net_p.team_id = r_team if mode.is_team_mode() else mode.team_for(controller.actors.size())
+				var r_col: Color = GameMode.team_color(net_p.team_id) if mode.is_team_mode() else Cosmetics.color_at(int(entry.get("color", 0)))
+				net_p.dart_pool = dart_pool
+				add_child(net_p)
+				net_p.setup_profile(pid, str(entry.get("name", "Player")), r_col, StringName(str(entry.get("hat", &"cap"))), StringName(str(entry.get("skin", &"default"))))
+				fx.watch_actor(net_p)
+				controller.register(net_p)
+				remote_players[pid] = net_p
 	else:
 		player = PLAYER_SCENE.instantiate() as Player
 		player.display_name = GameSettings.display_name()
 		player.hat_id = GameSettings.player_hat
+		player.skin_id = GameSettings.player_skin
 		player.team_id = mode.team_for(0)
 		player.color = GameMode.team_color(player.team_id) if mode.is_team_mode() else GameSettings.color()
 		player.dart_pool = dart_pool
@@ -263,7 +298,12 @@ func _ready() -> void:
 		fx.watch_actor(player)
 		controller.register(player)
 
-	var bot_count := team_bot_count(mode, GameSettings.bot_count)
+	var bot_count := 0
+	if NetworkManager != null and NetworkManager.is_online:
+		if NetworkManager.is_host:
+			bot_count = team_bot_count(mode, NetworkManager.bot_fill_count)
+	else:
+		bot_count = team_bot_count(mode, GameSettings.bot_count)
 	var colors := bot_colors(player.color, bot_count, player2.color if player2 != null else Color.TRANSPARENT)
 	var bot_team_offset := 2 if GameSettings.split_screen else 1
 	for i in bot_count:
@@ -499,4 +539,23 @@ func _create_power_up(mode: GameMode) -> void:
 func _exit_tree() -> void:
 	Engine.time_scale = 1.0
 	InputSetup.clear_split_screen_actions()
+
+
+func on_network_state_received(peer_id: int, pos: Vector3, rot_y: float, pitch: float, vel: Vector3, is_aiming: bool, is_sprinting: bool) -> void:
+	if remote_players.has(peer_id):
+		remote_players[peer_id].apply_network_state(pos, rot_y, pitch, vel, is_aiming, is_sprinting)
+
+
+func on_network_fire_dart(shooter_id: int, weapon_idx: int, origin: Vector3, dir: Vector3, charge: float, element: int) -> void:
+	if remote_players.has(shooter_id):
+		remote_players[shooter_id].fire_network_dart(weapon_idx, origin, dir, charge, element)
+
+
+func on_network_actor_tagged(_victim_id: int, _attacker_id: int, _weapon_name: String, _ricochet: bool) -> void:
+	pass
+
+
+func on_network_actor_respawn(peer_id: int, spawn_pos: Vector3) -> void:
+	if remote_players.has(peer_id):
+		remote_players[peer_id].global_position = spawn_pos
 

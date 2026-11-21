@@ -21,6 +21,7 @@ const VIEW_YAW := 0.07
 
 @export var player_index: int = 0
 @export var action_prefix: String = ""
+var skin_id: StringName = &"default"
 var body_model: CharacterModel = null
 var view_layer_mask: int = 1
 
@@ -76,6 +77,7 @@ var _reload_time: float = 0.0
 var _reload_duration: float = 0.8
 var _reload_slapped: bool = false
 var is_aiming_down_sights: bool = false
+var _net_sync_timer: float = 0.0
 
 
 func _ready() -> void:
@@ -262,6 +264,12 @@ func _process(delta: float) -> void:
 	_dip_vel += dip_accel * delta
 	_dip_pos += _dip_vel * delta
 	_dip_pos = clampf(_dip_pos, -0.04, 0.08)
+
+	if NetworkManager != null and NetworkManager.is_online and is_human and player_index == 0:
+		_net_sync_timer += delta
+		if _net_sync_timer >= 0.05:
+			_net_sync_timer = 0.0
+			NetworkManager.rpc(&"rpc_sync_state", NetworkManager.local_peer_id, global_position, rotation.y, _pitch, velocity, is_aiming_down_sights, _sprinting)
 
 	var speed := Vector2(velocity.x, velocity.z).length()
 	var bob_amount := clampf(speed / walk_speed, 0.0, 1.4) if on_floor else 0.0
@@ -508,7 +516,7 @@ func _on_weapon_changed(state: WeaponState) -> void:
 	_fp_arms.visible = true
 	if _sleeve_mat != null:
 		_sleeve_mat.albedo_color = color
-	var skin: StringName = GameSettings.player2_skin if player_index == 1 else GameSettings.player_skin
+	var skin: StringName = skin_id if skin_id != &"default" else (GameSettings.player2_skin if player_index == 1 else GameSettings.player_skin)
 	_view_model = BlasterModel.create(state.data, true, skin)
 	_view_root.add_child(_view_model)
 	if view_layer_mask != 1:
@@ -680,7 +688,7 @@ func enable_body_model(layer_mask: int = 2) -> void:
 		body_model.show_overhead(true)
 		var current_w := arsenal.current()
 		if current_w != null:
-			var skin: StringName = GameSettings.player2_skin if player_index == 1 else GameSettings.player_skin
+			var skin: StringName = skin_id if skin_id != &"default" else (GameSettings.player2_skin if player_index == 1 else GameSettings.player_skin)
 			body_model.set_weapon(current_w.data, skin)
 		_set_model_layers(body_model, layer_mask)
 

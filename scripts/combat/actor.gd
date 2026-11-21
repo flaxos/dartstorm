@@ -449,6 +449,9 @@ func _on_arsenal_fired(state: WeaponState) -> void:
 		var direction := spread(aim, weapon.spread_degrees + get_extra_spread_degrees())
 		dart_pool.fire(dart_data, origin, direction, self, weapon, color, exclude)
 
+	if NetworkManager != null and NetworkManager.is_online and is_human and not (self is NetworkPlayer):
+		NetworkManager.rpc(&"rpc_fire_dart", NetworkManager.local_peer_id, arsenal.current_index, origin, aim, 1.0, int(infusion_element))
+
 
 ## Random direction inside a cone of `degrees` around `direction`.
 static func spread(direction: Vector3, degrees: float) -> Vector3:

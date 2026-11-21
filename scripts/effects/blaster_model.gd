@@ -245,7 +245,8 @@ func _part(mesh: Mesh, pos: Vector3, color: Color, rot_deg: Vector3, parent: Nod
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh
 	var is_chassis := not color.is_equal_approx(ORANGE_TIP) and not color.is_equal_approx(DARK) and metallic < 0.2
-	if is_chassis and Cosmetics.has_skin(skin_id):
+	var has_custom_skin := skin_id != &"default" and not skin_id.is_empty() and Cosmetics.has_skin(skin_id)
+	if is_chassis and has_custom_skin:
 		var skin_mat := ShaderMaterial.new()
 		skin_mat.shader = _skin_shader
 		var b_col := data.body_color if data != null else color

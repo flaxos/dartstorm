@@ -89,11 +89,26 @@ func _build() -> void:
 	_grid_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_grid_container)
 
-	_done_btn = UiKit.button("DONE", 26, Vector2(220, 52))
+	var btm_row := HBoxContainer.new()
+	btm_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	btm_row.add_theme_constant_override("separation", 16)
+	_box.add_child(btm_row)
+
+	var boss_btn := UiKit.button("👑 BOSS MODE: UNLOCK ALL", 22, Vector2(320, 52))
+	boss_btn.name = "ShopBossMode"
+	boss_btn.pressed.connect(func() -> void:
+		var prog: Node = get_node_or_null("/root/Progression")
+		if prog != null and prog.has_method("activate_boss_mode"):
+			prog.call("activate_boss_mode")
+			GameSettings.notify("👑 BOSS MODE! 99,999 Coins & All Items Unlocked!")
+			_refresh_header()
+			_refresh_catalog())
+	btm_row.add_child(boss_btn)
+
+	_done_btn = UiKit.button("DONE", 26, Vector2(180, 52))
 	_done_btn.name = "ShopDone"
-	_done_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_done_btn.pressed.connect(func() -> void: closed.emit())
-	_box.add_child(_done_btn)
+	btm_row.add_child(_done_btn)
 
 	_switch_tab(Tab.HATS)
 

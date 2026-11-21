@@ -7,7 +7,7 @@ render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_sc
 uniform vec4 body_color : source_color = vec4(0.15, 0.45, 1.0, 1.0);
 uniform vec4 accent_color : source_color = vec4(1.0, 0.85, 0.2, 1.0);
 uniform sampler2D skin_pattern : source_color, filter_linear_mipmap, repeat_enable;
-uniform float pattern_scale : hint_range(0.1, 40.0) = 18.0;
+uniform float pattern_scale : hint_range(0.1, 40.0) = 3.2;
 uniform float pattern_blend_power : hint_range(1.0, 32.0) = 12.0;
 
 // 0: MATTE, 1: GLOSS, 2: METALLIC_FLAKE, 3: HOLOGRAPHIC_IRIDESCENT
@@ -40,8 +40,9 @@ void fragment() {
 
 	vec4 pattern = col_x * blend_weights.x + col_y * blend_weights.y + col_z * blend_weights.z;
 
-	// Vibrant sticker decal overlay on top of molded body color
-	vec3 base_albedo = mix(body_color.rgb, pattern.rgb, pattern_intensity);
+	// Vibrant sticker decal overlay on top of molded body color using decal alpha
+	float decal_alpha = clamp(pattern.a * pattern_intensity, 0.0, 1.0);
+	vec3 base_albedo = mix(body_color.rgb, pattern.rgb, decal_alpha);
 
 	ALBEDO = base_albedo;
 	ROUGHNESS = roughness;
@@ -68,7 +69,7 @@ void fragment() {
 		float view_angle = clamp(dot(NORMAL, VIEW), 0.0, 1.0);
 		float hue = fract(view_angle * 1.6 + pattern.g * 0.35);
 		vec3 rainbow = clamp(abs(mod(hue * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
-		ALBEDO = mix(base_albedo, rainbow, 0.52);
+		ALBEDO = mix(base_albedo, rainbow, decal_alpha * 0.52);
 		ROUGHNESS = 0.18;
 		METALLIC = 0.45;
 		SPECULAR = 0.95;

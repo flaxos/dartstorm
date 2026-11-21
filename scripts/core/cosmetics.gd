@@ -31,18 +31,18 @@ const HATS: Array[Dictionary] = [
 	{"id": &"crown", "name": "Crown", "cost": 500, "tier": "Champion"},
 ]
 
-## Blaster skins with pattern texture, finish mode (0: Matte, 1: Gloss, 2: Metallic, 3: Holographic), cost, and tier.
+## Blaster skins with pattern texture, finish mode (0: Matte, 1: Gloss, 2: Metallic, 3: Holographic, 4: Emissive), cost, and tier.
 const SKINS: Array[Dictionary] = [
-	{"id": &"default", "name": "Classic Foam", "cost": 0, "tier": "Starter", "pattern": "res://assets/textures/skins/pattern_default.png", "finish": 1},
+	{"id": &"default", "name": "Classic Foam", "cost": 0, "tier": "Starter", "pattern": "res://assets/textures/skins/pattern_default.png", "finish": 0},
 	{"id": &"nitro", "name": "Nitro Stripe", "cost": 150, "tier": "Speed", "pattern": "res://assets/textures/skins/pattern_nitro.png", "finish": 1},
-	{"id": &"cyber", "name": "Neon Circuit", "cost": 250, "tier": "Tech", "pattern": "res://assets/textures/skins/pattern_cyber.png", "finish": 1},
-	{"id": &"hazard", "name": "Caution Zone", "cost": 250, "tier": "Hazard", "pattern": "res://assets/textures/skins/pattern_hazard.png", "finish": 0},
+	{"id": &"cyber", "name": "Neon Circuit", "cost": 250, "tier": "Tech", "pattern": "res://assets/textures/skins/pattern_cyber.png", "finish": 4},
+	{"id": &"hazard", "name": "Caution Zone", "cost": 250, "tier": "Hazard", "pattern": "res://assets/textures/skins/pattern_hazard.png", "finish": 2},
 	{"id": &"galaxy", "name": "Cosmic Pop", "cost": 400, "tier": "Space", "pattern": "res://assets/textures/skins/pattern_galaxy.png", "finish": 2},
 	{"id": &"dino", "name": "Dino Claws", "cost": 400, "tier": "Wild", "pattern": "res://assets/textures/skins/pattern_dino.png", "finish": 0},
 	{"id": &"hologram", "name": "Prism Foil", "cost": 500, "tier": "Champion", "pattern": "res://assets/textures/skins/pattern_hologram.png", "finish": 3},
-	{"id": &"slime", "name": "Toxic Slime", "cost": 600, "tier": "Outbreak", "pattern": "res://assets/textures/skins/pattern_slime.png", "finish": 1},
+	{"id": &"slime", "name": "Toxic Slime", "cost": 600, "tier": "Outbreak", "pattern": "res://assets/textures/skins/pattern_slime.png", "finish": 4},
 	{"id": &"shark", "name": "Shark Bite", "cost": 300, "tier": "Aero", "pattern": "res://assets/textures/skins/pattern_shark.png", "finish": 1},
-	{"id": &"flames", "name": "Fire Storm", "cost": 350, "tier": "Hot Rod", "pattern": "res://assets/textures/skins/pattern_flames.png", "finish": 1},
+	{"id": &"flames", "name": "Fire Storm", "cost": 350, "tier": "Hot Rod", "pattern": "res://assets/textures/skins/pattern_flames.png", "finish": 4},
 ]
 
 const RANDOM_NAMES: Array[String] = [

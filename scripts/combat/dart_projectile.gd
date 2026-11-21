@@ -42,6 +42,13 @@ var scavengeable: bool = false
 static var resting_pickups: Array[DartProjectile] = []
 const MAX_RESTING_PICKUPS := 120
 
+static func clear_resting_pickups() -> void:
+	for p in resting_pickups:
+		if is_instance_valid(p):
+			p.scavengeable = false
+	resting_pickups.clear()
+
+var _scavenge_check_timer: float = 0.0
 var _spent: bool = false
 var _resting: bool = false
 var _rest_left: float = 0.0
@@ -147,16 +154,19 @@ func _physics_process(delta: float) -> void:
 	if _resting:
 		if scavengeable:
 			scale = Vector3.ONE * 1.15
-			var actors: Array[Node] = get_tree().get_nodes_in_group(&"actors")
-			for a in actors:
-				var act: Actor = a as Actor
-				if act != null and is_instance_valid(act) and act.alive and not act.is_tagged_out:
-					if act.global_position.distance_to(global_position) < 1.3:
-						var added: int = act.collect_ammo(1)
-						if added > 0:
-							Sfx.play_at(&"ammo", global_position, 1.2, -6.0, 0.08)
-							retire()
-							return
+			_scavenge_check_timer -= delta
+			if _scavenge_check_timer <= 0.0:
+				_scavenge_check_timer = 0.05
+				var actors: Array[Node] = get_tree().get_nodes_in_group(&"actors")
+				for a in actors:
+					var act: Actor = a as Actor
+					if act != null and is_instance_valid(act) and act.alive and not act.is_tagged_out:
+						if act.global_position.distance_to(global_position) < 1.3:
+							var added: int = act.collect_ammo(1)
+							if added > 0:
+								Sfx.play_at(&"ammo", global_position, 1.2, -6.0, 0.08)
+								retire()
+								return
 			return
 		_rest_left -= delta
 		if _rest_left <= 0.0:

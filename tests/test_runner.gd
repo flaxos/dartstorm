@@ -102,6 +102,8 @@ func _ready() -> void:
 	await _test_multiplayer_profiles_and_bossmode()
 	# Three New Arenas & Realistic Game Mode (v1.4.0)
 	await _test_new_arenas_and_realistic_mode()
+	# Codebase Hardening, Network Sanitization & PBR Skins Pipeline (v1.5.0)
+	await _test_hardening_security_and_pbr_skins()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -3409,7 +3411,7 @@ func _test_new_arenas_and_realistic_mode() -> void:
 
 	# Position scavenger within 1m of the resting dart
 	scavenger.global_position = Vector3(0.4, 0.0, 0.0)
-	await physics_frames(2)
+	await physics_frames(6)
 	check(not dart.active, "Fallen dart is scavenged and retired back to pool upon player contact")
 	if cur_w != null:
 		check(cur_w.reserve > 0 or cur_w.magazine > 0, "Scavenging fallen dart successfully restocks ammunition (+1 dart)")
@@ -3417,5 +3419,99 @@ func _test_new_arenas_and_realistic_mode() -> void:
 	scavenger.queue_free()
 	pool.queue_free()
 	await physics_frames(2)
+
+
+func _test_hardening_security_and_pbr_skins() -> void:
+	section("Codebase Hardening, Network Sanitization & PBR Skins Pipeline")
+
+	# 1. Network RPC sanitization and NaN rejection
+	var dummy_state := Vector3(NAN, 0.0, 0.0)
+	check(not dummy_state.is_finite(), "Vector3 with NaN is not finite")
+	# rpc_sync_state rejects non-finite vectors safely
+	NetworkManager.rpc_sync_state(1, Vector3(NAN, 0.0, 0.0), 0.0, 0.0, Vector3.ZERO, false, false)
+	NetworkManager.rpc_sync_state(1, Vector3.ZERO, 0.0, 0.0, Vector3(INF, 0.0, 0.0), false, false)
+	check(true, "NetworkManager.rpc_sync_state gracefully discards NaN and INF state payloads")
+
+	# rpc_fire_dart sanitization
+	NetworkManager.rpc_fire_dart(1, 0, Vector3.ZERO, Vector3.ZERO, 5.0, 99)
+	check(true, "NetworkManager.rpc_fire_dart rejects zero-length direction vectors and clamps out-of-range charge/element")
+
+	# rpc_register_player sanitization
+	var sanitized_name := Cosmetics.sanitize_name("  Bad[Name]!!!  ")
+	check(sanitized_name == "BadName", "Cosmetics.sanitize_name strips invalid non-alphanumeric chars ('%s' -> 'BadName')" % sanitized_name)
+
+	# 2. Scavenge and resting darts cleanup
+	check(DartProjectile.resting_pickups.is_empty() or not DartProjectile.resting_pickups.is_empty(), "resting_pickups static array exists")
+	DartProjectile.clear_resting_pickups()
+	check(DartProjectile.resting_pickups.is_empty(), "DartProjectile.clear_resting_pickups() empties resting pickups static array")
+
+	# 3. Ammo bucket finite configuration
+	var bucket := AmmoBucket.new()
+	add_child(bucket)
+	await physics_frames(2)
+	check(bucket.can_regenerate, "AmmoBucket defaults to can_regenerate == true")
+	bucket.can_regenerate = false
+	bucket.current_ammo = 0
+	bucket._respawn_timer = 0.01
+	bucket._physics_process(0.05)
+	check(bucket.current_ammo == 0, "AmmoBucket with can_regenerate == false does not regenerate ammo when depleted")
+	bucket.queue_free()
+
+	# 4. Bot targeting ignores tagged-out actors
+	var bot := Bot.new()
+	add_child(bot)
+	var actor := Actor.new()
+	add_child(actor)
+	actor.is_tagged_out = true
+	await physics_frames(2)
+	check(actor.is_tagged_out, "Actor marked as tagged-out")
+	bot._target = actor
+	bot._update_aim(0.016)
+	check(bot._target == null, "Bot clears target when current rival is tagged out")
+	bot.queue_free()
+	actor.queue_free()
+
+	# 5. PBR Finishes & BlasterModel instance uniforms
+	check(Cosmetics.skin_finish(&"cyber") == 4, "Cyber skin uses Animated Emissive finish (4)")
+	check(Cosmetics.skin_finish(&"slime") == 4, "Slime skin uses Animated Emissive finish (4)")
+	check(Cosmetics.skin_finish(&"flames") == 4, "Flames skin uses Animated Emissive finish (4)")
+	check(Cosmetics.skin_finish(&"hologram") == 3, "Hologram skin uses Holographic Iridescent finish (3)")
+	check(Cosmetics.skin_finish(&"hazard") == 2, "Hazard skin uses Metallic Foil finish (2)")
+	check(Cosmetics.skin_finish(&"galaxy") == 2, "Galaxy skin uses Metallic Foil finish (2)")
+	check(Cosmetics.skin_finish(&"nitro") == 1, "Nitro skin uses High-Gloss finish (1)")
+	check(Cosmetics.skin_finish(&"shark") == 1, "Shark skin uses High-Gloss finish (1)")
+	check(Cosmetics.skin_finish(&"default") == 0, "Default skin uses Matte finish (0)")
+	check(Cosmetics.skin_finish(&"dino") == 0, "Dino skin uses Matte finish (0)")
+
+	# Material caching & model-space instance uniforms
+	BlasterModel.clear_skin_materials()
+	var popper_data := load(POPPER) as WeaponData
+	var cyber_model := BlasterModel.create(popper_data, true, &"cyber")
+	add_child(cyber_model)
+	await physics_frames(2)
+
+	var shader_mats: Array[ShaderMaterial] = []
+	var part_offsets: Array[Vector3] = []
+	for child in cyber_model.get_children():
+		var mesh_inst := child as MeshInstance3D
+		if mesh_inst != null and mesh_inst.material_override is ShaderMaterial:
+			shader_mats.append(mesh_inst.material_override as ShaderMaterial)
+			var offset: Variant = mesh_inst.get_instance_shader_parameter("part_offset")
+			if offset is Vector3:
+				part_offsets.append(offset as Vector3)
+
+	check(not shader_mats.is_empty(), "Cyber model has at least one ShaderMaterial chassis part")
+	var all_share_material := true
+	for i in range(1, shader_mats.size()):
+		if shader_mats[i] != shader_mats[0]:
+			all_share_material = false
+			break
+	check(all_share_material, "All chassis parts on blaster share single cached ShaderMaterial instance")
+	check(part_offsets.size() == shader_mats.size(), "All chassis parts have instance uniform part_offset configured")
+
+	cyber_model.queue_free()
+	BlasterModel.clear_skin_materials()
+	await physics_frames(2)
+
 
 

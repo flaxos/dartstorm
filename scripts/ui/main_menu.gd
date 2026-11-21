@@ -103,6 +103,10 @@ var _customise_profile: int = 0
 var _profile_tab_p1: Button
 var _profile_tab_p2: Button
 var _is_dragging_model: bool = false
+var _model_angle: float = PI
+var _turntable_auto: bool = true
+var _turntable_btn: Button
+var _inspect_light: OmniLight3D
 var _help: PanelContainer
 var _help_box: VBoxContainer
 var _bunker_label: Label
@@ -212,7 +216,12 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_time += delta
 	if player_model != null:
-		player_model.rotation.y = PI + sin(_time * 0.8) * (0.7 if _customise.visible else 0.3)
+		if _customise != null and _customise.visible:
+			if _turntable_auto and not _is_dragging_model:
+				_model_angle = fmod(_model_angle + delta * 0.45, TAU)
+			player_model.rotation.y = _model_angle
+		else:
+			player_model.rotation.y = PI + sin(_time * 0.8) * 0.3
 		player_model.position.y = PLAYER_SPOT.y + 0.32 + absf(sin(_time * 1.6)) * 0.04
 	for i in squad.size():
 		var member := squad[i]
@@ -230,9 +239,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			if event.button_index == MOUSE_BUTTON_LEFT:
 				_is_dragging_model = event.pressed
 		elif event is InputEventMouseMotion and _is_dragging_model:
-			player_model.rotation.y += event.relative.x * 0.012
+			_model_angle = fmod(_model_angle + event.relative.x * 0.012, TAU)
+			player_model.rotation.y = _model_angle
 		elif event is InputEventScreenDrag:
-			player_model.rotation.y += event.relative.x * 0.012
+			_model_angle = fmod(_model_angle + event.relative.x * 0.012, TAU)
+			player_model.rotation.y = _model_angle
 
 	if not event.is_action_pressed(&"ui_cancel"):
 		return
@@ -273,6 +284,14 @@ func _build_island() -> void:
 	# Yellow lightning bolts crackling over the squad, straight from the drawing.
 	_bolts.append(_lightning_bolt(Vector3(-2.5, 4.9, -3.0), -14.0))
 	_bolts.append(_lightning_bolt(Vector3(4.2, 4.6, -3.0), 12.0))
+	# Studio inspect light for character/blaster customize inspection
+	_inspect_light = OmniLight3D.new()
+	_inspect_light.position = PLAYER_SPOT + Vector3(-0.6, 1.8, 1.6)
+	_inspect_light.light_color = Color(1.0, 0.96, 0.9)
+	_inspect_light.light_energy = 0.0
+	_inspect_light.omni_range = 6.0
+	_inspect_light.omni_attenuation = 0.8
+	_stage.add_child(_inspect_light)
 	_squad_root = Node3D.new()
 	_stage.add_child(_squad_root)
 
@@ -866,7 +885,7 @@ func _build_customise() -> void:
 	inspect_row.add_child(prev_w)
 
 	_weapon_inspect_label = UiKit.label("", 16, UiKit.CREAM, 4)
-	_weapon_inspect_label.custom_minimum_size = Vector2(250, 36)
+	_weapon_inspect_label.custom_minimum_size = Vector2(180, 36)
 	_weapon_inspect_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_weapon_inspect_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	inspect_row.add_child(_weapon_inspect_label)
@@ -875,7 +894,13 @@ func _build_customise() -> void:
 	next_w.pressed.connect(_cycle_preview_weapon.bind(1))
 	inspect_row.add_child(next_w)
 
-	var tip_label := UiKit.label("(Click & drag to rotate character 360°)", 13, UiKit.SKY, 2)
+	_turntable_btn = UiKit.small_button("🔄 AUTO", Vector2(96, 36))
+	_turntable_btn.pressed.connect(func() -> void:
+		_turntable_auto = not _turntable_auto
+		_turntable_btn.text = "🔄 AUTO" if _turntable_auto else "⏸️ PAUSE")
+	inspect_row.add_child(_turntable_btn)
+
+	var tip_label := UiKit.label("(Drag character 360° • Turntable toggle • Studio PBR inspect light)", 13, UiKit.SKY, 2)
 	box.add_child(tip_label)
 
 	var btn_row := HBoxContainer.new()
@@ -943,11 +968,16 @@ func _show_customise(shown: bool) -> void:
 		_refresh_customise()
 		_update_preview_weapon()
 		_swatches[clampi(GameSettings.player_color, 0, _swatches.size() - 1)].grab_focus()
+		if _inspect_light != null:
+			_inspect_light.light_energy = 1.8
+		_model_angle = PI
 	else:
 		_move_camera(CAMERA_LOBBY, LOOK_LOBBY)
 		GameSettings.save_settings()
 		_refresh_card()
 		_play_button.grab_focus()
+		if _inspect_light != null:
+			_inspect_light.light_energy = 0.0
 
 
 ## Keeps the raw text while typing (so spaces work); it's cleaned up when

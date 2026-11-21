@@ -164,15 +164,44 @@ func rpc_register_player(info: Dictionary) -> void:
 	if not is_host:
 		return
 	var sender_id := multiplayer.get_remote_sender_id()
-	info["peer_id"] = sender_id
-	# Assign team index based on mode
-	info["team_id"] = roster.size() % 2
-	# Remove any old entry for this peer
-	for i in range(roster.size() - 1, -1, -1):
+	if sender_id == 0:
+		sender_id = local_peer_id
+
+	# Prevent roster flooding beyond MAX_CLIENTS
+	var existing_idx := -1
+	for i in roster.size():
 		if int(roster[i].get("peer_id", 0)) == sender_id:
-			roster.remove_at(i)
+			existing_idx = i
 			break
-	roster.append(info)
+	if existing_idx < 0 and roster.size() >= MAX_CLIENTS:
+		return
+
+	# Sanitize and bound all incoming player profile attributes
+	var raw_name: String = str(info.get("name", "Player"))
+	var safe_name := Cosmetics.sanitize_name(raw_name)
+	if safe_name.is_empty():
+		safe_name = "Player %d" % sender_id
+	var safe_color: int = clampi(int(info.get("color", 0)), 0, Cosmetics.COLORS.size() - 1)
+	var raw_hat: StringName = StringName(str(info.get("hat", &"cap")))
+	var safe_hat: StringName = raw_hat if Cosmetics.has_hat(raw_hat) else &"cap"
+	var raw_skin: StringName = StringName(str(info.get("skin", &"default")))
+	var safe_skin: StringName = raw_skin if Cosmetics.has_skin(raw_skin) else &"default"
+	var safe_level: int = clampi(int(info.get("level", 1)), 1, 100)
+
+	var clean_entry := {
+		"peer_id": sender_id,
+		"name": safe_name,
+		"color": safe_color,
+		"hat": safe_hat,
+		"skin": safe_skin,
+		"level": safe_level,
+		"team_id": (existing_idx if existing_idx >= 0 else roster.size()) % 2,
+	}
+
+	if existing_idx >= 0:
+		roster[existing_idx] = clean_entry
+	else:
+		roster.append(clean_entry)
 	_sync_lobby_to_all()
 
 
@@ -228,17 +257,38 @@ func _do_launch(p_arena: int, p_mode: int, p_roster: Array[Dictionary], p_bot_fi
 
 @rpc("any_peer", "unreliable")
 func rpc_sync_state(peer_id: int, pos: Vector3, rot_y: float, pitch: float, vel: Vector3, is_aiming: bool, is_sprinting: bool) -> void:
+	# Enforce server-verified sender ID to prevent impersonation/spoofing
+	var sender_id := multiplayer.get_remote_sender_id()
+	if sender_id == 0:
+		sender_id = peer_id
+
+	# Drop corrupted or NaN/INF packets
+	if not pos.is_finite() or not vel.is_finite() or not is_finite(rot_y) or not is_finite(pitch):
+		return
+
 	# Relay to current match if active
 	var match_scene := get_tree().current_scene as MatchScene
 	if match_scene != null and match_scene.has_method("on_network_state_received"):
-		match_scene.call("on_network_state_received", peer_id, pos, rot_y, pitch, vel, is_aiming, is_sprinting)
+		match_scene.call("on_network_state_received", sender_id, pos, rot_y, pitch, vel, is_aiming, is_sprinting)
 
 
 @rpc("any_peer", "reliable")
 func rpc_fire_dart(shooter_id: int, weapon_index: int, origin: Vector3, dir: Vector3, charge: float, element: int) -> void:
+	# Enforce server-verified shooter ID to prevent forged hostile fire
+	var sender_id := multiplayer.get_remote_sender_id()
+	if sender_id == 0:
+		sender_id = shooter_id
+
+	# Validate direction and origin vectors against NaN/INF and zero-length
+	if not origin.is_finite() or not dir.is_finite() or dir.length_squared() < 0.0001:
+		return
+	var safe_dir := dir.normalized()
+	var safe_charge := clampf(charge, 0.0, 1.0)
+	var safe_element := clampi(element, 0, 4)
+
 	var match_scene := get_tree().current_scene as MatchScene
 	if match_scene != null and match_scene.has_method("on_network_fire_dart"):
-		match_scene.call("on_network_fire_dart", shooter_id, weapon_index, origin, dir, charge, element)
+		match_scene.call("on_network_fire_dart", sender_id, weapon_index, origin, safe_dir, safe_charge, safe_element)
 
 
 @rpc("authority", "reliable")

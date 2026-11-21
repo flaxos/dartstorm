@@ -15,6 +15,10 @@ var muzzle: Marker3D
 
 var skin_id: StringName = &"default"
 static var _skin_shader: Shader = preload("res://assets/materials/blaster_skin.gdshader")
+static var _skin_materials: Dictionary = {}
+
+static func clear_skin_materials() -> void:
+	_skin_materials.clear()
 
 var _spinner: Node3D
 var _belt: Array[Node3D] = []
@@ -247,17 +251,28 @@ func _part(mesh: Mesh, pos: Vector3, color: Color, rot_deg: Vector3, parent: Nod
 	var is_chassis := not color.is_equal_approx(ORANGE_TIP) and not color.is_equal_approx(DARK) and metallic < 0.2
 	var has_custom_skin := skin_id != &"default" and not skin_id.is_empty() and Cosmetics.has_skin(skin_id)
 	if is_chassis and has_custom_skin:
-		var skin_mat := ShaderMaterial.new()
-		skin_mat.shader = _skin_shader
 		var b_col := data.body_color if data != null else color
 		var a_col := data.accent_color if data != null else color
-		skin_mat.set_shader_parameter("body_color", b_col)
-		skin_mat.set_shader_parameter("accent_color", a_col)
-		var pattern_path: String = Cosmetics.skin_pattern(skin_id)
-		if ResourceLoader.exists(pattern_path):
-			skin_mat.set_shader_parameter("skin_pattern", load(pattern_path))
-		skin_mat.set_shader_parameter("finish_mode", Cosmetics.skin_finish(skin_id))
+		var mat_key := "%s_%s_%s" % [skin_id, b_col.to_html(false), a_col.to_html(false)]
+		var skin_mat: ShaderMaterial = _skin_materials.get(mat_key, null)
+		if skin_mat == null:
+			skin_mat = ShaderMaterial.new()
+			skin_mat.shader = _skin_shader
+			skin_mat.set_shader_parameter("body_color", b_col)
+			skin_mat.set_shader_parameter("accent_color", a_col)
+			var pattern_path: String = Cosmetics.skin_pattern(skin_id)
+			if ResourceLoader.exists(pattern_path):
+				skin_mat.set_shader_parameter("skin_pattern", load(pattern_path))
+			skin_mat.set_shader_parameter("finish_mode", Cosmetics.skin_finish(skin_id))
+			_skin_materials[mat_key] = skin_mat
 		instance.material_override = skin_mat
+		var part_offset := pos
+		var part_rot := rot_deg
+		if parent != null and parent != self:
+			part_offset += parent.position
+			part_rot += parent.rotation_degrees
+		instance.set_instance_shader_parameter("part_offset", part_offset)
+		instance.set_instance_shader_parameter("part_rot", part_rot)
 	else:
 		instance.material_override = ArenaKit.mat(color, 0.85 if color.is_equal_approx(DARK) else 0.5, metallic)
 	instance.position = pos

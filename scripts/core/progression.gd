@@ -454,8 +454,12 @@ func reset_to_defaults() -> void:
 
 func load_progression() -> void:
 	var file := ConfigFile.new()
-	if file.load(SAVE_PATH) != OK:
-		# First run: initialize defaults
+	var loaded := file.load(SAVE_PATH) == OK
+	if not loaded and FileAccess.file_exists(SAVE_PATH + ".tmp"):
+		loaded = file.load(SAVE_PATH + ".tmp") == OK
+
+	if not loaded:
+		# First run or missing/corrupted file: initialize defaults
 		reset_to_defaults()
 		progression_loaded.emit()
 		return
@@ -589,7 +593,12 @@ func save_progression() -> void:
 		})
 	file.set_value("missions", "active", missions_save)
 
-	var err := file.save(SAVE_PATH)
-	if err != OK:
-		push_warning("Could not save progression (error %d)" % err)
+	var tmp_path := SAVE_PATH + ".tmp"
+	var err := file.save(tmp_path)
+	if err == OK:
+		var copy_err := DirAccess.copy_absolute(tmp_path, SAVE_PATH)
+		if copy_err != OK:
+			file.save(SAVE_PATH)
+	else:
+		file.save(SAVE_PATH)
 	progression_saved.emit()

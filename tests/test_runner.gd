@@ -98,6 +98,8 @@ func _ready() -> void:
 	await _test_touch_controls_and_mobile_export()
 	# Environment & Lighting Uplift: Tactile PBR Shaders, Splat Decals & Golden Hour (v1.2.0)
 	await _test_environment_and_splat_decals()
+	# Online Multiplayer, Dual Profiles, Blaster Inspector & Boss Mode (v1.3.0)
+	await _test_multiplayer_profiles_and_bossmode()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -1968,7 +1970,7 @@ func _test_blaster_skins_and_shader() -> void:
 	check(preserved_dark_grip, "dark grip preserves matte tactile polymer material")
 	model.queue_free()
 
-	# Default skin also uses shader with pattern_default decals
+	# Default skin uses clean molded toy plastic so bots and pickups are not skinned
 	var model_default := BlasterModel.create(popper_data, true, &"default")
 	add_child(model_default)
 	await physics_frames(2)
@@ -1978,7 +1980,7 @@ func _test_blaster_skins_and_shader() -> void:
 		if mesh_inst != null and mesh_inst.material_override is ShaderMaterial:
 			default_has_shader = true
 			break
-	check(default_has_shader, "default skin applies shader with pattern_default toy decals")
+	check(not default_has_shader, "default skin isolates blaster to clean molded plastic (bots/pickups not skinned)")
 	model_default.queue_free()
 
 	# 5. Shop Panel skins tab
@@ -3201,4 +3203,93 @@ func _test_environment_and_splat_decals() -> void:
 	GameSettings.visual_intensity = saved_intensity
 	await physics_frames(2)
 	check(FoamSplat.live_count() == 0, "Zero foam splats remain active after stage cleanup")
+
+
+func _test_multiplayer_profiles_and_bossmode() -> void:
+	section("Online Multiplayer, Dual Profiles, Blaster Inspector & Boss Mode")
+
+	# 1. Boss Mode Test
+	Progression.activate_boss_mode()
+	check(Progression.coins >= 99999, "Boss Mode grants at least 99,999 coins")
+	var all_skins_unlocked := true
+	for skin in Cosmetics.SKINS:
+		var sid: StringName = skin["id"]
+		if not Progression.is_unlocked(&"skin", sid):
+			all_skins_unlocked = false
+			break
+	check(all_skins_unlocked, "Boss Mode unlocks all 10 blaster skin patterns")
+
+	var all_hats_unlocked := true
+	for hat in Cosmetics.HATS:
+		var hid: StringName = hat["id"]
+		if not Progression.is_unlocked(&"hat", hid):
+			all_hats_unlocked = false
+			break
+	check(all_hats_unlocked, "Boss Mode unlocks all 11 hats")
+
+	var all_colors_unlocked := true
+	for ci in Cosmetics.COLORS.size():
+		if not Progression.is_unlocked(&"color", ci):
+			all_colors_unlocked = false
+			break
+	check(all_colors_unlocked, "Boss Mode unlocks all 8 player colors")
+
+	# 2. Multi-Profile Progression & Isolation
+	check(Progression.get_profile_count() >= 2, "Progression supports dual profiles (P1 and P2)")
+	Progression.set_active_profile(0)
+	var p0_data := Progression.get_profile_data(0)
+	Progression.set_active_profile(1)
+	var p1_data := Progression.get_profile_data(1)
+	check(p0_data is Dictionary and p1_data is Dictionary, "Profile data retrieved as dictionaries")
+	Progression.set_active_profile(0)
+
+	# 3. Blaster Skin Shader & Model Isolation
+	var popper_data := load(POPPER) as WeaponData
+	check(popper_data != null, "Pocket Popper loaded for skin model inspection")
+	var model_nitro := BlasterModel.create(popper_data, false, &"nitro")
+	add_child(model_nitro)
+	await physics_frames(2)
+	var nitro_has_shader := false
+	for child in model_nitro.get_children():
+		var mesh_inst := child as MeshInstance3D
+		if mesh_inst != null and mesh_inst.material_override is ShaderMaterial:
+			nitro_has_shader = true
+			break
+	check(nitro_has_shader, "Custom skin &nitro applies triplanar decal ShaderMaterial")
+	model_nitro.queue_free()
+
+	# 4. Universal NetworkManager (WebSocketMultiplayerPeer)
+	check(NetworkManager != null, "NetworkManager autoload singleton exists")
+	check(not NetworkManager.is_online, "NetworkManager defaults to offline state")
+	var host_err := NetworkManager.host_game(8928)
+	check(host_err == OK, "NetworkManager successfully hosts WebSocket server on port 8928")
+	check(NetworkManager.is_online, "NetworkManager marks is_online == true when hosting")
+	check(NetworkManager.is_host, "NetworkManager marks is_host == true for host instance")
+	check(NetworkManager.roster.size() == 1, "NetworkManager registers host in lobby roster")
+	NetworkManager.disconnect_game()
+	check(not NetworkManager.is_online, "NetworkManager disconnect_game resets online state cleanly")
+	check(not NetworkManager.is_host, "NetworkManager disconnect_game clears host flag")
+
+	# 5. MainMenu Arsenal Inspector & All 11 Weapons
+	check(MainMenu.ALL_WEAPONS.size() == 11, "MainMenu.ALL_WEAPONS contains all 11 blasters in the arsenal")
+	var all_blasters_valid := true
+	for w_path in MainMenu.ALL_WEAPONS:
+		if not ResourceLoader.exists(w_path):
+			all_blasters_valid = false
+			break
+	check(all_blasters_valid, "All 11 blasters in inspector exist on disk as valid resources")
+
+	# 6. MultiplayerMenu Hub
+	var mp_ui := MultiplayerMenu.new()
+	add_child(mp_ui)
+	await physics_frames(2)
+	check(mp_ui.is_inside_tree(), "MultiplayerMenu successfully mounts in scene tree")
+	mp_ui._switch_tab(MultiplayerMenu.Tab.JOIN)
+	await physics_frames(2)
+	check(mp_ui._join_panel != null and mp_ui._join_panel.visible, "MultiplayerMenu successfully switches to JOIN tab")
+	mp_ui._switch_tab(MultiplayerMenu.Tab.HOST)
+	await physics_frames(2)
+	check(mp_ui._host_panel != null and mp_ui._host_panel.visible, "MultiplayerMenu successfully switches to HOST tab")
+	mp_ui.queue_free()
+	await physics_frames(2)
 

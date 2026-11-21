@@ -37,15 +37,9 @@ def draw_sticker_badge(draw, bbox, bg_color, border_color=(255, 255, 255, 255), 
 
 
 def gen_default():
-    """Default Authentic Nerf: Molded diamond grip + DARTSTORM branding & velocity gauge."""
-    img = Image.new("RGBA", (SIZE, SIZE), (210, 215, 225, 255))
+    """Default Authentic Nerf: DARTSTORM branding & velocity gauge."""
+    img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-
-    # Molded diamond grip stippling across background
-    step = 32
-    for y in range(0, SIZE, step):
-        for x in range(0, SIZE, step):
-            draw.polygon([(x + 16, y), (x + 32, y + 16), (x + 16, y + 32), (x, y + 16)], fill=(195, 200, 212, 255))
 
     font_large = get_font(72)
     font_med = get_font(36)
@@ -92,7 +86,7 @@ def gen_default():
 
 def gen_nitro():
     """Nitro Stripe: bold racing stripes, 07 roundel, checkered flags, turbo arrows."""
-    img = Image.new("RGBA", (SIZE, SIZE), (250, 250, 250, 255))
+    img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
     # Racing dual stripes
@@ -129,7 +123,7 @@ def gen_nitro():
 
 def gen_cyber():
     """Neon Cyber: circuit traces, CPU chip sticker, digital reticle, matrix dots."""
-    img = Image.new("RGBA", (SIZE, SIZE), (15, 20, 35, 255))
+    img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
     # Circuit board traces
@@ -248,7 +242,7 @@ def gen_galaxy():
 
 def gen_dino():
     """Dino Claws: scale grip, giant 3-claw slash marks, T-Rex skull badge."""
-    img = Image.new("RGBA", (SIZE, SIZE), (35, 120, 50, 255))
+    img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
     # Reptilian scales
@@ -317,7 +311,7 @@ def gen_hologram():
 
 def gen_slime():
     """Toxic Slime: dripping radioactive green slime waves, biohazard skull sticker."""
-    img = Image.new("RGBA", (SIZE, SIZE), (25, 55, 28, 255))
+    img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
     # Slime drip waves
@@ -344,7 +338,7 @@ def gen_slime():
 
 def gen_shark():
     """Shark Bite: WW2 Flying Tigers fighter shark teeth, menacing eye, steel rivet seams."""
-    img = Image.new("RGBA", (SIZE, SIZE), (70, 85, 105, 255))
+    img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
     # Steel plate rivet seams
@@ -384,7 +378,7 @@ def gen_shark():
 
 def gen_flames():
     """Hot-Rod Flames: blazing layered fire tongues, skull spark plug, drag racing badge."""
-    img = Image.new("RGBA", (SIZE, SIZE), (20, 20, 25, 255))
+    img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
     # Layered hot-rod flame tongues licking across

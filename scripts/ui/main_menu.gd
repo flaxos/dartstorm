@@ -1,3 +1,4 @@
+class_name MainMenu
 extends Node3D
 ## The lobby, laid out like the young players' own drawing of DARTSTORM's home
 ## screen (GDD §3.21): you stand on a round platform in the middle of a
@@ -42,6 +43,19 @@ const BLASTERS := [
 	"res://resources/weapons/pocket_popper.tres",
 	"res://resources/weapons/flaxs_chainstorm.tres",
 ]
+const ALL_WEAPONS: Array[String] = [
+	"res://resources/weapons/pocket_popper.tres",
+	"res://resources/weapons/dart_sprayer.tres",
+	"res://resources/weapons/flaxs_chainstorm.tres",
+	"res://resources/weapons/double_trouble.tres",
+	"res://resources/weapons/foam_hammer.tres",
+	"res://resources/weapons/longshot.tres",
+	"res://resources/weapons/thunder_cannon.tres",
+	"res://resources/weapons/frost_ranger.tres",
+	"res://resources/weapons/hydro_soaker.tres",
+	"res://resources/weapons/ricochet_ranger.tres",
+	"res://resources/weapons/wind_whisperer.tres",
+]
 const KEYBOARD_HELP := [
 	"Move: W A S D     Look: Mouse",
 	"Jump: Space     Sprint: Shift",
@@ -80,7 +94,14 @@ var _menu: Control
 var _settings: SettingsPanel
 var _missions: MissionsPanel
 var _shop: ShopPanel
+var _multiplayer_menu: MultiplayerMenu
 var _customise: PanelContainer
+var _preview_weapon_index: int = 0
+var _weapon_inspect_label: Label
+var _customise_profile: int = 0
+var _profile_tab_p1: Button
+var _profile_tab_p2: Button
+var _is_dragging_model: bool = false
 var _help: PanelContainer
 var _help_box: VBoxContainer
 var _bunker_label: Label
@@ -164,6 +185,12 @@ func _ready() -> void:
 		_refresh_card()
 		_refresh_customise())
 
+	_multiplayer_menu = MultiplayerMenu.new()
+	_multiplayer_menu.visible = false
+	_ui.add_child(_multiplayer_menu)
+	UiKit.pin(_multiplayer_menu, Vector2(0.5, 0.5), Vector2.ZERO, Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_BOTH)
+	_multiplayer_menu.closed.connect(_show_multiplayer.bind(false))
+
 	var prog: Node = get_node_or_null("/root/Progression")
 	if prog != null:
 		prog.connect("xp_gained", func(_a: Variant, _t: Variant) -> void: _refresh_card())
@@ -197,6 +224,15 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _customise != null and _customise.visible and player_model != null:
+		if event is InputEventMouseButton:
+			if event.button_index == MOUSE_BUTTON_LEFT:
+				_is_dragging_model = event.pressed
+		elif event is InputEventMouseMotion and _is_dragging_model:
+			player_model.rotation.y += event.relative.x * 0.012
+		elif event is InputEventScreenDrag:
+			player_model.rotation.y += event.relative.x * 0.012
+
 	if not event.is_action_pressed(&"ui_cancel"):
 		return
 	if _missions != null and _missions.visible:
@@ -420,6 +456,7 @@ func _build_player_card() -> void:
 	xp_row.add_child(_coins_label)
 
 	for entry: Array in [
+		["ONLINE MULTIPLAYER", _show_multiplayer.bind(true)],
 		["MISSIONS", _show_missions.bind(true)],
 		["SHOP", _show_shop.bind(true)],
 		["CHARACTER", _show_customise.bind(true)],
@@ -718,6 +755,14 @@ func _show_settings(shown: bool) -> void:
 		_play_button.grab_focus()
 
 
+func _show_multiplayer(shown: bool) -> void:
+	_multiplayer_menu.visible = shown
+	_menu.visible = not shown
+	if not shown:
+		_refresh_card()
+		_play_button.grab_focus()
+
+
 func _show_help(shown: bool) -> void:
 	_help.visible = shown
 	_menu.visible = not shown
@@ -736,84 +781,156 @@ func _build_customise() -> void:
 	_ui.add_child(_customise)
 	UiKit.pin(_customise, Vector2(0.0, 0.5), Vector2(36, 0), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_BOTH)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 12)
+	box.add_theme_constant_override("separation", 10)
 	_customise.add_child(box)
-	box.add_child(UiKit.label("CHARACTER", 40, UiKit.ORANGE_HOT, 10))
+	box.add_child(UiKit.label("CHARACTER", 38, UiKit.ORANGE_HOT, 10))
 
-	box.add_child(UiKit.label("NAME", 20, UiKit.SKY, 4))
+	# Profile selection tabs
+	var prof_row := HBoxContainer.new()
+	prof_row.add_theme_constant_override("separation", 10)
+	box.add_child(prof_row)
+	_profile_tab_p1 = UiKit.small_button("PROFILE 1 (P1)", Vector2(170, 36))
+	_profile_tab_p1.pressed.connect(_switch_customise_profile.bind(0))
+	prof_row.add_child(_profile_tab_p1)
+	_profile_tab_p2 = UiKit.small_button("PROFILE 2 (P2)", Vector2(170, 36))
+	_profile_tab_p2.pressed.connect(_switch_customise_profile.bind(1))
+	prof_row.add_child(_profile_tab_p2)
+
+	box.add_child(UiKit.label("NAME", 18, UiKit.SKY, 4))
 	var name_row := HBoxContainer.new()
 	name_row.add_theme_constant_override("separation", 10)
 	box.add_child(name_row)
 	_name_edit = LineEdit.new()
 	_name_edit.max_length = Cosmetics.NAME_MAX_LENGTH
 	_name_edit.placeholder_text = "You"
-	_name_edit.custom_minimum_size = Vector2(300, 48)
+	_name_edit.custom_minimum_size = Vector2(300, 44)
 	_name_edit.add_theme_font_override("font", UiKit.font())
-	_name_edit.add_theme_font_size_override("font_size", 26)
+	_name_edit.add_theme_font_size_override("font_size", 24)
 	_name_edit.add_theme_stylebox_override("normal", UiKit.panel_style(UiKit.NAVY_DARK, 1.0, 12, 2, UiKit.SKY, 10))
 	_name_edit.add_theme_stylebox_override("focus", UiKit.panel_style(UiKit.NAVY_DARK, 0.0, 12, 3, UiKit.CREAM, 10))
 	_name_edit.text_changed.connect(_on_name_changed)
 	name_row.add_child(_name_edit)
-	var random := UiKit.small_button("RANDOM", Vector2(130, 48))
+	var random := UiKit.small_button("RANDOM", Vector2(120, 44))
 	random.pressed.connect(func() -> void:
 		_name_edit.text = Cosmetics.random_name()
 		_on_name_changed(_name_edit.text))
 	name_row.add_child(random)
 
-	box.add_child(UiKit.label("COLOUR  (TEAM MODES USE TEAM COLOURS)", 18, UiKit.SKY, 4))
+	box.add_child(UiKit.label("COLOUR  (TEAM MODES USE TEAM COLOURS)", 16, UiKit.SKY, 4))
 	var colours := HBoxContainer.new()
 	colours.add_theme_constant_override("separation", 8)
 	box.add_child(colours)
 	for i in Cosmetics.COLORS.size():
 		var swatch := Button.new()
-		swatch.custom_minimum_size = Vector2(46, 46)
+		swatch.custom_minimum_size = Vector2(44, 44)
 		swatch.tooltip_text = Cosmetics.COLORS[i]["name"]
 		swatch.pressed.connect(_pick_color.bind(i))
 		swatch.pressed.connect(func() -> void: Sfx.play(&"ui_click"))
 		colours.add_child(swatch)
 		_swatches.append(swatch)
 
-	box.add_child(UiKit.label("HAT", 20, UiKit.SKY, 4))
+	box.add_child(UiKit.label("HAT", 18, UiKit.SKY, 4))
 	var hats := GridContainer.new()
 	hats.columns = 4
-	hats.add_theme_constant_override("h_separation", 8)
-	hats.add_theme_constant_override("v_separation", 8)
+	hats.add_theme_constant_override("h_separation", 6)
+	hats.add_theme_constant_override("v_separation", 6)
 	box.add_child(hats)
 	for hat in Cosmetics.HATS:
-		var hat_button := UiKit.small_button(String(hat["name"]).to_upper(), Vector2(120, 42))
-		hat_button.add_theme_font_size_override("font_size", 18)
+		var hat_button := UiKit.small_button(String(hat["name"]).to_upper(), Vector2(118, 38))
+		hat_button.add_theme_font_size_override("font_size", 16)
 		hat_button.pressed.connect(_pick_hat.bind(hat["id"]))
 		hats.add_child(hat_button)
 		_hat_buttons.append(hat_button)
 
-	box.add_child(UiKit.label("BLASTER SKIN / STICKERS", 20, UiKit.SKY, 4))
+	box.add_child(UiKit.label("BLASTER SKIN / STICKERS", 18, UiKit.SKY, 4))
 	var skins_grid := GridContainer.new()
 	skins_grid.columns = 4
-	skins_grid.add_theme_constant_override("h_separation", 8)
-	skins_grid.add_theme_constant_override("v_separation", 8)
+	skins_grid.add_theme_constant_override("h_separation", 6)
+	skins_grid.add_theme_constant_override("v_separation", 6)
 	box.add_child(skins_grid)
 	for skin in Cosmetics.SKINS:
-		var skin_button := UiKit.small_button(String(skin["name"]).to_upper(), Vector2(120, 38))
-		skin_button.add_theme_font_size_override("font_size", 15)
+		var skin_button := UiKit.small_button(String(skin["name"]).to_upper(), Vector2(118, 36))
+		skin_button.add_theme_font_size_override("font_size", 14)
 		skin_button.pressed.connect(_pick_skin.bind(skin["id"]))
 		skins_grid.add_child(skin_button)
 		_skin_buttons.append(skin_button)
 
+	box.add_child(UiKit.label("INSPECT BLASTER", 18, UiKit.SKY, 4))
+	var inspect_row := HBoxContainer.new()
+	inspect_row.add_theme_constant_override("separation", 8)
+	box.add_child(inspect_row)
+
+	var prev_w := UiKit.small_button("<", Vector2(40, 36))
+	prev_w.pressed.connect(_cycle_preview_weapon.bind(-1))
+	inspect_row.add_child(prev_w)
+
+	_weapon_inspect_label = UiKit.label("", 16, UiKit.CREAM, 4)
+	_weapon_inspect_label.custom_minimum_size = Vector2(250, 36)
+	_weapon_inspect_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_weapon_inspect_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	inspect_row.add_child(_weapon_inspect_label)
+
+	var next_w := UiKit.small_button(">", Vector2(40, 36))
+	next_w.pressed.connect(_cycle_preview_weapon.bind(1))
+	inspect_row.add_child(next_w)
+
+	var tip_label := UiKit.label("(Click & drag to rotate character 360°)", 13, UiKit.SKY, 2)
+	box.add_child(tip_label)
+
 	var btn_row := HBoxContainer.new()
-	btn_row.add_theme_constant_override("separation", 14)
+	btn_row.add_theme_constant_override("separation", 10)
 	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_child(btn_row)
 
-	var shop_btn := UiKit.small_button("COIN SHOP 🪙", Vector2(170, 52))
+	var shop_btn := UiKit.small_button("SHOP 🪙", Vector2(130, 48))
 	shop_btn.pressed.connect(func() -> void:
 		_show_customise(false)
 		_show_shop(true))
 	btn_row.add_child(shop_btn)
 
-	var done := UiKit.button("DONE", 26, Vector2(170, 52))
+	var boss_btn := UiKit.button("👑 BOSS MODE", 18, Vector2(170, 48))
+	boss_btn.name = "CustomiseBossMode"
+	boss_btn.pressed.connect(func() -> void:
+		var prog: Node = get_node_or_null("/root/Progression")
+		if prog != null and prog.has_method("activate_boss_mode"):
+			prog.call("activate_boss_mode")
+			GameSettings.notify("👑 BOSS MODE! 99,999 Coins & All Items Unlocked!")
+			_refresh_customise()
+			_update_preview_weapon())
+	btn_row.add_child(boss_btn)
+
+	var done := UiKit.button("DONE", 22, Vector2(130, 48))
 	done.pressed.connect(_show_customise.bind(false))
 	btn_row.add_child(done)
 	_refresh_customise()
+	_update_preview_weapon()
+
+
+func _switch_customise_profile(idx: int) -> void:
+	_customise_profile = idx
+	var prog: Node = get_node_or_null("/root/Progression")
+	if prog != null and prog.has_method("set_active_profile"):
+		prog.call("set_active_profile", idx)
+	_refresh_customise()
+	_update_preview_weapon()
+
+
+func _cycle_preview_weapon(step: int) -> void:
+	_preview_weapon_index = (_preview_weapon_index + step + ALL_WEAPONS.size()) % ALL_WEAPONS.size()
+	Sfx.play(&"swap")
+	_update_preview_weapon()
+
+
+func _update_preview_weapon() -> void:
+	if player_model == null or ALL_WEAPONS.is_empty():
+		return
+	_preview_weapon_index = clampi(_preview_weapon_index, 0, ALL_WEAPONS.size() - 1)
+	var path: String = ALL_WEAPONS[_preview_weapon_index]
+	var wdata := load(path) as WeaponData
+	var active_skin: StringName = GameSettings.player2_skin if _customise_profile == 1 else GameSettings.player_skin
+	player_model.set_weapon(wdata, active_skin)
+	if _weapon_inspect_label != null and wdata != null:
+		_weapon_inspect_label.text = "%s (%d/%d)" % [wdata.display_name.to_upper(), _preview_weapon_index + 1, ALL_WEAPONS.size()]
 
 
 func _show_customise(shown: bool) -> void:
@@ -823,6 +940,7 @@ func _show_customise(shown: bool) -> void:
 	if shown:
 		_move_camera(CAMERA_CLOSE, LOOK_CLOSE)
 		_refresh_customise()
+		_update_preview_weapon()
 		_swatches[clampi(GameSettings.player_color, 0, _swatches.size() - 1)].grab_focus()
 	else:
 		_move_camera(CAMERA_LOBBY, LOOK_LOBBY)
@@ -834,7 +952,10 @@ func _show_customise(shown: bool) -> void:
 ## Keeps the raw text while typing (so spaces work); it's cleaned up when
 ## saved and wherever the name is shown (Cosmetics.sanitize_name).
 func _on_name_changed(text: String) -> void:
-	GameSettings.player_name = text.substr(0, Cosmetics.NAME_MAX_LENGTH)
+	if _customise_profile == 0:
+		GameSettings.player_name = text.substr(0, Cosmetics.NAME_MAX_LENGTH)
+	else:
+		GameSettings.player2_name = text.substr(0, Cosmetics.NAME_MAX_LENGTH)
 
 
 func _pick_color(index: int) -> void:
@@ -842,7 +963,11 @@ func _pick_color(index: int) -> void:
 	if prog != null and not bool(prog.call("is_unlocked", &"color", index)):
 		GameSettings.notify("Colour locked! Visit the Coin Shop (🪙 %d)" % Cosmetics.color_cost(index))
 		return
-	GameSettings.player_color = index
+	if _customise_profile == 0:
+		GameSettings.player_color = index
+	else:
+		GameSettings.player2_color = index
+	player_model.set_shirt(Cosmetics.color_at(index))
 	_refresh_customise()
 	_rebuild_squad()
 
@@ -852,7 +977,10 @@ func _pick_hat(id: StringName) -> void:
 	if prog != null and not bool(prog.call("is_unlocked", &"hat", id)):
 		GameSettings.notify("Hat locked! Visit the Coin Shop (🪙 %d)" % Cosmetics.hat_cost(id))
 		return
-	GameSettings.player_hat = id
+	if _customise_profile == 0:
+		GameSettings.player_hat = id
+	else:
+		GameSettings.player2_hat = id
 	player_model.set_hat(id)
 	_refresh_customise()
 
@@ -862,19 +990,36 @@ func _pick_skin(id: StringName) -> void:
 	if prog != null and not bool(prog.call("is_unlocked", &"skin", id)) and not Cosmetics.is_default_skin(id):
 		GameSettings.notify("Skin locked! Visit the Coin Shop (🪙 %d)" % Cosmetics.skin_cost(id))
 		return
-	GameSettings.player_skin = id
-	if player_model != null:
-		player_model.set_weapon(load(BLASTERS[2]) as WeaponData, id)
+	if _customise_profile == 0:
+		GameSettings.player_skin = id
+	else:
+		GameSettings.player2_skin = id
+	_update_preview_weapon()
 	_refresh_customise()
 
 
 func _refresh_customise() -> void:
-	if not _name_edit.has_focus() and _name_edit.text != GameSettings.player_name:
-		_name_edit.text = GameSettings.player_name
+	var is_p1 := _customise_profile == 0
+	if _profile_tab_p1 != null and _profile_tab_p2 != null:
+		_profile_tab_p1.add_theme_stylebox_override("normal",
+				UiKit.panel_style(UiKit.ORANGE if is_p1 else UiKit.BLUE, 1.0, 10, 3 if is_p1 else 0, UiKit.CREAM, 6))
+		_profile_tab_p2.add_theme_stylebox_override("normal",
+				UiKit.panel_style(UiKit.ORANGE if not is_p1 else UiKit.BLUE, 1.0, 10, 3 if not is_p1 else 0, UiKit.CREAM, 6))
+
+	var cur_name: String = GameSettings.player_name if is_p1 else GameSettings.player2_name
+	if not _name_edit.has_focus() and _name_edit.text != cur_name:
+		_name_edit.text = cur_name
+	var cur_color: int = GameSettings.player_color if is_p1 else GameSettings.player2_color
+	var cur_hat: StringName = GameSettings.player_hat if is_p1 else GameSettings.player2_hat
+	var cur_skin: StringName = GameSettings.player_skin if is_p1 else GameSettings.player2_skin
+
+	if player_model != null:
+		player_model.setup(cur_name, Cosmetics.color_at(cur_color), cur_hat)
+
 	var prog: Node = get_node_or_null("/root/Progression")
 	for i in _swatches.size():
 		var tint := Cosmetics.color_at(i)
-		var chosen := i == GameSettings.player_color
+		var chosen := i == cur_color
 		var unlocked := prog == null or bool(prog.call("is_unlocked", &"color", i))
 		var display_tint := tint if unlocked else tint.darkened(0.5)
 		_swatches[i].add_theme_stylebox_override("normal", UiKit.panel_style(display_tint, 1.0, 23, 4 if chosen else 0, UiKit.CREAM, 0))
@@ -885,7 +1030,7 @@ func _refresh_customise() -> void:
 	for i in _hat_buttons.size():
 		var hat_id: StringName = Cosmetics.HATS[i]["id"]
 		var hat_name: String = Cosmetics.HATS[i]["name"]
-		var chosen: bool = hat_id == GameSettings.player_hat
+		var chosen: bool = hat_id == cur_hat
 		var unlocked := prog == null or bool(prog.call("is_unlocked", &"hat", hat_id))
 		_hat_buttons[i].text = (hat_name if unlocked else "🔒 " + hat_name).to_upper()
 		var bg_col := (UiKit.ORANGE if chosen else UiKit.BLUE) if unlocked else UiKit.NAVY_DARK
@@ -895,7 +1040,7 @@ func _refresh_customise() -> void:
 	for i in _skin_buttons.size():
 		var skin_id: StringName = Cosmetics.SKINS[i]["id"]
 		var skin_name: String = Cosmetics.SKINS[i]["name"]
-		var chosen: bool = skin_id == GameSettings.player_skin
+		var chosen: bool = skin_id == cur_skin
 		var unlocked := prog == null or bool(prog.call("is_unlocked", &"skin", skin_id)) or Cosmetics.is_default_skin(skin_id)
 		_skin_buttons[i].text = (skin_name if unlocked else "🔒 " + skin_name).to_upper()
 		var bg_col := (UiKit.ORANGE if chosen else UiKit.BLUE) if unlocked else UiKit.NAVY_DARK

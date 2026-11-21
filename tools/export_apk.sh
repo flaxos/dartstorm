@@ -56,6 +56,10 @@ fi
 
 echo
 echo "Built $APK ($(du -h "$APK" | cut -f1))"
+if [ -d "$ROOT/build/web" ]; then
+	cp "$APK" "$ROOT/build/web/DARTSTORM.apk"
+	echo "Available for direct download at http://<host>:8910/DARTSTORM.apk"
+fi
 
 # Verify APK package info if aapt is available
 AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -n 1 || true)"

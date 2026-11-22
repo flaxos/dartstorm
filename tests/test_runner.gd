@@ -110,6 +110,8 @@ func _ready() -> void:
 	await _test_gltf_model_loader_and_hybrid_pipeline()
 	# Stylized Hero Character Asset & Humanoid Animation Rig (v1.8.0 / Phase 2)
 	await _test_hero_character_and_skeletal_animations()
+	# AAA Blaster Arsenal 3D Models & Weapon Animations (v1.9.0 / Phase 3)
+	await _test_blaster_arsenal_models_and_mechanisms()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -1963,7 +1965,7 @@ func _test_blaster_skins_and_shader() -> void:
 	var preserved_orange_tip := false
 	var preserved_dark_grip := false
 
-	for child in model.get_children():
+	for child in model.find_children("*", "MeshInstance3D", true, false):
 		var mesh_inst := child as MeshInstance3D
 		if mesh_inst != null and mesh_inst.material_override != null:
 			if mesh_inst.material_override is ShaderMaterial:
@@ -1985,7 +1987,7 @@ func _test_blaster_skins_and_shader() -> void:
 	add_child(model_default)
 	await physics_frames(2)
 	var default_has_shader := false
-	for child in model_default.get_children():
+	for child in model_default.find_children("*", "MeshInstance3D", true, false):
 		var mesh_inst := child as MeshInstance3D
 		if mesh_inst != null and mesh_inst.material_override is ShaderMaterial:
 			default_has_shader = true
@@ -3296,7 +3298,7 @@ func _test_multiplayer_profiles_and_bossmode() -> void:
 	add_child(model_nitro)
 	await physics_frames(2)
 	var nitro_has_shader := false
-	for child in model_nitro.get_children():
+	for child in model_nitro.find_children("*", "MeshInstance3D", true, false):
 		var mesh_inst := child as MeshInstance3D
 		if mesh_inst != null and mesh_inst.material_override is ShaderMaterial:
 			nitro_has_shader = true
@@ -3493,10 +3495,10 @@ func _test_hardening_security_and_pbr_skins() -> void:
 	await physics_frames(2)
 	check(bucket.can_regenerate, "AmmoBucket defaults to can_regenerate == true")
 	bucket.can_regenerate = false
-	bucket.current_ammo = 0
-	bucket._respawn_timer = 0.01
+	bucket.stock = 0
+	bucket._regen_left = 0.01
 	bucket._physics_process(0.05)
-	check(bucket.current_ammo == 0, "AmmoBucket with can_regenerate == false does not regenerate ammo when depleted")
+	check(bucket.stock == 0, "AmmoBucket with can_regenerate == false does not regenerate ammo when depleted")
 	bucket.queue_free()
 
 	# 4. Bot targeting ignores tagged-out actors
@@ -3534,7 +3536,7 @@ func _test_hardening_security_and_pbr_skins() -> void:
 
 	var shader_mats: Array[ShaderMaterial] = []
 	var part_offsets: Array[Vector3] = []
-	for child in cyber_model.get_children():
+	for child in cyber_model.find_children("*", "MeshInstance3D", true, false):
 		var mesh_inst := child as MeshInstance3D
 		if mesh_inst != null and mesh_inst.material_override is ShaderMaterial:
 			shader_mats.append(mesh_inst.material_override as ShaderMaterial)
@@ -3597,7 +3599,7 @@ func _test_aaa_graphics_and_pbr_pipeline() -> void:
 	add_child(blaster)
 	await physics_frames(2)
 	var found_high_poly_tube := false
-	for child in blaster.get_children():
+	for child in blaster.find_children("*", "MeshInstance3D", true, false):
 		var mesh_inst := child as MeshInstance3D
 		if mesh_inst != null and mesh_inst.mesh is CylinderMesh:
 			var cyl := mesh_inst.mesh as CylinderMesh
@@ -3840,6 +3842,127 @@ func _test_hero_character_and_skeletal_animations() -> void:
 	check(not char_model.is_zombie(), "Hero restored from zombie state")
 
 	char_model.queue_free()
+	await physics_frames(2)
+
+
+func _test_blaster_arsenal_models_and_mechanisms() -> void:
+	section("AAA Blaster Arsenal 3D Models & Weapon Animations (Phase 3)")
+
+	var blaster_ids := ["popper", "six_shot", "storm", "sweeper", "whisper", "chainstorm", "rocket"]
+
+	# 1. Asset File Presence (.tscn and .glb)
+	for b_id in blaster_ids:
+		var tscn_path := "res://assets/models/blasters/%s.tscn" % b_id
+		var glb_path := "res://assets/models/blasters/%s.glb" % b_id
+		check(FileAccess.file_exists(tscn_path), "%s.tscn exists on disk" % b_id)
+		check(FileAccess.file_exists(glb_path), "%s.glb exists on disk" % b_id)
+		check(ModelLoader.has_blaster_model(StringName(b_id)), "ModelLoader detects %s" % b_id)
+
+	# 2. Weapon ID Alias Resolution
+	check(ModelLoader.has_blaster_model(&"pocket_popper"), "pocket_popper resolves to popper model")
+	check(ModelLoader.has_blaster_model(&"flaxs_chainstorm"), "flaxs_chainstorm resolves to chainstorm model")
+	check(ModelLoader.has_blaster_model(&"double_trouble"), "double_trouble resolves to sweeper model")
+	check(ModelLoader.has_blaster_model(&"thunder_cannon"), "thunder_cannon resolves to rocket model")
+	check(ModelLoader.has_blaster_model(&"longshot"), "longshot resolves to whisper model")
+
+	# 3. Model Sockets and Structure
+	for b_id in blaster_ids:
+		var model_node := ModelLoader.instantiate_blaster(StringName(b_id))
+		check(model_node != null, "Successfully instantiates %s model" % b_id)
+		if model_node != null:
+			var muzzle_marker := model_node.find_child("MuzzleMarker", true, false)
+			check(muzzle_marker is Marker3D, "%s contains MuzzleMarker" % b_id)
+			var grip_marker := model_node.find_child("GripMarker", true, false)
+			check(grip_marker is Marker3D, "%s contains GripMarker" % b_id)
+			var chassis_mesh := model_node.find_child("Mesh_Chassis_*", true, false)
+			check(chassis_mesh is MeshInstance3D, "%s contains Mesh_Chassis part" % b_id)
+			model_node.queue_free()
+	await physics_frames(2)
+
+	# 4. Moving Mechanical Parts Presence
+	var six_shot_node := ModelLoader.instantiate_blaster(&"six_shot")
+	check(six_shot_node.find_child("Cylinder", true, false) != null, "six_shot contains Cylinder node")
+	six_shot_node.queue_free()
+
+	var sweeper_node := ModelLoader.instantiate_blaster(&"sweeper")
+	check(sweeper_node.find_child("PumpSlide", true, false) != null, "sweeper contains PumpSlide node")
+	sweeper_node.queue_free()
+
+	var chainstorm_node := ModelLoader.instantiate_blaster(&"chainstorm")
+	check(chainstorm_node.find_child("Spinner", true, false) != null, "chainstorm contains Spinner node")
+	chainstorm_node.queue_free()
+
+	var popper_node := ModelLoader.instantiate_blaster(&"popper")
+	check(popper_node.find_child("Slide", true, false) != null, "popper contains Slide node")
+	popper_node.queue_free()
+
+	var storm_node := ModelLoader.instantiate_blaster(&"storm")
+	check(storm_node.find_child("Magazine", true, false) != null, "storm contains Magazine node")
+	storm_node.queue_free()
+
+	var whisper_node := ModelLoader.instantiate_blaster(&"whisper")
+	check(whisper_node.find_child("Scope", true, false) != null, "whisper contains Scope node")
+	check(whisper_node.find_child("Suppressor", true, false) != null, "whisper contains Suppressor node")
+	whisper_node.queue_free()
+
+	var rocket_node := ModelLoader.instantiate_blaster(&"rocket")
+	check(rocket_node.find_child("Sight", true, false) != null, "rocket contains Sight node")
+	rocket_node.queue_free()
+	await physics_frames(2)
+
+	# 5. Live BlasterModel Integration & Mechanical Animation Responses
+	var popper_data := load(POPPER) as WeaponData
+	var live_popper := BlasterModel.create(popper_data, true, &"cyber")
+	add_child(live_popper)
+	await physics_frames(2)
+	check(live_popper.model_root != null, "BlasterModel instances 3D model for pocket_popper")
+	check(live_popper.muzzle != null, "BlasterModel positions muzzle from MuzzleMarker")
+	check(live_popper.grip_marker != null, "BlasterModel identifies GripMarker")
+	check(live_popper.get_chassis_material() is ShaderMaterial, "BlasterModel binds cyber skin ShaderMaterial")
+
+	# Recoil and slide impulse on fire
+	live_popper.flash()
+	check(live_popper._slide_cycle > 0.5, "Popper slide triggers recoil cycle on flash")
+	check(live_popper._recoil_z > 0.01, "Popper experiences physical recoil kick on flash")
+	live_popper.queue_free()
+	await physics_frames(2)
+
+	# Revolver cylinder rotation on fire
+	var hammer_data := load("res://resources/weapons/foam_hammer.tres") as WeaponData
+	var live_six_shot := BlasterModel.create(hammer_data, false, &"default")
+	add_child(live_six_shot)
+	await physics_frames(2)
+	check(live_six_shot._cylinder != null, "BlasterModel connects to revolver Cylinder")
+	var initial_rot_z: float = live_six_shot._cylinder.rotation.z if live_six_shot._cylinder != null else 0.0
+	live_six_shot.flash()
+	if live_six_shot._cylinder != null:
+		check(not is_equal_approx(live_six_shot._cylinder.rotation.z, initial_rot_z), "Cylinder rotates 60 degrees on fire")
+	live_six_shot.queue_free()
+	await physics_frames(2)
+
+	# Minigun spinning barrels
+	var chain_data := load("res://resources/weapons/flaxs_chainstorm.tres") as WeaponData
+	var live_chain := BlasterModel.create(chain_data, false, &"hazard")
+	add_child(live_chain)
+	await physics_frames(2)
+	check(live_chain._spinner != null, "BlasterModel hooks chainstorm 6-barrel Spinner")
+	live_chain.set_spin(1.0)
+	live_chain._process(0.05)
+	if live_chain._spinner != null:
+		check(live_chain._spinner.rotation.z != 0.0, "Chainstorm barrel cluster rotates while spun up")
+	live_chain.queue_free()
+	await physics_frames(2)
+
+	# 6. Hero Socket Mounting
+	var hero := CharacterModel.new()
+	hero.setup("ArsenalHero", Color(0.2, 0.5, 1.0), &"cap")
+	add_child(hero)
+	await physics_frames(2)
+	hero.set_weapon(popper_data, &"galaxy")
+	check(hero.get_weapon() != null, "Weapon mounted cleanly in hero's hands")
+	check(hero.get_weapon().model_root != null, "Mounted weapon instances 3D model")
+	hero.queue_free()
+	BlasterModel.clear_skin_materials()
 	await physics_frames(2)
 
 

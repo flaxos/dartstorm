@@ -44,7 +44,17 @@ static func _grip_material() -> StandardMaterial3D:
 		_grip_mat.uv1_scale = Vector3(1.5, 1.5, 1.5)
 	return _grip_mat
 
+var model_root: Node3D = null
+var grip_marker: Marker3D = null
+var foregrip_marker: Marker3D = null
 var _spinner: Node3D
+var _cylinder: Node3D = null
+var _pump_slide: Node3D = null
+var _slide: Node3D = null
+var _recoil_z: float = 0.0
+var _recoil_pitch: float = 0.0
+var _pump_cycle: float = 0.0
+var _slide_cycle: float = 0.0
 var _belt: Array[Node3D] = []
 var _belt_phase: float = 0.0
 var _spin: float = 0.0
@@ -84,6 +94,18 @@ func flash() -> void:
 		_belt_phase = fposmod(_belt_phase - 0.5, 1.0)
 		_layout_belt()
 
+	# Moving mechanical parts response
+	if _cylinder != null:
+		_cylinder.rotate_z(deg_to_rad(60.0))
+	if _pump_slide != null:
+		_pump_cycle = 1.0
+	if _slide != null:
+		_slide_cycle = 1.0
+
+	var kick := data.recoil_kick if data != null else 1.0
+	_recoil_z = 0.03 * kick
+	_recoil_pitch = 0.04 * kick
+
 
 func _process(delta: float) -> void:
 	if _spinner != null and _spin > 0.0:
@@ -92,6 +114,26 @@ func _process(delta: float) -> void:
 		_flash_left -= delta
 		if _flash_left <= 0.0:
 			_flash.visible = false
+
+	# Procedural recoil damping
+	if _recoil_z > 0.001 or _recoil_pitch > 0.001:
+		_recoil_z = move_toward(_recoil_z, 0.0, delta * 0.35)
+		_recoil_pitch = move_toward(_recoil_pitch, 0.0, delta * 0.5)
+		if model_root != null:
+			model_root.position.z = _recoil_z
+			model_root.rotation.x = _recoil_pitch
+
+	# Pump action slide cycle
+	if _pump_cycle > 0.0:
+		_pump_cycle = move_toward(_pump_cycle, 0.0, delta * 4.0)
+		if _pump_slide != null:
+			_pump_slide.position.z = -0.20 + sin(_pump_cycle * PI) * 0.06
+
+	# Semi-auto pistol slide cycle
+	if _slide_cycle > 0.0:
+		_slide_cycle = move_toward(_slide_cycle, 0.0, delta * 6.0)
+		if _slide != null:
+			_slide.position.z = -0.05 + _slide_cycle * 0.035
 
 
 func _build() -> void:
@@ -122,15 +164,20 @@ func _build_from_model() -> bool:
 	var model_node := ModelLoader.instantiate_blaster(data.id)
 	if model_node == null:
 		return false
+	model_root = model_node
 	add_child(model_node)
 
+	var chassis_mat := get_chassis_material()
 	var mat_map := {
-		"chassis": get_chassis_material(),
+		"chassis": chassis_mat,
 		"hardware": ArenaKit.mat_styled(data.accent_color, ArenaKit.SurfaceType.METAL),
 		"safety": ArenaKit.mat_styled(ORANGE_TIP, ArenaKit.SurfaceType.PLASTIC),
 		"grip": _grip_material()
 	}
 	ModelLoader.apply_materials_recursive(model_node, mat_map)
+
+	if chassis_mat is ShaderMaterial:
+		_setup_shader_uniforms_recursive(model_node, model_node)
 
 	var found_muzzle := model_node.find_child("Muzzle*", true, false)
 	if found_muzzle is Node3D:
@@ -138,12 +185,51 @@ func _build_from_model() -> bool:
 	else:
 		muzzle.position = Vector3(0.0, 0.02, -0.32)
 
-	if data.model_style == WeaponData.ModelStyle.ROTARY:
-		var found_spinner := model_node.find_child("Spinner*", true, false)
-		if found_spinner is Node3D:
-			_spinner = found_spinner as Node3D
+	var found_grip := model_node.find_child("GripMarker", true, false)
+	if found_grip is Marker3D:
+		grip_marker = found_grip as Marker3D
+
+	var found_foregrip := model_node.find_child("ForegripMarker", true, false)
+	if found_foregrip is Marker3D:
+		foregrip_marker = found_foregrip as Marker3D
+
+	var found_spinner := model_node.find_child("Spinner*", true, false)
+	if found_spinner is Node3D:
+		_spinner = found_spinner as Node3D
+
+	var found_cyl := model_node.find_child("Cylinder*", true, false)
+	if found_cyl is Node3D:
+		_cylinder = found_cyl as Node3D
+
+	var found_pump := model_node.find_child("PumpSlide*", true, false)
+	if found_pump is Node3D:
+		_pump_slide = found_pump as Node3D
+
+	var found_slide := model_node.find_child("Slide*", true, false)
+	if found_slide is Node3D:
+		_slide = found_slide as Node3D
 
 	return true
+
+
+func _setup_shader_uniforms_recursive(node: Node, root: Node3D) -> void:
+	if node is MeshInstance3D:
+		var mi := node as MeshInstance3D
+		if mi.name.to_lower().contains("chassis"):
+			var local_pos := _get_relative_position(mi, root)
+			mi.set_instance_shader_parameter(&"part_offset", local_pos)
+			mi.set_instance_shader_parameter(&"part_rot", Vector3.ZERO)
+	for child in node.get_children():
+		_setup_shader_uniforms_recursive(child, root)
+
+
+func _get_relative_position(node: Node3D, root: Node3D) -> Vector3:
+	var pos := Vector3.ZERO
+	var curr: Node3D = node
+	while curr != null and curr != root:
+		pos += curr.position
+		curr = curr.get_parent() as Node3D
+	return pos
 
 
 func get_chassis_material() -> Material:

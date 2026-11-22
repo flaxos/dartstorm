@@ -1,0 +1,181 @@
+[gd_scene load_steps=19 format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hea2x"]
+resource_name = "chassis"
+albedo_color = Color(0.18, 0.48, 0.95, 1)
+roughness = 0.4
+
+[sub_resource type="BoxMesh" id="BoxMesh_i5v3f"]
+size = Vector3(0.07, 0.1, 0.28)
+
+[sub_resource type="BoxMesh" id="BoxMesh_fnfle"]
+size = Vector3(0.068, 0.035, 0.22)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_t1toy"]
+top_radius = 0.022
+bottom_radius = 0.025
+height = 0.16
+radial_segments = 24
+rings = 2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cbysn"]
+resource_name = "safety"
+albedo_color = Color(1, 0.45, 0.05, 1)
+roughness = 0.5
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_4afox"]
+top_radius = 0.028
+bottom_radius = 0.028
+height = 0.04
+radial_segments = 24
+rings = 2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cktj1"]
+resource_name = "hardware"
+albedo_color = Color(0.13, 0.16, 0.24, 1)
+metallic = 0.7
+roughness = 0.35
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_67t02"]
+top_radius = 0.048
+bottom_radius = 0.048
+height = 0.1
+radial_segments = 24
+rings = 2
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ctyke"]
+top_radius = 0.012
+bottom_radius = 0.012
+height = 0.08
+radial_segments = 24
+rings = 2
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_1q3d0"]
+top_radius = 0.012
+bottom_radius = 0.012
+height = 0.08
+radial_segments = 24
+rings = 2
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_pfqe8"]
+top_radius = 0.012
+bottom_radius = 0.012
+height = 0.08
+radial_segments = 24
+rings = 2
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_t6os3"]
+top_radius = 0.012
+bottom_radius = 0.012
+height = 0.08
+radial_segments = 24
+rings = 2
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_85yvu"]
+top_radius = 0.012
+bottom_radius = 0.012
+height = 0.08
+radial_segments = 24
+rings = 2
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_00sgx"]
+top_radius = 0.012
+bottom_radius = 0.012
+height = 0.08
+radial_segments = 24
+rings = 2
+
+[sub_resource type="BoxMesh" id="BoxMesh_qdbud"]
+size = Vector3(0.018, 0.04, 0.03)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_t1qpp"]
+resource_name = "grip"
+albedo_color = Color(0.1, 0.11, 0.16, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="BoxMesh_xvkg6"]
+size = Vector3(0.065, 0.15, 0.09)
+
+[sub_resource type="BoxMesh" id="BoxMesh_gcqle"]
+size = Vector3(0.025, 0.065, 0.09)
+
+[node name="Blaster_six_shot" type="Node3D"]
+
+[node name="Mesh_Chassis_Frame" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.06)
+material_override = SubResource("StandardMaterial3D_hea2x")
+mesh = SubResource("BoxMesh_i5v3f")
+
+[node name="Mesh_Chassis_TopShroud" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, -0.12)
+material_override = SubResource("StandardMaterial3D_hea2x")
+mesh = SubResource("BoxMesh_fnfle")
+
+[node name="Mesh_Chassis_Barrel" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0.03, -0.2)
+material_override = SubResource("StandardMaterial3D_hea2x")
+mesh = SubResource("CylinderMesh_t1toy")
+
+[node name="Mesh_Safety_Muzzle" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0.03, -0.28)
+material_override = SubResource("StandardMaterial3D_cbysn")
+mesh = SubResource("CylinderMesh_4afox")
+
+[node name="Cylinder" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, -0.06)
+
+[node name="Mesh_Hardware_Drum" type="MeshInstance3D" parent="Cylinder"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0)
+material_override = SubResource("StandardMaterial3D_cktj1")
+mesh = SubResource("CylinderMesh_67t02")
+
+[node name="Mesh_Safety_Chamber_0" type="MeshInstance3D" parent="Cylinder"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0.032, -0.01)
+material_override = SubResource("StandardMaterial3D_cbysn")
+mesh = SubResource("CylinderMesh_ctyke")
+
+[node name="Mesh_Safety_Chamber_1" type="MeshInstance3D" parent="Cylinder"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0.0277128, 0.016, -0.01)
+material_override = SubResource("StandardMaterial3D_cbysn")
+mesh = SubResource("CylinderMesh_1q3d0")
+
+[node name="Mesh_Safety_Chamber_2" type="MeshInstance3D" parent="Cylinder"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0.0277128, -0.016, -0.01)
+material_override = SubResource("StandardMaterial3D_cbysn")
+mesh = SubResource("CylinderMesh_pfqe8")
+
+[node name="Mesh_Safety_Chamber_3" type="MeshInstance3D" parent="Cylinder"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 3.91887e-18, -0.032, -0.01)
+material_override = SubResource("StandardMaterial3D_cbysn")
+mesh = SubResource("CylinderMesh_t6os3")
+
+[node name="Mesh_Safety_Chamber_4" type="MeshInstance3D" parent="Cylinder"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, -0.0277128, -0.016, -0.01)
+material_override = SubResource("StandardMaterial3D_cbysn")
+mesh = SubResource("CylinderMesh_85yvu")
+
+[node name="Mesh_Safety_Chamber_5" type="MeshInstance3D" parent="Cylinder"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, -0.0277128, 0.016, -0.01)
+material_override = SubResource("StandardMaterial3D_cbysn")
+mesh = SubResource("CylinderMesh_00sgx")
+
+[node name="Mesh_Hardware_Hammer" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.939693, 0.34202, 0, -0.34202, 0.939693, 0, 0.065, 0.06)
+material_override = SubResource("StandardMaterial3D_cktj1")
+mesh = SubResource("BoxMesh_qdbud")
+
+[node name="Mesh_Grip_Handle" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.939693, -0.34202, 0, 0.34202, 0.939693, 0, -0.1, 0.06)
+material_override = SubResource("StandardMaterial3D_t1qpp")
+mesh = SubResource("BoxMesh_xvkg6")
+
+[node name="Mesh_Hardware_TriggerGuard" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, -0.02)
+material_override = SubResource("StandardMaterial3D_cktj1")
+mesh = SubResource("BoxMesh_gcqle")
+
+[node name="MuzzleMarker" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -0.31)
+
+[node name="GripMarker" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.09, 0.07)

@@ -35,15 +35,42 @@ func has_hero_model() -> bool:
 	return has_model(HERO_MODEL_TSCN) or has_model(HERO_MODEL_PATH)
 
 
+const BLASTER_ALIASES: Dictionary = {
+	&"pocket_popper": &"popper",
+	&"dart_sprayer": &"storm",
+	&"ricochet_ranger": &"storm",
+	&"double_trouble": &"sweeper",
+	&"flaxs_chainstorm": &"chainstorm",
+	&"foam_hammer": &"six_shot",
+	&"hydro_soaker": &"six_shot",
+	&"thunder_cannon": &"rocket",
+	&"longshot": &"whisper",
+	&"wind_whisperer": &"whisper",
+	&"frost_ranger": &"whisper"
+}
+
+
+## Resolves a weapon ID to its base blaster model ID via direct match or alias.
+func resolve_blaster_id(blaster_id: StringName) -> StringName:
+	var tscn_path := BLASTER_DIR + str(blaster_id) + ".tscn"
+	var glb_path := BLASTER_DIR + str(blaster_id) + ".glb"
+	if has_model(tscn_path) or has_model(glb_path):
+		return blaster_id
+	if BLASTER_ALIASES.has(blaster_id):
+		return BLASTER_ALIASES[blaster_id]
+	return blaster_id
+
+
 ## Checks if a model exists for the given blaster ID (e.g. "popper", "six_shot").
 func has_blaster_model(blaster_id: StringName) -> bool:
 	if not models_enabled or blaster_id.is_empty():
 		return false
-	var glb_path := BLASTER_DIR + str(blaster_id) + ".glb"
-	if has_model(glb_path):
+	var resolved := resolve_blaster_id(blaster_id)
+	var tscn_path := BLASTER_DIR + str(resolved) + ".tscn"
+	if has_model(tscn_path):
 		return true
-	var tscn_path := BLASTER_DIR + str(blaster_id) + ".tscn"
-	return has_model(tscn_path)
+	var glb_path := BLASTER_DIR + str(resolved) + ".glb"
+	return has_model(glb_path)
 
 
 ## Checks if a model exists for the given prop ID (e.g. "slide", "gym").
@@ -79,7 +106,7 @@ func load_scene(res_path: String) -> PackedScene:
 
 	# 1. Try native Godot ResourceLoader if already imported
 	if ResourceLoader.exists(res_path):
-		scene = ResourceLoader.load(res_path, "PackedScene") as PackedScene
+		scene = ResourceLoader.load(res_path) as PackedScene
 
 	# 2. Direct glTF / GLB loading via GLTFDocument for runtime/unimported files
 	if scene == null and (res_path.ends_with(".glb") or res_path.ends_with(".gltf")):
@@ -133,14 +160,15 @@ func instantiate_hero() -> Node3D:
 	return null
 
 
-## Instantiates a blaster model by ID, resolving .glb first then .tscn.
+## Instantiates a blaster model by ID, resolving .tscn first then .glb.
 func instantiate_blaster(blaster_id: StringName) -> Node3D:
-	var glb_path := BLASTER_DIR + str(blaster_id) + ".glb"
-	if has_model(glb_path):
-		return instantiate_model(glb_path)
-	var tscn_path := BLASTER_DIR + str(blaster_id) + ".tscn"
+	var resolved := resolve_blaster_id(blaster_id)
+	var tscn_path := BLASTER_DIR + str(resolved) + ".tscn"
 	if has_model(tscn_path):
 		return instantiate_model(tscn_path)
+	var glb_path := BLASTER_DIR + str(resolved) + ".glb"
+	if has_model(glb_path):
+		return instantiate_model(glb_path)
 	return null
 
 
@@ -216,24 +244,35 @@ func apply_materials_recursive(node: Node, material_map: Dictionary) -> void:
 
 	if node is MeshInstance3D:
 		var mi := node as MeshInstance3D
-		if mi.mesh != null:
+		var node_name := mi.name.to_lower()
+		var override_mat_name := mi.material_override.resource_name.to_lower() if mi.material_override != null else ""
+
+		var matched_mat: Material = null
+		for key in material_map.keys():
+			var key_str := str(key).to_lower()
+			if not override_mat_name.is_empty() and key_str in override_mat_name:
+				matched_mat = material_map[key] as Material
+				break
+			elif key_str in node_name:
+				matched_mat = material_map[key] as Material
+				break
+
+		if matched_mat != null:
+			mi.material_override = matched_mat
+
+		if mi.mesh != null and mi.mesh.get_surface_count() > 0:
 			for surf_idx in mi.mesh.get_surface_count():
 				var surf_mat := mi.mesh.surface_get_material(surf_idx)
 				var mat_name := surf_mat.resource_name.to_lower() if surf_mat != null else ""
-				var node_name := mi.name.to_lower()
-
-				var matched_mat: Material = null
-				for key in material_map.keys():
-					var key_str := str(key).to_lower()
-					if not mat_name.is_empty() and key_str in mat_name:
-						matched_mat = material_map[key] as Material
-						break
-					elif key_str in node_name:
-						matched_mat = material_map[key] as Material
-						break
-
-				if matched_mat != null:
-					mi.set_surface_override_material(surf_idx, matched_mat)
+				var surf_matched: Material = matched_mat
+				if surf_matched == null:
+					for key in material_map.keys():
+						var key_str := str(key).to_lower()
+						if not mat_name.is_empty() and key_str in mat_name:
+							surf_matched = material_map[key] as Material
+							break
+				if surf_matched != null:
+					mi.set_surface_override_material(surf_idx, surf_matched)
 
 	for child in node.get_children():
 		apply_materials_recursive(child, material_map)

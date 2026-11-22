@@ -112,6 +112,8 @@ func _ready() -> void:
 	await _test_hero_character_and_skeletal_animations()
 	# AAA Blaster Arsenal 3D Models & Weapon Animations (v1.9.0 / Phase 3)
 	await _test_blaster_arsenal_models_and_mechanisms()
+	# Stylized Arena Environments & Tactical Props (v2.0.0 / Phase 4)
+	await _test_stylized_arena_props_and_environments()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -3966,7 +3968,158 @@ func _test_blaster_arsenal_models_and_mechanisms() -> void:
 	await physics_frames(2)
 
 
+func _test_stylized_arena_props_and_environments() -> void:
+	section("Stylized Arena Environments & Tactical Props (Phase 4)")
 
+	# 1. 3D Prop Asset Existence & glTF Binary Verification
+	var expected_props: Array[String] = [
+		"dog_house",
+		"playground_slide",
+		"picnic_table",
+		"inflatable_bunker",
+		"soccer_goal",
+		"cartoon_tree",
+		"watchtower"
+	]
 
+	for prop_id in expected_props:
+		var tscn_path := "res://assets/models/props/" + prop_id + ".tscn"
+		var glb_path := "res://assets/models/props/" + prop_id + ".glb"
+		check(FileAccess.file_exists(tscn_path), "Prop scene file exists: %s" % tscn_path)
+		check(FileAccess.file_exists(glb_path), "Prop GLB file exists: %s" % glb_path)
+		check(ModelLoader.has_prop_model(StringName(prop_id)), "ModelLoader confirms prop model: %s" % prop_id)
 
+	# 2. Prop Alias Resolution
+	check(ModelLoader.resolve_prop_id(&"dog") == &"dog_house", "Alias 'dog' resolves to dog_house")
+	check(ModelLoader.resolve_prop_id(&"slide") == &"playground_slide", "Alias 'slide' resolves to playground_slide")
+	check(ModelLoader.resolve_prop_id(&"bunker") == &"inflatable_bunker", "Alias 'bunker' resolves to inflatable_bunker")
+	check(ModelLoader.resolve_prop_id(&"goal") == &"soccer_goal", "Alias 'goal' resolves to soccer_goal")
+	check(ModelLoader.resolve_prop_id(&"table") == &"picnic_table", "Alias 'table' resolves to picnic_table")
+	check(ModelLoader.resolve_prop_id(&"tree") == &"cartoon_tree", "Alias 'tree' resolves to cartoon_tree")
+	check(ModelLoader.resolve_prop_id(&"tower") == &"watchtower", "Alias 'tower' resolves to watchtower")
 
+	# 3. Dedicated Prop Instantiation & Physics Collision Structure
+	# Dog House
+	var dh := ModelLoader.instantiate_prop(&"dog_house")
+	check(dh != null, "dog_house instantiates cleanly")
+	check(dh is StaticBody3D, "dog_house has StaticBody3D root")
+	check((dh as StaticBody3D).collision_layer == Layers.WORLD, "dog_house collides on Layers.WORLD")
+	check(dh.find_child("_dog", true, false) != null, "dog_house contains _dog node")
+	check(dh.find_child("_tail", true, false) != null, "dog_house contains _tail node")
+	dh.queue_free()
+
+	# Playground Slide
+	var slide := ModelLoader.instantiate_prop(&"playground_slide")
+	check(slide != null, "playground_slide instantiates cleanly")
+	check(slide.find_child("SlideBed", true, false) != null, "playground_slide contains SlideBed")
+	slide.queue_free()
+
+	# Picnic Table
+	var table := ModelLoader.instantiate_prop(&"picnic_table")
+	check(table != null, "picnic_table instantiates cleanly")
+	check(table.find_child("Tabletop", true, false) != null, "picnic_table contains Tabletop")
+	check(table.find_child("CoolerBody", true, false) != null, "picnic_table contains CoolerBody")
+	table.queue_free()
+
+	# Inflatable Bunker
+	var bunker := ModelLoader.instantiate_prop(&"inflatable_bunker")
+	check(bunker != null, "inflatable_bunker instantiates cleanly")
+	check(bunker.find_child("VinylBody", true, false) != null, "inflatable_bunker contains VinylBody")
+	check(bunker.find_child("AccentBand", true, false) != null, "inflatable_bunker contains AccentBand")
+	bunker.queue_free()
+
+	# Soccer Goal
+	var goal := ModelLoader.instantiate_prop(&"soccer_goal")
+	check(goal != null, "soccer_goal instantiates cleanly")
+	check(goal.find_child("Crossbar", true, false) != null, "soccer_goal contains Crossbar")
+	check(goal.find_child("NetBack", true, false) != null, "soccer_goal contains NetBack")
+	goal.queue_free()
+
+	# Cartoon Tree
+	var tree := ModelLoader.instantiate_prop(&"cartoon_tree")
+	check(tree != null, "cartoon_tree instantiates cleanly")
+	check(tree.find_child("TrunkBase", true, false) != null, "cartoon_tree contains TrunkBase")
+	check(tree.find_child("CanopyBase", true, false) != null, "cartoon_tree contains CanopyBase")
+	tree.queue_free()
+
+	# Watchtower
+	var tower := ModelLoader.instantiate_prop(&"watchtower")
+	check(tower != null, "watchtower instantiates cleanly")
+	check(tower.find_child("Deck", true, false) != null, "watchtower contains Deck")
+	check(tower.find_child("RoofCanopy", true, false) != null, "watchtower contains RoofCanopy")
+	tower.queue_free()
+	await physics_frames(2)
+
+	# 4. ArenaKit.prop Helper & Decor Layer Clearing
+	var test_parent := Node3D.new()
+	add_child(test_parent)
+	var placed_prop := ArenaKit.prop(test_parent, &"inflatable_bunker", Vector3(5.0, 0.0, 5.0), Vector3(0.0, 45.0, 0.0))
+	check(placed_prop != null, "ArenaKit.prop instantiates and parents prop")
+	check(placed_prop.position == Vector3(5.0, 0.0, 5.0), "ArenaKit.prop positions prop correctly")
+	check(placed_prop is CollisionObject3D and (placed_prop as CollisionObject3D).collision_layer == Layers.WORLD, "Placed prop retains Layers.WORLD collision in standard parent")
+
+	var decor_parent := Node3D.new()
+	decor_parent.name = "Decor"
+	add_child(decor_parent)
+	var decor_tree := ArenaKit.prop(decor_parent, &"cartoon_tree", Vector3(10.0, 0.0, 10.0))
+	check(decor_tree != null, "ArenaKit.prop instantiates tree in Decor")
+	check(decor_tree is CollisionObject3D and (decor_tree as CollisionObject3D).collision_layer == 0, "Prop placed in Decor has collision_layer cleared to 0")
+
+	test_parent.queue_free()
+	decor_parent.queue_free()
+	await physics_frames(2)
+
+	# 5. Live DogHouse Interactive Reactivity with 3D Model
+	var live_dog_house := DogHouse.new()
+	add_child(live_dog_house)
+	await physics_frames(2)
+	check(live_dog_house._dog != null, "DogHouse hooks _dog node from 3D model")
+	check(live_dog_house._tail != null, "DogHouse hooks _tail node from 3D model")
+
+	var barks: Array[int] = [0]
+	var on_barked := func() -> void: barks[0] += 1
+	live_dog_house.barked.connect(on_barked)
+	live_dog_house.on_dart_hit(null, Vector3.ZERO)
+	check(barks[0] > 0, "DogHouse emits barked signal on dart hit with 3D model")
+	check(live_dog_house._cooldown > 0.5, "DogHouse cooldown triggered on bark")
+	live_dog_house.queue_free()
+	await physics_frames(2)
+
+	# 6. Live Arenas Build Cleanly with 3D Props
+	# Playground
+	var playground := Playground.new()
+	playground.bake_navigation = false
+	add_child(playground)
+	await physics_frames(2)
+	check(playground.geometry.get_child_count() > 0, "Playground builds geometry with 3D slide")
+	playground.queue_free()
+
+	# Sunny Park
+	var sunny_park := SunnyPark.new()
+	sunny_park.bake_navigation = false
+	add_child(sunny_park)
+	await physics_frames(2)
+	check(sunny_park.geometry.get_child_count() > 0, "SunnyPark builds geometry with 3D picnic tables & trees")
+	sunny_park.queue_free()
+
+	# Soccer Field
+	var soccer := SoccerField.new()
+	soccer.bake_navigation = false
+	add_child(soccer)
+	await physics_frames(2)
+	check(soccer.geometry.get_child_count() > 0, "SoccerField builds geometry with 3D goals & bunkers")
+	soccer.queue_free()
+	await physics_frames(2)
+
+	# 7. Procedural Fallback Verification (when models_enabled = false)
+	ModelLoader.models_enabled = false
+	check(ModelLoader.has_prop_model(&"dog_house") == false, "has_prop_model returns false when models disabled")
+	check(ArenaKit.prop(self, &"dog_house", Vector3.ZERO) == null, "ArenaKit.prop returns null when models disabled")
+
+	var fallback_dog_house := DogHouse.new()
+	add_child(fallback_dog_house)
+	await physics_frames(2)
+	check(fallback_dog_house._dog != null, "Procedural fallback DogHouse still constructs _dog")
+	fallback_dog_house.queue_free()
+	ModelLoader.models_enabled = true
+	await physics_frames(2)

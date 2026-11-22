@@ -20,6 +20,21 @@ var _cooldown: float = 0.0
 func _ready() -> void:
 	collision_layer = Layers.WORLD
 	collision_mask = 0
+
+	if ModelLoader.has_prop_model(&"dog_house"):
+		var model_root := ModelLoader.instantiate_prop(&"dog_house")
+		if model_root != null:
+			while model_root.get_child_count() > 0:
+				var c := model_root.get_child(0)
+				model_root.remove_child(c)
+				c.owner = null
+				add_child(c)
+			model_root.queue_free()
+			_dog = find_child("_dog", true, false) as Node3D
+			_tail = find_child("_tail", true, false) as Node3D
+			return
+
+	# Fallback procedural dog house
 	var shape := BoxShape3D.new()
 	shape.size = SIZE
 	var collision := CollisionShape3D.new()
@@ -58,7 +73,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_time += delta
 	_cooldown = maxf(_cooldown - delta, 0.0)
-	_tail.rotation.z = sin(_time * 9.0) * 0.6
+	if _tail != null:
+		_tail.rotation.z = sin(_time * 9.0) * 0.6
 
 
 ## Called by a dart that lands on the dog house.
@@ -66,8 +82,10 @@ func on_dart_hit(_dart: DartProjectile, _point: Vector3) -> void:
 	if _cooldown > 0.0:
 		return
 	_cooldown = BARK_COOLDOWN
-	Sfx.play_at(&"woof", _dog.global_position + Vector3.UP * 0.5, 1.0, 0.0, 0.08)
+	var dog_pos: Vector3 = (_dog.global_position if is_inside_tree() else position) if _dog != null else position
+	Sfx.play_at(&"woof", dog_pos + Vector3.UP * 0.5, 1.0, 0.0, 0.08)
 	barked.emit()
-	var tween := create_tween()
-	tween.tween_property(_dog, "position:y", 0.7, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(_dog, "position:y", 0.0, 0.18).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+	if _dog != null and is_inside_tree():
+		var tween := create_tween()
+		tween.tween_property(_dog, "position:y", 0.7, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tween.tween_property(_dog, "position:y", 0.0, 0.18).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)

@@ -153,6 +153,10 @@ func _build_picnic_grove() -> void:
 
 
 func _build_picnic_table(at: Vector3) -> void:
+	if ModelLoader.has_prop_model(&"picnic_table"):
+		var p := ArenaKit.prop(geometry, &"picnic_table", at)
+		if p != null:
+			return
 	# Tabletop (waist-high cover)
 	ArenaKit.box(geometry, Vector3(2.4, 0.12, 1.4), at + Vector3(0.0, 0.85, 0.0), BENCH_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	# 4 Legs
@@ -191,6 +195,10 @@ func _build_hedges_and_trees() -> void:
 
 
 func _build_oak_tree(at: Vector3) -> void:
+	if ModelLoader.has_prop_model(&"cartoon_tree"):
+		var t := ArenaKit.prop(geometry, &"cartoon_tree", at, Vector3.ZERO, Vector3.ONE * 1.15)
+		if t != null:
+			return
 	var trunk_h := 5.5
 	var trunk_r := 0.7
 	ArenaKit.cylinder(geometry, trunk_r, trunk_h, at + Vector3(0.0, trunk_h * 0.5, 0.0), TRUNK, ArenaKit.SurfaceType.WOOD)

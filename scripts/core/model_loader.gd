@@ -50,6 +50,28 @@ const BLASTER_ALIASES: Dictionary = {
 }
 
 
+const PROP_ALIASES: Dictionary = {
+	&"tree": &"cartoon_tree",
+	&"slide": &"playground_slide",
+	&"bunker": &"inflatable_bunker",
+	&"goal": &"soccer_goal",
+	&"table": &"picnic_table",
+	&"dog": &"dog_house",
+	&"tower": &"watchtower"
+}
+
+
+## Resolves a prop ID to its base model ID via direct match or alias.
+func resolve_prop_id(prop_id: StringName) -> StringName:
+	var tscn_path := PROPS_DIR + str(prop_id) + ".tscn"
+	var glb_path := PROPS_DIR + str(prop_id) + ".glb"
+	if has_model(tscn_path) or has_model(glb_path):
+		return prop_id
+	if PROP_ALIASES.has(prop_id):
+		return PROP_ALIASES[prop_id]
+	return prop_id
+
+
 ## Resolves a weapon ID to its base blaster model ID via direct match or alias.
 func resolve_blaster_id(blaster_id: StringName) -> StringName:
 	var tscn_path := BLASTER_DIR + str(blaster_id) + ".tscn"
@@ -73,15 +95,16 @@ func has_blaster_model(blaster_id: StringName) -> bool:
 	return has_model(glb_path)
 
 
-## Checks if a model exists for the given prop ID (e.g. "slide", "gym").
+## Checks if a model exists for the given prop ID (e.g. "slide", "gym", "tree").
 func has_prop_model(prop_id: StringName) -> bool:
 	if not models_enabled or prop_id.is_empty():
 		return false
-	var glb_path := PROPS_DIR + str(prop_id) + ".glb"
-	if has_model(glb_path):
+	var resolved := resolve_prop_id(prop_id)
+	var tscn_path := PROPS_DIR + str(resolved) + ".tscn"
+	if has_model(tscn_path):
 		return true
-	var tscn_path := PROPS_DIR + str(prop_id) + ".tscn"
-	return has_model(tscn_path)
+	var glb_path := PROPS_DIR + str(resolved) + ".glb"
+	return has_model(glb_path)
 
 
 ## Checks if a model exists for the given hat ID (e.g. "cap", "cowboy").
@@ -172,14 +195,15 @@ func instantiate_blaster(blaster_id: StringName) -> Node3D:
 	return null
 
 
-## Instantiates an arena prop model by ID.
+## Instantiates an arena prop model by ID, resolving .tscn first then .glb.
 func instantiate_prop(prop_id: StringName) -> Node3D:
-	var glb_path := PROPS_DIR + str(prop_id) + ".glb"
-	if has_model(glb_path):
-		return instantiate_model(glb_path)
-	var tscn_path := PROPS_DIR + str(prop_id) + ".tscn"
+	var resolved := resolve_prop_id(prop_id)
+	var tscn_path := PROPS_DIR + str(resolved) + ".tscn"
 	if has_model(tscn_path):
 		return instantiate_model(tscn_path)
+	var glb_path := PROPS_DIR + str(resolved) + ".glb"
+	if has_model(glb_path):
+		return instantiate_model(glb_path)
 	return null
 
 

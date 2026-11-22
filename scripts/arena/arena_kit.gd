@@ -260,8 +260,31 @@ static func house(parent: Node, at: Vector3, size: Vector3, wall: Color, roof: C
 	deco(parent, prism, at + Vector3(0.0, size.y + size.y * 0.275, 0.0), roof)
 
 
-## A round cartoon tree (looks only).
+## Instantiates a 3D arena prop if available, positions it, and adds it to parent.
+## Returns the instantiated Node3D, or null if models are disabled or missing.
+static func prop(parent: Node, prop_id: StringName, pos: Vector3,
+		rot_deg: Vector3 = Vector3.ZERO, prop_scale: Vector3 = Vector3.ONE) -> Node3D:
+	if not ModelLoader.has_prop_model(prop_id):
+		return null
+	var instance := ModelLoader.instantiate_prop(prop_id)
+	if instance == null:
+		return null
+	instance.position = pos
+	instance.rotation_degrees = rot_deg
+	if prop_scale != Vector3.ONE:
+		instance.scale = prop_scale
+	if parent != null and parent.name == "Decor" and instance is CollisionObject3D:
+		(instance as CollisionObject3D).collision_layer = 0
+	parent.add_child(instance)
+	return instance
+
+
+## A round cartoon tree. Uses 3D model if available with graceful procedural fallback.
 static func tree(parent: Node, at: Vector3, tree_scale: float) -> void:
+	if ModelLoader.has_prop_model(&"cartoon_tree"):
+		var t := prop(parent, &"cartoon_tree", at, Vector3.ZERO, Vector3.ONE * tree_scale)
+		if t != null:
+			return
 	deco_cylinder(parent, 0.5 * tree_scale, 5.0 * tree_scale, at + Vector3(0.0, 2.5 * tree_scale, 0.0), TRUNK, Vector3.ZERO, -1.0, SurfaceType.WOOD)
 	deco_sphere(parent, 3.2 * tree_scale, at + Vector3(0.0, 6.5 * tree_scale, 0.0), LEAF)
 	deco_sphere(parent, 2.3 * tree_scale, at + Vector3(1.2, 8.3, -0.6) * tree_scale, LEAF_LIGHT)

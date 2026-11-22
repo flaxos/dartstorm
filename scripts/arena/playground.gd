@@ -103,10 +103,16 @@ func _build_jungle_gym() -> void:
 	ArenaKit.box(geometry, Vector3(5.0, 0.8, 0.12), (pos_a + pos_b) * 0.5 + Vector3(0.0, (deck_a_h + deck_b_h) * 0.5 + 0.4, bridge_w * 0.5), RED, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
 
 	# Yellow plastic slide from Tower B to East
-	ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h, 0.0), pos_b + Vector3(7.5, 0.0, 0.0), 1.6, YELLOW, 0.25, ArenaKit.SurfaceType.PLASTIC)
-	# Slide side rails
-	ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h + 0.35, -0.8), pos_b + Vector3(7.5, 0.35, -0.8), 0.15, RED, 0.25, ArenaKit.SurfaceType.PLASTIC)
-	ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h + 0.35, 0.8), pos_b + Vector3(7.5, 0.35, 0.8), 0.15, RED, 0.25, ArenaKit.SurfaceType.PLASTIC)
+	if ModelLoader.has_prop_model(&"playground_slide"):
+		var slide_prop := ArenaKit.prop(geometry, &"playground_slide", pos_b + Vector3(1.2, 0.0, 0.0))
+		if slide_prop == null:
+			ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h, 0.0), pos_b + Vector3(7.5, 0.0, 0.0), 1.6, YELLOW, 0.25, ArenaKit.SurfaceType.PLASTIC)
+			ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h + 0.35, -0.8), pos_b + Vector3(7.5, 0.35, -0.8), 0.15, RED, 0.25, ArenaKit.SurfaceType.PLASTIC)
+			ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h + 0.35, 0.8), pos_b + Vector3(7.5, 0.35, 0.8), 0.15, RED, 0.25, ArenaKit.SurfaceType.PLASTIC)
+	else:
+		ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h, 0.0), pos_b + Vector3(7.5, 0.0, 0.0), 1.6, YELLOW, 0.25, ArenaKit.SurfaceType.PLASTIC)
+		ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h + 0.35, -0.8), pos_b + Vector3(7.5, 0.35, -0.8), 0.15, RED, 0.25, ArenaKit.SurfaceType.PLASTIC)
+		ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h + 0.35, 0.8), pos_b + Vector3(7.5, 0.35, 0.8), 0.15, RED, 0.25, ArenaKit.SurfaceType.PLASTIC)
 
 	# Jump Pad on North side bouncing onto Tower B
 	add_jump_pad(pos_b + Vector3(0.0, 0.0, -4.5), 11.5)

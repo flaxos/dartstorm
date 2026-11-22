@@ -90,6 +90,11 @@ func _build_soccer_goals() -> void:
 
 
 func _build_single_goal(at: Vector3, rot_y: float) -> void:
+	if ModelLoader.has_prop_model(&"soccer_goal"):
+		var goal_prop := ArenaKit.prop(geometry, &"soccer_goal", at, Vector3(0.0, rot_y, 0.0))
+		if goal_prop != null:
+			return
+
 	var goal_root := Node3D.new()
 	goal_root.position = at
 	goal_root.rotation_degrees.y = rot_y
@@ -122,12 +127,22 @@ func _build_inflatable_bunkers() -> void:
 	_build_wedge_bunker(Vector3(8.0, 0.0, 0.0), 3.4, 1.8, CYAN_BLUE, -90.0)
 
 	# Stand-up inflatable cylinders (Cans)
-	var can_r := 1.1
-	var can_h := 2.2
-	ArenaKit.cylinder(geometry, can_r, can_h, Vector3(-4.5, can_h * 0.5, -5.5), BLAZE_ORANGE, ArenaKit.SurfaceType.PLASTIC)
-	ArenaKit.cylinder(geometry, can_r, can_h, Vector3(4.5, can_h * 0.5, -5.5), CYAN_BLUE, ArenaKit.SurfaceType.PLASTIC)
-	ArenaKit.cylinder(geometry, can_r, can_h, Vector3(-4.5, can_h * 0.5, 5.5), CYAN_BLUE, ArenaKit.SurfaceType.PLASTIC)
-	ArenaKit.cylinder(geometry, can_r, can_h, Vector3(4.5, can_h * 0.5, 5.5), BLAZE_ORANGE, ArenaKit.SurfaceType.PLASTIC)
+	var can_spots: Array[Vector3] = [
+		Vector3(-4.5, 0.0, -5.5),
+		Vector3(4.5, 0.0, -5.5),
+		Vector3(-4.5, 0.0, 5.5),
+		Vector3(4.5, 0.0, 5.5),
+	]
+	var can_colors: Array[Color] = [BLAZE_ORANGE, CYAN_BLUE, CYAN_BLUE, BLAZE_ORANGE]
+	for i in can_spots.size():
+		var spot := can_spots[i]
+		if ModelLoader.has_prop_model(&"inflatable_bunker"):
+			var b := ArenaKit.prop(geometry, &"inflatable_bunker", spot)
+			if b != null:
+				continue
+		var can_r := 1.1
+		var can_h := 2.2
+		ArenaKit.cylinder(geometry, can_r, can_h, spot + Vector3(0.0, can_h * 0.5, 0.0), can_colors[i], ArenaKit.SurfaceType.PLASTIC)
 
 	# Aztec Pyramid bunkers (flanking wing cover)
 	_build_pyramid_bunker(Vector3(-16.0, 0.0, -8.0), 4.2, 2.0, LIME_GREEN)

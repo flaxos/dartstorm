@@ -51,7 +51,7 @@ func _create_mat(color: Color, slot_name: String, roughness: float, metallic: fl
 	mat.roughness = roughness
 	mat.metallic = metallic
 	mat.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
-	mat.specular_mode = BaseMaterial3D.SPECULAR_TOON
+	mat.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
 	return mat
 
 

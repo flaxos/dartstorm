@@ -257,8 +257,8 @@ func _make_mat(color: Color, slot_name: String) -> StandardMaterial3D:
 	mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY
 	mat.cull_mode = BaseMaterial3D.CULL_BACK
 	mat.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
-	mat.specular_mode = BaseMaterial3D.SPECULAR_TOON
-	mat.roughness = 0.5
+	mat.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
+	mat.roughness = 0.70
 	return mat
 
 

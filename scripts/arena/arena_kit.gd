@@ -10,6 +10,9 @@ enum SurfaceType {
 	WOOD,
 	METAL,
 	CARDBOARD,
+	SANDSTONE,
+	COBBLE,
+	BRICK,
 }
 
 const WOOD_SHADER := preload("res://assets/materials/toy_wood.gdshader")
@@ -19,8 +22,22 @@ const LEAF := Color(0.25, 0.65, 0.25)
 const LEAF_LIGHT := Color(0.38, 0.78, 0.3)
 
 static var _materials: Dictionary = {}
-static var _wood_normal: Texture2D = preload("res://assets/textures/pbr/stylized_wood_normal.png")
-static var _wood_orm: Texture2D = preload("res://assets/textures/pbr/stylized_wood_orm.png")
+
+static var _sandstone_albedo: Texture2D = preload("res://assets/textures/arenas/sandstone_albedo.png")
+static var _sandstone_normal: Texture2D = preload("res://assets/textures/arenas/sandstone_normal.png")
+static var _sandstone_orm: Texture2D = preload("res://assets/textures/arenas/sandstone_orm.png")
+
+static var _cobble_albedo: Texture2D = preload("res://assets/textures/arenas/cobble_albedo.png")
+static var _cobble_normal: Texture2D = preload("res://assets/textures/arenas/cobble_normal.png")
+static var _cobble_orm: Texture2D = preload("res://assets/textures/arenas/cobble_orm.png")
+
+static var _wood_normal: Texture2D = preload("res://assets/textures/arenas/wood_normal.png")
+static var _wood_orm: Texture2D = preload("res://assets/textures/arenas/wood_orm.png")
+
+static var _brick_albedo: Texture2D = preload("res://assets/textures/arenas/brick_albedo.png")
+static var _brick_normal: Texture2D = preload("res://assets/textures/arenas/brick_normal.png")
+static var _brick_orm: Texture2D = preload("res://assets/textures/arenas/brick_orm.png")
+
 static var _plastic_normal: Texture2D = preload("res://assets/textures/pbr/blaster_body_normal.png")
 static var _plastic_orm: Texture2D = preload("res://assets/textures/pbr/blaster_body_orm.png")
 static var _metal_normal: Texture2D = preload("res://assets/textures/pbr/brushed_metal_normal.png")
@@ -34,6 +51,29 @@ static func clear_materials() -> void:
 ## Cached tactile material. Supports molded toy plastic, procedural timber, and brushed metal.
 static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 		roughness: float = -1.0, metallic: float = -1.0, emission: float = 0.0) -> Material:
+	if surface == SurfaceType.DEFAULT:
+		# Detect sandstone / desert adobe tones
+		if (color.is_equal_approx(Color(0.86, 0.76, 0.58))
+				or color.is_equal_approx(Color(0.85, 0.74, 0.55))
+				or color.is_equal_approx(Color(0.74, 0.64, 0.46))
+				or color.is_equal_approx(Color(0.72, 0.62, 0.44))):
+			surface = SurfaceType.SANDSTONE
+		# Detect cobblestone pavement tones
+		elif (color.is_equal_approx(Color(0.66, 0.60, 0.50))
+				or color.is_equal_approx(Color(0.65, 0.58, 0.48))):
+			surface = SurfaceType.COBBLE
+		# Detect stone masonry / brick tones
+		elif (color.is_equal_approx(Color(0.68, 0.70, 0.74))
+				or color.is_equal_approx(Color(0.55, 0.58, 0.62))):
+			surface = SurfaceType.BRICK
+		# Detect timber / crate / wood tones
+		elif (color.is_equal_approx(Color(0.70, 0.48, 0.30))
+				or color.is_equal_approx(Color(0.68, 0.46, 0.28))
+				or color.is_equal_approx(Color(0.72, 0.54, 0.36))
+				or color.is_equal_approx(Color(0.55, 0.38, 0.22))
+				or color.is_equal_approx(Color(0.82, 0.28, 0.20))):
+			surface = SurfaceType.WOOD
+
 	var key := "%s|%d|%.2f|%.2f|%.2f" % [color.to_html(), surface, roughness, metallic, emission]
 	if _materials.has(key):
 		return _materials[key]
@@ -43,7 +83,7 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 		sm.shader = WOOD_SHADER
 		sm.set_shader_parameter(&"wood_tint", color)
 		sm.set_shader_parameter(&"roughness", 0.72 if roughness < 0.0 else roughness)
-		sm.set_shader_parameter(&"rim_strength", 0.32)
+		sm.set_shader_parameter(&"rim_strength", 0.18)
 		sm.set_shader_parameter(&"texture_normal", _wood_normal)
 		sm.set_shader_parameter(&"texture_orm", _wood_orm)
 		_materials[key] = sm
@@ -52,16 +92,62 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
 	material.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
-	material.specular_mode = BaseMaterial3D.SPECULAR_TOON
-	material.rim_enabled = true
+	material.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
+	material.rim_enabled = false
 
 	match surface:
+		SurfaceType.SANDSTONE:
+			material.albedo_texture = _sandstone_albedo
+			material.uv1_triplanar = true
+			material.uv1_scale = Vector3(0.2, 0.2, 0.2)
+			material.roughness = 0.86 if roughness < 0.0 else roughness
+			material.metallic = 0.0 if metallic < 0.0 else metallic
+			material.metallic_specular = 0.12
+			material.normal_enabled = true
+			material.normal_texture = _sandstone_normal
+			material.normal_scale = 0.75
+			material.ao_enabled = true
+			material.ao_texture = _sandstone_orm
+			material.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+			material.roughness_texture = _sandstone_orm
+			material.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
+		SurfaceType.COBBLE:
+			material.albedo_texture = _cobble_albedo
+			material.uv1_triplanar = true
+			material.uv1_scale = Vector3(0.25, 0.25, 0.25)
+			material.roughness = 0.82 if roughness < 0.0 else roughness
+			material.metallic = 0.0 if metallic < 0.0 else metallic
+			material.metallic_specular = 0.12
+			material.normal_enabled = true
+			material.normal_texture = _cobble_normal
+			material.normal_scale = 0.8
+			material.ao_enabled = true
+			material.ao_texture = _cobble_orm
+			material.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+			material.roughness_texture = _cobble_orm
+			material.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
+		SurfaceType.BRICK:
+			material.albedo_texture = _brick_albedo
+			material.uv1_triplanar = true
+			material.uv1_scale = Vector3(0.22, 0.22, 0.22)
+			material.roughness = 0.88 if roughness < 0.0 else roughness
+			material.metallic = 0.0 if metallic < 0.0 else metallic
+			material.metallic_specular = 0.10
+			material.normal_enabled = true
+			material.normal_texture = _brick_normal
+			material.normal_scale = 0.85
+			material.ao_enabled = true
+			material.ao_texture = _brick_orm
+			material.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+			material.roughness_texture = _brick_orm
+			material.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
 		SurfaceType.PLASTIC:
 			material.roughness = 0.32 if roughness < 0.0 else roughness
 			material.metallic = 0.04 if metallic < 0.0 else metallic
-			material.metallic_specular = 0.6
-			material.rim = 0.42
-			material.rim_tint = 0.45
+			material.metallic_specular = 0.35
+			material.rim_enabled = true
+			material.rim = 0.22
+			material.rim_tint = 0.30
 			material.normal_enabled = true
 			material.normal_texture = _plastic_normal
 			material.normal_scale = 0.4
@@ -73,12 +159,11 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 		SurfaceType.METAL:
 			material.roughness = 0.24 if roughness < 0.0 else roughness
 			material.metallic = 0.85 if metallic < 0.0 else metallic
-			material.metallic_specular = 0.85
-			material.rim = 0.2
-			material.rim_tint = 0.2
+			material.metallic_specular = 0.50
+			material.rim_enabled = false
 			material.normal_enabled = true
 			material.normal_texture = _metal_normal
-			material.normal_scale = 0.5
+			material.normal_scale = 0.45
 			material.roughness_texture = _metal_orm
 			material.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
 			material.metallic_texture = _metal_orm
@@ -86,15 +171,12 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 		SurfaceType.CARDBOARD:
 			material.roughness = 0.88 if roughness < 0.0 else roughness
 			material.metallic = 0.0 if metallic < 0.0 else metallic
-			material.metallic_specular = 0.15
-			material.rim = 0.25
-			material.rim_tint = 0.2
+			material.metallic_specular = 0.10
 		_:
-			# DEFAULT: High-quality vibrant toy surface
-			material.roughness = 0.75 if roughness < 0.0 else roughness
+			# DEFAULT: Tactile matte toy surface
+			material.roughness = 0.80 if roughness < 0.0 else roughness
 			material.metallic = 0.0 if metallic < 0.0 else metallic
-			material.rim = 0.35
-			material.rim_tint = 0.35
+			material.metallic_specular = 0.20
 
 	if color.a < 0.999:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA

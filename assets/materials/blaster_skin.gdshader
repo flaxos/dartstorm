@@ -31,9 +31,9 @@ uniform float detail_normal_scale : hint_range(1.0, 64.0) = 16.0;
 uniform float detail_normal_blend : hint_range(0.0, 1.0) = 0.40;
 
 // 0: MATTE, 1: GLOSS, 2: METALLIC, 3: HOLOGRAPHIC, 4: ANIMATED_EMISSIVE
-uniform int finish_mode : hint_range(0, 4) = 1;
+uniform int finish_mode : hint_range(0, 4) = 0;
 uniform float pattern_intensity : hint_range(0.0, 1.0) = 0.95;
-uniform float rim_strength : hint_range(0.0, 1.0) = 0.45;
+uniform float rim_strength : hint_range(0.0, 1.0) = 0.15;
 
 // Per-instance transform relative to weapon root for seamless model-space coherence
 instance uniform vec3 part_offset = vec3(0.0);
@@ -112,14 +112,14 @@ void fragment() {
 	ALBEDO = base_albedo;
 	ROUGHNESS = base_roughness;
 	METALLIC = base_metallic;
-	SPECULAR = 0.55;
+	SPECULAR = 0.30;
 
 	// 4. Finish Mode Execution
 	if (finish_mode == 0) {
 		// 0: Matte Toy Polymer
-		ROUGHNESS = clamp(orm.g * 1.3, 0.58, 0.95);
+		ROUGHNESS = clamp(orm.g * 1.3, 0.65, 0.95);
 		METALLIC = 0.01;
-		SPECULAR = 0.35;
+		SPECULAR = 0.25;
 	} else if (finish_mode == 1) {
 		// 1: High-Gloss Clearcoat Racing Lacquer
 		ROUGHNESS = clamp(orm.g * 0.42 + (1.0 - decal_alpha) * 0.08, 0.12, 0.38);

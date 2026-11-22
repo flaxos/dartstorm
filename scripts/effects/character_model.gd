@@ -33,14 +33,15 @@ static func _cloth_mat(color: Color) -> StandardMaterial3D:
 	mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY
 	mat.cull_mode = BaseMaterial3D.CULL_BACK
 	mat.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
-	mat.specular_mode = BaseMaterial3D.SPECULAR_TOON
-	mat.roughness = 0.78
+	mat.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
+	mat.roughness = 0.85
+	mat.metallic_specular = 0.2
 	mat.normal_enabled = true
 	mat.normal_texture = _cloth_normal
 	mat.normal_scale = 0.35
 	mat.rim_enabled = true
-	mat.rim = 0.45
-	mat.rim_tint = 0.5
+	mat.rim = 0.18
+	mat.rim_tint = 0.3
 	_cached_cloth_mats[key] = mat
 	return mat
 
@@ -52,14 +53,15 @@ static func _sneaker_mat() -> StandardMaterial3D:
 		mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY
 		mat.cull_mode = BaseMaterial3D.CULL_BACK
 		mat.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
-		mat.specular_mode = BaseMaterial3D.SPECULAR_TOON
-		mat.roughness = 0.55
+		mat.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
+		mat.roughness = 0.70
+		mat.metallic_specular = 0.2
 		mat.normal_enabled = true
 		mat.normal_texture = _sneaker_normal
 		mat.normal_scale = 0.45
 		mat.rim_enabled = true
-		mat.rim = 0.35
-		mat.rim_tint = 0.5
+		mat.rim = 0.15
+		mat.rim_tint = 0.3
 		_cached_sneaker_mat = mat
 	return _cached_sneaker_mat
 
@@ -73,12 +75,12 @@ static func _skin_mat(color: Color) -> StandardMaterial3D:
 	mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY
 	mat.cull_mode = BaseMaterial3D.CULL_BACK
 	mat.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
-	mat.specular_mode = BaseMaterial3D.SPECULAR_TOON
-	mat.roughness = 0.44
-	mat.metallic_specular = 0.45
+	mat.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
+	mat.roughness = 0.72
+	mat.metallic_specular = 0.2
 	mat.rim_enabled = true
-	mat.rim = 0.52
-	mat.rim_tint = 0.45
+	mat.rim = 0.15
+	mat.rim_tint = 0.3
 	_cached_skin_mats[key] = mat
 	return mat
 

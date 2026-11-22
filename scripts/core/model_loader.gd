@@ -7,6 +7,7 @@ extends Node
 
 const MODELS_ROOT := "res://assets/models/"
 const HERO_MODEL_PATH := "res://assets/models/characters/hero_base.glb"
+const HERO_MODEL_TSCN := "res://assets/models/characters/hero_base.tscn"
 const BLASTER_DIR := "res://assets/models/blasters/"
 const PROPS_DIR := "res://assets/models/props/"
 const HATS_DIR := "res://assets/models/hats/"
@@ -29,9 +30,9 @@ func has_model(res_path: String) -> bool:
 	return ResourceLoader.exists(res_path) or FileAccess.file_exists(res_path)
 
 
-## Checks if the base stylized hero model exists.
+## Checks if the base stylized hero model exists (.tscn or .glb).
 func has_hero_model() -> bool:
-	return has_model(HERO_MODEL_PATH)
+	return has_model(HERO_MODEL_TSCN) or has_model(HERO_MODEL_PATH)
 
 
 ## Checks if a model exists for the given blaster ID (e.g. "popper", "six_shot").
@@ -123,9 +124,13 @@ func instantiate_model(res_path: String) -> Node3D:
 	return wrapper
 
 
-## Instantiates the base hero model if present.
+## Instantiates the base hero model if present (.tscn or .glb).
 func instantiate_hero() -> Node3D:
-	return instantiate_model(HERO_MODEL_PATH)
+	if has_model(HERO_MODEL_TSCN):
+		return instantiate_model(HERO_MODEL_TSCN)
+	if has_model(HERO_MODEL_PATH):
+		return instantiate_model(HERO_MODEL_PATH)
+	return null
 
 
 ## Instantiates a blaster model by ID, resolving .glb first then .tscn.

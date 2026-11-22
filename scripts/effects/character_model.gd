@@ -227,7 +227,14 @@ func get_weapon() -> BlasterModel:
 
 ## Tilts the upper body to match where the bot is aiming.
 func set_aim_pitch(radians: float) -> void:
-	_upper.rotation.x = clampf(radians, -0.9, 0.9)
+	if _hero_skeleton != null:
+		var bone_idx := _hero_skeleton.find_bone("Chest")
+		if bone_idx >= 0:
+			var pitch := clampf(radians, -0.9, 0.9)
+			_hero_skeleton.set_bone_pose_rotation(bone_idx, Quaternion(Vector3.RIGHT, pitch))
+			return
+	if _upper != null:
+		_upper.rotation.x = clampf(radians, -0.9, 0.9)
 
 
 ## 0 = fresh, 1 = about to be tagged out.
@@ -244,7 +251,10 @@ func animate(horizontal_speed: float, delta: float) -> void:
 	if _hero_model_node != null:
 		var anim_player: AnimationPlayer = _hero_model_node.find_child("AnimationPlayer", true, false) as AnimationPlayer
 		if anim_player != null:
-			if horizontal_speed > 0.5:
+			if _flinch > 0.05 and anim_player.has_animation("flinch"):
+				if anim_player.current_animation != "flinch":
+					anim_player.play("flinch")
+			elif horizontal_speed > 0.5:
 				if anim_player.has_animation("run") and anim_player.current_animation != "run":
 					anim_player.play("run")
 			else:
@@ -362,9 +372,28 @@ func _build_from_hero_model() -> bool:
 	}
 	ModelLoader.apply_materials_recursive(_hero_model_node, mat_map)
 
+	_legs.clear()
+	var leg_l := _hero_model_node.find_child("Mesh_UpperLeg_L*", true, false) as MeshInstance3D
+	var leg_r := _hero_model_node.find_child("Mesh_UpperLeg_R*", true, false) as MeshInstance3D
+	if leg_l != null and leg_r != null:
+		_legs = [leg_l, leg_r]
+
+	_arms.clear()
+	var arm_l := _hero_model_node.find_child("Mesh_UpperArm_L*", true, false) as MeshInstance3D
+	var arm_r := _hero_model_node.find_child("Mesh_UpperArm_R*", true, false) as MeshInstance3D
+	if arm_l != null and arm_r != null:
+		_arms = [arm_l, arm_r]
+
+	_torso = _hero_model_node.find_child("Mesh_Torso*", true, false) as MeshInstance3D
+	_head = _hero_model_node.find_child("Mesh_Head*", true, false) as MeshInstance3D
+
 	_weapon_mount = ModelLoader.get_or_create_socket(_hero_model_node, &"Socket_Hand_R", &"Hand_R")
 	_hat_root = ModelLoader.get_or_create_socket(_hero_model_node, &"Socket_Head", &"Head")
 	_backpack = ModelLoader.get_or_create_socket(_hero_model_node, &"Socket_Back", &"Chest")
+
+	var anim_player: AnimationPlayer = _hero_model_node.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if anim_player != null and anim_player.has_animation("idle"):
+		anim_player.play("idle")
 
 	_build_hat()
 	_build_overhead_and_shield()

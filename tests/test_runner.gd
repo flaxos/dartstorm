@@ -108,6 +108,8 @@ func _ready() -> void:
 	await _test_aaa_graphics_and_pbr_pipeline()
 	# glTF 2.0 Model Loader & Hybrid Fallback Architecture (v1.7.0 / Phase 1)
 	await _test_gltf_model_loader_and_hybrid_pipeline()
+	# Stylized Hero Character Asset & Humanoid Animation Rig (v1.8.0 / Phase 2)
+	await _test_hero_character_and_skeletal_animations()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -3734,6 +3736,112 @@ func _test_gltf_model_loader_and_hybrid_pipeline() -> void:
 	ModelLoader.clear_cache()
 	export_scene.queue_free()
 	await physics_frames(2)
+
+
+func _test_hero_character_and_skeletal_animations() -> void:
+	section("Stylized Hero Character Asset & Humanoid Animation Rig (Phase 2)")
+
+	# 1. Asset File Presence
+	check(FileAccess.file_exists("res://assets/models/characters/hero_base.tscn"), "hero_base.tscn exists on disk")
+	check(FileAccess.file_exists("res://assets/models/characters/hero_base.glb"), "hero_base.glb exists on disk")
+	check(ModelLoader.has_hero_model(), "ModelLoader.has_hero_model() returns true")
+
+	# 2. Hero Instance Structure
+	var hero_inst := ModelLoader.instantiate_hero()
+	check(hero_inst != null, "ModelLoader.instantiate_hero() returns valid Node3D")
+	if hero_inst == null:
+		return
+
+	# 3. Skeleton3D & 16-Bone Humanoid Hierarchy
+	var skel: Skeleton3D = ModelLoader.find_skeleton(hero_inst)
+	check(skel != null, "Hero model contains a Skeleton3D")
+	if skel != null:
+		check(skel.get_bone_count() >= 16, "Skeleton has at least 16 humanoid bones (found %d)" % skel.get_bone_count())
+		var required_bones := [
+			"Root", "Hips", "Spine", "Chest", "Neck", "Head",
+			"Shoulder_L", "UpperArm_L", "LowerArm_L", "Hand_L",
+			"Shoulder_R", "UpperArm_R", "LowerArm_R", "Hand_R",
+			"UpperLeg_L", "LowerLeg_L", "Foot_L",
+			"UpperLeg_R", "LowerLeg_R", "Foot_R"
+		]
+		var found_all_bones := true
+		for b_name in required_bones:
+			if skel.find_bone(b_name) < 0:
+				found_all_bones = false
+				break
+		check(found_all_bones, "Skeleton contains standard humanoid bones (Hips, Chest, Head, Hands, Legs, Feet)")
+
+	# 4. Sockets & Bone Attachments
+	var sock_hand_r := hero_inst.find_child("Socket_Hand_R", true, false)
+	var sock_hand_l := hero_inst.find_child("Socket_Hand_L", true, false)
+	var sock_head := hero_inst.find_child("Socket_Head", true, false)
+	var sock_back := hero_inst.find_child("Socket_Back", true, false)
+	check(sock_hand_r is BoneAttachment3D, "Socket_Hand_R is a BoneAttachment3D")
+	check(sock_hand_l is BoneAttachment3D, "Socket_Hand_L is a BoneAttachment3D")
+	check(sock_head is BoneAttachment3D, "Socket_Head is a BoneAttachment3D")
+	check(sock_back is BoneAttachment3D, "Socket_Back is a BoneAttachment3D")
+
+	# 5. Keyframed Animation Suite
+	var anim_player: AnimationPlayer = hero_inst.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	check(anim_player != null, "Hero model contains an AnimationPlayer")
+	if anim_player != null:
+		check(anim_player.has_animation("idle"), "AnimationPlayer has 'idle' animation")
+		check(anim_player.has_animation("run"), "AnimationPlayer has 'run' animation")
+		check(anim_player.has_animation("strafe_left"), "AnimationPlayer has 'strafe_left' animation")
+		check(anim_player.has_animation("strafe_right"), "AnimationPlayer has 'strafe_right' animation")
+		check(anim_player.has_animation("jump"), "AnimationPlayer has 'jump' animation")
+		check(anim_player.has_animation("flinch"), "AnimationPlayer has 'flinch' animation")
+		check(anim_player.has_animation("victory"), "AnimationPlayer has 'victory' animation")
+
+	hero_inst.queue_free()
+	await physics_frames(2)
+
+	# 6. CharacterModel Live Integration with Hero Base
+	var char_model := CharacterModel.new()
+	char_model.setup("SlickHero", Color(1.0, 0.4, 0.1), &"beanie")
+	add_child(char_model)
+	await physics_frames(2)
+
+	check(char_model._hero_model_node != null, "CharacterModel instances the stylized hero base model")
+	check(char_model._hero_skeleton != null, "CharacterModel identifies the hero Skeleton3D")
+
+	# Weapon mounting to socket
+	var popper_data := load(POPPER) as WeaponData
+	char_model.set_weapon(popper_data, &"default")
+	check(char_model.get_weapon() != null, "Weapon is mounted on hero")
+	check(char_model._weapon_mount != null, "Weapon is attached to Socket_Hand_R")
+
+	# Aim Pitch tilt
+	char_model.set_aim_pitch(0.4)
+	if char_model._hero_skeleton != null:
+		var chest_idx := char_model._hero_skeleton.find_bone("Chest")
+		check(chest_idx >= 0, "Chest bone found for aim pitch rotation")
+
+	# Animation transitions
+	char_model.animate(0.0, 0.016)
+	var live_anim: AnimationPlayer = char_model._hero_model_node.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if live_anim != null:
+		check(live_anim.current_animation == "idle", "CharacterModel plays 'idle' animation when stationary")
+		char_model.animate(4.5, 0.016)
+		check(live_anim.current_animation == "run", "CharacterModel transitions to 'run' animation when moving")
+		char_model.flinch()
+		char_model.animate(0.0, 0.016)
+		check(live_anim.current_animation == "flinch", "CharacterModel triggers 'flinch' animation on hit")
+
+	# Hat cosmetics on head socket
+	check(char_model._hat_root != null, "Hat is mounted to head socket")
+	char_model.set_hat(&"crown")
+	check(char_model.hat_id() == &"crown", "Hat swapped cleanly on head socket")
+
+	# Zombie transformation
+	char_model.set_zombie(true)
+	check(char_model.is_zombie(), "Hero transformed to zombie state")
+	char_model.set_zombie(false)
+	check(not char_model.is_zombie(), "Hero restored from zombie state")
+
+	char_model.queue_free()
+	await physics_frames(2)
+
 
 
 

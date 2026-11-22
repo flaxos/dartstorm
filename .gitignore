@@ -6,6 +6,7 @@
 # Local/editor state
 .DS_Store
 Thumbs.db
+*.uid
 *.tmp
 *.temp
 *.bak

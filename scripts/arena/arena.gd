@@ -107,21 +107,21 @@ func _build_sky_and_sun(sun_pitch: float = -52.0, warm_fill: float = 0.0) -> voi
 		environment.ambient_light_energy = 1.0 + warm_fill * 0.3
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.adjustment_enabled = true
-	environment.adjustment_contrast = 1.06
-	environment.adjustment_saturation = 1.16
+	environment.adjustment_contrast = 1.10
+	environment.adjustment_saturation = 1.18
 	environment.glow_enabled = true
 	environment.glow_intensity = 0.45
-	environment.glow_bloom = 0.1
+	environment.glow_bloom = 0.12
 	environment.glow_hdr_threshold = 1.0
 	# SSAO, SSR and Volumetric Fog require a RenderingDevice (Forward+ / Mobile Vulkan).
 	# Guard them so the Compatibility (WebGL2 / OpenGL ES3) renderer stays warning-free.
 	if RenderingServer.get_rendering_device() != null:
 		environment.ssao_enabled = true
-		environment.ssao_radius = 1.4
-		environment.ssao_intensity = 1.6
-		environment.ssao_detail = 0.5
+		environment.ssao_radius = 1.5
+		environment.ssao_intensity = 2.0
+		environment.ssao_detail = 0.65
 		environment.ssr_enabled = true
-		environment.ssr_max_steps = 32
+		environment.ssr_max_steps = 48
 		environment.volumetric_fog_enabled = true
 		environment.volumetric_fog_density = 0.005
 		environment.volumetric_fog_albedo = Color(0.96, 0.90, 0.80)
@@ -135,8 +135,13 @@ func _build_sky_and_sun(sun_pitch: float = -52.0, warm_fill: float = 0.0) -> voi
 	sun.light_energy = 1.35
 	sun.light_color = Color(1.0, 0.93, 0.82)
 	sun.shadow_enabled = true
-	sun.shadow_blur = 1.4
+	sun.shadow_blur = 1.6
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	sun.directional_shadow_split_1 = 0.08
+	sun.directional_shadow_split_2 = 0.22
+	sun.directional_shadow_split_3 = 0.55
 	sun.directional_shadow_blend_splits = true
+	sun.directional_shadow_fade_start = 0.85
 	sun.directional_shadow_max_distance = 120.0
 	sun.shadow_bias = 0.02
 	sun.shadow_normal_bias = 1.2

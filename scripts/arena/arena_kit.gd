@@ -19,6 +19,16 @@ const LEAF := Color(0.25, 0.65, 0.25)
 const LEAF_LIGHT := Color(0.38, 0.78, 0.3)
 
 static var _materials: Dictionary = {}
+static var _wood_normal: Texture2D = preload("res://assets/textures/pbr/stylized_wood_normal.png")
+static var _wood_orm: Texture2D = preload("res://assets/textures/pbr/stylized_wood_orm.png")
+static var _plastic_normal: Texture2D = preload("res://assets/textures/pbr/blaster_body_normal.png")
+static var _plastic_orm: Texture2D = preload("res://assets/textures/pbr/blaster_body_orm.png")
+static var _metal_normal: Texture2D = preload("res://assets/textures/pbr/brushed_metal_normal.png")
+static var _metal_orm: Texture2D = preload("res://assets/textures/pbr/brushed_metal_orm.png")
+
+
+static func clear_materials() -> void:
+	_materials.clear()
 
 
 ## Cached tactile material. Supports molded toy plastic, procedural timber, and brushed metal.
@@ -34,6 +44,8 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 		sm.set_shader_parameter(&"wood_tint", color)
 		sm.set_shader_parameter(&"roughness", 0.72 if roughness < 0.0 else roughness)
 		sm.set_shader_parameter(&"rim_strength", 0.32)
+		sm.set_shader_parameter(&"texture_normal", _wood_normal)
+		sm.set_shader_parameter(&"texture_orm", _wood_orm)
 		_materials[key] = sm
 		return sm
 
@@ -45,20 +57,39 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 	match surface:
 		SurfaceType.PLASTIC:
 			material.roughness = 0.32 if roughness < 0.0 else roughness
-			material.metallic = 0.05 if metallic < 0.0 else metallic
-			material.specular = 0.55
+			material.metallic = 0.04 if metallic < 0.0 else metallic
+			material.metallic_specular = 0.6
 			material.rim = 0.42
 			material.rim_tint = 0.45
+			material.normal_enabled = true
+			material.normal_texture = _plastic_normal
+			material.normal_scale = 0.4
+			material.ao_enabled = true
+			material.ao_texture = _plastic_orm
+			material.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+			material.roughness_texture = _plastic_orm
+			material.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
+			material.uv1_triplanar = true
+			material.uv1_scale = Vector3(0.5, 0.5, 0.5)
 		SurfaceType.METAL:
 			material.roughness = 0.24 if roughness < 0.0 else roughness
 			material.metallic = 0.85 if metallic < 0.0 else metallic
-			material.specular = 0.7
+			material.metallic_specular = 0.85
 			material.rim = 0.2
 			material.rim_tint = 0.2
+			material.normal_enabled = true
+			material.normal_texture = _metal_normal
+			material.normal_scale = 0.5
+			material.roughness_texture = _metal_orm
+			material.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
+			material.metallic_texture = _metal_orm
+			material.metallic_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_BLUE
+			material.uv1_triplanar = true
+			material.uv1_scale = Vector3(0.5, 0.5, 0.5)
 		SurfaceType.CARDBOARD:
 			material.roughness = 0.88 if roughness < 0.0 else roughness
 			material.metallic = 0.0 if metallic < 0.0 else metallic
-			material.specular = 0.15
+			material.metallic_specular = 0.15
 			material.rim = 0.25
 			material.rim_tint = 0.2
 		_:

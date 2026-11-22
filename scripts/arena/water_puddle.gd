@@ -17,6 +17,9 @@ var _electric_mesh: MeshInstance3D
 var _time: float = 0.0
 
 
+static var _water_shader: Shader = preload("res://assets/materials/stylized_water.gdshader")
+
+
 func _ready() -> void:
 	add_to_group(&"water_puddles")
 
@@ -29,12 +32,10 @@ func _ready() -> void:
 	cyl.radial_segments = 24
 	cyl.rings = 1
 	_water_mesh.mesh = cyl
-	var mat := StandardMaterial3D.new()
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_color = puddle_color
-	mat.roughness = 0.08
-	mat.metallic = 0.2
-	mat.metallic_specular = 0.9
+	var mat := ShaderMaterial.new()
+	mat.shader = _water_shader
+	mat.set_shader_parameter(&"shallow_color", puddle_color.lightened(0.2))
+	mat.set_shader_parameter(&"deep_color", puddle_color.darkened(0.3))
 	_water_mesh.material_override = mat
 	_water_mesh.position.y = 0.02
 	_water_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -110,9 +111,13 @@ func _physics_process(delta: float) -> void:
 		electrified_left -= delta
 		_electric_mesh.visible = true
 		_electric_mesh.scale = Vector3.ONE * (1.0 + sin(_time * 40.0) * 0.06)
+		if _water_mesh != null and _water_mesh.material_override is ShaderMaterial:
+			(_water_mesh.material_override as ShaderMaterial).set_shader_parameter(&"electrified", 1.0)
 		_shock_occupants()
 		if electrified_left <= 0.0:
 			_electric_mesh.visible = false
+			if _water_mesh != null and _water_mesh.material_override is ShaderMaterial:
+				(_water_mesh.material_override as ShaderMaterial).set_shader_parameter(&"electrified", 0.0)
 
 
 func _splash_actor(actor: Actor) -> void:

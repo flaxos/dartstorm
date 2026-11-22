@@ -36,6 +36,7 @@ const DEFAULTS := {
 	"touch_look_sensitivity": 1.0,
 	"touch_fire_mode": 1,
 	"touch_fire_btn_size": 1.0,
+	"graphics_quality": 2,
 }
 const NOTICE_SECONDS := 3.0
 ## The bots slider on the menu. Team modes may add one more to even the teams.
@@ -46,6 +47,8 @@ const MAX_BOTS := 7
 enum MatchMode { FREE_FOR_ALL, GUN_GAME, DUOS, TEAMS, ZOMBIES, ZOMBIE_SIEGE, FLOOR_IS_LAVA, REALISTIC }
 enum TouchMode { AUTO, ALWAYS, OFF }
 enum TouchFireMode { AIM_AND_TAP, HOLD_AND_AIM }
+enum GraphicsQuality { LOW, MEDIUM, HIGH, ULTRA }
+const GRAPHICS_QUALITY_NAMES := ["Low (Performance)", "Medium (Balanced)", "High (AAA Quality)", "Ultra (Cinematic)"]
 
 # --- Preferences ---
 var mouse_sensitivity: float = 1.0
@@ -78,6 +81,8 @@ var touch_look_sensitivity: float = 1.0
 var touch_fire_mode: int = TouchFireMode.HOLD_AND_AIM
 ## Multiplier for touch fire button size (0.85 = compact, 1.0 = standard 104px, 1.2 = large 120px)
 var touch_fire_btn_size: float = 1.0
+## Graphics quality preset: 0 = Low, 1 = Medium, 2 = High, 3 = Ultra
+var graphics_quality: int = GraphicsQuality.HIGH
 var _touch_detected: bool = false
 
 # --- Your player (Player 1) ---
@@ -171,7 +176,29 @@ func apply() -> void:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	if get_tree() != null and get_tree().current_scene != null and get_tree().current_scene.name == "Match":
 		Engine.time_scale = game_speed
+	_apply_graphics_quality()
 	changed.emit()
+
+
+func _apply_graphics_quality() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var vp := get_viewport()
+	if vp == null:
+		return
+	match graphics_quality:
+		GraphicsQuality.LOW:
+			vp.scaling_3d_scale = 0.85
+			vp.msaa_3d = Viewport.MSAA_DISABLED
+		GraphicsQuality.MEDIUM:
+			vp.scaling_3d_scale = 1.0
+			vp.msaa_3d = Viewport.MSAA_DISABLED
+		GraphicsQuality.HIGH:
+			vp.scaling_3d_scale = 1.0
+			vp.msaa_3d = Viewport.MSAA_2X
+		GraphicsQuality.ULTRA:
+			vp.scaling_3d_scale = 1.0
+			vp.msaa_3d = Viewport.MSAA_4X
 
 
 ## The name shown in the tag feed and scoreboard.
@@ -313,6 +340,7 @@ func load_settings() -> void:
 	camera_shake = clampf(float(file.get_value("video", "camera_shake", camera_shake)), 0.0, 1.5)
 	visual_intensity = clampf(float(file.get_value("video", "visual_intensity", visual_intensity)), 0.2, 1.5)
 	fullscreen = bool(file.get_value("video", "fullscreen", fullscreen))
+	graphics_quality = clampi(int(file.get_value("video", "graphics_quality", graphics_quality)), 0, GraphicsQuality.size() - 1)
 	game_speed = clampf(float(file.get_value("gameplay", "game_speed", game_speed)), 0.70, 1.10)
 	master_volume = clampf(float(file.get_value("audio", "master_volume", master_volume)), 0.0, 1.0)
 	music_volume = clampf(float(file.get_value("audio", "music_volume", music_volume)), 0.0, 1.0)
@@ -365,6 +393,7 @@ func save_settings() -> void:
 	file.set_value("video", "camera_shake", camera_shake)
 	file.set_value("video", "visual_intensity", visual_intensity)
 	file.set_value("video", "fullscreen", fullscreen)
+	file.set_value("video", "graphics_quality", graphics_quality)
 	file.set_value("gameplay", "game_speed", game_speed)
 	file.set_value("audio", "master_volume", master_volume)
 	file.set_value("audio", "music_volume", music_volume)

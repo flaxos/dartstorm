@@ -66,6 +66,7 @@ func _build() -> void:
 			func(value: float) -> void: GameSettings.camera_shake = value)
 	_slider(video, "Visual effects", 0.2, 1.5, 0.05, GameSettings.visual_intensity,
 			func(value: float) -> void: GameSettings.visual_intensity = value)
+	_graphics_quality_picker(video)
 	_toggle(video, "Fullscreen", GameSettings.fullscreen,
 			func(on: bool) -> void: GameSettings.fullscreen = on)
 	_slider(video, "Volume", 0.0, 1.0, 0.05, GameSettings.master_volume,
@@ -126,6 +127,27 @@ func _palette_picker(parent: Control) -> void:
 		button.text = GameMode.PALETTE_NAMES[p_idx[0]]
 		s0.color = GameMode.team_color(0)
 		s1.color = GameMode.team_color(1)
+		GameSettings.apply()
+		Sfx.play(&"click"))
+
+
+func _graphics_quality_picker(parent: Control) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	parent.add_child(row)
+	var name_label := UiKit.label("Graphics Quality", 20, UiKit.CREAM, 4)
+	name_label.custom_minimum_size.x = 220
+	row.add_child(name_label)
+
+	var q_idx := [GameSettings.graphics_quality]
+	var current_name: String = GameSettings.GRAPHICS_QUALITY_NAMES[clampi(q_idx[0], 0, GameSettings.GRAPHICS_QUALITY_NAMES.size() - 1)]
+	var button := UiKit.small_button(current_name, Vector2(210, 40))
+	row.add_child(button)
+
+	button.pressed.connect(func() -> void:
+		q_idx[0] = (q_idx[0] + 1) % GameSettings.GraphicsQuality.size()
+		GameSettings.graphics_quality = q_idx[0]
+		button.text = GameSettings.GRAPHICS_QUALITY_NAMES[q_idx[0]]
 		GameSettings.apply()
 		Sfx.play(&"click"))
 

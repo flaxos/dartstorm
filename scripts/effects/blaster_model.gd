@@ -15,10 +15,34 @@ var muzzle: Marker3D
 
 var skin_id: StringName = &"default"
 static var _skin_shader: Shader = preload("res://assets/materials/blaster_skin.gdshader")
+static var _body_normal: Texture2D = preload("res://assets/textures/pbr/blaster_body_normal.png")
+static var _body_orm: Texture2D = preload("res://assets/textures/pbr/blaster_body_orm.png")
+static var _detail_normal: Texture2D = preload("res://assets/textures/pbr/micro_detail_normal.png")
+static var _grip_normal: Texture2D = preload("res://assets/textures/pbr/rubber_grip_normal.png")
+static var _grip_orm: Texture2D = preload("res://assets/textures/pbr/rubber_grip_orm.png")
+static var _grip_mat: StandardMaterial3D = null
 static var _skin_materials: Dictionary = {}
 
 static func clear_skin_materials() -> void:
 	_skin_materials.clear()
+	_grip_mat = null
+
+static func _grip_material() -> StandardMaterial3D:
+	if _grip_mat == null:
+		_grip_mat = StandardMaterial3D.new()
+		_grip_mat.albedo_color = DARK
+		_grip_mat.roughness = 0.85
+		_grip_mat.normal_enabled = true
+		_grip_mat.normal_texture = _grip_normal
+		_grip_mat.normal_scale = 0.75
+		_grip_mat.ao_enabled = true
+		_grip_mat.ao_texture = _grip_orm
+		_grip_mat.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+		_grip_mat.roughness_texture = _grip_orm
+		_grip_mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
+		_grip_mat.uv1_triplanar = true
+		_grip_mat.uv1_scale = Vector3(1.5, 1.5, 1.5)
+	return _grip_mat
 
 var _spinner: Node3D
 var _belt: Array[Node3D] = []
@@ -239,8 +263,8 @@ func _tube(radius: float, length: float, pos: Vector3, color: Color, parent: Nod
 	mesh.top_radius = radius
 	mesh.bottom_radius = radius
 	mesh.height = length
-	mesh.radial_segments = 12
-	mesh.rings = 1
+	mesh.radial_segments = 24
+	mesh.rings = 2
 	return _part(mesh, pos, color, Vector3(90.0, 0.0, 0.0), parent, metallic)
 
 
@@ -260,6 +284,11 @@ func _part(mesh: Mesh, pos: Vector3, color: Color, rot_deg: Vector3, parent: Nod
 			skin_mat.shader = _skin_shader
 			skin_mat.set_shader_parameter("body_color", b_col)
 			skin_mat.set_shader_parameter("accent_color", a_col)
+			skin_mat.set_shader_parameter("texture_normal", _body_normal)
+			skin_mat.set_shader_parameter("texture_orm", _body_orm)
+			skin_mat.set_shader_parameter("texture_detail_normal", _detail_normal)
+			skin_mat.set_shader_parameter("normal_scale", 1.0)
+			skin_mat.set_shader_parameter("detail_normal_scale", 20.0)
 			var pattern_path: String = Cosmetics.skin_pattern(skin_id)
 			if ResourceLoader.exists(pattern_path):
 				skin_mat.set_shader_parameter("skin_pattern", load(pattern_path))
@@ -273,8 +302,12 @@ func _part(mesh: Mesh, pos: Vector3, color: Color, rot_deg: Vector3, parent: Nod
 			part_rot += parent.rotation_degrees
 		instance.set_instance_shader_parameter("part_offset", part_offset)
 		instance.set_instance_shader_parameter("part_rot", part_rot)
+	elif color.is_equal_approx(DARK) and metallic < 0.2:
+		instance.material_override = _grip_material()
+	elif metallic > 0.4:
+		instance.material_override = ArenaKit.mat_styled(color, ArenaKit.SurfaceType.METAL, 0.24, metallic)
 	else:
-		instance.material_override = ArenaKit.mat(color, 0.85 if color.is_equal_approx(DARK) else 0.5, metallic)
+		instance.material_override = ArenaKit.mat_styled(color, ArenaKit.SurfaceType.PLASTIC, 0.45, metallic)
 	instance.position = pos
 	instance.rotation_degrees = rot_deg
 	if first_person:

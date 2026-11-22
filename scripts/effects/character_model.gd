@@ -11,6 +11,78 @@ const HAT_Y := 1.86
 const ZOMBIE_GREEN := Color(0.38, 0.78, 0.28)
 const ZOMBIE_SKIN := Color(0.48, 0.82, 0.38)
 
+static var _cloth_normal: Texture2D = preload("res://assets/textures/pbr/cloth_fabric_normal.png")
+static var _cloth_orm: Texture2D = preload("res://assets/textures/pbr/cloth_fabric_orm.png")
+static var _sneaker_normal: Texture2D = preload("res://assets/textures/pbr/sneaker_rubber_normal.png")
+static var _sneaker_orm: Texture2D = preload("res://assets/textures/pbr/sneaker_rubber_orm.png")
+
+static var _cached_cloth_mats: Dictionary = {}
+static var _cached_sneaker_mat: StandardMaterial3D = null
+static var _cached_skin_mats: Dictionary = {}
+
+static func clear_character_materials() -> void:
+	_cached_cloth_mats.clear()
+	_cached_sneaker_mat = null
+	_cached_skin_mats.clear()
+
+static func _cloth_mat(color: Color) -> StandardMaterial3D:
+	var key := color.to_html(false)
+	if _cached_cloth_mats.has(key):
+		return _cached_cloth_mats[key]
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.diffuse_mode = BaseMaterial3D.DIFFUSE_BURLEY
+	mat.roughness = 0.88
+	mat.roughness_texture = _cloth_orm
+	mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
+	mat.ao_enabled = true
+	mat.ao_texture = _cloth_orm
+	mat.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+	mat.normal_enabled = true
+	mat.normal_texture = _cloth_normal
+	mat.normal_scale = 0.5
+	mat.uv1_triplanar = true
+	mat.uv1_scale = Vector3(2.5, 2.5, 2.5)
+	mat.rim_enabled = true
+	mat.rim = 0.35
+	mat.rim_tint = 0.5
+	_cached_cloth_mats[key] = mat
+	return mat
+
+static func _sneaker_mat() -> StandardMaterial3D:
+	if _cached_sneaker_mat == null:
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color(0.96, 0.96, 0.98)
+		mat.diffuse_mode = BaseMaterial3D.DIFFUSE_BURLEY
+		mat.roughness = 0.65
+		mat.roughness_texture = _sneaker_orm
+		mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
+		mat.ao_enabled = true
+		mat.ao_texture = _sneaker_orm
+		mat.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+		mat.normal_enabled = true
+		mat.normal_texture = _sneaker_normal
+		mat.normal_scale = 0.65
+		mat.uv1_triplanar = true
+		mat.uv1_scale = Vector3(1.5, 1.5, 1.5)
+		_cached_sneaker_mat = mat
+	return _cached_sneaker_mat
+
+static func _skin_mat(color: Color) -> StandardMaterial3D:
+	var key := color.to_html(false)
+	if _cached_skin_mats.has(key):
+		return _cached_skin_mats[key]
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.diffuse_mode = BaseMaterial3D.DIFFUSE_BURLEY
+	mat.roughness = 0.44
+	mat.metallic_specular = 0.45
+	mat.rim_enabled = true
+	mat.rim = 0.48
+	mat.rim_tint = 0.45
+	_cached_skin_mats[key] = mat
+	return mat
+
 var _tint: Color = Color.WHITE
 var _upper: Node3D
 var _torso: MeshInstance3D
@@ -78,8 +150,8 @@ func show_overhead(shown: bool) -> void:
 func set_zombie(enabled: bool) -> void:
 	_is_zombie = enabled
 	if enabled:
-		var zombie_mat := ArenaKit.mat(ZOMBIE_GREEN, 0.7)
-		var zombie_skin_mat := ArenaKit.mat(ZOMBIE_SKIN, 0.7)
+		var zombie_mat := _cloth_mat(ZOMBIE_GREEN)
+		var zombie_skin_mat := _skin_mat(ZOMBIE_SKIN)
 		if _torso != null:
 			_torso.material_override = zombie_mat
 		if _head != null:
@@ -90,23 +162,23 @@ func set_zombie(enabled: bool) -> void:
 			arm.material_override = zombie_mat
 			arm.rotation_degrees = Vector3(90.0, side * -5.0, 0.0)
 		for leg in _legs:
-			leg.material_override = ArenaKit.mat(ZOMBIE_GREEN.darkened(0.25), 0.7)
+			leg.material_override = _cloth_mat(ZOMBIE_GREEN.darkened(0.25))
 		set_weapon(null)
 		if _name_label != null:
 			_name_label.modulate = Color(0.5, 0.95, 0.35)
 	else:
-		var shirt := ArenaKit.mat(_tint, 0.7)
+		var shirt := _cloth_mat(_tint)
 		if _torso != null:
 			_torso.material_override = shirt
 		if _head != null:
-			_head.material_override = ArenaKit.mat(SKIN, 0.7)
+			_head.material_override = _skin_mat(SKIN)
 		for i in _arms.size():
 			var arm := _arms[i]
 			var side: float = -1.0 if i == 0 else 1.0
 			arm.material_override = shirt
 			arm.rotation_degrees = Vector3(80.0, side * -18.0, 0.0)
 		for leg in _legs:
-			leg.material_override = ArenaKit.mat(NAVY)
+			leg.material_override = _cloth_mat(NAVY)
 		if _name_label != null:
 			_name_label.modulate = _tint.lightened(0.35)
 
@@ -168,22 +240,58 @@ func animate(horizontal_speed: float, delta: float) -> void:
 
 
 func _build() -> void:
-	var shirt := ArenaKit.mat(_tint, 0.7)
+	var shirt := _cloth_mat(_tint)
+	var pants := _cloth_mat(NAVY)
+	_legs.clear()
 	for side: float in [-1.0, 1.0]:
-		var leg := _capsule(self, 0.12, 0.74, Vector3(side * 0.15, 0.37, 0.0), ArenaKit.mat(NAVY))
+		var leg := _capsule(self, 0.12, 0.74, Vector3(side * 0.15, 0.37, 0.0), pants)
 		_legs.append(leg)
+
+		# Stylized High-Traction Sneaker attached to foot
+		_box_child(leg, Vector3(0.15, 0.055, 0.28), Vector3(0.0, -0.34, -0.04), _sneaker_mat())
+		_box_child(leg, Vector3(0.14, 0.08, 0.22), Vector3(0.0, -0.28, -0.03), _cloth_mat(_tint.darkened(0.25)))
+		_box_child(leg, Vector3(0.145, 0.065, 0.09), Vector3(0.0, -0.32, -0.15), _sneaker_mat())
 
 	_upper = Node3D.new()
 	add_child(_upper)
 	_torso = _capsule(_upper, 0.31, 0.86, Vector3(0.0, 1.05, 0.0), shirt)
-	_head = ArenaKit.deco_sphere(_upper, 0.26, Vector3(0.0, 1.66, 0.0), SKIN)
+
+	# Hoodie / Combat Vest Cowl Collar
+	_tube_child(_upper, 0.26, 0.07, Vector3(0.0, 1.48, 0.0), _cloth_mat(_tint.darkened(0.18)))
+	# Tactical chest pocket
+	_box_child(_upper, Vector3(0.11, 0.13, 0.04), Vector3(0.12, 1.15, -0.29), _cloth_mat(_tint.darkened(0.28)))
+
+	# Head
+	_head = _sphere_child(_upper, 0.26, Vector3(0.0, 1.66, 0.0), _skin_mat(SKIN), 1.0)
+
+	# Stylized Eyes & Facial Features
 	_arms.clear()
 	for side: float in [-1.0, 1.0]:
-		ArenaKit.deco_sphere(_upper, 0.065, Vector3(side * 0.095, 1.7, -0.215), Color.WHITE)
-		ArenaKit.deco_sphere(_upper, 0.034, Vector3(side * 0.095, 1.7, -0.265), Color(0.05, 0.05, 0.1))
+		# Eyebrows
+		_box_child(_upper, Vector3(0.075, 0.022, 0.025), Vector3(side * 0.095, 1.795, -0.235), ArenaKit.mat(Color(0.25, 0.16, 0.08), 0.8), Vector3(0.0, 0.0, side * -12.0))
+		# White Sclera
+		_sphere_child(_upper, 0.065, Vector3(side * 0.095, 1.7, -0.215), ArenaKit.mat(Color(0.98, 0.98, 1.0), 0.15))
+		# Iris & Pupil
+		_sphere_child(_upper, 0.038, Vector3(side * 0.095, 1.7, -0.265), ArenaKit.mat(Color(0.08, 0.25, 0.5), 0.2))
+		_sphere_child(_upper, 0.024, Vector3(side * 0.095, 1.7, -0.275), ArenaKit.mat(Color(0.02, 0.02, 0.04), 0.1))
+		# Pixar Specular Catchlight
+		_sphere_child(_upper, 0.012, Vector3(side * 0.095 + 0.016, 1.722, -0.285), ArenaKit.mat(Color.WHITE, 0.0, 0.0, 1.5))
+		# Rosy Cheeks
+		_sphere_child(_upper, 0.035, Vector3(side * 0.155, 1.605, -0.205), ArenaKit.mat(Color(1.0, 0.65, 0.65, 0.5), 0.8))
+
+		# Arm
 		var arm := _capsule(_upper, 0.085, 0.52, Vector3(side * 0.3, 1.18, -0.24), shirt)
 		arm.rotation_degrees = Vector3(80.0, side * -18.0, 0.0)
 		_arms.append(arm)
+
+		# Sleeve cuff
+		_tube_child(arm, 0.092, 0.04, Vector3(0.0, -0.22, 0.0), _cloth_mat(_tint.darkened(0.2)))
+		# Molded hand
+		_sphere_child(arm, 0.072, Vector3(0.0, -0.28, 0.0), _skin_mat(SKIN), 0.85)
+
+	# Cute button nose
+	_sphere_child(_upper, 0.032, Vector3(0.0, 1.63, -0.26), _skin_mat(SKIN.darkened(0.12)))
+
 	_hat_root = Node3D.new()
 	_upper.add_child(_hat_root)
 	_build_hat()
@@ -323,12 +431,57 @@ func _capsule(parent: Node3D, radius: float, height: float, pos: Vector3, materi
 	var mesh := CapsuleMesh.new()
 	mesh.radius = radius
 	mesh.height = height
-	mesh.radial_segments = 12
-	mesh.rings = 4
+	mesh.radial_segments = 24
+	mesh.rings = 8
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh
 	instance.material_override = material
 	instance.position = pos
+	parent.add_child(instance)
+	return instance
+
+
+func _box_child(parent: Node3D, size: Vector3, pos: Vector3, material: Material,
+		rot_deg: Vector3 = Vector3.ZERO) -> MeshInstance3D:
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	var instance := MeshInstance3D.new()
+	instance.mesh = mesh
+	instance.material_override = material
+	instance.position = pos
+	instance.rotation_degrees = rot_deg
+	parent.add_child(instance)
+	return instance
+
+
+func _sphere_child(parent: Node3D, radius: float, pos: Vector3, material: Material,
+		squash: float = 1.0) -> MeshInstance3D:
+	var mesh := SphereMesh.new()
+	mesh.radius = radius
+	mesh.height = radius * 2.0 * squash
+	mesh.radial_segments = 24
+	mesh.rings = 12
+	var instance := MeshInstance3D.new()
+	instance.mesh = mesh
+	instance.material_override = material
+	instance.position = pos
+	parent.add_child(instance)
+	return instance
+
+
+func _tube_child(parent: Node3D, radius: float, length: float, pos: Vector3, material: Material,
+		rot_deg: Vector3 = Vector3.ZERO) -> MeshInstance3D:
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius
+	mesh.height = length
+	mesh.radial_segments = 24
+	mesh.rings = 2
+	var instance := MeshInstance3D.new()
+	instance.mesh = mesh
+	instance.material_override = material
+	instance.position = pos
+	instance.rotation_degrees = rot_deg
 	parent.add_child(instance)
 	return instance
 

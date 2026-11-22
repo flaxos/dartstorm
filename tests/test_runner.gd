@@ -104,6 +104,8 @@ func _ready() -> void:
 	await _test_new_arenas_and_realistic_mode()
 	# Codebase Hardening, Network Sanitization & PBR Skins Pipeline (v1.5.0)
 	await _test_hardening_security_and_pbr_skins()
+	# AAA Visual Uplift: High-Poly Models, PBR Textures & Graphics Quality Scaler (v1.6.0)
+	await _test_aaa_graphics_and_pbr_pipeline()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -3548,6 +3550,75 @@ func _test_hardening_security_and_pbr_skins() -> void:
 	cyber_model.queue_free()
 	BlasterModel.clear_skin_materials()
 	await physics_frames(2)
+
+
+func _test_aaa_graphics_and_pbr_pipeline() -> void:
+	section("AAA Visual Uplift: High-Poly Models, PBR Textures & Graphics Quality Scaler")
+
+	# 1. PBR Texture maps
+	check(ResourceLoader.exists("res://assets/textures/pbr/blaster_body_normal.png"), "blaster_body_normal.png exists")
+	check(ResourceLoader.exists("res://assets/textures/pbr/blaster_body_orm.png"), "blaster_body_orm.png exists")
+	check(ResourceLoader.exists("res://assets/textures/pbr/rubber_grip_normal.png"), "rubber_grip_normal.png exists")
+	check(ResourceLoader.exists("res://assets/textures/pbr/rubber_grip_orm.png"), "rubber_grip_orm.png exists")
+	check(ResourceLoader.exists("res://assets/textures/pbr/brushed_metal_normal.png"), "brushed_metal_normal.png exists")
+	check(ResourceLoader.exists("res://assets/textures/pbr/cloth_fabric_normal.png"), "cloth_fabric_normal.png exists")
+	check(ResourceLoader.exists("res://assets/textures/pbr/sneaker_rubber_normal.png"), "sneaker_rubber_normal.png exists")
+	check(ResourceLoader.exists("res://assets/textures/pbr/micro_detail_normal.png"), "micro_detail_normal.png exists")
+	check(ResourceLoader.exists("res://assets/textures/pbr/stylized_wood_normal.png"), "stylized_wood_normal.png exists")
+
+	# 2. Graphics Quality Scaler
+	check(GameSettings.GraphicsQuality.size() == 4, "GraphicsQuality has 4 tiers (LOW, MEDIUM, HIGH, ULTRA)")
+	check(GameSettings.graphics_quality == GameSettings.GraphicsQuality.HIGH, "Default graphics quality is HIGH")
+	check(GameSettings.GRAPHICS_QUALITY_NAMES.size() == 4, "Graphics quality has human-readable label names")
+
+	# 3. High-Poly Character Model & Stylized Anatomy
+	var hero := CharacterModel.new()
+	hero.setup("TestHero", Color(0.1, 0.4, 0.9), &"cap")
+	add_child(hero)
+	await physics_frames(2)
+	check(hero._legs.size() == 2, "CharacterModel has 2 legs")
+	check(hero._legs[0].get_child_count() >= 3, "Leg has attached sneaker sole, upper and toe cap")
+	check(hero._arms.size() == 2, "CharacterModel has 2 arms")
+	check(hero._arms[0].get_child_count() >= 2, "Arm has attached cuff and stylized hand")
+	check(hero._torso != null and hero._torso.mesh is CapsuleMesh, "Torso is a smooth capsule mesh")
+	if hero._torso != null and hero._torso.mesh is CapsuleMesh:
+		var torso_mesh: CapsuleMesh = hero._torso.mesh as CapsuleMesh
+		check(torso_mesh.radial_segments >= 24, "Torso capsule uses high-poly 24+ radial segments")
+	hero.queue_free()
+	await physics_frames(2)
+
+	# 4. High-Poly Blaster Mesh & PBR Materials
+	var popper_data := load(POPPER) as WeaponData
+	var blaster := BlasterModel.create(popper_data, true, &"default")
+	add_child(blaster)
+	await physics_frames(2)
+	var found_high_poly_tube := false
+	for child in blaster.get_children():
+		var mesh_inst := child as MeshInstance3D
+		if mesh_inst != null and mesh_inst.mesh is CylinderMesh:
+			var cyl := mesh_inst.mesh as CylinderMesh
+			if cyl.radial_segments >= 24:
+				found_high_poly_tube = true
+				break
+	check(found_high_poly_tube, "Blaster tubes use high-poly 24 radial segments")
+	blaster.queue_free()
+	await physics_frames(2)
+
+	# 5. Stylized Water Puddle & Dynamic Electrification
+	var puddle := WaterPuddle.new()
+	puddle.radius = 2.0
+	add_child(puddle)
+	await physics_frames(2)
+	check(puddle._water_mesh != null, "WaterPuddle has water mesh instance")
+	check(puddle._water_mesh.material_override is ShaderMaterial, "Water puddle uses custom ShaderMaterial")
+	puddle.electrify(1.5)
+	await physics_frames(2)
+	if puddle._water_mesh.material_override is ShaderMaterial:
+		var sm := puddle._water_mesh.material_override as ShaderMaterial
+		check(is_equal_approx(float(sm.get_shader_parameter(&"electrified")), 1.0), "Puddle electrify parameter is passed to shader")
+	puddle.queue_free()
+	await physics_frames(2)
+
 
 
 

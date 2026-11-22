@@ -36,6 +36,12 @@ var buckets: Array[AmmoBucket] = []
 ## Each team's home end, by team number (0 blue, 1 orange). Team modes respawn
 ## players at the end nearest their own base.
 var team_bases: Array[Vector3] = []
+## Flag pedestals for Capture The Flag (0 Blue, 1 Orange). Falls back to team_bases.
+var flag_pedestals: Array[Vector3] = []
+## Bomb sites for Plant The Bomb ("A": Vector3, "B": Vector3).
+var bomb_sites: Dictionary = {}
+## Where the bomb spawns for Attackers (falls back to team_bases[1] or spawn).
+var bomb_spawns: Array[Vector3] = []
 var shield_pickups: Array[ShieldPickup] = []
 var puddles: Array[WaterPuddle] = []
 var ice_slicks: Array[IceSlick] = []
@@ -192,6 +198,22 @@ func add_bucket(at: Vector3, tint: Color = Color(0.95, 0.75, 0.2), capacity: int
 	buckets.append(bucket)
 	roam_points.append(at + Vector3(1.2, 0.0, 0.0))
 	return bucket
+
+
+func get_flag_pedestal(team: int) -> Vector3:
+	if team >= 0 and team < flag_pedestals.size():
+		return flag_pedestals[team]
+	if team >= 0 and team < team_bases.size():
+		return team_bases[team]
+	return Vector3(-14.0, 0.0, 0.0) if team == 0 else Vector3(14.0, 0.0, 0.0)
+
+
+func get_bomb_site_pos(site_id: String) -> Vector3:
+	if bomb_sites.has(site_id):
+		return bomb_sites[site_id]
+	if not bomb_sites.is_empty():
+		return bomb_sites.values()[0]
+	return Vector3(0.0, 0.0, -12.0) if site_id == "A" else Vector3(0.0, 0.0, 12.0)
 
 
 func add_wind_zone(centre: Vector3, zone_size: Vector3, direction: Vector3, strength: float,

@@ -182,6 +182,19 @@ func _build_ui() -> void:
 			player.arsenal.cycle(1))
 	add_child(swap_btn)
 
+	# Interact / Use button (for planting, defusing, and interactables)
+	var interact_btn := _create_action_button("USE", &"interact", Vector2(56, 56), Color(UiKit.ORANGE_HOT.darkened(0.2), 0.85), UiKit.ORANGE_HOT, 15)
+	interact_btn.name = "InteractButton"
+	interact_btn.anchor_left = 1.0
+	interact_btn.anchor_top = 1.0
+	interact_btn.anchor_right = 1.0
+	interact_btn.anchor_bottom = 1.0
+	interact_btn.offset_left = -312.0
+	interact_btn.offset_top = -148.0
+	interact_btn.offset_right = -256.0
+	interact_btn.offset_bottom = -92.0
+	add_child(interact_btn)
+
 
 ## Updates button sizes, labels, and behavior based on GameSettings.
 func refresh_fire_mode() -> void:

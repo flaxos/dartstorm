@@ -68,6 +68,9 @@ var _lava_timer_label: Label
 var _weather_panel: PanelContainer
 var _weather_icon_label: Label
 var _weather_text_label: Label
+var _objective_box: VBoxContainer
+var _objective_label: Label
+var _objective_bar: ProgressBar
 
 
 func setup(player: Player, controller: MatchController) -> void:
@@ -230,6 +233,55 @@ func _process(delta: float) -> void:
 		else:
 			_weather_panel.visible = false
 
+	# Objective mode status bar
+	if _objective_box != null:
+		if _controller.mode is CaptureTheFlagMode:
+			_objective_box.visible = true
+			var flag_statuses: Array[String] = []
+			for f in get_tree().get_nodes_in_group(&"flags"):
+				var flag := f as FlagPickup
+				if flag != null:
+					var tname := GameMode.team_name(flag.team_id)
+					var st := "BASE"
+					if flag.state == FlagPickup.State.CARRIED:
+						st = "YOU" if flag.carrier == _player else "TAKEN"
+					elif flag.state == FlagPickup.State.DROPPED:
+						st = "DROPPED (%ds)" % maxi(int(flag.drop_timer), 0)
+					flag_statuses.append("[%s FLAG: %s]" % [tname, st])
+			_objective_label.text = "   ".join(flag_statuses)
+			_objective_bar.visible = false
+		elif _controller.mode is PlantTheBombMode:
+			_objective_box.visible = true
+			var bomb_target: BombTarget = get_tree().get_first_node_in_group(&"bomb_target") as BombTarget
+			if bomb_target != null:
+				match bomb_target.state:
+					BombTarget.BombState.CARRIED:
+						_objective_label.text = "BOMB: %s" % ("CARRIED BY YOU (PLANT AT A/B)" if bomb_target.carrier == _player else "CARRIED BY " + (bomb_target.carrier.display_name.to_upper() if bomb_target.carrier != null else "UNKNOWN"))
+						_objective_bar.visible = false
+					BombTarget.BombState.DROPPED:
+						_objective_label.text = "BOMB: DROPPED!"
+						_objective_bar.visible = false
+					BombTarget.BombState.PLANTING:
+						_objective_label.text = "ARMING BOMB AT SITE %s..." % bomb_target.active_site
+						_objective_bar.visible = true
+						_objective_bar.value = clampf(bomb_target.plant_progress_left / BombTarget.PLANT_TIME, 0.0, 1.0)
+					BombTarget.BombState.PLANTED:
+						_objective_label.text = "BOMB PLANTED AT SITE %s! (%.1fs)" % [bomb_target.active_site, maxf(bomb_target.fuse_left, 0.0)]
+						_objective_bar.visible = true
+						_objective_bar.value = clampf(bomb_target.fuse_left / BombTarget.FUSE_TIME, 0.0, 1.0)
+					BombTarget.BombState.DEFUSING:
+						_objective_label.text = "DEFUSING BOMB AT SITE %s..." % bomb_target.active_site
+						_objective_bar.visible = true
+						_objective_bar.value = clampf(bomb_target.defuse_progress_left / BombTarget.DEFUSE_TIME, 0.0, 1.0)
+					BombTarget.BombState.DEFUSED:
+						_objective_label.text = "BOMB DEFUSED!"
+						_objective_bar.visible = false
+					BombTarget.BombState.DETONATED:
+						_objective_label.text = "BOMB DETONATED!"
+						_objective_bar.visible = false
+		else:
+			_objective_box.visible = false
+
 	# Respawn countdown while tagged out.
 	if not _player.alive and not _match_over:
 		var left := _controller.respawn_time_left(_player)
@@ -388,11 +440,27 @@ func _build() -> void:
 	_root.add_child(_team_strip)
 	UiKit.pin(_team_strip, Vector2(0.5, 0.0), Vector2(0, 108), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
 
+	# Objective mode status bar (CTF flag indicators & Bomb site status)
+	_objective_box = VBoxContainer.new()
+	_objective_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_objective_box.visible = false
+	_root.add_child(_objective_box)
+	UiKit.pin(_objective_box, Vector2(0.5, 0.0), Vector2(0, 144 if teams else 114), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
+
+	_objective_label = UiKit.label("", 22, UiKit.CREAM, 6)
+	_objective_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_objective_box.add_child(_objective_label)
+
+	_objective_bar = UiKit.bar(UiKit.ORANGE_HOT, Vector2(240, 10))
+	_objective_bar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_objective_bar.visible = false
+	_objective_box.add_child(_objective_bar)
+
 	# Announcer call-outs sit just under the clock (and the team scores).
 	_announce_label = UiKit.label("", 40, UiKit.ORANGE_HOT, 12)
 	_announce_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_root.add_child(_announce_label)
-	UiKit.pin(_announce_label, Vector2(0.5, 0.0), Vector2(0, 160 if teams else 128), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
+	UiKit.pin(_announce_label, Vector2(0.5, 0.0), Vector2(0, 185 if teams else 145), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
 
 	_popups = Control.new()
 	_popups.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -823,7 +891,14 @@ func _refresh_team_strip(teams: Array[Dictionary], mine: int) -> void:
 		var color := _controller.mode.get_team_color(id)
 		var name_str := _controller.mode.get_team_name(id)
 		var chip := UiKit.panel(color.darkened(0.25), 0.92, 14, 3 if id == mine else 0, UiKit.CREAM, 8)
-		chip.add_child(UiKit.label("%s %d" % [name_str, team["score"]], 22, UiKit.CREAM, 5))
+		var score_text := "%s %d" % [name_str, team["score"]]
+		if _controller.mode is CaptureTheFlagMode:
+			var ctf := _controller.mode as CaptureTheFlagMode
+			score_text = "%s %d/%d CAPS" % [name_str, ctf.get_captures(id), CaptureTheFlagMode.WINNING_CAPTURES]
+		elif _controller.mode is PlantTheBombMode:
+			var bomb_mode := _controller.mode as PlantTheBombMode
+			score_text = "%s %d/%d RDS" % [name_str, bomb_mode.get_rounds(id), PlantTheBombMode.WINNING_ROUNDS]
+		chip.add_child(UiKit.label(score_text, 22, UiKit.CREAM, 5))
 		_team_strip.add_child(chip)
 
 

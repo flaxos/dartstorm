@@ -111,6 +111,14 @@ func _physics_process(delta: float) -> void:
 		_update_aim(delta)
 		_update_trigger(delta)
 		wish = _choose_direction(delta)
+		var bomb_target_node := get_tree().get_first_node_in_group(&"bomb_target") as BombTarget
+		if bomb_target_node != null:
+			if bomb_target_node.carrier == self and not bomb_target_node.get_site_at(global_position).is_empty():
+				bomb_target_node.progress_plant(self, delta)
+				wish = Vector3.ZERO
+			elif team_id == 0 and (bomb_target_node.state == BombTarget.BombState.PLANTED or bomb_target_node.state == BombTarget.BombState.DEFUSING) and global_position.distance_to(bomb_target_node.global_position) <= BombTarget.DEFUSE_RADIUS:
+				bomb_target_node.progress_defuse(self, delta)
+				wish = Vector3.ZERO
 		_melee_cooldown = maxf(_melee_cooldown - delta, 0.0)
 		_lunge_cooldown = maxf(_lunge_cooldown - delta, 0.0)
 		if _lunge_telegraph_left > 0.0:
@@ -266,6 +274,51 @@ func _think() -> void:
 
 	_target = _pick_target()
 	_ensure_loaded_weapon()
+
+	# 1. CTF Objectives
+	var flags_in_match := get_tree().get_nodes_in_group(&"flags")
+	if not flags_in_match.is_empty():
+		var our_flag: FlagPickup = null
+		var enemy_flag: FlagPickup = null
+		for f in flags_in_match:
+			var flag := f as FlagPickup
+			if flag != null:
+				if flag.team_id == team_id:
+					our_flag = flag
+				else:
+					enemy_flag = flag
+		if enemy_flag != null and enemy_flag.carrier == self:
+			_mood = Mood.ROAM
+			var home_ped := arena.get_flag_pedestal(team_id) if arena != null else Vector3.ZERO
+			_set_goal(home_ped)
+			return
+		if our_flag != null and our_flag.carrier != null and is_instance_valid(our_flag.carrier) and our_flag.carrier.alive:
+			_target = our_flag.carrier
+			_mood = Mood.FIGHT
+			_set_goal(our_flag.carrier.global_position)
+			return
+		if enemy_flag != null and (enemy_flag.state == FlagPickup.State.DROPPED or enemy_flag.state == FlagPickup.State.AT_BASE):
+			_mood = Mood.ROAM
+			_set_goal(enemy_flag.global_position)
+			return
+
+	# 2. Plant The Bomb Objectives
+	var bomb_target_obj: BombTarget = get_tree().get_first_node_in_group(&"bomb_target") as BombTarget
+	if bomb_target_obj != null:
+		if bomb_target_obj.carrier == self:
+			var site_choice := "A" if (int(hash(display_name)) % 2 == 0) else "B"
+			var target_pos := arena.get_bomb_site_pos(site_choice) if arena != null else Vector3.ZERO
+			_mood = Mood.ROAM
+			_set_goal(target_pos)
+			return
+		elif bomb_target_obj.state == BombTarget.BombState.DROPPED and team_id == 1:
+			_mood = Mood.ROAM
+			_set_goal(bomb_target_obj.global_position)
+			return
+		elif team_id == 0 and (bomb_target_obj.state == BombTarget.BombState.PLANTED or bomb_target_obj.state == BombTarget.BombState.DEFUSING):
+			_mood = Mood.ROAM
+			_set_goal(bomb_target_obj.global_position)
+			return
 
 	if _wants_resupply():
 		var stocked := _nearest_bucket(true)

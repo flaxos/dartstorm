@@ -42,6 +42,8 @@ var _last_whole_second: int = -1
 var _respawns: Dictionary = {}
 ## Team modes: the team currently in front (-1 before anyone scores or when level).
 var _leading_team: int = -1
+var flags: Array[FlagPickup] = []
+var bomb_target: BombTarget = null
 
 
 func setup(p_mode: GameMode, p_arena: Arena) -> void:
@@ -135,6 +137,8 @@ func _physics_process(delta: float) -> void:
 			_tick_respawns(delta)
 			if mode is RealisticMode:
 				_tick_realistic_bases()
+			if mode is CaptureTheFlagMode:
+				_tick_ctf_captures()
 			if time_left <= 0.0:
 				_finish()
 
@@ -232,6 +236,8 @@ func _on_tagged_out(victim: Actor, attacker: Actor, weapon: WeaponData, ricochet
 	if winner != null:
 		_finish()
 		return
+	if mode is PlantTheBombMode and state == State.PLAYING:
+		_check_bomb_elimination()
 	if attacker_entry.tier != tier_before and attacker.alive:
 		_equip(attacker)
 		var held := attacker.arsenal.current()
@@ -423,4 +429,159 @@ func _tick_realistic_bases() -> void:
 				else:
 					popup.emit(actor, "BACK IN PLAY!", UiKit.LIME)
 					announce(entry, "%s REVIVED AT BASE!" % actor.display_name.to_upper(), UiKit.LIME, &"powerup")
+
+
+# --- Capture The Flag (CTF) ---
+
+func setup_ctf(ctf_mode: CaptureTheFlagMode, p_flags: Array[FlagPickup]) -> void:
+	flags = p_flags
+	for flag in flags:
+		flag.picked_up.connect(func(_f: FlagPickup, carrier: Actor) -> void:
+			var entry := board.entry_for(carrier)
+			announce(entry, "%s TOOK THE %s FLAG!" % [carrier.display_name.to_upper(), GameMode.team_name(flag.team_id)], GameMode.team_color(flag.team_id).lightened(0.2), &"flag_pickup")
+		)
+		flag.dropped.connect(func(_f: FlagPickup, _pos: Vector3) -> void:
+			announce(null, "%s FLAG DROPPED!" % GameMode.team_name(flag.team_id), GameMode.team_color(flag.team_id).lightened(0.2), &"powerup")
+		)
+		flag.returned.connect(func(_f: FlagPickup) -> void:
+			announce(null, "%s FLAG RETURNED TO BASE!" % GameMode.team_name(flag.team_id), GameMode.team_color(flag.team_id).lightened(0.2), &"flag_capture")
+		)
+		flag.captured.connect(func(_f: FlagPickup, carrier: Actor) -> void:
+			var entry := board.entry_for(carrier)
+			if entry != null:
+				entry.score += CaptureTheFlagMode.CAPTURE_SCORE
+				board.notify_changed()
+			ctf_mode.record_capture(carrier.team_id)
+			announce(entry, "%s SCORED A CAPTURE FOR %s TEAM!" % [carrier.display_name.to_upper(), GameMode.team_name(carrier.team_id)], UiKit.LIME, &"win")
+			popup.emit(carrier, "+%d FLAG CAPTURE!" % CaptureTheFlagMode.CAPTURE_SCORE, UiKit.LIME)
+			if ctf_mode.is_won():
+				announce(entry, "%s TEAM WINS CTF!" % GameMode.team_name(carrier.team_id), UiKit.LIME, &"win")
+				_finish()
+		)
+
+
+func _tick_ctf_captures() -> void:
+	if arena == null:
+		return
+	for flag in flags:
+		if flag.state == FlagPickup.State.CARRIED and flag.carrier != null and is_instance_valid(flag.carrier) and flag.carrier.alive:
+			var friendly_team := flag.carrier.team_id
+			var home_ped := arena.get_flag_pedestal(friendly_team)
+			if flag.carrier.global_position.distance_to(home_ped) <= FlagPickup.CAPTURE_RADIUS:
+				flag.capture(flag.carrier)
+
+
+# --- Plant The Bomb ---
+
+func setup_bomb(bomb_mode: PlantTheBombMode, p_bomb_target: BombTarget) -> void:
+	bomb_target = p_bomb_target
+	bomb_target.bomb_picked_up.connect(func(carrier: Actor) -> void:
+		var entry := board.entry_for(carrier)
+		announce(entry, "%s HAS THE FOAM BOMB!" % carrier.display_name.to_upper(), UiKit.ORANGE_HOT, &"ammo")
+	)
+	bomb_target.bomb_dropped.connect(func(_pos: Vector3) -> void:
+		announce(null, "THE FOAM BOMB WAS DROPPED!", UiKit.ORANGE_HOT, &"dry")
+	)
+	bomb_target.bomb_plant_started.connect(func(site: String, carrier: Actor) -> void:
+		popup.emit(carrier, "ARMING BOMB AT SITE %s..." % site, UiKit.ORANGE_HOT)
+	)
+	bomb_target.bomb_planted.connect(func(site: String, _pos: Vector3) -> void:
+		announce(null, "THE BOMB HAS BEEN PLANTED AT SITE %s!" % site, UiKit.ORANGE_HOT, &"bomb_plant")
+	)
+	bomb_target.bomb_defuse_started.connect(func(defuser: Actor) -> void:
+		popup.emit(defuser, "DEFUSING BOMB...", UiKit.SKY)
+	)
+	bomb_target.bomb_defused.connect(func(defuser: Actor) -> void:
+		var entry := board.entry_for(defuser)
+		if entry != null:
+			entry.score += PlantTheBombMode.DEFUSE_SCORE
+			board.notify_changed()
+		announce(entry, "BOMB DEFUSED! GUARDIANS WIN THE ROUND!", UiKit.SKY, &"bomb_defuse")
+		popup.emit(defuser, "+%d BOMB DEFUSED!" % PlantTheBombMode.DEFUSE_SCORE, UiKit.SKY)
+		bomb_mode.record_round_win(0)
+		if bomb_mode.is_won():
+			announce(null, "GUARDIANS WIN THE MATCH!", UiKit.SKY, &"win")
+			_finish()
+		else:
+			_reset_bomb_round()
+	)
+	bomb_target.bomb_detonated.connect(func(site: String, _pos: Vector3) -> void:
+		announce(null, "TARGET AT SITE %s DESTROYED! INFILTRATORS WIN THE ROUND!" % site, UiKit.ORANGE_HOT, &"bomb_detonate")
+		bomb_mode.record_round_win(1)
+		if bomb_mode.is_won():
+			announce(null, "INFILTRATORS WIN THE MATCH!", UiKit.ORANGE_HOT, &"win")
+			_finish()
+		else:
+			_reset_bomb_round()
+	)
+
+
+func _check_bomb_elimination() -> void:
+	if not mode is PlantTheBombMode:
+		return
+	var bomb_mode := mode as PlantTheBombMode
+	var living_defenders := 0
+	var living_attackers := 0
+	for actor in actors:
+		if is_instance_valid(actor) and actor.alive and not actor.is_tagged_out:
+			if actor.team_id == 0:
+				living_defenders += 1
+			elif actor.team_id == 1:
+				living_attackers += 1
+
+	if bomb_target != null and (bomb_target.state == BombTarget.BombState.PLANTED or bomb_target.state == BombTarget.BombState.DEFUSING):
+		# If bomb is planted: defenders must defuse even if all attackers are tagged out!
+		if living_defenders == 0:
+			announce(null, "ALL GUARDIANS ELIMINATED! INFILTRATORS WIN THE ROUND!", UiKit.ORANGE_HOT, &"streak")
+			bomb_mode.record_round_win(1)
+			if bomb_mode.is_won():
+				announce(null, "INFILTRATORS WIN THE MATCH!", UiKit.ORANGE_HOT, &"win")
+				_finish()
+			else:
+				_reset_bomb_round()
+	else:
+		# Bomb not planted yet
+		if living_attackers == 0:
+			announce(null, "ALL INFILTRATORS ELIMINATED! GUARDIANS WIN THE ROUND!", UiKit.SKY, &"streak")
+			bomb_mode.record_round_win(0)
+			if bomb_mode.is_won():
+				announce(null, "GUARDIANS WIN THE MATCH!", UiKit.SKY, &"win")
+				_finish()
+			else:
+				_reset_bomb_round()
+		elif living_defenders == 0:
+			announce(null, "ALL GUARDIANS ELIMINATED! INFILTRATORS WIN THE ROUND!", UiKit.ORANGE_HOT, &"streak")
+			bomb_mode.record_round_win(1)
+			if bomb_mode.is_won():
+				announce(null, "INFILTRATORS WIN THE MATCH!", UiKit.ORANGE_HOT, &"win")
+				_finish()
+			else:
+				_reset_bomb_round()
+
+
+func _reset_bomb_round() -> void:
+	await get_tree().create_timer(2.0).timeout
+	if state == State.ENDED:
+		return
+	for actor in actors:
+		if is_instance_valid(actor):
+			actor.is_tagged_out = false
+			actor.alive = true
+			actor.tag_meter = 0.0
+			actor.meter_changed.emit(0.0, actor.tag_meter_max)
+			_spawn(actor)
+	if bomb_target != null:
+		var b_spawn := arena.bomb_spawns[0] if (arena != null and not arena.bomb_spawns.is_empty()) else arena.team_bases[1] if (arena != null and arena.team_bases.size() > 1) else Vector3(0.0, 0.0, 15.0)
+		var carrier: Actor = null
+		for act in actors:
+			if act.team_id == 1 and act.is_human:
+				carrier = act
+				break
+		if carrier == null:
+			for act in actors:
+				if act.team_id == 1:
+					carrier = act
+					break
+		bomb_target.spawn_bomb(b_spawn, carrier)
+
 

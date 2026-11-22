@@ -206,13 +206,21 @@ func _physics_process(delta: float) -> void:
 				if wish.length_squared() > 0.05:
 					lunge(wish.normalized(), 6.0)
 		else:
-			arsenal.set_trigger(fire_held)
+			var planting_or_defusing := false
+			var bomb_target: BombTarget = get_tree().get_first_node_in_group(&"bomb_target") as BombTarget
+			if bomb_target != null:
+				if (bomb_target.state == BombTarget.BombState.PLANTING and bomb_target.planter == self) \
+						or (bomb_target.state == BombTarget.BombState.DEFUSING and bomb_target.defuser == self):
+					planting_or_defusing = true
+			arsenal.set_trigger(fire_held and not planting_or_defusing)
 
 		if Input.is_action_just_pressed(_act(&"throw_grenade")) and not is_zombie and grenade_count > 0:
 			_perform_grenade_throw()
 
 		if Input.is_action_just_pressed(_act(&"ping")):
 			_perform_ping()
+
+		_handle_bomb_interaction(delta)
 	else:
 		if is_aiming_down_sights:
 			is_aiming_down_sights = false
@@ -226,6 +234,23 @@ func _physics_process(delta: float) -> void:
 		_jump_buffer_left = 0.0
 		_coyote_left = 0.0
 	move_actor(wish, _sprinting, jump, delta)
+
+
+func _handle_bomb_interaction(delta: float) -> void:
+	var bomb_target: BombTarget = get_tree().get_first_node_in_group(&"bomb_target") as BombTarget
+	if bomb_target == null:
+		return
+	var wants_interact := Input.is_action_pressed(_act(&"interact")) or Input.is_action_pressed(_act(&"fire"))
+	if bomb_target.carrier == self:
+		if not bomb_target.get_site_at(global_position).is_empty() and wants_interact:
+			bomb_target.progress_plant(self, delta)
+		else:
+			bomb_target.cancel_plant()
+	elif team_id == 0 and (bomb_target.state == BombTarget.BombState.PLANTED or bomb_target.state == BombTarget.BombState.DEFUSING):
+		if wants_interact:
+			bomb_target.progress_defuse(self, delta)
+		else:
+			bomb_target.cancel_defuse()
 
 
 func _process(delta: float) -> void:

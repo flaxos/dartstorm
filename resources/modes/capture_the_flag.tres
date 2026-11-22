@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="CaptureTheFlagMode" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/capture_the_flag_mode.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/weapons/pocket_popper.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/weapons/dart_sprayer.tres" id="4"]
+
+[resource]
+script = ExtResource("1")
+id = &"capture_the_flag"
+display_name = "Capture The Flag"
+short_name = "CTF"
+description = "Infiltrate the enemy fortress, steal their flag, and bring it home! First team to 3 captures wins."
+teams = 2
+duration_seconds = 360.0
+countdown_seconds = 3
+respawn_delay = 3.0
+points_per_tag = 100
+ricochet_bonus = 50
+points_per_target = 10
+loadout = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4")])
+infinite_reserve = true

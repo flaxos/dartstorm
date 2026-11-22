@@ -17,6 +17,9 @@ const ARENAS: Array[Dictionary] = [
 	{"name": "PLAYGROUND", "path": "res://scenes/arenas/playground.tscn"},
 	{"name": "SUNNY PARK", "path": "res://scenes/arenas/sunny_park.tscn"},
 	{"name": "SOCCER STADIUM", "path": "res://scenes/arenas/soccer_field.tscn"},
+	{"name": "TWO FORTS", "path": "res://scenes/arenas/two_forts.tscn"},
+	{"name": "DUSTY COURTYARD", "path": "res://scenes/arenas/dust_courtyard.tscn"},
+	{"name": "DUSTSTORM II", "path": "res://scenes/arenas/dust2.tscn"},
 ]
 const PLAYER_SCENE := preload("res://scenes/player/player.tscn")
 const BOT_SCENE := preload("res://scenes/enemies/bot.tscn")
@@ -33,6 +36,8 @@ const MODE_PATHS := [
 	"res://resources/modes/zombie_siege.tres",
 	"res://resources/modes/floor_is_lava.tres",
 	"res://resources/modes/realistic.tres",
+	"res://resources/modes/capture_the_flag.tres",
+	"res://resources/modes/plant_the_bomb.tres",
 ]
 ## Indexed by GameSettings.bot_difficulty.
 const DIFFICULTY_PATHS := [
@@ -72,6 +77,8 @@ var horde_director: HordeDirector
 var lava_hazard: LavaHazard
 var lava_director: LavaDirector
 var weather_director: WeatherDirector
+var flags: Array[FlagPickup] = []
+var bomb_target: BombTarget = null
 
 
 ## Loads a resource without ever crashing: returns null if the file is missing
@@ -395,6 +402,44 @@ func _ready() -> void:
 			lava_mode.on_high_tide_survived(controller.board)
 		)
 		lava_director.start()
+
+	if mode is CaptureTheFlagMode:
+		var ctf := mode as CaptureTheFlagMode
+		ctf.reset_captures()
+		for t in 2:
+			var flag := FlagPickup.new()
+			flag.name = "Flag_Team_%d" % t
+			flag.team_id = t
+			var ped_pos := arena.get_flag_pedestal(t) if arena != null else (Vector3(-14.0, 0.0, 0.0) if t == 0 else Vector3(14.0, 0.0, 0.0))
+			flag.position = ped_pos
+			arena.add_child(flag)
+			flags.append(flag)
+		controller.setup_ctf(ctf, flags)
+
+	if mode is PlantTheBombMode:
+		var bomb_mode := mode as PlantTheBombMode
+		bomb_mode.reset_rounds()
+		bomb_target = BombTarget.new()
+		bomb_target.name = "BombTarget"
+		arena.add_child(bomb_target)
+		var sites: Dictionary = arena.bomb_sites.duplicate() if arena != null else {}
+		if sites.is_empty():
+			sites["A"] = arena.get_bomb_site_pos("A") if arena != null else Vector3(0.0, 0.0, -12.0)
+			sites["B"] = arena.get_bomb_site_pos("B") if arena != null else Vector3(0.0, 0.0, 12.0)
+		bomb_target.setup_sites(sites)
+		var b_spawn := arena.bomb_spawns[0] if (arena != null and not arena.bomb_spawns.is_empty()) else arena.team_bases[1] if (arena != null and arena.team_bases.size() > 1) else Vector3(0.0, 0.0, 15.0)
+		var initial_carrier: Actor = null
+		for act in controller.actors:
+			if act.team_id == 1 and act.is_human:
+				initial_carrier = act
+				break
+		if initial_carrier == null:
+			for act in controller.actors:
+				if act.team_id == 1:
+					initial_carrier = act
+					break
+		bomb_target.spawn_bomb(b_spawn, initial_carrier)
+		controller.setup_bomb(bomb_mode, bomb_target)
 
 	if GameSettings.weather_events and not mode is FloorIsLavaMode:
 		weather_director = WeatherDirector.new()

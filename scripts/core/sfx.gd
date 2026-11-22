@@ -492,6 +492,13 @@ func _build_bank() -> void:
 	_register(&"cheer", _crowd(1.6))
 	_register(&"connect", _melody([660.0, 990.0], 0.07, Wave.TRIANGLE, 0.35))
 	_register(&"disconnect", _melody([990.0, 660.0], 0.07, Wave.TRIANGLE, 0.35))
+	# Objective Modes: CTF & Plant The Bomb
+	_register(&"flag_pickup", _melody([880.0, 1174.0, 1760.0], 0.05, Wave.TRIANGLE, 0.38))
+	_register(&"flag_capture", _melody([523.0, 659.0, 784.0, 1047.0], 0.09, Wave.SQUARE, 0.3))
+	_register(&"bomb_beep", _tone(0.06, 1760.0, 1760.0, Wave.SQUARE, 0.28, 0.0, 0.002, 1.0))
+	_register(&"bomb_plant", _sequence([_tone(0.04, 1200.0, 1200.0, Wave.SINE, 0.3), _silence(0.02), _tone(0.04, 1500.0, 1500.0, Wave.SINE, 0.3), _silence(0.02), _tone(0.06, 2000.0, 2000.0, Wave.SQUARE, 0.32)]))
+	_register(&"bomb_defuse", _melody([1760.0, 1318.0, 880.0, 440.0], 0.06, Wave.TRIANGLE, 0.35))
+	_register(&"bomb_detonate", _mix([_tone(0.5, 90.0, 30.0, Wave.SAW, 0.8), _noise(0.65, 3000.0, 120.0, 0.8, 1.6)]))
 	# Backyard life.
 	_register(&"woof", _sequence([
 		_mix([_tone(0.09, 330.0, 220.0, Wave.SAW, 0.32), _noise(0.09, 1400.0, 600.0, 0.3, 1.2)]),

@@ -25,6 +25,7 @@ const REBINDABLE_ACTIONS: Array[Dictionary] = [
 	{"action": &"throw_grenade", "label": "Throw Grenade"},
 	{"action": &"ping", "label": "Tactical Ping"},
 	{"action": &"reload", "label": "Reload"},
+	{"action": &"interact", "label": "Interact / Objective"},
 	{"action": &"weapon_next", "label": "Next Blaster"},
 	{"action": &"weapon_prev", "label": "Previous Blaster"},
 	{"action": &"scoreboard", "label": "Scoreboard"},
@@ -43,6 +44,7 @@ static func ensure_actions() -> void:
 	_add(&"throw_grenade", [_key(KEY_G), _pad(JOY_BUTTON_DPAD_DOWN)])
 	_add(&"ping", [_key(KEY_T), _mouse(MOUSE_BUTTON_MIDDLE), _pad(JOY_BUTTON_DPAD_UP)])
 	_add(&"reload", [_key(KEY_R), _pad(JOY_BUTTON_X)])
+	_add(&"interact", [_key(KEY_F), _key(KEY_E), _pad(JOY_BUTTON_X)])
 	_add(&"weapon_1", [_key(KEY_1)])
 	_add(&"weapon_2", [_key(KEY_2)])
 	_add(&"weapon_3", [_key(KEY_3)])

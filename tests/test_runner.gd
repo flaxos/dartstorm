@@ -13,6 +13,8 @@ const FFA := "res://resources/modes/free_for_all.tres"
 const GUN_GAME := "res://resources/modes/gun_game.tres"
 const ZOMBIES_MODE := "res://resources/modes/zombies.tres"
 const ZOMBIE_SIEGE_MODE := "res://resources/modes/zombie_siege.tres"
+const CTF_MODE := "res://resources/modes/capture_the_flag.tres"
+const PLANT_THE_BOMB_MODE := "res://resources/modes/plant_the_bomb.tres"
 const WEAPON_DIR := "res://resources/weapons"
 
 var _passed: int = 0
@@ -114,6 +116,10 @@ func _ready() -> void:
 	await _test_blaster_arsenal_models_and_mechanisms()
 	# Stylized Arena Environments & Tactical Props (v2.0.0 / Phase 4)
 	await _test_stylized_arena_props_and_environments()
+	# Capture The Flag & Plant The Bomb Game Modes (v2.1.0)
+	await _test_ctf_and_plant_the_bomb_modes()
+	# Classic Arenas: Two Fortresses, Dusty Courtyard & Duststorm II (v2.1.0)
+	await _test_classic_arenas_2fort_dust_dust2()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -1265,7 +1271,7 @@ func _test_lobby() -> void:
 	check(squad.size() == 3, "your 3 bots stand on platforms around you")
 	var play := menu.get("_play_button") as Button
 	check(play != null and play.has_focus(), "the big PLAY button has focus (A on a controller starts a match)")
-	check((menu.get("_mode_buttons") as Array).size() == 8, "eight mode cards: SOLO, DUOS, TEAMS, GUN GAME, ZOMBIES, SIEGE, LAVA, REALISTIC")
+	check((menu.get("_mode_buttons") as Array).size() >= 8, "mode cards: SOLO, DUOS, TEAMS, GUN GAME, ZOMBIES, SIEGE, LAVA, REALISTIC, CTF, BOMB")
 	var right_col: Node = (menu.get("_menu") as Control).get_node_or_null("RightCol")
 	check(right_col != null and play.is_ancestor_of(right_col) == false and right_col.is_ancestor_of(play),
 			"the mode picker and PLAY button are unified in RightCol to prevent overlap")
@@ -3348,7 +3354,7 @@ func _test_new_arenas_and_realistic_mode() -> void:
 	section("Three New Arenas & Realistic Game Mode")
 
 	# 1. Total Registered Arenas
-	check(MatchScene.ARENAS.size() == 6, "MatchScene registers all 6 arenas (Backyard, Home Turf, Treehouse, Playground, Park, Soccer)")
+	check(MatchScene.ARENAS.size() >= 6, "MatchScene registers all arenas (Backyard, Home Turf, Treehouse, Playground, Park, Soccer, 2Fort, Dust, Dust2)")
 
 	# 2. Playground Arena
 	var playground_scene := load("res://scenes/arenas/playground.tscn") as PackedScene
@@ -4123,3 +4129,250 @@ func _test_stylized_arena_props_and_environments() -> void:
 	fallback_dog_house.queue_free()
 	ModelLoader.models_enabled = true
 	await physics_frames(2)
+
+
+func _test_ctf_and_plant_the_bomb_modes() -> void:
+	section("Modes: Capture The Flag & Plant The Bomb")
+
+	# 1. Resources and mode resolution
+	var ctf_res := load(CTF_MODE) as GameMode
+	check(ctf_res != null, "CTF resource loads cleanly")
+	check(ctf_res.mode == GameSettings.MatchMode.CAPTURE_THE_FLAG, "CTF resource mode is CAPTURE_THE_FLAG")
+	check(ctf_res.is_team_mode(), "CTF is a team mode")
+
+	var bomb_res := load(PLANT_THE_BOMB_MODE) as GameMode
+	check(bomb_res != null, "Plant The Bomb resource loads cleanly")
+	check(bomb_res.mode == GameSettings.MatchMode.PLANT_THE_BOMB, "Bomb resource mode is PLANT_THE_BOMB")
+	check(bomb_res.is_team_mode(), "Bomb is a team mode")
+
+	var resolved_ctf := MatchScene.resolve_mode(GameSettings.MatchMode.CAPTURE_THE_FLAG)
+	check(resolved_ctf is CaptureTheFlagMode, "resolve_mode resolves CaptureTheFlagMode")
+
+	var resolved_bomb := MatchScene.resolve_mode(GameSettings.MatchMode.PLANT_THE_BOMB)
+	check(resolved_bomb is PlantTheBombMode, "resolve_mode resolves PlantTheBombMode")
+
+	# 2. FlagPickup unit test: spawn, pickup, drop, return timer, capture
+	var stage := make_stage()
+	var blue_flag := FlagPickup.new()
+	blue_flag.team_id = 0
+	stage.add_child(blue_flag)
+	blue_flag.global_position = Vector3(-10.0, 0.0, 0.0)
+	blue_flag.base_position = Vector3(-10.0, 0.0, 0.0)
+	blue_flag.reset_to_base()
+
+	var orange_flag := FlagPickup.new()
+	orange_flag.team_id = 1
+	stage.add_child(orange_flag)
+	orange_flag.global_position = Vector3(10.0, 0.0, 0.0)
+	orange_flag.base_position = Vector3(10.0, 0.0, 0.0)
+	orange_flag.reset_to_base()
+
+	var blue_player := make_actor(stage, Vector3(-10.0, 0.0, 0.0), 0)
+	var orange_player := make_actor(stage, Vector3(10.0, 0.0, 0.0), 1)
+
+	# Blue player cannot pickup blue flag when at pedestal
+	blue_flag._on_body_entered(blue_player)
+	check(blue_flag.carrier == null, "blue flag carrier remains null when friendly player enters")
+	check(blue_flag.state == FlagPickup.State.AT_BASE, "blue flag stays AT_BASE")
+
+	# Orange player picks up blue flag
+	var blue_picked := [false]
+	blue_flag.picked_up.connect(func(_f: FlagPickup, _c: Actor) -> void: blue_picked[0] = true)
+	blue_flag._on_body_entered(orange_player)
+	check(blue_flag.carrier == orange_player, "carrier is orange player")
+	check(blue_flag.state == FlagPickup.State.CARRIED, "blue flag state is CARRIED")
+	check(blue_picked[0], "picked_up signal emitted")
+
+	# Orange player tags out -> flag drops
+	var blue_dropped := [false]
+	blue_flag.dropped.connect(func(_f: FlagPickup, _p: Vector3) -> void: blue_dropped[0] = true)
+	blue_flag.drop()
+	check(blue_flag.carrier == null, "flag has no carrier after drop")
+	check(blue_flag.state == FlagPickup.State.DROPPED, "flag is in DROPPED state")
+	check(blue_dropped[0], "dropped signal emitted")
+
+	# Blue player touches dropped flag -> returns to pedestal
+	var blue_returned := [false]
+	blue_flag.returned.connect(func(_f: FlagPickup) -> void: blue_returned[0] = true)
+	blue_flag._on_body_entered(blue_player)
+	check(blue_returned[0], "returned signal emitted")
+	check(blue_flag.state == FlagPickup.State.AT_BASE, "blue flag returned to base")
+
+	# Orange player picks up blue flag again
+	blue_flag._on_body_entered(orange_player)
+	check(blue_flag.carrier == orange_player, "orange player has blue flag")
+
+	# Capture test
+	var blue_captured := [false]
+	blue_flag.captured.connect(func(_f: FlagPickup, _c: Actor) -> void: blue_captured[0] = true)
+	blue_flag.capture(orange_player)
+	check(blue_captured[0], "captured signal emitted")
+	check(blue_flag.state == FlagPickup.State.AT_BASE, "captured flag resets to base")
+	check(blue_flag.carrier == null, "carrier cleared after capture")
+
+	# Auto-return timer tick test
+	blue_flag._on_body_entered(orange_player)
+	blue_flag.drop()
+	check(blue_flag.state == FlagPickup.State.DROPPED, "flag dropped again")
+	blue_flag.drop_timer = 0.05
+	blue_flag._physics_process(0.1)
+	check(blue_flag.state == FlagPickup.State.AT_BASE, "flag automatically returned after timeout")
+
+	# 3. BombTarget unit test: spawn, pickup, plant, fuse, defuse, detonate
+	var bomb := BombTarget.new()
+	stage.add_child(bomb)
+	bomb.setup_sites({
+		"A": Vector3(15.0, 0.0, -15.0),
+		"B": Vector3(-15.0, 0.0, -15.0)
+	})
+	bomb.spawn_bomb(Vector3(0.0, 0.0, 25.0))
+	check(bomb.state == BombTarget.BombState.DROPPED, "bomb initial state is DROPPED")
+	check(bomb.get_site_at(Vector3(15.0, 0.0, -15.0)) == "A", "site A recognized at pos")
+	check(bomb.get_site_at(Vector3(-15.0, 0.0, -15.0)) == "B", "site B recognized at pos")
+	check(bomb.get_site_at(Vector3(0.0, 0.0, 0.0)) == "", "no site in mid")
+
+	# Defender (team 0) cannot pickup dropped bomb
+	bomb._on_pickup_entered(blue_player)
+	check(bomb.carrier == null, "defenders cannot pickup unplanted bomb")
+
+	# Attacker (team 1) picks up bomb
+	var bomb_picked := [false]
+	bomb.bomb_picked_up.connect(func(_c: Actor) -> void: bomb_picked[0] = true)
+	bomb._on_pickup_entered(orange_player)
+	check(bomb.carrier == orange_player, "carrier is attacker")
+	check(bomb.state == BombTarget.BombState.CARRIED, "bomb state is CARRIED")
+	check(bomb_picked[0], "bomb_picked_up signal emitted")
+
+	# Carrier drops bomb
+	var bomb_dropped_flag := [false]
+	bomb.bomb_dropped.connect(func(_p: Vector3) -> void: bomb_dropped_flag[0] = true)
+	bomb.drop_bomb(Vector3(2.0, 0.0, 2.0))
+	check(bomb.carrier == null, "carrier cleared on drop")
+	check(bomb.state == BombTarget.BombState.DROPPED, "bomb state is DROPPED")
+	check(bomb_dropped_flag[0], "bomb_dropped signal emitted")
+
+	# Attacker picks up dropped bomb
+	bomb._on_pickup_entered(orange_player)
+	check(bomb.carrier == orange_player, "attacker retrieves dropped bomb")
+
+	# Planting at Site A
+	orange_player.global_position = Vector3(15.0, 0.0, -15.0)
+	var planted_site := [""]
+	bomb.bomb_planted.connect(func(site: String, _p: Vector3) -> void: planted_site[0] = site)
+	bomb.progress_plant(orange_player, 1.0)
+	check(bomb.state == BombTarget.BombState.PLANTING, "bomb is PLANTING")
+	check(bomb.plant_progress_left > 0.0, "plant progress advancing")
+
+	# Complete plant
+	bomb.progress_plant(orange_player, 3.0)
+	check(bomb.state == BombTarget.BombState.PLANTED, "bomb is PLANTED")
+	check(planted_site[0] == "A", "bomb_planted signal emitted for Site A")
+	check(bomb.fuse_left > 35.0, "fuse started around 40s")
+	check(bomb.carrier == null, "carrier cleared upon plant")
+
+	# Defender defuses bomb
+	blue_player.global_position = bomb._bomb_model.global_position
+	var defused := [false]
+	bomb.bomb_defused.connect(func(_d: Actor) -> void: defused[0] = true)
+	bomb.progress_defuse(blue_player, 1.0)
+	check(bomb.state == BombTarget.BombState.DEFUSING, "bomb is DEFUSING")
+	check(bomb.defuse_progress_left > 0.0, "defuse progress advancing")
+
+	bomb.progress_defuse(blue_player, 4.0)
+	check(bomb.state == BombTarget.BombState.DEFUSED, "bomb is DEFUSED")
+	check(defused[0], "bomb_defused signal emitted")
+
+	# Detonation test
+	bomb.spawn_bomb(Vector3(15.0, 0.0, -15.0), orange_player)
+	bomb.progress_plant(orange_player, 3.0)
+	check(bomb.state == BombTarget.BombState.PLANTED, "bomb replanted")
+	var detonated := [false]
+	bomb.bomb_detonated.connect(func(_s: String, _p: Vector3) -> void: detonated[0] = true)
+	bomb.fuse_left = 0.05
+	bomb._physics_process(0.1)
+	check(bomb.state == BombTarget.BombState.DETONATED, "bomb is DETONATED")
+	check(detonated[0], "bomb_detonated signal emitted")
+
+	stage.queue_free()
+	await physics_frames(2)
+
+
+func _test_classic_arenas_2fort_dust_dust2() -> void:
+	section("Arenas: Two Fortresses, Dusty Courtyard & Duststorm II")
+
+	# 1. Two Fortresses (2Fort)
+	var two_forts := TwoForts.new()
+	two_forts.bake_navigation = false
+	add_child(two_forts)
+	await physics_frames(2)
+	check(two_forts.geometry.get_child_count() > 0, "TwoForts builds extensive geometry")
+	check(two_forts.flag_pedestals.size() >= 2, "TwoForts registers at least 2 flag pedestals (Blue & Orange)")
+	check(two_forts.get_flag_pedestal(0) != Vector3.ZERO, "TwoForts Blue flag pedestal defined")
+	check(two_forts.get_flag_pedestal(1) != Vector3.ZERO, "TwoForts Orange flag pedestal defined")
+	check(two_forts.spawns.size() >= 4, "TwoForts has player/bot spawns")
+	two_forts.queue_free()
+	await physics_frames(2)
+
+	# 2. Dusty Courtyard (de_dust)
+	var dust := DustCourtyard.new()
+	dust.bake_navigation = false
+	add_child(dust)
+	await physics_frames(2)
+	check(dust.geometry.get_child_count() > 0, "DustCourtyard builds geometry")
+	check(dust.bomb_sites.has("A") and dust.bomb_sites.has("B"), "DustCourtyard registers Bomb Site A and Site B")
+	check(dust.bomb_spawns.size() > 0, "DustCourtyard defines bomb spawn location")
+	check(dust.spawns.size() >= 4, "DustCourtyard defines player/bot spawns")
+	dust.queue_free()
+	await physics_frames(2)
+
+	# 3. Duststorm II (de_dust2)
+	var dust2 := Dust2.new()
+	dust2.bake_navigation = false
+	add_child(dust2)
+	await physics_frames(2)
+	check(dust2.geometry.get_child_count() > 0, "Dust2 builds geometry")
+	check(dust2.bomb_sites.has("A") and dust2.bomb_sites.has("B"), "Dust2 registers Bomb Site A and Site B")
+	check(dust2.bomb_spawns.size() > 0, "Dust2 defines bomb spawn location")
+	check(dust2.spawns.size() >= 4, "Dust2 defines player/bot spawns")
+	dust2.queue_free()
+	await physics_frames(2)
+
+	# 4. CTF Match Simulation on Two Forts
+	var saved_mode := GameSettings.match_mode
+	var saved_arena := GameSettings.arena
+	var saved_bots := GameSettings.bot_count
+
+	GameSettings.arena = 6  # Two Forts
+	GameSettings.bot_count = 2
+	var ctf_game := start_match(GameSettings.MatchMode.CAPTURE_THE_FLAG)
+	var ctf_controller := ctf_game.get("controller") as MatchController
+	var ctf_hud := ctf_game.get("hud") as Hud
+	check(ctf_controller != null, "CTF match controller initialized")
+	check(ctf_controller.mode is CaptureTheFlagMode, "Match mode is CaptureTheFlagMode")
+	check(ctf_hud != null, "HUD initialized in CTF")
+	check(ctf_hud.team_chip_count() == 2, "HUD displays team scores for Blue & Orange")
+	var ctf_flags: Array = ctf_game.get("flags")
+	check(ctf_flags.size() == 2, "CTF match spawned 2 flags")
+	await fast_forward(0.5)
+	await end_match(ctf_game, saved_mode)
+
+	# 5. Plant The Bomb Match Simulation on Dust2
+	GameSettings.arena = 8  # Dust2
+	GameSettings.bot_count = 2
+	var bomb_game := start_match(GameSettings.MatchMode.PLANT_THE_BOMB)
+	var bomb_controller := bomb_game.get("controller") as MatchController
+	var bomb_hud := bomb_game.get("hud") as Hud
+	check(bomb_controller != null, "Bomb match controller initialized")
+	check(bomb_controller.mode is PlantTheBombMode, "Match mode is PlantTheBombMode")
+	check(bomb_hud != null, "HUD initialized in Plant The Bomb")
+	check(bomb_hud.team_chip_count() == 2, "HUD displays round score for Blue & Orange")
+	var live_bomb: BombTarget = bomb_game.get("bomb_target") as BombTarget
+	check(live_bomb != null, "Plant The Bomb match spawned live BombTarget")
+	check(live_bomb.has_site("A") and live_bomb.has_site("B"), "live BombTarget populated with Sites A and B")
+	await fast_forward(0.5)
+	await end_match(bomb_game, saved_mode)
+
+	GameSettings.arena = saved_arena
+	GameSettings.bot_count = saved_bots
+	GameSettings.match_mode = saved_mode
+

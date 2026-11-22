@@ -44,10 +44,14 @@ func _setup_materials() -> void:
 func _create_mat(color: Color, slot_name: String, roughness: float, metallic: float) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.resource_name = slot_name
-	mat.albedo_color = color
+	mat.albedo_color = Color(color.r, color.g, color.b, 1.0)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+	mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY
+	mat.cull_mode = BaseMaterial3D.CULL_BACK
 	mat.roughness = roughness
 	mat.metallic = metallic
-	mat.diffuse_mode = BaseMaterial3D.DIFFUSE_BURLEY
+	mat.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
+	mat.specular_mode = BaseMaterial3D.SPECULAR_TOON
 	return mat
 
 

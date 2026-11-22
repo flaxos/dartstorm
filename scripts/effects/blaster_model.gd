@@ -19,7 +19,6 @@ static var _body_normal: Texture2D = preload("res://assets/textures/pbr/blaster_
 static var _body_orm: Texture2D = preload("res://assets/textures/pbr/blaster_body_orm.png")
 static var _detail_normal: Texture2D = preload("res://assets/textures/pbr/micro_detail_normal.png")
 static var _grip_normal: Texture2D = preload("res://assets/textures/pbr/rubber_grip_normal.png")
-static var _grip_orm: Texture2D = preload("res://assets/textures/pbr/rubber_grip_orm.png")
 static var _grip_mat: StandardMaterial3D = null
 static var _skin_materials: Dictionary = {}
 
@@ -30,18 +29,16 @@ static func clear_skin_materials() -> void:
 static func _grip_material() -> StandardMaterial3D:
 	if _grip_mat == null:
 		_grip_mat = StandardMaterial3D.new()
-		_grip_mat.albedo_color = DARK
+		_grip_mat.albedo_color = Color(DARK.r, DARK.g, DARK.b, 1.0)
+		_grip_mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+		_grip_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY
+		_grip_mat.cull_mode = BaseMaterial3D.CULL_BACK
+		_grip_mat.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
+		_grip_mat.specular_mode = BaseMaterial3D.SPECULAR_TOON
 		_grip_mat.roughness = 0.85
 		_grip_mat.normal_enabled = true
 		_grip_mat.normal_texture = _grip_normal
-		_grip_mat.normal_scale = 0.75
-		_grip_mat.ao_enabled = true
-		_grip_mat.ao_texture = _grip_orm
-		_grip_mat.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
-		_grip_mat.roughness_texture = _grip_orm
-		_grip_mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
-		_grip_mat.uv1_triplanar = true
-		_grip_mat.uv1_scale = Vector3(1.5, 1.5, 1.5)
+		_grip_mat.normal_scale = 0.5
 	return _grip_mat
 
 var model_root: Node3D = null

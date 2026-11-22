@@ -12,9 +12,7 @@ const ZOMBIE_GREEN := Color(0.38, 0.78, 0.28)
 const ZOMBIE_SKIN := Color(0.48, 0.82, 0.38)
 
 static var _cloth_normal: Texture2D = preload("res://assets/textures/pbr/cloth_fabric_normal.png")
-static var _cloth_orm: Texture2D = preload("res://assets/textures/pbr/cloth_fabric_orm.png")
 static var _sneaker_normal: Texture2D = preload("res://assets/textures/pbr/sneaker_rubber_normal.png")
-static var _sneaker_orm: Texture2D = preload("res://assets/textures/pbr/sneaker_rubber_orm.png")
 
 static var _cached_cloth_mats: Dictionary = {}
 static var _cached_sneaker_mat: StandardMaterial3D = null
@@ -30,21 +28,18 @@ static func _cloth_mat(color: Color) -> StandardMaterial3D:
 	if _cached_cloth_mats.has(key):
 		return _cached_cloth_mats[key]
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = color
-	mat.diffuse_mode = BaseMaterial3D.DIFFUSE_BURLEY
-	mat.roughness = 0.88
-	mat.roughness_texture = _cloth_orm
-	mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
-	mat.ao_enabled = true
-	mat.ao_texture = _cloth_orm
-	mat.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+	mat.albedo_color = Color(color.r, color.g, color.b, 1.0)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+	mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY
+	mat.cull_mode = BaseMaterial3D.CULL_BACK
+	mat.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
+	mat.specular_mode = BaseMaterial3D.SPECULAR_TOON
+	mat.roughness = 0.78
 	mat.normal_enabled = true
 	mat.normal_texture = _cloth_normal
-	mat.normal_scale = 0.5
-	mat.uv1_triplanar = true
-	mat.uv1_scale = Vector3(2.5, 2.5, 2.5)
+	mat.normal_scale = 0.35
 	mat.rim_enabled = true
-	mat.rim = 0.35
+	mat.rim = 0.45
 	mat.rim_tint = 0.5
 	_cached_cloth_mats[key] = mat
 	return mat
@@ -52,19 +47,19 @@ static func _cloth_mat(color: Color) -> StandardMaterial3D:
 static func _sneaker_mat() -> StandardMaterial3D:
 	if _cached_sneaker_mat == null:
 		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(0.96, 0.96, 0.98)
-		mat.diffuse_mode = BaseMaterial3D.DIFFUSE_BURLEY
-		mat.roughness = 0.65
-		mat.roughness_texture = _sneaker_orm
-		mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
-		mat.ao_enabled = true
-		mat.ao_texture = _sneaker_orm
-		mat.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+		mat.albedo_color = Color(0.96, 0.96, 0.98, 1.0)
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+		mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY
+		mat.cull_mode = BaseMaterial3D.CULL_BACK
+		mat.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
+		mat.specular_mode = BaseMaterial3D.SPECULAR_TOON
+		mat.roughness = 0.55
 		mat.normal_enabled = true
 		mat.normal_texture = _sneaker_normal
-		mat.normal_scale = 0.65
-		mat.uv1_triplanar = true
-		mat.uv1_scale = Vector3(1.5, 1.5, 1.5)
+		mat.normal_scale = 0.45
+		mat.rim_enabled = true
+		mat.rim = 0.35
+		mat.rim_tint = 0.5
 		_cached_sneaker_mat = mat
 	return _cached_sneaker_mat
 
@@ -73,12 +68,16 @@ static func _skin_mat(color: Color) -> StandardMaterial3D:
 	if _cached_skin_mats.has(key):
 		return _cached_skin_mats[key]
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = color
-	mat.diffuse_mode = BaseMaterial3D.DIFFUSE_BURLEY
+	mat.albedo_color = Color(color.r, color.g, color.b, 1.0)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+	mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY
+	mat.cull_mode = BaseMaterial3D.CULL_BACK
+	mat.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
+	mat.specular_mode = BaseMaterial3D.SPECULAR_TOON
 	mat.roughness = 0.44
 	mat.metallic_specular = 0.45
 	mat.rim_enabled = true
-	mat.rim = 0.48
+	mat.rim = 0.52
 	mat.rim_tint = 0.45
 	_cached_skin_mats[key] = mat
 	return mat
@@ -218,6 +217,8 @@ func set_weapon(data: WeaponData, skin_id: StringName = &"") -> void:
 	_weapon = BlasterModel.create(data, false, skin_id)
 	_weapon.scale = Vector3.ONE * 1.35
 	_weapon_mount.add_child(_weapon)
+	if _weapon.grip_marker != null:
+		_weapon.position = -_weapon.grip_marker.position * 1.35
 	_backpack.visible = data.model_style == WeaponData.ModelStyle.ROTARY
 
 
@@ -361,6 +362,15 @@ func _build_from_hero_model() -> bool:
 	add_child(_hero_model_node)
 	_upper = _hero_model_node
 	_hero_skeleton = ModelLoader.find_skeleton(_hero_model_node)
+	if _hero_skeleton != null:
+		_hero_skeleton.reset_bone_poses()
+		for c in _hero_skeleton.get_children():
+			if c is BoneAttachment3D:
+				var b_idx := _hero_skeleton.find_bone(c.bone_name)
+				if b_idx >= 0:
+					c.bone_idx = b_idx
+					c.transform = _hero_skeleton.get_bone_global_rest(b_idx)
+					_hero_skeleton.force_update_bone_child_transform(b_idx)
 
 	var mat_map := {
 		"clothing": _cloth_mat(_tint),

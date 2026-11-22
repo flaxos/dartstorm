@@ -180,7 +180,7 @@ func _build_hero_rig() -> Node3D:
 		_sphere(attach_head, "Mesh_Iris_" + ("L" if side < 0 else "R"), 0.038, Vector3(side * 0.095, 0.04, -0.265), _make_mat(Color(0.1, 0.3, 0.65), "iris"))
 		_sphere(attach_head, "Mesh_Pupil_" + ("L" if side < 0 else "R"), 0.024, Vector3(side * 0.095, 0.04, -0.275), mat_dark)
 		_sphere(attach_head, "Mesh_Catchlight_" + ("L" if side < 0 else "R"), 0.012, Vector3(side * 0.095 + 0.016, 0.058, -0.285), mat_shoes)
-		_sphere(attach_head, "Mesh_Cheek_" + ("L" if side < 0 else "R"), 0.035, Vector3(side * 0.155, -0.055, -0.205), _make_mat(Color(1.0, 0.65, 0.65, 0.6), "skin"))
+		_sphere(attach_head, "Mesh_Cheek_" + ("L" if side < 0 else "R"), 0.035, Vector3(side * 0.155, -0.055, -0.205), _make_mat(Color(1.0, 0.62, 0.62, 1.0), "skin"))
 
 	# 2. Chest & Torso (Attached to Attach_Chest)
 	_capsule(attach_chest, "Mesh_Torso_Clothing", 0.29, 0.54, Vector3(0.0, -0.10, 0.0), mat_clothing)
@@ -202,15 +202,15 @@ func _build_hero_rig() -> Node3D:
 
 	# 6. Left Leg & High-Traction Sneaker
 	var leg_l := _capsule(attach_ul_l, "Mesh_UpperLeg_L_Pants", 0.11, 0.62, Vector3(0.0, -0.26, 0.0), mat_pants)
-	_box(leg_l, "Mesh_Sneaker_Sole_L_Shoes", Vector3(0.155, 0.055, 0.28), Vector3(0.0, -0.34, -0.04), mat_shoes)
-	_box(leg_l, "Mesh_Sneaker_Upper_L_Shoes", Vector3(0.14, 0.08, 0.22), Vector3(0.0, -0.28, -0.03), mat_clothing)
-	_box(leg_l, "Mesh_Sneaker_Toe_L_Shoes", Vector3(0.145, 0.065, 0.09), Vector3(0.0, -0.32, -0.15), mat_shoes)
+	_box(leg_l, "Mesh_Sneaker_Sole_L_Shoes", Vector3(0.155, 0.055, 0.28), Vector3(0.0, -0.58, -0.04), mat_shoes)
+	_box(leg_l, "Mesh_Sneaker_Upper_L_Shoes", Vector3(0.14, 0.08, 0.22), Vector3(0.0, -0.52, -0.03), mat_clothing)
+	_box(leg_l, "Mesh_Sneaker_Toe_L_Shoes", Vector3(0.145, 0.065, 0.09), Vector3(0.0, -0.56, -0.15), mat_shoes)
 
 	# 7. Right Leg & High-Traction Sneaker
 	var leg_r := _capsule(attach_ul_r, "Mesh_UpperLeg_R_Pants", 0.11, 0.62, Vector3(0.0, -0.26, 0.0), mat_pants)
-	_box(leg_r, "Mesh_Sneaker_Sole_R_Shoes", Vector3(0.155, 0.055, 0.28), Vector3(0.0, -0.34, -0.04), mat_shoes)
-	_box(leg_r, "Mesh_Sneaker_Upper_R_Shoes", Vector3(0.14, 0.08, 0.22), Vector3(0.0, -0.28, -0.03), mat_clothing)
-	_box(leg_r, "Mesh_Sneaker_Toe_R_Shoes", Vector3(0.145, 0.065, 0.09), Vector3(0.0, -0.32, -0.15), mat_shoes)
+	_box(leg_r, "Mesh_Sneaker_Sole_R_Shoes", Vector3(0.155, 0.055, 0.28), Vector3(0.0, -0.58, -0.04), mat_shoes)
+	_box(leg_r, "Mesh_Sneaker_Upper_R_Shoes", Vector3(0.14, 0.08, 0.22), Vector3(0.0, -0.52, -0.03), mat_clothing)
+	_box(leg_r, "Mesh_Sneaker_Toe_R_Shoes", Vector3(0.145, 0.065, 0.09), Vector3(0.0, -0.56, -0.15), mat_shoes)
 
 	# --- AnimationPlayer & Keyframed Clips ---
 	var anim_player := AnimationPlayer.new()
@@ -227,6 +227,10 @@ func _build_hero_rig() -> Node3D:
 	lib.add_animation("victory", _build_anim_victory())
 	anim_player.add_animation_library("", lib)
 
+	skel.reset_bone_poses()
+	for i in skel.get_bone_count():
+		skel.force_update_bone_child_transform(i)
+
 	return hero_root
 
 
@@ -234,7 +238,13 @@ func _bone_attachment(skel: Skeleton3D, node_name: String, bone_name: String, of
 	var attach := BoneAttachment3D.new()
 	attach.name = node_name
 	attach.bone_name = bone_name
-	attach.position = offset
+	var b_idx := skel.find_bone(bone_name)
+	if b_idx >= 0:
+		attach.bone_idx = b_idx
+		var rest_t := skel.get_bone_global_rest(b_idx)
+		attach.transform = Transform3D(rest_t.basis, rest_t.origin + offset)
+	else:
+		attach.position = offset
 	skel.add_child(attach)
 	return attach
 
@@ -242,8 +252,12 @@ func _bone_attachment(skel: Skeleton3D, node_name: String, bone_name: String, of
 func _make_mat(color: Color, slot_name: String) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.resource_name = slot_name
-	mat.albedo_color = color
-	mat.diffuse_mode = BaseMaterial3D.DIFFUSE_BURLEY
+	mat.albedo_color = Color(color.r, color.g, color.b, 1.0)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+	mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY
+	mat.cull_mode = BaseMaterial3D.CULL_BACK
+	mat.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
+	mat.specular_mode = BaseMaterial3D.SPECULAR_TOON
 	mat.roughness = 0.5
 	return mat
 

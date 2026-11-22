@@ -2,6 +2,8 @@
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_igae6"]
 resource_name = "vinyl"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.12, 0.55, 0.95, 1)
 metallic = 0.06
 roughness = 0.28
@@ -20,6 +22,8 @@ rings = 8
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hdkgc"]
 resource_name = "vinyl_accent"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(1, 0.42, 0.05, 1)
 metallic = 0.06
 roughness = 0.28
@@ -50,6 +54,8 @@ radial_segments = 16
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ndj8j"]
 resource_name = "plastic_orange"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(1, 0.48, 0.08, 1)
 metallic = 0.04
 roughness = 0.32

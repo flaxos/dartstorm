@@ -2,6 +2,8 @@
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_40f4u"]
 resource_name = "wood"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.72, 0.5, 0.3, 1)
 roughness = 0.72
 
@@ -13,6 +15,8 @@ size = Vector3(2.5, 0.12, 1.4)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sdtpm"]
 resource_name = "wood_dark"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.52, 0.34, 0.18, 1)
 roughness = 0.78
 
@@ -48,6 +52,8 @@ size = Vector3(2.5, 0.1, 0.46)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_55xwb"]
 resource_name = "plastic_red"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.92, 0.22, 0.2, 1)
 metallic = 0.04
 roughness = 0.32
@@ -57,6 +63,8 @@ size = Vector3(0.65, 0.38, 0.44)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_eav6v"]
 resource_name = "steel"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.95, 0.95, 0.98, 1)
 metallic = 0.85
 roughness = 0.25

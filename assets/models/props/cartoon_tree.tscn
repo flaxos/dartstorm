@@ -2,6 +2,8 @@
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sdtpm"]
 resource_name = "wood_dark"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.52, 0.34, 0.18, 1)
 roughness = 0.78
 
@@ -25,6 +27,8 @@ size = Vector3(0.35, 0.65, 1.1)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_seq6n"]
 resource_name = "leaf"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.22, 0.62, 0.22, 1)
 roughness = 0.75
 
@@ -36,6 +40,8 @@ rings = 8
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rcw46"]
 resource_name = "leaf_light"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.38, 0.78, 0.3, 1)
 roughness = 0.7
 

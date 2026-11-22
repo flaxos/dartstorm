@@ -5,6 +5,8 @@ size = Vector3(2, 1.6, 2.2)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sdtpm"]
 resource_name = "wood_dark"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.52, 0.34, 0.18, 1)
 roughness = 0.78
 
@@ -13,6 +15,8 @@ size = Vector3(2.15, 0.16, 2.35)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fxr6j"]
 resource_name = "shingle"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.85, 0.26, 0.2, 1)
 roughness = 0.65
 
@@ -36,6 +40,8 @@ size = Vector3(2.45, 0.95, 2.55)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_e0lhe"]
 resource_name = "steel_dark"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.22, 0.24, 0.28, 1)
 metallic = 0.75
 roughness = 0.3
@@ -45,6 +51,8 @@ size = Vector3(0.92, 1.05, 0.08)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_eav6v"]
 resource_name = "steel"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.95, 0.95, 0.98, 1)
 metallic = 0.85
 roughness = 0.25
@@ -57,6 +65,8 @@ radial_segments = 16
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ndj8j"]
 resource_name = "plastic_orange"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(1, 0.48, 0.08, 1)
 metallic = 0.04
 roughness = 0.32
@@ -69,6 +79,8 @@ rings = 8
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bitf2"]
 resource_name = "plastic_yellow"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(1, 0.82, 0.1, 1)
 metallic = 0.04
 roughness = 0.32
@@ -81,6 +93,8 @@ rings = 8
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6xarb"]
 resource_name = "fur"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.85, 0.62, 0.35, 1)
 roughness = 0.82
 
@@ -98,6 +112,8 @@ rings = 8
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_im78r"]
 resource_name = "fur_dark"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.52, 0.35, 0.18, 1)
 roughness = 0.85
 

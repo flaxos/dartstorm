@@ -51,7 +51,8 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
-	material.diffuse_mode = BaseMaterial3D.DIFFUSE_BURLEY
+	material.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
+	material.specular_mode = BaseMaterial3D.SPECULAR_TOON
 	material.rim_enabled = true
 
 	match surface:
@@ -69,8 +70,6 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 			material.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
 			material.roughness_texture = _plastic_orm
 			material.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
-			material.uv1_triplanar = true
-			material.uv1_scale = Vector3(0.5, 0.5, 0.5)
 		SurfaceType.METAL:
 			material.roughness = 0.24 if roughness < 0.0 else roughness
 			material.metallic = 0.85 if metallic < 0.0 else metallic
@@ -84,8 +83,6 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 			material.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
 			material.metallic_texture = _metal_orm
 			material.metallic_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_BLUE
-			material.uv1_triplanar = true
-			material.uv1_scale = Vector3(0.5, 0.5, 0.5)
 		SurfaceType.CARDBOARD:
 			material.roughness = 0.88 if roughness < 0.0 else roughness
 			material.metallic = 0.0 if metallic < 0.0 else metallic

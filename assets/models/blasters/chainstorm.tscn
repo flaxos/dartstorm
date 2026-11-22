@@ -2,6 +2,8 @@
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hea2x"]
 resource_name = "chassis"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.18, 0.48, 0.95, 1)
 roughness = 0.4
 
@@ -10,6 +12,8 @@ size = Vector3(0.17, 0.18, 0.28)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cktj1"]
 resource_name = "hardware"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.13, 0.16, 0.24, 1)
 metallic = 0.7
 roughness = 0.35
@@ -40,6 +44,8 @@ rings = 2
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cbysn"]
 resource_name = "safety"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(1, 0.45, 0.05, 1)
 roughness = 0.5
 
@@ -143,6 +149,8 @@ rings = 2
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_t1qpp"]
 resource_name = "grip"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.1, 0.11, 0.16, 1)
 roughness = 0.85
 

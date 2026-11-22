@@ -78,19 +78,26 @@ func _setup_materials() -> void:
 
 	mat_net = StandardMaterial3D.new()
 	mat_net.resource_name = "net"
-	mat_net.albedo_color = Color(0.95, 0.96, 0.98, 0.65)
-	mat_net.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat_net.albedo_color = Color(0.95, 0.96, 0.98, 1.0)
+	mat_net.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+	mat_net.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY
+	mat_net.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
+	mat_net.specular_mode = BaseMaterial3D.SPECULAR_TOON
 	mat_net.roughness = 0.6
-	mat_net.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_net.cull_mode = BaseMaterial3D.CULL_BACK
 
 
 func _create_mat(color: Color, slot_name: String, roughness: float, metallic: float) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.resource_name = slot_name
-	mat.albedo_color = color
+	mat.albedo_color = Color(color.r, color.g, color.b, 1.0)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+	mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY
+	mat.cull_mode = BaseMaterial3D.CULL_BACK
 	mat.roughness = roughness
 	mat.metallic = metallic
-	mat.diffuse_mode = BaseMaterial3D.DIFFUSE_BURLEY
+	mat.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
+	mat.specular_mode = BaseMaterial3D.SPECULAR_TOON
 	return mat
 
 

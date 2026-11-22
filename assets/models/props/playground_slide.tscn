@@ -2,6 +2,8 @@
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_eav6v"]
 resource_name = "steel"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.95, 0.95, 0.98, 1)
 metallic = 0.85
 roughness = 0.25
@@ -32,6 +34,8 @@ radial_segments = 16
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ryfhx"]
 resource_name = "plastic_blue"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.18, 0.48, 0.95, 1)
 metallic = 0.04
 roughness = 0.32
@@ -44,6 +48,8 @@ size = Vector3(2.4, 0.25, 2.4)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bitf2"]
 resource_name = "plastic_yellow"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(1, 0.82, 0.1, 1)
 metallic = 0.04
 roughness = 0.32
@@ -62,6 +68,8 @@ size = Vector3(0.12, 1, 2.4)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_e0lhe"]
 resource_name = "steel_dark"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.22, 0.24, 0.28, 1)
 metallic = 0.75
 roughness = 0.3
@@ -113,6 +121,8 @@ size = Vector3(6.11494, 0.18, 1.5)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_55xwb"]
 resource_name = "plastic_red"
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(0.92, 0.22, 0.2, 1)
 metallic = 0.04
 roughness = 0.32

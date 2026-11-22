@@ -530,6 +530,20 @@ func _on_weapon_changed(state: WeaponState) -> void:
 	_view_offset = state.data.view_offset
 	_swap = 1.0
 	_recoil = 0.0
+	if _fp_arms != null and _view_model != null:
+		if _view_model.grip_marker != null and _fp_right_arm != null:
+			_fp_right_arm.position = _view_model.grip_marker.position - Vector3(0.0, -0.09, 0.07)
+		elif _fp_right_arm != null:
+			_fp_right_arm.position = Vector3.ZERO
+		if _fp_left_arm != null:
+			if _view_model.foregrip_marker != null:
+				_fp_left_arm.visible = true
+				_fp_left_arm.position = _view_model.foregrip_marker.position - Vector3(0.0, -0.07, -0.22)
+			elif _view_model.grip_marker != null:
+				_fp_left_arm.visible = false
+			else:
+				_fp_left_arm.visible = true
+				_fp_left_arm.position = Vector3.ZERO
 	if body_model != null:
 		body_model.set_weapon(state.data, skin)
 	Sfx.play(&"swap")

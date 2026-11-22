@@ -97,20 +97,79 @@ func _process(delta: float) -> void:
 func _build() -> void:
 	muzzle = Marker3D.new()
 	add_child(muzzle)
-	match data.model_style:
-		WeaponData.ModelStyle.PISTOL:
-			_build_pistol(false)
-		WeaponData.ModelStyle.DOUBLE:
-			_build_pistol(true)
-		WeaponData.ModelStyle.SPRAYER:
-			_build_sprayer()
-		WeaponData.ModelStyle.ROTARY:
-			_build_rotary()
-		WeaponData.ModelStyle.HAMMER:
-			_build_hammer()
-		WeaponData.ModelStyle.RIFLE:
-			_build_rifle()
+	if not _build_from_model():
+		match data.model_style:
+			WeaponData.ModelStyle.PISTOL:
+				_build_pistol(false)
+			WeaponData.ModelStyle.DOUBLE:
+				_build_pistol(true)
+			WeaponData.ModelStyle.SPRAYER:
+				_build_sprayer()
+			WeaponData.ModelStyle.ROTARY:
+				_build_rotary()
+			WeaponData.ModelStyle.HAMMER:
+				_build_hammer()
+			WeaponData.ModelStyle.RIFLE:
+				_build_rifle()
 	_build_flash()
+
+
+func _build_from_model() -> bool:
+	if data == null or not is_instance_valid(ModelLoader):
+		return false
+	if not ModelLoader.has_blaster_model(data.id):
+		return false
+	var model_node := ModelLoader.instantiate_blaster(data.id)
+	if model_node == null:
+		return false
+	add_child(model_node)
+
+	var mat_map := {
+		"chassis": get_chassis_material(),
+		"hardware": ArenaKit.mat_styled(data.accent_color, ArenaKit.SurfaceType.METAL),
+		"safety": ArenaKit.mat_styled(ORANGE_TIP, ArenaKit.SurfaceType.PLASTIC),
+		"grip": _grip_material()
+	}
+	ModelLoader.apply_materials_recursive(model_node, mat_map)
+
+	var found_muzzle := model_node.find_child("Muzzle*", true, false)
+	if found_muzzle is Node3D:
+		muzzle.position = (found_muzzle as Node3D).position
+	else:
+		muzzle.position = Vector3(0.0, 0.02, -0.32)
+
+	if data.model_style == WeaponData.ModelStyle.ROTARY:
+		var found_spinner := model_node.find_child("Spinner*", true, false)
+		if found_spinner is Node3D:
+			_spinner = found_spinner as Node3D
+
+	return true
+
+
+func get_chassis_material() -> Material:
+	var b_col := data.body_color if data != null else Color.WHITE
+	var a_col := data.accent_color if data != null else Color.WHITE
+	var has_custom_skin := skin_id != &"default" and not skin_id.is_empty() and Cosmetics.has_skin(skin_id)
+	if has_custom_skin:
+		var mat_key := "%s_%s_%s" % [skin_id, b_col.to_html(false), a_col.to_html(false)]
+		var skin_mat: ShaderMaterial = _skin_materials.get(mat_key, null)
+		if skin_mat == null:
+			skin_mat = ShaderMaterial.new()
+			skin_mat.shader = _skin_shader
+			skin_mat.set_shader_parameter("body_color", b_col)
+			skin_mat.set_shader_parameter("accent_color", a_col)
+			skin_mat.set_shader_parameter("texture_normal", _body_normal)
+			skin_mat.set_shader_parameter("texture_orm", _body_orm)
+			skin_mat.set_shader_parameter("texture_detail_normal", _detail_normal)
+			skin_mat.set_shader_parameter("normal_scale", 1.0)
+			skin_mat.set_shader_parameter("detail_normal_scale", 20.0)
+			var pattern_path: String = Cosmetics.skin_pattern(skin_id)
+			if ResourceLoader.exists(pattern_path):
+				skin_mat.set_shader_parameter("skin_pattern", load(pattern_path))
+			skin_mat.set_shader_parameter("finish_mode", Cosmetics.skin_finish(skin_id))
+			_skin_materials[mat_key] = skin_mat
+		return skin_mat
+	return ArenaKit.mat_styled(b_col, ArenaKit.SurfaceType.PLASTIC, 0.32, 0.0)
 
 
 func _build_pistol(double_barrel: bool) -> void:

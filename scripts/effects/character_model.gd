@@ -102,6 +102,8 @@ var _propeller: Node3D
 var _hat_id: StringName = &"cap"
 var _is_zombie: bool = false
 var _shield_bubble: MeshInstance3D
+var _hero_model_node: Node3D = null
+var _hero_skeleton: Skeleton3D = null
 
 
 var _raw_display_name: String = ""
@@ -149,6 +151,21 @@ func show_overhead(shown: bool) -> void:
 
 func set_zombie(enabled: bool) -> void:
 	_is_zombie = enabled
+	if _hero_model_node != null and is_instance_valid(ModelLoader):
+		var zombie_mat := _cloth_mat(ZOMBIE_GREEN)
+		var zombie_skin_mat := _skin_mat(ZOMBIE_SKIN)
+		var zombie_map := {
+			"clothing": zombie_mat if enabled else _cloth_mat(_tint),
+			"pants": _cloth_mat(ZOMBIE_GREEN.darkened(0.25)) if enabled else _cloth_mat(NAVY),
+			"skin": zombie_skin_mat if enabled else _skin_mat(SKIN)
+		}
+		ModelLoader.apply_materials_recursive(_hero_model_node, zombie_map)
+		if enabled:
+			set_weapon(null)
+		if _name_label != null:
+			_name_label.modulate = Color(0.5, 0.95, 0.35) if enabled else _tint.lightened(0.35)
+		return
+
 	if enabled:
 		var zombie_mat := _cloth_mat(ZOMBIE_GREEN)
 		var zombie_skin_mat := _skin_mat(ZOMBIE_SKIN)
@@ -224,6 +241,18 @@ func flinch() -> void:
 
 
 func animate(horizontal_speed: float, delta: float) -> void:
+	if _hero_model_node != null:
+		var anim_player: AnimationPlayer = _hero_model_node.find_child("AnimationPlayer", true, false) as AnimationPlayer
+		if anim_player != null:
+			if horizontal_speed > 0.5:
+				if anim_player.has_animation("run") and anim_player.current_animation != "run":
+					anim_player.play("run")
+			else:
+				if anim_player.has_animation("idle") and anim_player.current_animation != "idle":
+					anim_player.play("idle")
+		_flinch = move_toward(_flinch, 0.0, delta * 5.0)
+		return
+
 	_walk_phase += delta * horizontal_speed * 1.6
 	var swing := sin(_walk_phase) * clampf(horizontal_speed / 6.0, 0.0, 1.0) * 0.6
 	_legs[0].rotation.x = swing
@@ -240,6 +269,9 @@ func animate(horizontal_speed: float, delta: float) -> void:
 
 
 func _build() -> void:
+	if _build_from_hero_model():
+		return
+
 	var shirt := _cloth_mat(_tint)
 	var pants := _cloth_mat(NAVY)
 	_legs.clear()
@@ -307,6 +339,39 @@ func _build() -> void:
 	ArenaKit.deco_box(_backpack, Vector3(0.52, 0.1, 0.3), Vector3(0.0, 1.3, 0.38), Color(1.0, 0.85, 0.2))
 	_backpack.visible = false
 
+	_build_overhead_and_shield()
+
+
+func _build_from_hero_model() -> bool:
+	if not is_instance_valid(ModelLoader) or not ModelLoader.has_hero_model():
+		return false
+	_hero_model_node = ModelLoader.instantiate_hero()
+	if _hero_model_node == null:
+		return false
+	add_child(_hero_model_node)
+	_upper = _hero_model_node
+	_hero_skeleton = ModelLoader.find_skeleton(_hero_model_node)
+
+	var mat_map := {
+		"clothing": _cloth_mat(_tint),
+		"shirt": _cloth_mat(_tint),
+		"pants": _cloth_mat(NAVY),
+		"skin": _skin_mat(SKIN),
+		"shoes": _sneaker_mat(),
+		"sneaker": _sneaker_mat()
+	}
+	ModelLoader.apply_materials_recursive(_hero_model_node, mat_map)
+
+	_weapon_mount = ModelLoader.get_or_create_socket(_hero_model_node, &"Socket_Hand_R", &"Hand_R")
+	_hat_root = ModelLoader.get_or_create_socket(_hero_model_node, &"Socket_Head", &"Head")
+	_backpack = ModelLoader.get_or_create_socket(_hero_model_node, &"Socket_Back", &"Chest")
+
+	_build_hat()
+	_build_overhead_and_shield()
+	return true
+
+
+func _build_overhead_and_shield() -> void:
 	_name_label = Label3D.new()
 	_name_label.font = UiKit.font()
 	_name_label.font_size = 56
@@ -362,6 +427,17 @@ func _build_hat() -> void:
 	for child in _hat_root.get_children():
 		child.queue_free()
 	_propeller = null
+	if is_instance_valid(ModelLoader) and ModelLoader.has_hat_model(_hat_id):
+		var hat_node := ModelLoader.instantiate_hat(_hat_id)
+		if hat_node != null:
+			hat_node.position = Vector3(0.0, HAT_Y, 0.0) if _hero_skeleton == null else Vector3.ZERO
+			_hat_root.add_child(hat_node)
+			ModelLoader.apply_materials_recursive(hat_node, {
+				"main": _cloth_mat(_tint.darkened(0.2)),
+				"accent": _cloth_mat(_tint.lightened(0.3))
+			})
+			return
+
 	var main := _tint.darkened(0.2)
 	match _hat_id:
 		&"cap":

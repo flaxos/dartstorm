@@ -106,6 +106,8 @@ func _ready() -> void:
 	await _test_hardening_security_and_pbr_skins()
 	# AAA Visual Uplift: High-Poly Models, PBR Textures & Graphics Quality Scaler (v1.6.0)
 	await _test_aaa_graphics_and_pbr_pipeline()
+	# glTF 2.0 Model Loader & Hybrid Fallback Architecture (v1.7.0 / Phase 1)
+	await _test_gltf_model_loader_and_hybrid_pipeline()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -3618,6 +3620,121 @@ func _test_aaa_graphics_and_pbr_pipeline() -> void:
 		check(is_equal_approx(float(sm.get_shader_parameter(&"electrified")), 1.0), "Puddle electrify parameter is passed to shader")
 	puddle.queue_free()
 	await physics_frames(2)
+
+
+func _test_gltf_model_loader_and_hybrid_pipeline() -> void:
+	section("glTF 2.0 Model Loader & Hybrid Fallback Architecture (Phase 1)")
+
+	# 1. Autoload Singleton Presence
+	check(is_instance_valid(ModelLoader), "ModelLoader autoload singleton is registered and valid")
+	check(ModelLoader.models_enabled, "ModelLoader models_enabled is true by default")
+	check(ModelLoader.MODELS_ROOT == "res://assets/models/", "ModelLoader points to assets/models/")
+
+	# 2. Safe Query Interface (returns false/true without exceptions)
+	var has_hero: bool = ModelLoader.has_hero_model()
+	check(has_hero == false or has_hero == true, "has_hero_model() returns boolean safely")
+	check(ModelLoader.has_blaster_model(&"non_existent_blaster_xyz") == false, "has_blaster_model returns false for missing blaster")
+	check(ModelLoader.has_prop_model(&"non_existent_prop_xyz") == false, "has_prop_model returns false for missing prop")
+	check(ModelLoader.has_hat_model(&"non_existent_hat_xyz") == false, "has_hat_model returns false for missing hat")
+
+	# 3. Model Cache Management
+	ModelLoader.clear_cache()
+	check(ModelLoader._scene_cache.is_empty(), "clear_cache empties the model cache")
+
+	# 4. Bone Sockets & Skeleton Integration
+	var test_actor := Node3D.new()
+	add_child(test_actor)
+	var socket_hand := ModelLoader.get_or_create_socket(test_actor, &"Socket_Hand_R")
+	check(socket_hand != null, "get_or_create_socket creates socket node")
+	check(socket_hand.name == "Socket_Hand_R", "Created socket has correct name")
+	var socket_hand_again := ModelLoader.get_or_create_socket(test_actor, &"Socket_Hand_R")
+	check(socket_hand_again == socket_hand, "get_or_create_socket returns existing socket without duplicating")
+
+	# Test with Skeleton3D bone attachment
+	var test_skel := Skeleton3D.new()
+	test_skel.add_bone("Hand_L")
+	test_actor.add_child(test_skel)
+	var bone_socket := ModelLoader.get_or_create_socket(test_actor, &"Socket_Hand_L", &"Hand_L")
+	check(bone_socket is BoneAttachment3D, "get_or_create_socket creates BoneAttachment3D when bone is in skeleton")
+	if bone_socket is BoneAttachment3D:
+		var ba := bone_socket as BoneAttachment3D
+		check(ba.bone_name == "Hand_L", "BoneAttachment3D is attached to Hand_L bone")
+	test_actor.queue_free()
+	await physics_frames(2)
+
+	# 5. Recursive Material Application
+	var test_mesh_root := Node3D.new()
+	var test_mi := MeshInstance3D.new()
+	test_mi.name = "Chassis_Mesh"
+	var box := BoxMesh.new()
+	test_mi.mesh = box
+	test_mesh_root.add_child(test_mi)
+	var custom_mat := StandardMaterial3D.new()
+	custom_mat.albedo_color = Color.MAGENTA
+	ModelLoader.apply_materials_recursive(test_mesh_root, { "chassis": custom_mat })
+	check(test_mi.get_surface_override_material(0) == custom_mat, "apply_materials_recursive binds matching material by name")
+	test_mesh_root.queue_free()
+	await physics_frames(2)
+
+	# 6. Procedural Fallback in CharacterModel with Sockets
+	var char_model := CharacterModel.new()
+	char_model.setup("TestKid", Color(0.2, 0.7, 0.3), &"cap")
+	add_child(char_model)
+	await physics_frames(2)
+	check(char_model._upper != null, "CharacterModel upper body node exists")
+	check(char_model._weapon_mount != null, "CharacterModel has weapon mount socket")
+	check(char_model._hat_root != null, "CharacterModel has hat root socket")
+	check(char_model._backpack != null, "CharacterModel has backpack socket")
+	char_model.queue_free()
+	await physics_frames(2)
+
+	# 7. Procedural Fallback in BlasterModel
+	var popper_data := load(POPPER) as WeaponData
+	var blaster := BlasterModel.create(popper_data, false, &"default")
+	add_child(blaster)
+	await physics_frames(2)
+	check(blaster.muzzle != null, "BlasterModel has valid muzzle marker")
+	check(blaster.get_chassis_material() != null, "BlasterModel provides valid chassis material")
+	blaster.queue_free()
+	await physics_frames(2)
+
+	# 8. Dynamic glTF 2.0 Export and Import Verification Loop
+	var doc := GLTFDocument.new()
+	var state := GLTFState.new()
+	var export_scene := Node3D.new()
+	export_scene.name = "TestGlbBlaster"
+	var frame := MeshInstance3D.new()
+	frame.name = "Chassis"
+	var frame_mesh := BoxMesh.new()
+	frame_mesh.size = Vector3(0.08, 0.12, 0.35)
+	frame.mesh = frame_mesh
+	export_scene.add_child(frame)
+	var test_muzzle := Marker3D.new()
+	test_muzzle.name = "MuzzleMarker"
+	test_muzzle.position = Vector3(0.0, 0.02, -0.22)
+	export_scene.add_child(test_muzzle)
+
+	var glb_path := "res://assets/models/blasters/test_gltf_sample.glb"
+	var append_err := doc.append_from_scene(export_scene, state)
+	check(append_err == OK, "GLTFDocument successfully appends scene")
+	var write_err := doc.write_to_filesystem(state, glb_path)
+	check(write_err == OK, "GLTFDocument successfully writes .glb binary asset to filesystem")
+	check(FileAccess.file_exists(glb_path), "Exported .glb file exists on disk")
+
+	# Test ModelLoader with newly generated .glb
+	check(ModelLoader.has_blaster_model(&"test_gltf_sample"), "ModelLoader detects newly generated .glb blaster model")
+	var loaded_blaster_node := ModelLoader.instantiate_blaster(&"test_gltf_sample")
+	check(loaded_blaster_node != null, "ModelLoader successfully instantiates .glb model as Node3D")
+	if loaded_blaster_node != null:
+		check(loaded_blaster_node.find_child("Chassis", true, false) != null, "Instantiated .glb contains Chassis mesh")
+		loaded_blaster_node.queue_free()
+
+	# Clean up temporary test asset
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(glb_path))
+	ModelLoader.clear_cache()
+	export_scene.queue_free()
+	await physics_frames(2)
+
 
 
 

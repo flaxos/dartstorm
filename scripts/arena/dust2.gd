@@ -14,9 +14,10 @@ extends Arena
 const HALF_X := 44.0
 const HALF_Z := 44.0
 
+const DESERT_SAND := Color(0.88, 0.76, 0.56)
 const SANDSTONE := Color(0.86, 0.76, 0.58)
 const SANDSTONE_DARK := Color(0.74, 0.64, 0.46)
-const COBBLE := Color(0.66, 0.60, 0.50)
+const PAVER := Color(0.82, 0.72, 0.54)
 const CRATE_WOOD := Color(0.70, 0.48, 0.30)
 const METAL_DOOR := Color(0.45, 0.50, 0.55)
 const CAR_BLUE := Color(0.20, 0.40, 0.75)
@@ -37,9 +38,9 @@ func _build() -> void:
 
 
 func _build_ground_and_walls() -> void:
-	# Main terrain ground plane
-	ArenaKit.box(geometry, Vector3(HALF_X * 2.0, 1.0, HALF_Z * 2.0), Vector3(0.0, -0.5, 0.0), SANDSTONE)
-	ArenaKit.deco_box(decor, Vector3(500.0, 0.2, 500.0), Vector3(0.0, -0.55, 0.0), SANDSTONE_DARK)
+	# Main terrain ground plane - sun-baked desert sand
+	ArenaKit.box(geometry, Vector3(HALF_X * 2.0, 1.0, HALF_Z * 2.0), Vector3(0.0, -0.5, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+	ArenaKit.deco_box(decor, Vector3(500.0, 0.2, 500.0), Vector3(0.0, -0.55, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
 
 	# Boundary fortress canyon walls
 	var wall_h := 7.5
@@ -52,7 +53,9 @@ func _build_ground_and_walls() -> void:
 
 func _build_t_spawn_and_approaches() -> void:
 	# --- T-Spawn Plaza (South: X: -10 to 10, Z: 30 to 40) ---
-	ArenaKit.box(geometry, Vector3(22.0, 0.4, 12.0), Vector3(0.0, -0.2, 34.0), COBBLE)
+	ArenaKit.box(geometry, Vector3(22.0, 0.3, 12.0), Vector3(0.0, -0.15, 34.0), PAVER)
+	# Stone curb framing the northern edge of T-Spawn towards Suicide and approaches
+	ArenaKit.box(geometry, Vector3(22.0, 0.06, 0.4), Vector3(0.0, 0.03, 28.0), SANDSTONE_DARK)
 
 	# Staging crates at T Spawn
 	ArenaKit.box(geometry, Vector3(1.8, 1.8, 1.8), Vector3(-4.0, 0.9, 36.0), CRATE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
@@ -67,16 +70,16 @@ func _build_t_spawn_and_approaches() -> void:
 
 	# --- T-Ramp & Outside Tunnel (West approach towards B Tunnels) ---
 	# Connecting corridor from T Spawn West (X: -10.0 to -24.0, Z: 26.0)
-	ArenaKit.box(geometry, Vector3(16.0, 0.3, 6.0), Vector3(-17.0, -0.15, 26.0), COBBLE)
+	ArenaKit.box(geometry, Vector3(16.0, 0.3, 6.0), Vector3(-17.0, -0.15, 26.0), PAVER)
 	ArenaKit.box(geometry, Vector3(16.0, 5.0, 0.8), Vector3(-17.0, 2.5, 29.5), SANDSTONE)
 	ArenaKit.box(geometry, Vector3(12.0, 5.0, 0.8), Vector3(-15.0, 2.5, 22.5), SANDSTONE)
 	# Turn North into Outside Tunnel (X = -24.0, Z: 26.0 to 18.0)
-	ArenaKit.box(geometry, Vector3(6.0, 0.3, 10.0), Vector3(-24.0, -0.15, 21.0), COBBLE)
+	ArenaKit.box(geometry, Vector3(6.0, 0.3, 10.0), Vector3(-24.0, -0.15, 21.0), PAVER)
 	ArenaKit.box(geometry, Vector3(0.8, 5.0, 12.0), Vector3(-27.5, 2.5, 20.0), SANDSTONE)
 
 	# --- TAXI & Long Doors approach (East approach towards Long A) ---
 	# Connecting corridor from T Spawn East (X: 10.0 to 22.0, Z: 26.0)
-	ArenaKit.box(geometry, Vector3(14.0, 0.3, 6.0), Vector3(16.0, -0.15, 26.0), COBBLE)
+	ArenaKit.box(geometry, Vector3(14.0, 0.3, 6.0), Vector3(16.0, -0.15, 26.0), PAVER)
 	ArenaKit.box(geometry, Vector3(14.0, 5.0, 0.8), Vector3(16.0, 2.5, 29.5), SANDSTONE)
 	ArenaKit.box(geometry, Vector3(10.0, 5.0, 0.8), Vector3(14.0, 2.5, 22.5), SANDSTONE)
 	# TAXI cover obstacle at (X = 18.0, Z = 20.0)
@@ -101,7 +104,7 @@ func _build_long_a_and_pit() -> void:
 	# --- Long Pit (Sunken Depression at X = 25.0 to 33.0, Z = 6.0 to 14.0, depth Y = -1.6) ---
 	var pit_w := 8.0
 	var pit_l := 9.0
-	ArenaKit.box(geometry, Vector3(pit_w, 0.4, pit_l), Vector3(29.0, -1.8, 10.0), COBBLE)
+	ArenaKit.box(geometry, Vector3(pit_w, 0.4, pit_l), Vector3(29.0, -1.8, 10.0), PAVER)
 	# Pit retaining walls
 	ArenaKit.box(geometry, Vector3(pit_w, 2.0, 0.8), Vector3(29.0, -0.6, 14.5), SANDSTONE)
 	ArenaKit.box(geometry, Vector3(0.8, 2.0, pit_l), Vector3(33.5, -0.6, 10.0), SANDSTONE)
@@ -125,7 +128,7 @@ func _build_long_a_and_pit() -> void:
 func _build_mid_and_doors() -> void:
 	# --- Top Mid & Mid Avenue (X: -4.0 to 4.0, Z: 12.0 down to -4.0) ---
 	var mid_w := 8.0
-	ArenaKit.box(geometry, Vector3(mid_w, 0.3, 18.0), Vector3(0.0, -0.15, 4.0), COBBLE)
+	ArenaKit.box(geometry, Vector3(mid_w, 0.3, 18.0), Vector3(0.0, -0.15, 4.0), PAVER)
 
 	# West wall of Mid (separating Mid from B Tunnels)
 	ArenaKit.box(geometry, Vector3(0.8, 5.5, 24.0), Vector3(-5.0, 2.75, 4.0), SANDSTONE)
@@ -147,7 +150,7 @@ func _build_mid_and_doors() -> void:
 	ArenaKit.box(geometry, Vector3(1.6, 3.4, 0.15), Vector3(1.1, 1.7, -5.3), METAL_DOOR, Vector3(0.0, -26.0, 0.0), ArenaKit.SurfaceType.METAL)
 
 	# --- Lower Mid (North of Mid Doors, sloping down from Z = -6.0 to -16.0) ---
-	ArenaKit.box(geometry, Vector3(10.0, 0.3, 12.0), Vector3(-1.0, -0.15, -11.0), COBBLE)
+	ArenaKit.box(geometry, Vector3(10.0, 0.3, 12.0), Vector3(-1.0, -0.15, -11.0), PAVER)
 
 	# Truck obstacle in Lower Mid (at X = -4.0, Z = -12.0)
 	ArenaKit.box(geometry, Vector3(2.4, 1.6, 4.6), Vector3(-4.0, 0.8, -12.0), CAR_BLUE, Vector3(0.0, 20.0, 0.0), ArenaKit.SurfaceType.METAL)
@@ -194,7 +197,7 @@ func _build_b_tunnels_and_site_b() -> void:
 	var tun_w := 5.2
 	var tun_l := 20.0
 	# Tunnel floor
-	ArenaKit.box(geometry, Vector3(tun_w, 0.3, tun_l), Vector3(-23.0, -0.15, 8.0), COBBLE)
+	ArenaKit.box(geometry, Vector3(tun_w, 0.3, tun_l), Vector3(-23.0, -0.15, 8.0), PAVER)
 	# Tunnel walls
 	ArenaKit.box(geometry, Vector3(0.8, 4.5, tun_l), Vector3(-23.0 - tun_w * 0.5 - 0.4, 2.25, 8.0), SANDSTONE)
 	ArenaKit.box(geometry, Vector3(0.8, 4.5, tun_l), Vector3(-23.0 + tun_w * 0.5 + 0.4, 2.25, 8.0), SANDSTONE)
@@ -205,7 +208,7 @@ func _build_b_tunnels_and_site_b() -> void:
 	ArenaKit.ramp(geometry, Vector3(-20.0, 0.0, 1.0), Vector3(-14.0, -1.5, 1.0), 3.8, SANDSTONE)
 
 	# --- Lower Tunnel (X: -14.0 to -5.0, Z = 1.0, depth Y = -1.5) ---
-	ArenaKit.box(geometry, Vector3(10.0, 0.3, 3.8), Vector3(-9.0, -1.65, 1.0), COBBLE)
+	ArenaKit.box(geometry, Vector3(10.0, 0.3, 3.8), Vector3(-9.0, -1.65, 1.0), PAVER)
 	# Lower Tunnel ceiling
 	ArenaKit.box(geometry, Vector3(10.0, 0.6, 5.0), Vector3(-9.0, 2.5, 1.0), SANDSTONE_DARK)
 	# Ramp emerging from Lower Tunnel into Mid right beside Xbox
@@ -253,7 +256,9 @@ func _build_b_tunnels_and_site_b() -> void:
 
 func _build_ct_spawn() -> void:
 	# --- CT Spawn (North-Central: X = 4.0, Z = -24.0) ---
-	ArenaKit.box(geometry, Vector3(16.0, 0.3, 10.0), Vector3(4.0, -0.15, -24.0), COBBLE)
+	ArenaKit.box(geometry, Vector3(16.0, 0.3, 10.0), Vector3(4.0, -0.15, -24.0), PAVER)
+	# Stone curb framing the CT Spawn terrace towards Lower Mid
+	ArenaKit.box(geometry, Vector3(16.0, 0.06, 0.4), Vector3(4.0, 0.03, -19.0), SANDSTONE_DARK)
 
 	# Tactical crates and equipment in CT Spawn
 	ArenaKit.box(geometry, Vector3(1.8, 1.8, 1.8), Vector3(2.0, 0.9, -26.0), CRATE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)

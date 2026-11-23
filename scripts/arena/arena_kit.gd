@@ -13,6 +13,7 @@ enum SurfaceType {
 	SANDSTONE,
 	COBBLE,
 	BRICK,
+	SAND,
 }
 
 const WOOD_SHADER := preload("res://assets/materials/toy_wood.gdshader")
@@ -30,6 +31,10 @@ static var _sandstone_orm: Texture2D = preload("res://assets/textures/arenas/san
 static var _cobble_albedo: Texture2D = preload("res://assets/textures/arenas/cobble_albedo.png")
 static var _cobble_normal: Texture2D = preload("res://assets/textures/arenas/cobble_normal.png")
 static var _cobble_orm: Texture2D = preload("res://assets/textures/arenas/cobble_orm.png")
+
+static var _sand_albedo: Texture2D = preload("res://assets/textures/arenas/sand_albedo.png")
+static var _sand_normal: Texture2D = preload("res://assets/textures/arenas/sand_normal.png")
+static var _sand_orm: Texture2D = preload("res://assets/textures/arenas/sand_orm.png")
 
 static var _wood_normal: Texture2D = preload("res://assets/textures/arenas/wood_normal.png")
 static var _wood_orm: Texture2D = preload("res://assets/textures/arenas/wood_orm.png")
@@ -52,14 +57,20 @@ static func clear_materials() -> void:
 static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 		roughness: float = -1.0, metallic: float = -1.0, emission: float = 0.0) -> Material:
 	if surface == SurfaceType.DEFAULT:
+		# Detect desert sand / earth tones
+		if (color.is_equal_approx(Color(0.88, 0.76, 0.56))
+				or color.is_equal_approx(Color(0.87, 0.75, 0.55))):
+			surface = SurfaceType.SAND
 		# Detect sandstone / desert adobe tones
-		if (color.is_equal_approx(Color(0.86, 0.76, 0.58))
+		elif (color.is_equal_approx(Color(0.86, 0.76, 0.58))
 				or color.is_equal_approx(Color(0.85, 0.74, 0.55))
 				or color.is_equal_approx(Color(0.74, 0.64, 0.46))
 				or color.is_equal_approx(Color(0.72, 0.62, 0.44))):
 			surface = SurfaceType.SANDSTONE
-		# Detect cobblestone pavement tones
-		elif (color.is_equal_approx(Color(0.66, 0.60, 0.50))
+		# Detect desert paver / cobblestone pavement tones
+		elif (color.is_equal_approx(Color(0.82, 0.72, 0.54))
+				or color.is_equal_approx(Color(0.78, 0.68, 0.50))
+				or color.is_equal_approx(Color(0.66, 0.60, 0.50))
 				or color.is_equal_approx(Color(0.65, 0.58, 0.48))):
 			surface = SurfaceType.COBBLE
 		# Detect stone masonry / brick tones
@@ -96,6 +107,21 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 	material.rim_enabled = false
 
 	match surface:
+		SurfaceType.SAND:
+			material.albedo_texture = _sand_albedo
+			material.uv1_triplanar = true
+			material.uv1_scale = Vector3(0.12, 0.12, 0.12)
+			material.roughness = 0.94 if roughness < 0.0 else roughness
+			material.metallic = 0.0 if metallic < 0.0 else metallic
+			material.metallic_specular = 0.05
+			material.normal_enabled = true
+			material.normal_texture = _sand_normal
+			material.normal_scale = 0.45
+			material.ao_enabled = true
+			material.ao_texture = _sand_orm
+			material.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+			material.roughness_texture = _sand_orm
+			material.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
 		SurfaceType.SANDSTONE:
 			material.albedo_texture = _sandstone_albedo
 			material.uv1_triplanar = true
@@ -114,13 +140,13 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 		SurfaceType.COBBLE:
 			material.albedo_texture = _cobble_albedo
 			material.uv1_triplanar = true
-			material.uv1_scale = Vector3(0.25, 0.25, 0.25)
-			material.roughness = 0.82 if roughness < 0.0 else roughness
+			material.uv1_scale = Vector3(0.18, 0.18, 0.18)
+			material.roughness = 0.84 if roughness < 0.0 else roughness
 			material.metallic = 0.0 if metallic < 0.0 else metallic
-			material.metallic_specular = 0.12
+			material.metallic_specular = 0.10
 			material.normal_enabled = true
 			material.normal_texture = _cobble_normal
-			material.normal_scale = 0.8
+			material.normal_scale = 0.75
 			material.ao_enabled = true
 			material.ao_texture = _cobble_orm
 			material.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED

@@ -22,9 +22,14 @@ SOURCES = {
         "bump_strength": 3.0,
     },
     "cobble": {
-        "src": "/home/flax/.gemini/antigravity/brain/d63e5a52-fa6e-4ddd-b284-e80cf7779b79/stylized_cobble_texture_1795346747716.jpg",
-        "roughness": 0.80,
-        "bump_strength": 3.5,
+        "src": "/home/flax/.gemini/antigravity/brain/d63e5a52-fa6e-4ddd-b284-e80cf7779b79/stylized_desert_pavers_1795434650725.jpg",
+        "roughness": 0.85,
+        "bump_strength": 3.2,
+    },
+    "sand": {
+        "src": "/home/flax/.gemini/antigravity/brain/d63e5a52-fa6e-4ddd-b284-e80cf7779b79/stylized_desert_sand_1795434616405.jpg",
+        "roughness": 0.94,
+        "bump_strength": 2.0,
     },
     "wood": {
         "src": "/home/flax/.gemini/antigravity/brain/d63e5a52-fa6e-4ddd-b284-e80cf7779b79/stylized_wood_planks_1795346772374.jpg",

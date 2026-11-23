@@ -11,9 +11,10 @@ extends Arena
 const HALF_X := 42.0
 const HALF_Z := 36.0
 
+const DESERT_SAND := Color(0.88, 0.76, 0.56)
 const SANDSTONE := Color(0.85, 0.74, 0.55)
 const SANDSTONE_DARK := Color(0.72, 0.62, 0.44)
-const COBBLE := Color(0.65, 0.58, 0.48)
+const PAVER := Color(0.82, 0.72, 0.54)
 const CRATE_WOOD := Color(0.68, 0.46, 0.28)
 const TRIM_BLUE := Color(0.2, 0.45, 0.85)
 const TRIM_ORANGE := Color(0.95, 0.45, 0.1)
@@ -31,10 +32,10 @@ func _build() -> void:
 
 
 func _build_ground_and_walls() -> void:
-	# Main courtyard ground
-	ArenaKit.box(geometry, Vector3(HALF_X * 2.0, 1.0, HALF_Z * 2.0), Vector3(0.0, -0.5, 0.0), SANDSTONE)
+	# Main courtyard ground - sun-baked desert sand
+	ArenaKit.box(geometry, Vector3(HALF_X * 2.0, 1.0, HALF_Z * 2.0), Vector3(0.0, -0.5, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
 	# Infinite background desert floor
-	ArenaKit.deco_box(decor, Vector3(450.0, 0.2, 450.0), Vector3(0.0, -0.55, 0.0), SANDSTONE_DARK)
+	ArenaKit.deco_box(decor, Vector3(450.0, 0.2, 450.0), Vector3(0.0, -0.55, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
 
 	# High canyon fortress boundary walls
 	var wall_h := 7.0
@@ -62,8 +63,10 @@ func _build_t_spawn_and_hallway() -> void:
 	# East hall partition wall
 	ArenaKit.box(geometry, Vector3(0.8, 5.0, 28.0), Vector3(-21.0, 2.5, 4.0), SANDSTONE)
 
-	# Hallway floor (Z: 18 down to 6 at Y = 0.0)
-	ArenaKit.box(geometry, Vector3(hall_w, 0.4, 12.0), Vector3(-24.0, -0.2, 12.0), COBBLE)
+	# Hallway paved floor (Z: 18 down to 6 at Y = 0.0)
+	ArenaKit.box(geometry, Vector3(hall_w, 0.3, 12.0), Vector3(-24.0, -0.15, 12.0), PAVER)
+	# Stone threshold curb framing the entrance from T-Spawn
+	ArenaKit.box(geometry, Vector3(hall_w, 0.06, 0.4), Vector3(-24.0, 0.03, 18.0), SANDSTONE_DARK)
 
 	# Stairs rising up in the hallway from Y = 0.0 to Y = 1.6 (between Z = 6 and Z = 0)
 	ArenaKit.ramp(geometry, Vector3(-24.0, 0.0, 6.0), Vector3(-24.0, 1.6, 0.0), hall_w, SANDSTONE)
@@ -100,14 +103,14 @@ func _build_underpass_and_bridge() -> void:
 	ArenaKit.ramp(geometry, Vector3(-16.0, 0.0, 16.0), Vector3(-16.0, -2.4, 10.0), tun_w, SANDSTONE)
 
 	# North-South tunnel segment (Z: 10 down to 2 at depth Y = -2.4)
-	ArenaKit.box(geometry, Vector3(tun_w, 0.4, 8.0), Vector3(-16.0, -2.6, 6.0), COBBLE)
+	ArenaKit.box(geometry, Vector3(tun_w, 0.4, 8.0), Vector3(-16.0, -2.6, 6.0), PAVER)
 	ArenaKit.box(geometry, Vector3(0.8, 3.0, 8.0), Vector3(-16.0 - tun_w * 0.5 - 0.4, -1.0, 6.0), SANDSTONE_DARK)
 	ArenaKit.box(geometry, Vector3(0.8, 3.0, 8.0), Vector3(-16.0 + tun_w * 0.5 + 0.4, -1.0, 6.0), SANDSTONE_DARK)
 
 	# Underpass turns East towards X = 4 under the bridge:
 	# East-West tunnel segment (X: -16.0 to 4.0, Z = 0.0, Y = -2.4)
 	var tun_l := 20.0
-	ArenaKit.box(geometry, Vector3(tun_l, 0.4, tun_w), Vector3(-6.0, -2.6, 0.0), COBBLE)
+	ArenaKit.box(geometry, Vector3(tun_l, 0.4, tun_w), Vector3(-6.0, -2.6, 0.0), PAVER)
 	ArenaKit.box(geometry, Vector3(tun_l, 3.0, 0.8), Vector3(-6.0, -1.0, -tun_w * 0.5 - 0.4), SANDSTONE_DARK)
 	ArenaKit.box(geometry, Vector3(tun_l, 3.0, 0.8), Vector3(-6.0, -1.0, tun_w * 0.5 + 0.4), SANDSTONE_DARK)
 
@@ -200,11 +203,13 @@ func _build_north_hall_and_site_b() -> void:
 	ArenaKit.ramp(geometry, Vector3(0.0, 0.0, -27.0), Vector3(0.0, 0.8, -29.0), 4.0, SANDSTONE)
 
 	# --- CT Connector Eastward into North Courtyard (X from 3.0 to 20.0, Z = -26.0) ---
-	ArenaKit.box(geometry, Vector3(18.0, 0.3, 5.2), Vector3(12.0, -0.15, -26.0), COBBLE)
+	ArenaKit.box(geometry, Vector3(18.0, 0.3, 5.2), Vector3(12.0, -0.15, -26.0), PAVER)
 	ArenaKit.box(geometry, Vector3(18.0, 5.0, 0.8), Vector3(12.0, 2.5, -29.0), SANDSTONE)
 	ArenaKit.box(geometry, Vector3(14.0, 5.0, 0.8), Vector3(10.0, 2.5, -23.0), SANDSTONE)
-	# Turn South into North Courtyard
-	ArenaKit.box(geometry, Vector3(5.2, 0.3, 12.0), Vector3(20.0, -0.15, -17.0), COBBLE)
+	# Gateway lintel framing the exit into North Courtyard
+	ArenaKit.box(geometry, Vector3(0.8, 1.4, 5.2), Vector3(20.0, 4.3, -26.0), SANDSTONE_DARK)
+	# Stone threshold curb cleanly bounding the corridor from the sand courtyard
+	ArenaKit.box(geometry, Vector3(0.4, 0.06, 5.2), Vector3(20.0, 0.03, -26.0), SANDSTONE_DARK)
 
 
 func _build_spawns_and_objectives() -> void:

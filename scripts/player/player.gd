@@ -209,8 +209,8 @@ func _physics_process(delta: float) -> void:
 			var planting_or_defusing := false
 			var bomb_target: BombTarget = get_tree().get_first_node_in_group(&"bomb_target") as BombTarget
 			if bomb_target != null:
-				if (bomb_target.state == BombTarget.BombState.PLANTING and bomb_target.planter == self) \
-						or (bomb_target.state == BombTarget.BombState.DEFUSING and bomb_target.defuser == self):
+				if (bomb_target.state == BombTarget.BombState.PLANTING and bomb_target.carrier == self) \
+						or (bomb_target.state == BombTarget.BombState.DEFUSING and bomb_target.current_defuser == self):
 					planting_or_defusing = true
 			arsenal.set_trigger(fire_held and not planting_or_defusing)
 

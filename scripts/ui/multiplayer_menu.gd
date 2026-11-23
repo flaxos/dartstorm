@@ -16,6 +16,9 @@ var _host_tab_btn: Button
 var _join_tab_btn: Button
 var _status_label: Label
 var _ip_label: Label
+var _server_name_edit: LineEdit
+var _lan_scan_label: Label
+var _server_list_container: VBoxContainer
 var _address_edit: LineEdit
 var _port_edit: LineEdit
 var _host_port_edit: LineEdit
@@ -36,12 +39,18 @@ func _ready() -> void:
 	_connect_network_signals()
 
 
+func _exit_tree() -> void:
+	if NetworkManager != null:
+		NetworkManager.stop_lan_discovery()
+
+
 func _connect_network_signals() -> void:
 	if NetworkManager != null:
 		NetworkManager.connection_succeeded.connect(_on_connection_succeeded)
 		NetworkManager.connection_failed.connect(_on_connection_failed)
 		NetworkManager.server_disconnected.connect(_on_server_disconnected)
 		NetworkManager.lobby_updated.connect(_on_lobby_updated)
+		NetworkManager.lan_servers_updated.connect(_on_lan_servers_updated)
 
 
 func _build() -> void:
@@ -117,6 +126,18 @@ func _build_host_panel(parent: Control) -> void:
 	_host_panel.add_theme_constant_override("separation", 12)
 	parent.add_child(_host_panel)
 
+	# Server Name
+	var name_row := HBoxContainer.new()
+	name_row.add_theme_constant_override("separation", 10)
+	_host_panel.add_child(name_row)
+	var n_lbl := UiKit.label("NAME:", 18, UiKit.SKY, 4)
+	n_lbl.custom_minimum_size.x = 100
+	name_row.add_child(n_lbl)
+	_server_name_edit = LineEdit.new()
+	_server_name_edit.text = "%s's Match" % GameSettings.display_name()
+	_server_name_edit.custom_minimum_size = Vector2(260, 36)
+	name_row.add_child(_server_name_edit)
+
 	# Arena picker
 	var arena_row := HBoxContainer.new()
 	arena_row.add_theme_constant_override("separation", 10)
@@ -186,38 +207,69 @@ func _build_host_panel(parent: Control) -> void:
 
 func _build_join_panel(parent: Control) -> void:
 	_join_panel = VBoxContainer.new()
-	_join_panel.add_theme_constant_override("separation", 14)
+	_join_panel.add_theme_constant_override("separation", 8)
 	parent.add_child(_join_panel)
 
-	var addr_row := HBoxContainer.new()
-	addr_row.add_theme_constant_override("separation", 10)
-	_join_panel.add_child(addr_row)
-	var a_lbl := UiKit.label("HOST IP / URL:", 18, UiKit.SKY, 4)
-	a_lbl.custom_minimum_size.x = 140
-	addr_row.add_child(a_lbl)
+	# LAN Server Browser Header
+	var browser_header := HBoxContainer.new()
+	browser_header.add_theme_constant_override("separation", 10)
+	_join_panel.add_child(browser_header)
+
+	var title_lbl := UiKit.label("LAN SERVER BROWSER", 20, UiKit.ORANGE_HOT, 5)
+	browser_header.add_child(title_lbl)
+
+	_lan_scan_label = UiKit.label("SCANNING...", 15, UiKit.CREAM, 3)
+	_lan_scan_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_lan_scan_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	browser_header.add_child(_lan_scan_label)
+
+	var refresh_btn := UiKit.small_button("REFRESH", Vector2(90, 32))
+	refresh_btn.pressed.connect(_on_refresh_lan_servers)
+	browser_header.add_child(refresh_btn)
+
+	# Scrollable Server List
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(620, 150)
+	_join_panel.add_child(scroll)
+
+	_server_list_container = VBoxContainer.new()
+	_server_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_server_list_container.add_theme_constant_override("separation", 6)
+	scroll.add_child(_server_list_container)
+
+	_update_server_list_ui([])
+
+	# Separator and Direct Connect
+	var sep := HSeparator.new()
+	_join_panel.add_child(sep)
+
+	var dc_title := UiKit.label("OR DIRECT CONNECT (MANUAL IP / DOMAIN):", 16, UiKit.SKY, 4)
+	_join_panel.add_child(dc_title)
+
+	var dc_row := HBoxContainer.new()
+	dc_row.add_theme_constant_override("separation", 8)
+	_join_panel.add_child(dc_row)
+
+	var a_lbl := UiKit.label("IP:", 16, UiKit.CREAM, 3)
+	dc_row.add_child(a_lbl)
 
 	_address_edit = LineEdit.new()
-	_address_edit.placeholder_text = "192.168.86.39 or ws://domain"
+	_address_edit.placeholder_text = "192.168.1.50 or ws://domain"
 	_address_edit.text = _get_local_ip()
-	_address_edit.custom_minimum_size = Vector2(300, 42)
-	addr_row.add_child(_address_edit)
+	_address_edit.custom_minimum_size = Vector2(230, 38)
+	dc_row.add_child(_address_edit)
 
-	var port_row := HBoxContainer.new()
-	port_row.add_theme_constant_override("separation", 10)
-	_join_panel.add_child(port_row)
-	var p_lbl := UiKit.label("PORT:", 18, UiKit.SKY, 4)
-	p_lbl.custom_minimum_size.x = 140
-	port_row.add_child(p_lbl)
+	var p_lbl := UiKit.label("PORT:", 16, UiKit.CREAM, 3)
+	dc_row.add_child(p_lbl)
 
 	_port_edit = LineEdit.new()
 	_port_edit.text = str(NetworkManager.DEFAULT_PORT)
-	_port_edit.custom_minimum_size = Vector2(140, 42)
-	port_row.add_child(_port_edit)
+	_port_edit.custom_minimum_size = Vector2(80, 38)
+	dc_row.add_child(_port_edit)
 
-	var connect_btn := UiKit.button("CONNECT TO HOST", 24, Vector2(280, 52))
-	connect_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var connect_btn := UiKit.button("CONNECT", 20, Vector2(130, 40))
 	connect_btn.pressed.connect(_on_connect_pressed)
-	_join_panel.add_child(connect_btn)
+	dc_row.add_child(connect_btn)
 
 
 func _build_lobby_panel(parent: Control) -> void:
@@ -263,6 +315,91 @@ func _switch_tab(tab: Tab) -> void:
 	_join_tab_btn.add_theme_stylebox_override("normal",
 			UiKit.panel_style(UiKit.ORANGE if not is_h else UiKit.BLUE, 1.0, 12, 3 if not is_h else 0, UiKit.CREAM, 8))
 
+	if tab == Tab.JOIN and NetworkManager != null:
+		NetworkManager.start_lan_discovery()
+		_update_server_list_ui(NetworkManager.get_lan_servers())
+	elif NetworkManager != null and not NetworkManager.is_online:
+		NetworkManager.stop_lan_discovery()
+
+
+func _on_refresh_lan_servers() -> void:
+	if NetworkManager != null:
+		NetworkManager.stop_lan_discovery()
+		NetworkManager.start_lan_discovery()
+		_update_server_list_ui(NetworkManager.get_lan_servers())
+
+
+func _on_lan_servers_updated(servers: Array[Dictionary]) -> void:
+	if _join_panel != null and _join_panel.visible:
+		_update_server_list_ui(servers)
+
+
+func _update_server_list_ui(servers: Array[Dictionary]) -> void:
+	if _server_list_container == null:
+		return
+	for child in _server_list_container.get_children():
+		child.queue_free()
+
+	if OS.has_feature("web"):
+		var web_notice := UiKit.label("LAN Auto-Discovery is available on Desktop & Mobile apps.\nUse Direct Connect below on Web.", 14, UiKit.CREAM, 2)
+		_server_list_container.add_child(web_notice)
+		_lan_scan_label.text = "WEB BROWSER MODE"
+		return
+
+	if servers.is_empty():
+		var empty_lbl := UiKit.label("No active LAN servers detected yet.\nHost a match or launch a Dedicated Server to play!", 14, UiKit.CREAM, 2)
+		_server_list_container.add_child(empty_lbl)
+		_lan_scan_label.text = "LISTENING (PORT 8925)..."
+		return
+
+	_lan_scan_label.text = "%d SERVER%s FOUND" % [servers.size(), "S" if servers.size() != 1 else ""]
+	for s in servers:
+		var card := PanelContainer.new()
+		card.add_theme_stylebox_override("panel", UiKit.panel_style(UiKit.NAVY_DARK, 0.92, 10, 2, UiKit.ORANGE if bool(s.get("dedicated", false)) else UiKit.SKY, 10))
+		_server_list_container.add_child(card)
+
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		card.add_child(row)
+
+		var info_col := VBoxContainer.new()
+		info_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(info_col)
+
+		var name_row := HBoxContainer.new()
+		name_row.add_theme_constant_override("separation", 8)
+		info_col.add_child(name_row)
+
+		var s_name := str(s.get("name", "DARTSTORM Server"))
+		var name_lbl := UiKit.label(s_name, 18, UiKit.CREAM, 4)
+		name_row.add_child(name_lbl)
+
+		if bool(s.get("dedicated", false)):
+			var ded_badge := UiKit.label("[DEDICATED]", 14, UiKit.ORANGE_HOT, 3)
+			name_row.add_child(ded_badge)
+		else:
+			var host_badge := UiKit.label("[LAN HOST]", 14, UiKit.SKY, 3)
+			name_row.add_child(host_badge)
+
+		var sub_txt := "%s • %s • %s" % [str(s.get("arena_name", "")), str(s.get("mode_name", "")), str(s.get("state", "LOBBY"))]
+		var sub_lbl := UiKit.label(sub_txt, 14, UiKit.SKY, 2)
+		info_col.add_child(sub_lbl)
+
+		var p_count: int = int(s.get("players", 1))
+		var p_max: int = int(s.get("max_players", 8))
+		var p_col: Color = UiKit.LIME if p_count < p_max else UiKit.ORANGE_HOT
+		var p_lbl := UiKit.label("%d/%d PLAYERS\n%s:%d" % [p_count, p_max, str(s.get("ip", "")), int(s.get("port", 8920))], 13, p_col, 2)
+		p_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		row.add_child(p_lbl)
+
+		var join_btn := UiKit.button("JOIN", 18, Vector2(85, 38))
+		var target_ip := str(s.get("ip", "127.0.0.1"))
+		var target_port := int(s.get("port", 8920))
+		join_btn.pressed.connect(func() -> void:
+			_status_label.text = "Connecting to %s:%d..." % [target_ip, target_port]
+			NetworkManager.join_game(target_ip, target_port))
+		row.add_child(join_btn)
+
 
 func _cycle_arena(step: int) -> void:
 	_selected_arena = (_selected_arena + step + MatchScene.ARENAS.size()) % MatchScene.ARENAS.size()
@@ -281,10 +418,11 @@ func _on_start_hosting_pressed() -> void:
 	NetworkManager.selected_arena = _selected_arena
 	NetworkManager.selected_mode = _selected_mode
 	NetworkManager.bot_fill_count = 3 if _bot_fill else 0
+	var s_name := _server_name_edit.text.strip_edges() if _server_name_edit != null else ""
 
-	var err := NetworkManager.host_game(port)
+	var err := NetworkManager.host_game(port, NetworkManager.MAX_CLIENTS, s_name)
 	if err == OK:
-		_status_label.text = "Server hosted! Share IP %s with other players." % _get_local_ip()
+		_status_label.text = "Server hosted! Broadcasting on LAN (Port %d)." % port
 		_show_lobby_view()
 	else:
 		_status_label.text = "Error hosting server (code %d)" % err

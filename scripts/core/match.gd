@@ -272,21 +272,22 @@ func _ready() -> void:
 		fx.watch_actor(player2)
 		controller.register(player2)
 	elif NetworkManager != null and NetworkManager.is_online:
-		var my_entry: Dictionary = {}
-		for entry in NetworkManager.roster:
-			if int(entry.get("peer_id", 0)) == NetworkManager.local_peer_id:
-				my_entry = entry
-				break
-		player = PLAYER_SCENE.instantiate() as Player
-		player.display_name = str(my_entry.get("name", GameSettings.display_name()))
-		player.hat_id = StringName(str(my_entry.get("hat", GameSettings.player_hat)))
-		player.skin_id = StringName(str(my_entry.get("skin", GameSettings.player_skin)))
-		player.team_id = int(my_entry.get("team_id", 0))
-		player.color = GameMode.team_color(player.team_id) if mode.is_team_mode() else Cosmetics.color_at(int(my_entry.get("color", 0)))
-		player.dart_pool = dart_pool
-		add_child(player)
-		fx.watch_actor(player)
-		controller.register(player)
+		if not NetworkManager.is_dedicated_server:
+			var my_entry: Dictionary = {}
+			for entry in NetworkManager.roster:
+				if int(entry.get("peer_id", 0)) == NetworkManager.local_peer_id:
+					my_entry = entry
+					break
+			player = PLAYER_SCENE.instantiate() as Player
+			player.display_name = str(my_entry.get("name", GameSettings.display_name()))
+			player.hat_id = StringName(str(my_entry.get("hat", GameSettings.player_hat)))
+			player.skin_id = StringName(str(my_entry.get("skin", GameSettings.player_skin)))
+			player.team_id = int(my_entry.get("team_id", 0))
+			player.color = GameMode.team_color(player.team_id) if mode.is_team_mode() else Cosmetics.color_at(int(my_entry.get("color", 0)))
+			player.dart_pool = dart_pool
+			add_child(player)
+			fx.watch_actor(player)
+			controller.register(player)
 
 		for entry in NetworkManager.roster:
 			var pid := int(entry.get("peer_id", 0))
@@ -320,7 +321,8 @@ func _ready() -> void:
 			bot_count = team_bot_count(mode, NetworkManager.bot_fill_count)
 	else:
 		bot_count = team_bot_count(mode, GameSettings.bot_count)
-	var colors := bot_colors(player.color, bot_count, player2.color if player2 != null else Color.TRANSPARENT)
+	var p_base_col: Color = player.color if player != null else Color.ORANGE
+	var colors := bot_colors(p_base_col, bot_count, player2.color if player2 != null else Color.TRANSPARENT)
 	var bot_team_offset := 2 if GameSettings.split_screen else 1
 	for i in bot_count:
 		var bot := BOT_SCENE.instantiate() as Bot
@@ -465,14 +467,15 @@ func _ready() -> void:
 		if target != null:
 			target.hit.connect(controller.award_target_hit)
 
-	hud = HUD_SCENE.instantiate() as Hud
-	if viewport1 != null:
-		viewport1.add_child(hud)
-	else:
-		add_child(hud)
-	hud.setup(player, controller)
-	hud.restart_requested.connect(restart)
-	hud.menu_requested.connect(quit_to_menu)
+	if not (NetworkManager != null and NetworkManager.is_dedicated_server):
+		hud = HUD_SCENE.instantiate() as Hud
+		if viewport1 != null:
+			viewport1.add_child(hud)
+		else:
+			add_child(hud)
+		hud.setup(player, controller)
+		hud.restart_requested.connect(restart)
+		hud.menu_requested.connect(quit_to_menu)
 
 	if GameSettings.split_screen and player2 != null and viewport2 != null:
 		hud2 = HUD_SCENE.instantiate() as Hud
@@ -486,9 +489,10 @@ func _ready() -> void:
 	pause_menu.setup(controller)
 	pause_menu.restart_requested.connect(restart)
 	pause_menu.menu_requested.connect(quit_to_menu)
-	hud.pause_requested.connect(func() -> void:
-		if pause_menu != null and not pause_menu.is_open():
-			pause_menu.open())
+	if hud != null:
+		hud.pause_requested.connect(func() -> void:
+			if pause_menu != null and not pause_menu.is_open():
+				pause_menu.open())
 
 	controller.match_ended.connect(_on_match_ended)
 	if not OS.has_feature("mobile") and not OS.has_feature("web_android") and not OS.has_feature("web_ios") and GameSettings.touch_controls_mode != GameSettings.TouchMode.ALWAYS:
@@ -528,6 +532,19 @@ func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 	podium.name = "Podium"
 	add_child(podium)
 	var mode := controller.mode
+
+	if NetworkManager != null and NetworkManager.is_dedicated_server:
+		var summary_text := "MATCH COMPLETED"
+		if not ranking.is_empty():
+			if not mode.is_team_mode():
+				summary_text = "%s WON (%d TAGS)" % [ranking[0].name, ranking[0].tags]
+			else:
+				var team := mode.winning_team(controller.board)
+				summary_text = "%s TEAM WON" % GameMode.team_name(team)
+		var srv: Node = get_node_or_null("/root/DedicatedServer")
+		if srv != null and srv.has_method("on_match_completed"):
+			srv.call("on_match_completed", summary_text)
+		return
 
 	var prog: Node = get_node_or_null("/root/Progression")
 	if prog != null:

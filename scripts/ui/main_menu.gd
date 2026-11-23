@@ -140,6 +140,13 @@ var _time: float = 0.0
 
 
 func _ready() -> void:
+	var all_args: PackedStringArray = OS.get_cmdline_args()
+	all_args.append_array(OS.get_cmdline_user_args())
+	for arg in all_args:
+		if arg == "--server" or arg.begins_with("--server="):
+			get_tree().change_scene_to_file.call_deferred("res://scenes/server/server.tscn")
+			return
+
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 

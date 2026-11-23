@@ -120,6 +120,8 @@ func _ready() -> void:
 	await _test_ctf_and_plant_the_bomb_modes()
 	# Classic Arenas: Two Fortresses, Dusty Courtyard & Duststorm II (v2.1.0)
 	await _test_classic_arenas_2fort_dust_dust2()
+	# LAN Server Discovery & Headless Dedicated Server (v2.2.0)
+	await _test_lan_server_browser_and_dedicated_server()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -4375,4 +4377,107 @@ func _test_classic_arenas_2fort_dust_dust2() -> void:
 	GameSettings.arena = saved_arena
 	GameSettings.bot_count = saved_bots
 	GameSettings.match_mode = saved_mode
+
+
+func _test_lan_server_browser_and_dedicated_server() -> void:
+	section("LAN Server Browser & Headless Dedicated Server")
+
+	# 1. LanDiscovery Node & Configuration
+	var discovery := LanDiscovery.new()
+	add_child(discovery)
+	await physics_frames(1)
+
+	check(discovery != null, "LanDiscovery instantiated")
+	check(LanDiscovery.DISCOVERY_PORT == 8925, "Discovery UDP port is 8925")
+	check(not discovery.is_broadcasting, "is_broadcasting is false before start")
+	check(not discovery.is_listening, "is_listening is false before start")
+
+	# 2. Server info setup
+	discovery.set_server_info(8910, "Test LAN Server", 6, 8, 2, 8, true)
+	check(discovery.server_name == "Test LAN Server", "server_name updated")
+	check(discovery.server_port == 8910, "server_port updated")
+	check(discovery.current_arena == 6, "current_arena updated")
+	check(discovery.current_mode == 8, "current_mode updated")
+	check(discovery.player_count == 2, "player_count updated")
+	check(discovery.max_players == 8, "max_players updated")
+	check(discovery.is_dedicated == true, "is_dedicated updated")
+
+	# 3. Beacon packet ingestion & parsing
+	var signal_received: Array[bool] = [false]
+	var on_updated := func(_servers: Array[Dictionary]) -> void:
+		signal_received[0] = true
+	discovery.servers_updated.connect(on_updated)
+
+	var payload_dict := {
+		"magic": "DARTSTORM",
+		"name": "LAN Battle Arena",
+		"port": 8915,
+		"arena": "dust_2",
+		"mode": "plant_the_bomb",
+		"players": 4,
+		"max": 12,
+		"dedicated": true
+	}
+	var raw_packet := JSON.stringify(payload_dict).to_utf8_buffer()
+	discovery._on_packet_received(raw_packet, "192.168.1.105", 8925)
+
+	check(signal_received[0], "servers_updated emitted when valid beacon received")
+	var servers := discovery.get_discovered_servers()
+	check(servers.size() == 1, "discovered_servers has 1 server recorded")
+	if servers.size() > 0:
+		var s := servers[0]
+		check(s.get("ip") == "192.168.1.105", "server IP correctly parsed (192.168.1.105)")
+		check(s.get("port") == 8915, "server port correctly parsed (8915)")
+		check(s.get("name") == "LAN Battle Arena", "server name correctly parsed")
+		check(s.get("arena") == "dust_2", "arena correctly parsed (dust_2)")
+		check(s.get("mode") == "plant_the_bomb", "mode correctly parsed (plant_the_bomb)")
+		check(s.get("players") == 4 and s.get("max") == 12, "player counts correctly parsed (4/12)")
+		check(s.get("dedicated") == true, "dedicated flag is true")
+
+	# 4. Reject invalid / alien packets
+	var alien_dict := {"magic": "OTHER_GAME", "name": "Alien"}
+	var alien_packet := JSON.stringify(alien_dict).to_utf8_buffer()
+	discovery._on_packet_received(alien_packet, "192.168.1.199", 8925)
+	check(discovery.get_discovered_servers().size() == 1, "alien beacon without DARTSTORM magic is rejected")
+
+	var malformed_packet := "NOT_JSON_DATA".to_utf8_buffer()
+	discovery._on_packet_received(malformed_packet, "192.168.1.199", 8925)
+	check(discovery.get_discovered_servers().size() == 1, "malformed non-JSON packet safely rejected without crash")
+
+	# 5. Stale server timeout & pruning
+	var keys: Array = discovery.discovered_servers.keys()
+	if not keys.is_empty():
+		var key: String = keys[0]
+		discovery.discovered_servers[key]["last_seen_msec"] = Time.get_ticks_msec() - 4000  # Older than 3500ms
+		signal_received[0] = false
+		discovery._prune_stale_servers()
+		check(discovery.get_discovered_servers().is_empty(), "stale server pruned after timeout")
+		check(signal_received[0], "servers_updated emitted when stale server pruned")
+
+	if discovery.servers_updated.is_connected(on_updated):
+		discovery.servers_updated.disconnect(on_updated)
+	discovery.queue_free()
+	await physics_frames(2)
+
+	# 6. DedicatedServer static CLI parsers validation
+	check(DedicatedServer.parse_arena("2fort") == 6, "parse_arena('2fort') -> 6 (Two Fortresses)")
+	check(DedicatedServer.parse_arena("dust") == 7, "parse_arena('dust') -> 7 (Dusty Courtyard)")
+	check(DedicatedServer.parse_arena("dust2") == 8, "parse_arena('dust2') -> 8 (Duststorm II)")
+	check(DedicatedServer.parse_arena("tempest") == 2, "parse_arena('tempest') -> 2 (Treehouse)")
+	check(DedicatedServer.parse_mode("ctf") == 8, "parse_mode('ctf') -> 8 (Capture The Flag)")
+	check(DedicatedServer.parse_mode("bomb") == 9, "parse_mode('bomb') -> 9 (Plant The Bomb)")
+	check(DedicatedServer.parse_mode("tdm") == 2, "parse_mode('tdm') -> 2 (Team Deathmatch)")
+	check(DedicatedServer.parse_mode("realistic") == 7, "parse_mode('realistic') -> 7 (Realistic)")
+
+	# Map rotation parser
+	var rot := DedicatedServer.parse_map_rotation("2fort, dust2, backyard")
+	check(rot.size() == 3, "parse_map_rotation parsed 3 arenas")
+	check(rot[0] == 6 and rot[1] == 8 and rot[2] == 0,
+		"rotation sequence correctly parsed [6, 8, 0]")
+
+	# 7. NetworkManager dedicated server & LAN bridge checks
+	check(NetworkManager.has_signal("lan_servers_updated"), "NetworkManager provides lan_servers_updated signal")
+	check(typeof(NetworkManager.get_lan_servers()) == TYPE_ARRAY, "get_lan_servers() returns Array")
+	check("is_dedicated_server" in NetworkManager, "NetworkManager has is_dedicated_server property")
+
 

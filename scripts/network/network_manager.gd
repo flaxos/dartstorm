@@ -10,13 +10,18 @@ signal peer_connected(id: int)
 signal peer_disconnected(id: int)
 signal lobby_updated(roster: Array)
 signal match_launching(arena_idx: int, mode_idx: int, roster: Array, bot_count: int, bot_diff: int)
+signal lan_servers_updated(servers: Array[Dictionary])
 
 const DEFAULT_PORT := 8920
 const MAX_CLIENTS := 8
 
 var is_online: bool = false
 var is_host: bool = false
+var is_dedicated_server: bool = false
 var local_peer_id: int = 1
+var server_name: String = "DARTSTORM Server"
+var active_port: int = DEFAULT_PORT
+var max_clients: int = MAX_CLIENTS
 
 ## Roster format: Array of Dictionaries:
 ## { "peer_id": int, "name": String, "color": int, "hat": StringName, "skin": StringName, "level": int, "team_id": int }
@@ -28,6 +33,7 @@ var bot_fill_count: int = 0
 var bot_difficulty: int = 1
 
 var _peer: WebSocketMultiplayerPeer
+var _lan_discovery: LanDiscovery
 
 
 func _ready() -> void:
@@ -38,9 +44,29 @@ func _ready() -> void:
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
+	_lan_discovery = LanDiscovery.new()
+	_lan_discovery.name = "LanDiscovery"
+	add_child(_lan_discovery)
+	_lan_discovery.servers_updated.connect(_on_lan_discovery_servers_updated)
+
+
+func _on_lan_discovery_servers_updated(servers: Array[Dictionary]) -> void:
+	lan_servers_updated.emit(servers)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		if is_instance_valid(_lan_discovery):
+			if _lan_discovery.servers_updated.is_connected(_on_lan_discovery_servers_updated):
+				_lan_discovery.servers_updated.disconnect(_on_lan_discovery_servers_updated)
+			_lan_discovery.stop_broadcasting()
+			_lan_discovery.stop_listening()
+			_lan_discovery.free()
+			_lan_discovery = null
+
 
 ## Starts hosting a WebSocket server.
-func host_game(port: int = DEFAULT_PORT, _max_players: int = MAX_CLIENTS) -> Error:
+func host_game(port: int = DEFAULT_PORT, p_max_players: int = MAX_CLIENTS, p_server_name: String = "") -> Error:
 	disconnect_game()
 	_peer = WebSocketMultiplayerPeer.new()
 	var err := _peer.create_server(port)
@@ -52,13 +78,22 @@ func host_game(port: int = DEFAULT_PORT, _max_players: int = MAX_CLIENTS) -> Err
 	is_online = true
 	is_host = true
 	local_peer_id = 1
+	active_port = port
+	max_clients = p_max_players
+	if not p_server_name.is_empty():
+		server_name = p_server_name
+	elif server_name.is_empty() or server_name == "DARTSTORM Server":
+		server_name = "%s's Match" % GameSettings.display_name()
 
-	# Register host profile in roster
 	roster.clear()
-	var my_info := _get_local_player_info()
-	my_info["peer_id"] = 1
-	roster.append(my_info)
+	if not is_dedicated_server:
+		# Register host profile in roster
+		var my_info := _get_local_player_info()
+		my_info["peer_id"] = 1
+		roster.append(my_info)
 	lobby_updated.emit(roster)
+
+	start_lan_broadcast(server_name, port)
 	return OK
 
 
@@ -91,6 +126,8 @@ func join_game(address: String, port: int = DEFAULT_PORT) -> Error:
 
 ## Closes active peer and resets state.
 func disconnect_game() -> void:
+	stop_lan_broadcast()
+	stop_lan_discovery()
 	if _peer != null:
 		_peer.close()
 		_peer = null
@@ -98,8 +135,52 @@ func disconnect_game() -> void:
 		multiplayer.multiplayer_peer = null
 	is_online = false
 	is_host = false
+	is_dedicated_server = false
 	local_peer_id = 1
 	roster.clear()
+
+
+# --- LAN Discovery Bridges ---
+
+func start_lan_broadcast(p_name: String = "", p_port: int = -1) -> void:
+	if _lan_discovery == null:
+		return
+	var b_name := p_name if not p_name.is_empty() else server_name
+	var b_port := p_port if p_port > 0 else active_port
+	var state_str := "MATCH" if (get_tree().current_scene is MatchScene) else "LOBBY"
+	_lan_discovery.start_broadcasting(b_name, b_port, selected_arena, selected_mode, roster.size(), max_clients, is_dedicated_server, state_str)
+
+
+func update_lan_broadcast(arena_idx: int = -1, mode_idx: int = -1, players: int = -1, p_state: String = "") -> void:
+	if _lan_discovery == null:
+		return
+	var a := arena_idx if arena_idx >= 0 else selected_arena
+	var m := mode_idx if mode_idx >= 0 else selected_mode
+	var p := players if players >= 0 else roster.size()
+	var s := p_state if not p_state.is_empty() else ("MATCH" if (get_tree().current_scene is MatchScene) else "LOBBY")
+	_lan_discovery.update_broadcast(a, m, p, s)
+
+
+func stop_lan_broadcast() -> void:
+	if _lan_discovery != null:
+		_lan_discovery.stop_broadcasting()
+
+
+func start_lan_discovery() -> bool:
+	if _lan_discovery == null:
+		return false
+	return _lan_discovery.start_listening()
+
+
+func stop_lan_discovery() -> void:
+	if _lan_discovery != null:
+		_lan_discovery.stop_listening()
+
+
+func get_lan_servers() -> Array[Dictionary]:
+	if _lan_discovery == null:
+		return []
+	return _lan_discovery.get_discovered_servers()
 
 
 func _get_local_player_info() -> Dictionary:
@@ -208,6 +289,7 @@ func rpc_register_player(info: Dictionary) -> void:
 func _sync_lobby_to_all() -> void:
 	if not is_host:
 		return
+	update_lan_broadcast(selected_arena, selected_mode, roster.size(), "MATCH" if (get_tree().current_scene is MatchScene) else "LOBBY")
 	rpc(&"rpc_sync_lobby", roster, selected_arena, selected_mode)
 	lobby_updated.emit(roster)
 
@@ -227,6 +309,7 @@ func rpc_sync_lobby(p_roster: Array, p_arena: int, p_mode: int) -> void:
 func launch_match() -> void:
 	if not is_host:
 		return
+	update_lan_broadcast(selected_arena, selected_mode, roster.size(), "MATCH")
 	rpc(&"rpc_launch_match", selected_arena, selected_mode, roster, bot_fill_count, bot_difficulty)
 	_do_launch(selected_arena, selected_mode, roster, bot_fill_count, bot_difficulty)
 

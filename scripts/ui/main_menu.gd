@@ -108,8 +108,11 @@ var _profile_tab_p1: Button
 var _profile_tab_p2: Button
 var _is_dragging_model: bool = false
 var _model_angle: float = PI
+var _customise_pitch: float = 0.0
+var _customise_fov: float = 44.0
 var _turntable_auto: bool = true
 var _turntable_btn: Button
+var _reset_view_btn: Button
 var _inspect_light: OmniLight3D
 var _help: PanelContainer
 var _help_box: VBoxContainer
@@ -174,6 +177,7 @@ func _ready() -> void:
 	add_child(layer)
 	_ui = Control.new()
 	_ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(_ui)
 	_build_menu()
 	_build_help()
@@ -284,17 +288,54 @@ func _process(delta: float) -> void:
 		_bolts[i].scale = Vector3.ONE * (1.0 + sin(_time * 5.0 + i * 2.0) * 0.06)
 
 
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
+			_is_dragging_model = false
+	if _customise != null and _customise.visible and _is_dragging_model:
+		if event is InputEventMouseMotion:
+			var mm := event as InputEventMouseMotion
+			_model_angle = fmod(_model_angle + mm.relative.x * 0.012, TAU)
+			if player_model != null:
+				player_model.rotation.y = _model_angle
+			_customise_pitch = clampf(_customise_pitch - mm.relative.y * 0.004, -0.38, 0.38)
+			_update_customise_camera()
+			get_viewport().set_input_as_handled()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if _customise != null and _customise.visible and player_model != null:
 		if event is InputEventMouseButton:
-			if event.button_index == MOUSE_BUTTON_LEFT:
-				_is_dragging_model = event.pressed
-		elif event is InputEventMouseMotion and _is_dragging_model:
-			_model_angle = fmod(_model_angle + event.relative.x * 0.012, TAU)
-			player_model.rotation.y = _model_angle
+			var mb := event as InputEventMouseButton
+			if mb.button_index == MOUSE_BUTTON_LEFT:
+				if mb.pressed:
+					_is_dragging_model = true
+					if _turntable_auto:
+						_turntable_auto = false
+						if _turntable_btn != null:
+							_turntable_btn.text = "⏸️ PAUSE"
+					if mb.double_click:
+						_reset_customise_view()
+					get_viewport().set_input_as_handled()
+				else:
+					_is_dragging_model = false
+			elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+				_reset_customise_view()
+				get_viewport().set_input_as_handled()
+			elif mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed:
+				_zoom_customise(-2.5)
+				get_viewport().set_input_as_handled()
+			elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN and mb.pressed:
+				_zoom_customise(2.5)
+				get_viewport().set_input_as_handled()
 		elif event is InputEventScreenDrag:
-			_model_angle = fmod(_model_angle + event.relative.x * 0.012, TAU)
+			var sd := event as InputEventScreenDrag
+			_model_angle = fmod(_model_angle + sd.relative.x * 0.012, TAU)
 			player_model.rotation.y = _model_angle
+			_customise_pitch = clampf(_customise_pitch - sd.relative.y * 0.004, -0.38, 0.38)
+			_update_customise_camera()
+			get_viewport().set_input_as_handled()
 
 	if not event.is_action_pressed(&"ui_cancel"):
 		return
@@ -467,6 +508,35 @@ func _move_camera(offset: Vector3, look: Vector3) -> void:
 	var target := Transform3D(Basis.IDENTITY, STAGE + offset).looking_at(STAGE + look, Vector3.UP)
 	_camera_tween = create_tween()
 	_camera_tween.tween_property(_camera, "global_transform", target, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+func _reset_customise_view(update_cam: bool = true) -> void:
+	_model_angle = PI
+	_customise_pitch = 0.0
+	_customise_fov = 44.0
+	_is_dragging_model = false
+	if player_model != null:
+		player_model.rotation.y = _model_angle
+	if update_cam:
+		_update_customise_camera()
+
+
+func _zoom_customise(amount: float) -> void:
+	_customise_fov = clampf(_customise_fov + amount, 18.0, 52.0)
+	_update_customise_camera()
+
+
+func _update_customise_camera() -> void:
+	if _camera == null:
+		return
+	if _camera_tween != null and _camera_tween.is_valid():
+		_camera_tween.kill()
+	_camera.fov = _customise_fov
+	var zoom_t := inverse_lerp(52.0, 18.0, _customise_fov)
+	var look_y := lerpf(LOOK_CLOSE.y, LOOK_CLOSE.y + 0.48, zoom_t) + _customise_pitch
+	var cam_y := lerpf(CAMERA_CLOSE.y, CAMERA_CLOSE.y + 0.22, zoom_t) + _customise_pitch * 0.5
+	_camera.position = STAGE + Vector3(CAMERA_CLOSE.x, cam_y, CAMERA_CLOSE.z)
+	_camera.look_at(STAGE + Vector3(LOOK_CLOSE.x, look_y, LOOK_CLOSE.z), Vector3.UP)
 
 
 # --- The lobby screen (2D) ------------------------------------------------------------
@@ -989,7 +1059,13 @@ func _build_customise() -> void:
 		_turntable_btn.text = "🔄 AUTO" if _turntable_auto else "⏸️ PAUSE")
 	inspect_row.add_child(_turntable_btn)
 
-	var tip_label := UiKit.label("(Drag character 360° • Turntable toggle • Studio PBR inspect light)", 13, UiKit.SKY, 2)
+	_reset_view_btn = UiKit.small_button("🎯 RESET", Vector2(88, 36))
+	_reset_view_btn.pressed.connect(func() -> void:
+		_reset_customise_view()
+	)
+	inspect_row.add_child(_reset_view_btn)
+
+	var tip_label := UiKit.label("🖱️ Drag: Rotate 360° & Tilt  •  Scroll: Zoom  •  Right-Click / Double-Click: Reset", 13, UiKit.SKY, 2)
 	box.add_child(tip_label)
 
 	var btn_row := HBoxContainer.new()
@@ -1053,15 +1129,21 @@ func _show_customise(shown: bool) -> void:
 	_menu.visible = not shown
 	_rebuild_squad()  # Your own colour while customising (alone); team colours otherwise.
 	if shown:
+		_reset_customise_view(false)
+		_camera.fov = _customise_fov
 		_move_camera(CAMERA_CLOSE, LOOK_CLOSE)
 		_refresh_customise()
 		_update_preview_weapon()
 		_swatches[clampi(GameSettings.player_color, 0, _swatches.size() - 1)].grab_focus()
 		if _inspect_light != null:
 			_inspect_light.light_energy = 1.8
-		_model_angle = PI
 	else:
+		_camera.fov = 50.0
 		_move_camera(CAMERA_LOBBY, LOOK_LOBBY)
+		_is_dragging_model = false
+		_turntable_auto = true
+		if _turntable_btn != null:
+			_turntable_btn.text = "🔄 AUTO"
 		GameSettings.save_settings()
 		_refresh_card()
 		_play_button.grab_focus()

@@ -1023,6 +1023,30 @@ func _test_customisation() -> void:
 	stage.queue_free()
 	await physics_frames(1)
 
+	# Verify hat replacement cleanly removes previous hat and does not duplicate nodes
+	var swap_stage := make_stage()
+	var hat_model := CharacterModel.new()
+	swap_stage.add_child(hat_model)
+	hat_model.setup("Swap Test", Color.BLUE, &"cap")
+	await physics_frames(1)
+	var initial_child_count := hat_model.get_child_count()
+	var head_socket := hat_model.find_child("Socket_Head", true, false)
+
+	for hat in Cosmetics.HATS:
+		hat_model.set_hat(hat["id"])
+		hat_model.setup("Swap Test", Color.BLUE, hat["id"])
+		await physics_frames(1)
+		check(hat_model.hat_id() == hat["id"], "swapped hat to %s" % hat["id"])
+		check(hat_model.get_child_count() == initial_child_count, "CharacterModel child count does not leak on hat swap %s" % hat["id"])
+	# Switch back to cap and verify child count drops back to 2 (cap only)
+	hat_model.set_hat(&"cap")
+	hat_model.setup("Swap Test", Color.BLUE, &"cap")
+	await physics_frames(1)
+	if head_socket != null:
+		check(head_socket.get_child_count() == 2, "Socket_Head cleans up old hat pieces on swap (has %d children)" % head_socket.get_child_count())
+	swap_stage.queue_free()
+	await physics_frames(1)
+
 
 func _test_podium_and_awards() -> void:
 	section("End-of-match podium and awards")
@@ -1300,6 +1324,23 @@ func _test_lobby() -> void:
 	check(slots.all(func(slot: Node3D) -> bool: return not slot.visible), "customising clears the stage so you're alone")
 	var skin_btns: Array = menu.get("_skin_buttons")
 	check(skin_btns.size() == 10, "customise panel contains 10 blaster skin/sticker options (%d)" % skin_btns.size())
+
+	# Inspect controls: zoom and reset
+	menu.call("_zoom_customise", -10.0)
+	check(float(menu.get("_customise_fov")) < 44.0, "zoom in narrows FOV for close-up inspection")
+	menu.call("_reset_customise_view")
+	check(is_equal_approx(float(menu.get("_customise_fov")), 44.0), "reset view restores default FOV (44.0)")
+	check(is_equal_approx(float(menu.get("_model_angle")), PI), "reset view restores default model rotation (PI)")
+
+	# Hat picking in customise
+	var pmodel: CharacterModel = menu.get("player_model") as CharacterModel
+	check(pmodel != null, "player_model exists in customise")
+	var pmodel_children_before := pmodel.get_child_count()
+	menu.call("_pick_hat", &"cowboy")
+	await physics_frames(1)
+	check(pmodel.hat_id() == &"cowboy", "player_model equipped cowboy hat")
+	check(pmodel.get_child_count() == pmodel_children_before, "player_model did not duplicate nodes on hat swap")
+
 	menu.call("_show_customise", false)
 	await physics_frames(1)
 	slots = menu.get("_slots")

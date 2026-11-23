@@ -114,9 +114,19 @@ func setup(display_name: String, tint: Color, hat: StringName = &"cap") -> void:
 	_raw_display_name = display_name
 	_tint = tint
 	_hat_id = hat
+	if _hero_model_node != null or _upper != null:
+		set_shirt(tint)
+		set_hat(hat)
+		if _is_zombie:
+			set_zombie(true)
+		if _name_label != null:
+			_name_label.text = display_name
+			_name_label.modulate = Color(0.5, 0.95, 0.35) if _is_zombie else tint.lightened(0.35)
+		return
 	_build()
-	_name_label.text = display_name
-	_name_label.modulate = tint.lightened(0.35)
+	if _name_label != null:
+		_name_label.text = display_name
+		_name_label.modulate = tint.lightened(0.35)
 
 
 ## Toggles tagged-out visual status (weapon hidden, overhead warning label).
@@ -153,8 +163,14 @@ func set_shirt(color: Color) -> void:
 			"shirt": _cloth_mat(_tint),
 		}
 		ModelLoader.apply_materials_recursive(_hero_model_node, overrides)
+	elif _torso != null:
+		var shirt := _cloth_mat(_tint)
+		_torso.material_override = shirt
+		for arm in _arms:
+			arm.material_override = shirt
 	else:
 		_build()
+	_build_hat()
 
 
 ## Hides the floating name and tag meter (menu preview, podium).
@@ -296,7 +312,57 @@ func animate(horizontal_speed: float, delta: float) -> void:
 			arm.rotation = Vector3(deg_to_rad(90.0) + lurch, deg_to_rad(side * -5.0), sin(_walk_phase * 0.5) * 0.05)
 
 
+func _clear_model() -> void:
+	if _hero_model_node != null:
+		if is_instance_valid(_hero_model_node):
+			if _hero_model_node.get_parent() == self:
+				remove_child(_hero_model_node)
+			_hero_model_node.queue_free()
+		_hero_model_node = null
+		_hero_skeleton = null
+	if _upper != null:
+		if is_instance_valid(_upper) and _upper != _hero_model_node:
+			if _upper.get_parent() == self:
+				remove_child(_upper)
+			_upper.queue_free()
+		_upper = null
+	for leg in _legs:
+		if is_instance_valid(leg) and leg.get_parent() == self:
+			remove_child(leg)
+			leg.queue_free()
+	_legs.clear()
+	_arms.clear()
+	_torso = null
+	_head = null
+	_weapon = null
+	_weapon_mount = null
+	_backpack = null
+	_propeller = null
+	_hat_root = null
+	if _name_label != null:
+		if is_instance_valid(_name_label) and _name_label.get_parent() == self:
+			remove_child(_name_label)
+		_name_label.queue_free()
+		_name_label = null
+	if _meter_back != null:
+		if is_instance_valid(_meter_back) and _meter_back.get_parent() == self:
+			remove_child(_meter_back)
+		_meter_back.queue_free()
+		_meter_back = null
+	if _meter_fill != null:
+		if is_instance_valid(_meter_fill) and _meter_fill.get_parent() == self:
+			remove_child(_meter_fill)
+		_meter_fill.queue_free()
+		_meter_fill = null
+	if _shield_bubble != null:
+		if is_instance_valid(_shield_bubble) and _shield_bubble.get_parent() == self:
+			remove_child(_shield_bubble)
+		_shield_bubble.queue_free()
+		_shield_bubble = null
+
+
 func _build() -> void:
+	_clear_model()
 	if _build_from_hero_model():
 		return
 
@@ -480,7 +546,10 @@ func flash_shield() -> void:
 
 
 func _build_hat() -> void:
+	if _hat_root == null or not is_instance_valid(_hat_root):
+		return
 	for child in _hat_root.get_children():
+		_hat_root.remove_child(child)
 		child.queue_free()
 	_propeller = null
 	var base_y: float = (HAT_Y - 1.66) if _hero_skeleton != null else HAT_Y

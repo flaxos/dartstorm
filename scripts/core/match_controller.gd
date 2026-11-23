@@ -223,6 +223,8 @@ func _on_tagged_out(victim: Actor, attacker: Actor, weapon: WeaponData, ricochet
 	if attacker.is_human:
 		var prog: Node = get_node_or_null("/root/Progression")
 		if prog != null:
+			if weapon != null:
+				prog.call("record_weapon_tag", weapon.id, ricochet)
 			if ricochet:
 				prog.call("notify_event", &"ricochet_tag", 1)
 			if weapon != null and weapon.display_name.to_lower().contains("popper"):

@@ -230,7 +230,7 @@ func receive_dart(dart: DartProjectile) -> void:
 	if not alive or is_tagged_out or _protect_left > 0.0:
 		return
 	var attacker: Actor = dart.shooter if is_instance_valid(dart.shooter) else null
-	var power := dart.data.tag_power * (attacker.damage_scale if attacker != null else 1.0)
+	var power := dart.data.tag_power * dart.tag_power_multiplier * (attacker.damage_scale if attacker != null else 1.0)
 	var ricochet := dart.ricochet_count > 0
 
 	if shield_points > 0.0:
@@ -474,8 +474,19 @@ func _on_arsenal_fired(state: WeaponState) -> void:
 			dart_data = dart_data.duplicate() as DartData
 			dart_data.element = infusion_element
 	for i in weapon.darts_per_shot:
-		var direction := spread(aim, weapon.spread_degrees + get_extra_spread_degrees())
-		dart_pool.fire(dart_data, origin, direction, self, weapon, color, exclude)
+		var eff_spread: float = state.get_spread_degrees() if state != null else weapon.spread_degrees
+		var direction := spread(aim, eff_spread + get_extra_spread_degrees())
+		var dart := dart_pool.fire(dart_data, origin, direction, self, weapon, color, exclude)
+		if state != null and dart != null:
+			var speed_mult: float = float(state.modifiers.get("velocity_mult", 1.0))
+			if speed_mult != 1.0:
+				dart.velocity *= speed_mult
+			var grav_mult: float = float(state.modifiers.get("gravity_mult", 1.0))
+			if grav_mult != 1.0:
+				dart.gravity_scale = grav_mult
+			var power_mult: float = float(state.modifiers.get("tag_power_mult", 1.0))
+			if power_mult != 1.0:
+				dart.tag_power_multiplier = power_mult
 
 	if NetworkManager != null and NetworkManager.is_online and is_human and not (self is NetworkPlayer):
 		NetworkManager.rpc(&"rpc_fire_dart", NetworkManager.local_peer_id, arsenal.current_index, origin, aim, 1.0, int(infusion_element))

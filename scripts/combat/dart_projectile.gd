@@ -39,6 +39,8 @@ var age: float = 0.0
 var active: bool = false
 var persists_as_pickup: bool = false
 var scavengeable: bool = false
+var gravity_scale: float = 1.0
+var tag_power_multiplier: float = 1.0
 static var resting_pickups: Array[DartProjectile] = []
 const MAX_RESTING_PICKUPS := 120
 
@@ -104,6 +106,8 @@ func launch(p_data: DartData, origin: Vector3, direction: Vector3, p_shooter: Ac
 	ricochet_count = 0
 	age = 0.0
 	active = true
+	gravity_scale = 1.0
+	tag_power_multiplier = 1.0
 	_spent = false
 	_resting = false
 	persists_as_pickup = pool != null and pool.persists_as_pickup
@@ -186,7 +190,7 @@ func _physics_process(delta: float) -> void:
 	if not _ricochet_ignore.is_empty():
 		_expire_ricochet_ignores(delta)
 
-	var acceleration := Vector3.DOWN * GRAVITY * (1.0 if _spent else data.gravity_multiplier)
+	var acceleration := Vector3.DOWN * GRAVITY * (1.0 if _spent else data.gravity_multiplier * gravity_scale)
 	if not _spent and pool != null and pool.wind_field != null:
 		acceleration += pool.wind_field.get_wind_at(global_position) * data.wind_response
 	velocity += acceleration * delta

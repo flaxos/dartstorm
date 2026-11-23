@@ -191,7 +191,7 @@ func _physics_process(delta: float) -> void:
 				_fire_blocked_until_release = false
 
 		var current_w := arsenal.current()
-		var wants_aim := Input.is_action_pressed(_act(&"aim_down_sights")) and not is_zombie and not _sprinting and current_w != null and current_w.data.zoom_fov > 0.0
+		var wants_aim := Input.is_action_pressed(_act(&"aim_down_sights")) and not is_zombie and not _sprinting and current_w != null and current_w.get_zoom_fov() > 0.0
 		if wants_aim != is_aiming_down_sights:
 			is_aiming_down_sights = wants_aim
 			aiming_changed.emit(is_aiming_down_sights)
@@ -267,8 +267,8 @@ func _process(delta: float) -> void:
 		sin(_time * 31.0 + 2.1) * 0.01 * shake)
 	var target_base_fov := GameSettings.fov
 	var current_w := arsenal.current()
-	if is_aiming_down_sights and current_w != null and current_w.data.zoom_fov > 0.0:
-		target_base_fov = current_w.data.zoom_fov
+	if is_aiming_down_sights and current_w != null and current_w.get_zoom_fov() > 0.0:
+		target_base_fov = current_w.get_zoom_fov()
 	var fov_target := target_base_fov + (SPRINT_FOV_BOOST if _sprinting and not is_aiming_down_sights else 0.0)
 	var fov_speed := 16.0 if is_aiming_down_sights else 8.0
 	camera.fov = lerpf(camera.fov, fov_target, minf(fov_speed * delta, 1.0))
@@ -576,13 +576,21 @@ func _on_weapon_changed(state: WeaponState) -> void:
 
 func _on_shot_feedback(state: WeaponState) -> void:
 	var weapon := state.data
-	Sfx.play(weapon.sound, weapon.sound_pitch, -3.0, 0.07)
-	_recoil = minf(_recoil + weapon.recoil_kick, 1.6)
-	_punch += 0.006 * weapon.recoil_kick
-	add_trauma(weapon.camera_shake)
+	var snd: StringName = weapon.sound
+	var snd_pitch: float = weapon.sound_pitch
+	var vol_db: float = -3.0
+	var kick: float = state.get_recoil_kick() if state != null else weapon.recoil_kick
+	var shake: float = weapon.camera_shake * (float(state.modifiers.get("recoil_mult", 1.0)) if state != null else 1.0)
+	if state != null and state.modifiers.has("sound_override") and not str(state.modifiers["sound_override"]).is_empty():
+		snd = StringName(str(state.modifiers["sound_override"]))
+		vol_db = -8.0
+	Sfx.play(snd, snd_pitch, vol_db, 0.07)
+	_recoil = minf(_recoil + kick, 1.6)
+	_punch += 0.006 * kick
+	add_trauma(shake)
 	if _view_model != null:
 		_view_model.flash()
-	GameSettings.vibrate(0.12 * weapon.recoil_kick + 0.05, 0.0, 0.06)
+	GameSettings.vibrate(0.12 * kick + 0.05, 0.0, 0.06)
 	shot_fired.emit(state)
 
 

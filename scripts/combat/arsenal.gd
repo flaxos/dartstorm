@@ -96,7 +96,7 @@ func request_reload() -> void:
 	var state := current()
 	if state == null or _reload_left > 0.0 or not state.can_reload():
 		return
-	_reload_total = state.data.reload_time
+	_reload_total = state.get_reload_time()
 	_reload_left = _reload_total
 	reload_started.emit(state, _reload_total)
 
@@ -193,7 +193,7 @@ func _physics_process(delta: float) -> void:
 					if not _semi_latched and _cooldown <= 0.0:
 						_semi_latched = true
 						_shoot(state)
-						_cooldown = data.shot_interval()
+						_cooldown = state.get_shot_interval()
 						shot = true
 				WeaponData.FireMode.AUTO:
 					shot = _auto_fire(state)
@@ -214,7 +214,7 @@ func _auto_fire(state: WeaponState) -> bool:
 	var shots := 0
 	while _cooldown <= 0.0 and shots < MAX_SHOTS_PER_TICK and state.can_fire():
 		_shoot(state)
-		_cooldown += state.data.shot_interval()
+		_cooldown += state.get_shot_interval()
 		shots += 1
 	return shots > 0
 

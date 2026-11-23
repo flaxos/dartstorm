@@ -142,6 +142,21 @@ func hat_id() -> StringName:
 	return _hat_id
 
 
+## Swaps shirt / clothing color (used by customise screen).
+func set_shirt(color: Color) -> void:
+	_tint = color
+	if _name_label != null:
+		_name_label.modulate = _tint.lightened(0.35)
+	if _hero_model_node != null and is_instance_valid(ModelLoader):
+		var overrides := {
+			"clothing": _cloth_mat(_tint),
+			"shirt": _cloth_mat(_tint),
+		}
+		ModelLoader.apply_materials_recursive(_hero_model_node, overrides)
+	else:
+		_build()
+
+
 ## Hides the floating name and tag meter (menu preview, podium).
 func show_overhead(shown: bool) -> void:
 	_name_label.visible = shown

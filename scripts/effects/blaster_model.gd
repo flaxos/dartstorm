@@ -44,6 +44,8 @@ static func _grip_material() -> StandardMaterial3D:
 var model_root: Node3D = null
 var grip_marker: Marker3D = null
 var foregrip_marker: Marker3D = null
+var equipped_attachments: Dictionary = {}
+var attachment_nodes: Dictionary = {}
 var _spinner: Node3D
 var _cylinder: Node3D = null
 var _pump_slide: Node3D = null
@@ -59,7 +61,7 @@ var _flash: MeshInstance3D
 var _flash_left: float = 0.0
 
 
-static func create(p_data: WeaponData, p_first_person: bool, p_skin_id: StringName = &"") -> BlasterModel:
+static func create(p_data: WeaponData, p_first_person: bool, p_skin_id: StringName = &"", p_attachments: Dictionary = {}) -> BlasterModel:
 	var model := BlasterModel.new()
 	model.data = p_data
 	model.first_person = p_first_person
@@ -69,6 +71,10 @@ static func create(p_data: WeaponData, p_first_person: bool, p_skin_id: StringNa
 		model.skin_id = GameSettings.player_skin
 	else:
 		model.skin_id = &"default"
+	if not p_attachments.is_empty():
+		model.equipped_attachments = p_attachments.duplicate()
+	elif p_first_person and is_instance_valid(Progression) and p_data != null:
+		model.equipped_attachments = Progression.get_equipped_attachments(p_data.id)
 	model._build()
 	return model
 
@@ -151,6 +157,124 @@ func _build() -> void:
 			WeaponData.ModelStyle.RIFLE:
 				_build_rifle()
 	_build_flash()
+	_build_attachments()
+
+
+## Updates equipped attachments and rebuilds their 3D meshes without rebuilding the whole blaster.
+func update_attachments(p_attachments: Dictionary) -> void:
+	equipped_attachments = p_attachments.duplicate()
+	_build_attachments()
+
+
+func _build_attachments() -> void:
+	for child in attachment_nodes.values():
+		if is_instance_valid(child):
+			child.queue_free()
+	attachment_nodes.clear()
+
+	if equipped_attachments.is_empty():
+		return
+
+	var b_id: StringName = data.id if data != null else &""
+	for slot_name in equipped_attachments:
+		var att_id: StringName = equipped_attachments[slot_name]
+		if att_id.is_empty() or att_id == &"none":
+			continue
+		var node := BlasterAttachments.build_attachment(self, att_id, slot_name, b_id)
+		if node != null:
+			node.transform = get_slot_transform(slot_name)
+			if first_person:
+				_disable_shadows_recursive(node)
+			attachment_nodes[slot_name] = node
+
+			# If muzzle attachment, offset flash forward
+			if slot_name == &"barrel" and _flash != null:
+				match att_id:
+					&"rifled_extension":
+						_flash.position.z = muzzle.position.z - 0.15
+					&"mega_compensator":
+						_flash.position.z = muzzle.position.z - 0.07
+					&"whisper_shroud":
+						_flash.position.z = muzzle.position.z - 0.17
+
+
+func _disable_shadows_recursive(node: Node) -> void:
+	if node is GeometryInstance3D:
+		(node as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for child in node.get_children():
+		_disable_shadows_recursive(child)
+
+
+func get_slot_transform(slot: StringName) -> Transform3D:
+	var tf := Transform3D.IDENTITY
+	var style: int = data.model_style if data != null else WeaponData.ModelStyle.PISTOL
+	var s := str(slot).to_lower()
+
+	match s:
+		"optic":
+			match style:
+				WeaponData.ModelStyle.PISTOL, WeaponData.ModelStyle.DOUBLE:
+					tf.origin = Vector3(0.0, 0.08, -0.05)
+				WeaponData.ModelStyle.SPRAYER:
+					tf.origin = Vector3(0.0, 0.09, -0.1)
+				WeaponData.ModelStyle.HAMMER:
+					tf.origin = Vector3(0.0, 0.08, -0.05)
+				WeaponData.ModelStyle.RIFLE:
+					tf.origin = Vector3(0.0, 0.12, -0.05)
+				WeaponData.ModelStyle.ROTARY:
+					tf.origin = Vector3(0.0, 0.19, 0.03)
+				_:
+					tf.origin = Vector3(0.0, muzzle.position.y + 0.07, muzzle.position.z * 0.4)
+		"barrel":
+			if muzzle != null:
+				tf.origin = muzzle.position
+			else:
+				tf.origin = Vector3(0.0, 0.01, -0.3)
+		"magazine":
+			match style:
+				WeaponData.ModelStyle.PISTOL, WeaponData.ModelStyle.DOUBLE:
+					tf.origin = Vector3(0.0, -0.16, 0.06)
+				WeaponData.ModelStyle.SPRAYER:
+					tf.origin = Vector3(0.0, -0.155, -0.14)
+				WeaponData.ModelStyle.HAMMER:
+					tf.origin = Vector3(0.0, -0.085, -0.12)
+				WeaponData.ModelStyle.RIFLE:
+					tf.origin = Vector3(0.0, -0.06, 0.02)
+				WeaponData.ModelStyle.ROTARY:
+					tf.origin = Vector3(0.15, -0.01, 0.07)
+				_:
+					tf.origin = Vector3(0.0, -0.10, 0.0)
+		"stock":
+			match style:
+				WeaponData.ModelStyle.PISTOL, WeaponData.ModelStyle.DOUBLE:
+					tf.origin = Vector3(0.0, -0.03, 0.10)
+				WeaponData.ModelStyle.SPRAYER:
+					tf.origin = Vector3(0.0, -0.01, 0.34)
+				WeaponData.ModelStyle.HAMMER:
+					tf.origin = Vector3(0.0, -0.02, 0.37)
+				WeaponData.ModelStyle.RIFLE:
+					tf.origin = Vector3(0.0, -0.02, 0.43)
+				WeaponData.ModelStyle.ROTARY:
+					tf.origin = Vector3(0.0, -0.05, 0.22)
+				_:
+					tf.origin = Vector3(0.0, -0.02, 0.25)
+		"spring":
+			match style:
+				WeaponData.ModelStyle.PISTOL, WeaponData.ModelStyle.DOUBLE:
+					tf.origin = Vector3(0.038, 0.02, -0.05)
+				WeaponData.ModelStyle.SPRAYER:
+					tf.origin = Vector3(0.048, 0.02, -0.1)
+				WeaponData.ModelStyle.HAMMER:
+					tf.origin = Vector3(0.058, 0.02, -0.05)
+				WeaponData.ModelStyle.RIFLE:
+					tf.origin = Vector3(0.038, 0.02, -0.05)
+				WeaponData.ModelStyle.ROTARY:
+					tf.origin = Vector3(0.105, 0.05, 0.05)
+				_:
+					tf.origin = Vector3(0.04, 0.02, 0.0)
+
+	return tf
+
 
 
 func _build_from_model() -> bool:

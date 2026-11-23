@@ -5,11 +5,14 @@ extends Control
 const LINE := 9.0
 const BASE_GAP := 6.0
 
+enum ReticleType { STANDARD, RED_DOT, HOLO, SCOPE }
+
 var _kick: float = 0.0
 var _hit_left: float = 0.0
 var _hit_color: Color = Color.WHITE
 var _hit_size: float = 1.0
 var scoped: bool = false
+var reticle_type: ReticleType = ReticleType.STANDARD
 
 
 func _ready() -> void:
@@ -21,6 +24,24 @@ func set_scoped(s: bool) -> void:
 	if scoped != s:
 		scoped = s
 		queue_redraw()
+
+
+func set_reticle_type(type: ReticleType) -> void:
+	if reticle_type != type:
+		reticle_type = type
+		queue_redraw()
+
+
+func set_reticle_from_string(type_name: StringName) -> void:
+	match type_name:
+		&"red_dot":
+			set_reticle_type(ReticleType.RED_DOT)
+		&"holo":
+			set_reticle_type(ReticleType.HOLO)
+		&"scope":
+			set_reticle_type(ReticleType.SCOPE)
+		_:
+			set_reticle_type(ReticleType.STANDARD)
 
 
 ## Widens the crosshair for a moment (called per shot).
@@ -46,7 +67,15 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	var centre := size * 0.5
 	if scoped:
-		_draw_scope(centre)
+		match reticle_type:
+			ReticleType.RED_DOT:
+				_draw_red_dot(centre)
+			ReticleType.HOLO:
+				_draw_holo(centre)
+			ReticleType.SCOPE:
+				_draw_scope(centre)
+			_:
+				_draw_standard(centre)
 	else:
 		_draw_standard(centre)
 
@@ -104,3 +133,57 @@ func _draw_scope(centre: Vector2) -> void:
 	# Center precision aim dot
 	draw_circle(centre, 3.0, UiKit.NAVY_DARK)
 	draw_circle(centre, 1.8, UiKit.ORANGE_HOT)
+
+
+func _draw_red_dot(centre: Vector2) -> void:
+	var ring_r := 26.0 + _kick * 0.4
+	# Outer reflex hood outline (soft rounded circle)
+	draw_arc(centre, ring_r + 20.0, 0.0, TAU, 36, Color(0.08, 0.1, 0.16, 0.5), 18.0, true)
+	draw_arc(centre, ring_r + 11.0, 0.0, TAU, 36, UiKit.NAVY_DARK, 3.5, true)
+	# Subtle glass lens tint
+	draw_circle(centre, ring_r + 9.0, Color(0.15, 0.5, 0.7, 0.12))
+
+	# 4 subtle orientation ticks
+	for dir in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
+		var p1: Vector2 = centre + dir * (ring_r - 2.0)
+		var p2: Vector2 = centre + dir * (ring_r + 7.0)
+		draw_line(p1, p2, UiKit.NAVY_DARK, 3.0, true)
+		draw_line(p1, p2, Color(0.85, 0.95, 1.0, 0.7), 1.5, true)
+
+	# High-visibility glowing red laser dot
+	draw_circle(centre, 4.5, UiKit.NAVY_DARK)
+	draw_circle(centre, 3.0, Color(1.0, 0.15, 0.15))
+	draw_circle(centre, 1.5, Color(1.0, 0.85, 0.85))
+
+
+func _draw_holo(centre: Vector2) -> void:
+	var outer_r := 34.0 + _kick * 0.5
+	var inner_r := 18.0
+	# Holographic sight rectangular frame / lens tint
+	var window_rect := Rect2(centre - Vector2(55.0, 42.0), Vector2(110.0, 84.0))
+	draw_rect(window_rect, Color(0.1, 0.4, 0.6, 0.1), true)
+	draw_rect(window_rect, Color(0.08, 0.12, 0.18, 0.6), false, 3.0)
+
+	var holo_color := Color(0.15, 0.9, 1.0, 0.9)
+	var glow_color := Color(0.05, 0.2, 0.3, 0.6)
+
+	# Holographic outer ring
+	draw_arc(centre, outer_r, 0.0, TAU, 48, glow_color, 4.0, true)
+	draw_arc(centre, outer_r, 0.0, TAU, 48, holo_color, 2.0, true)
+
+	# 4 Cross ticks breaking out from ring
+	for dir in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
+		var p1: Vector2 = centre + dir * (outer_r - 6.0)
+		var p2: Vector2 = centre + dir * (outer_r + 12.0)
+		draw_line(p1, p2, glow_color, 4.0, true)
+		draw_line(p1, p2, holo_color, 2.0, true)
+
+	# Inner circle
+	draw_arc(centre, inner_r, 0.0, TAU, 32, glow_color, 3.0, true)
+	draw_arc(centre, inner_r, 0.0, TAU, 32, holo_color, 1.2, true)
+
+	# Center illuminated micro-pip
+	draw_circle(centre, 3.5, UiKit.NAVY_DARK)
+	draw_circle(centre, 2.2, Color(1.0, 0.35, 0.1))
+	draw_circle(centre, 1.0, Color(1.0, 0.95, 0.8))
+

@@ -10,6 +10,8 @@ signal coins_changed(new_balance: int)
 signal item_unlocked(category: StringName, id: Variant)
 signal mission_progress(mission_id: StringName, current: int, target: int)
 signal mission_completed(mission: Dictionary)
+signal weapon_mastery_updated(weapon_id: StringName, new_rank: int, total_xp: int)
+signal attachment_equipped(weapon_id: StringName, slot: StringName, attachment_id: StringName)
 signal progression_saved
 signal progression_loaded
 
@@ -116,6 +118,8 @@ var coins: int = STARTING_COINS
 var unlocked_hats: Array[StringName] = []
 var unlocked_colors: Array[int] = []
 var unlocked_skins: Array[StringName] = []
+var weapon_mastery: Dictionary = {}
+var equipped_attachments: Dictionary = {}
 var active_missions: Array[Dictionary] = []
 
 
@@ -210,6 +214,8 @@ func _default_profile_dict(_is_p2: bool = false) -> Dictionary:
 		"unlocked_hats": DEFAULT_HATS.duplicate(),
 		"unlocked_colors": DEFAULT_COLORS.duplicate(),
 		"unlocked_skins": DEFAULT_SKINS.duplicate(),
+		"weapon_mastery": {},
+		"equipped_attachments": {},
 	}
 
 
@@ -231,6 +237,8 @@ func _sync_active_profile() -> void:
 	unlocked_skins.clear()
 	for s in raw_skins:
 		unlocked_skins.append(StringName(str(s)))
+	weapon_mastery = cur.get("weapon_mastery", {}).duplicate(true)
+	equipped_attachments = cur.get("equipped_attachments", {}).duplicate(true)
 
 
 func _sync_to_active_profile() -> void:
@@ -242,6 +250,8 @@ func _sync_to_active_profile() -> void:
 	cur["unlocked_hats"] = unlocked_hats.duplicate()
 	cur["unlocked_colors"] = unlocked_colors.duplicate()
 	cur["unlocked_skins"] = unlocked_skins.duplicate()
+	cur["weapon_mastery"] = weapon_mastery.duplicate(true)
+	cur["equipped_attachments"] = equipped_attachments.duplicate(true)
 
 
 func get_profile_count() -> int:
@@ -308,6 +318,10 @@ func activate_boss_mode() -> void:
 		for s in Cosmetics.SKINS:
 			all_skins.append(s["id"])
 		p["unlocked_skins"] = all_skins
+		var boss_wm: Dictionary = {}
+		for b in WeaponModding.WORKBENCH_BLASTERS:
+			boss_wm[b["id"]] = {"xp": 5000, "tags": 100, "rank": 10}
+		p["weapon_mastery"] = boss_wm
 	_sync_active_profile()
 	save_progression()
 	coins_changed.emit(coins)
@@ -317,6 +331,130 @@ func activate_boss_mode() -> void:
 		item_unlocked.emit(&"color", ci)
 	for s in Cosmetics.SKINS:
 		item_unlocked.emit(&"skin", s["id"])
+
+
+## Normalizes weapon IDs to consistent key strings (e.g. &"pocket_popper", &"flaxs_chainstorm").
+func _normalize_weapon_id(weapon_id: Variant) -> StringName:
+	var s := str(weapon_id).to_lower().strip_edges()
+	if s.begins_with("res://"):
+		s = s.get_file().get_basename()
+	if s.is_empty():
+		return &"pocket_popper"
+	return StringName(s)
+
+
+## Records a tag scored with a weapon, awarding weapon mastery XP.
+## Returns dictionary with mastery update info: { "weapon_id": StringName, "xp_added": int, "total_xp": int, "rank": int, "ranked_up": bool }
+func record_weapon_tag(weapon_id: Variant, ricochet: bool = false, player_idx: int = active_profile_index) -> Dictionary:
+	_sync_to_active_profile()
+	var w_id := _normalize_weapon_id(weapon_id)
+	var xp_add := WeaponModding.XP_PER_WEAPON_TAG + (WeaponModding.XP_RICOCHET_BONUS if ricochet else 0)
+	var p_idx := clampi(player_idx, 0, profiles.size() - 1)
+	if profiles.size() < 2:
+		profiles = [_default_profile_dict(false), _default_profile_dict(true)]
+	var p: Dictionary = profiles[p_idx]
+	if not p.has("weapon_mastery") or not (p["weapon_mastery"] is Dictionary):
+		p["weapon_mastery"] = {}
+	var wm: Dictionary = p["weapon_mastery"]
+	var cur_data: Dictionary = wm.get(w_id, {"xp": 0, "tags": 0, "rank": 1}).duplicate(true)
+	var old_xp: int = int(cur_data.get("xp", 0))
+	var old_tags: int = int(cur_data.get("tags", 0))
+	var old_rank := WeaponModding.get_mastery_rank(old_xp)
+
+	var new_xp := old_xp + xp_add
+	var new_tags := old_tags + 1
+	var new_rank := WeaponModding.get_mastery_rank(new_xp)
+	var ranked_up := new_rank > old_rank
+
+	cur_data["xp"] = new_xp
+	cur_data["tags"] = new_tags
+	cur_data["rank"] = new_rank
+	wm[w_id] = cur_data
+
+	if p_idx == active_profile_index:
+		weapon_mastery = wm.duplicate(true)
+		weapon_mastery_updated.emit(w_id, new_rank, new_xp)
+
+	save_progression()
+	return {
+		"weapon_id": w_id,
+		"xp_added": xp_add,
+		"total_xp": new_xp,
+		"rank": new_rank,
+		"ranked_up": ranked_up,
+	}
+
+
+## Returns the mastery dictionary for a specific weapon:
+## { "weapon_id": StringName, "xp": int, "tags": int, "rank": int, "title": String, "progress": Dictionary }
+func get_weapon_mastery(weapon_id: Variant, profile_idx: int = active_profile_index) -> Dictionary:
+	_sync_to_active_profile()
+	var w_id := _normalize_weapon_id(weapon_id)
+	var p_idx := clampi(profile_idx, 0, profiles.size() - 1)
+	if profiles.size() < 2:
+		profiles = [_default_profile_dict(false), _default_profile_dict(true)]
+	var p: Dictionary = profiles[p_idx]
+	var wm: Dictionary = p.get("weapon_mastery", {})
+	var entry: Dictionary = wm.get(w_id, {"xp": 0, "tags": 0, "rank": 1})
+	var xp: int = int(entry.get("xp", 0))
+	var tags: int = int(entry.get("tags", 0))
+	var progress := WeaponModding.get_mastery_progress(xp)
+	return {
+		"weapon_id": w_id,
+		"xp": xp,
+		"tags": tags,
+		"rank": int(progress["rank"]),
+		"title": str(progress["title"]),
+		"progress": progress,
+	}
+
+
+## Returns equipped attachments for a weapon. Returns default stock if none equipped.
+func get_equipped_attachments(weapon_id: Variant, profile_idx: int = active_profile_index) -> Dictionary:
+	_sync_to_active_profile()
+	var w_id := _normalize_weapon_id(weapon_id)
+	var p_idx := clampi(profile_idx, 0, profiles.size() - 1)
+	if profiles.size() < 2:
+		profiles = [_default_profile_dict(false), _default_profile_dict(true)]
+	var p: Dictionary = profiles[p_idx]
+	var all_eq: Dictionary = p.get("equipped_attachments", {})
+	var eq: Dictionary = all_eq.get(w_id, WeaponModding.default_equipped()).duplicate(true)
+	var defs := WeaponModding.default_equipped()
+	for slot in defs:
+		if not eq.has(slot):
+			eq[slot] = defs[slot]
+	return eq
+
+
+## Equips an attachment to a slot on a weapon. Checks mastery rank unlock first.
+func equip_attachment(weapon_id: Variant, slot_name: StringName, attachment_id: StringName, profile_idx: int = active_profile_index) -> bool:
+	_sync_to_active_profile()
+	var w_id := _normalize_weapon_id(weapon_id)
+	var p_idx := clampi(profile_idx, 0, profiles.size() - 1)
+	if profiles.size() < 2:
+		profiles = [_default_profile_dict(false), _default_profile_dict(true)]
+	var p: Dictionary = profiles[p_idx]
+	var mastery := get_weapon_mastery(w_id, p_idx)
+	var rank: int = int(mastery["rank"])
+
+	if not WeaponModding.is_attachment_unlocked(attachment_id, rank):
+		return false
+
+	if not p.has("equipped_attachments") or not (p["equipped_attachments"] is Dictionary):
+		p["equipped_attachments"] = {}
+	var all_eq: Dictionary = p["equipped_attachments"]
+	if not all_eq.has(w_id) or not (all_eq[w_id] is Dictionary):
+		all_eq[w_id] = WeaponModding.default_equipped()
+	var eq: Dictionary = all_eq[w_id]
+	eq[str(slot_name).to_lower()] = attachment_id
+
+	if p_idx == active_profile_index:
+		equipped_attachments = all_eq.duplicate(true)
+		attachment_equipped.emit(w_id, slot_name, attachment_id)
+
+	save_progression()
+	return true
+
 
 
 func is_unlocked(category: StringName, id: Variant) -> bool:
@@ -494,6 +632,22 @@ func load_progression() -> void:
 				if not u_skins.has(skid) and Cosmetics.has_skin(skid):
 					u_skins.append(skid)
 			p_dict["unlocked_skins"] = u_skins
+
+			var raw_wm = file.get_value(sec, "weapon_mastery", "")
+			if raw_wm is String and not str(raw_wm).is_empty():
+				var parsed_wm = JSON.parse_string(str(raw_wm))
+				if parsed_wm is Dictionary:
+					p_dict["weapon_mastery"] = parsed_wm
+			if not p_dict.has("weapon_mastery"):
+				p_dict["weapon_mastery"] = {}
+
+			var raw_eq = file.get_value(sec, "equipped_attachments", "")
+			if raw_eq is String and not str(raw_eq).is_empty():
+				var parsed_eq = JSON.parse_string(str(raw_eq))
+				if parsed_eq is Dictionary:
+					p_dict["equipped_attachments"] = parsed_eq
+			if not p_dict.has("equipped_attachments"):
+				p_dict["equipped_attachments"] = {}
 		elif p_idx == 0:
 			# Backwards compatibility: load from legacy sections
 			p_dict["lifetime_xp"] = maxi(int(file.get_value("progression", "lifetime_xp", 0)), 0)
@@ -584,6 +738,8 @@ func save_progression() -> void:
 		for s in p.get("unlocked_skins", []):
 			p_skins.append(String(s))
 		file.set_value(sec, "skins", p_skins)
+		file.set_value(sec, "weapon_mastery", JSON.stringify(p.get("weapon_mastery", {})))
+		file.set_value(sec, "equipped_attachments", JSON.stringify(p.get("equipped_attachments", {})))
 
 	var missions_save: Array[Dictionary] = []
 	for m in active_missions:

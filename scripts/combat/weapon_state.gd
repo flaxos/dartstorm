@@ -7,13 +7,72 @@ var magazine: int = 0
 var reserve: int = 0
 ## Gun Game hands out bottomless reserves.
 var infinite_reserve: bool = false
+var attachments: Dictionary = {}
+var modifiers: Dictionary = {}
 
 
-func _init(p_data: WeaponData, p_infinite_reserve: bool = false) -> void:
+func _init(p_data: WeaponData, p_infinite_reserve: bool = false, p_attachments: Dictionary = {}) -> void:
 	data = p_data
 	infinite_reserve = p_infinite_reserve
-	magazine = data.magazine_size
+	attachments = p_attachments.duplicate()
+	if not attachments.is_empty():
+		modifiers = WeaponModding.compute_attachment_modifiers(attachments)
+	elif is_instance_valid(Progression) and p_data != null:
+		attachments = Progression.get_equipped_attachments(p_data.id)
+		modifiers = WeaponModding.compute_attachment_modifiers(attachments)
+	else:
+		modifiers = WeaponModding.compute_attachment_modifiers({})
+	magazine = get_magazine_size()
 	reserve = data.reserve_max if infinite_reserve else data.reserve_start
+
+
+## Effective magazine size accounting for extended drum or attachment modifiers.
+func get_magazine_size() -> int:
+	var base_size := data.magazine_size if data != null else 6
+	var bonus: int = int(modifiers.get("mag_bonus", 0))
+	return maxi(1, base_size + bonus)
+
+
+## Effective reload duration in seconds.
+func get_reload_time() -> float:
+	var base_time := data.reload_time if data != null else 1.5
+	var mult: float = float(modifiers.get("reload_mult", 1.0))
+	return maxf(0.2, base_time * mult)
+
+
+## Effective interval between shots in seconds.
+func get_shot_interval() -> float:
+	var base_rate := data.shots_per_second if data != null else 3.0
+	var mult: float = float(modifiers.get("rate_mult", 1.0))
+	var effective_rate := maxf(0.1, base_rate * mult)
+	return 1.0 / effective_rate
+
+
+## Effective spread degrees.
+func get_spread_degrees() -> float:
+	var base_spread := data.spread_degrees if data != null else 2.0
+	var mult: float = float(modifiers.get("spread_mult", 1.0))
+	return maxf(0.05, base_spread * mult)
+
+
+## Effective recoil kick multiplier.
+func get_recoil_kick() -> float:
+	var base_kick := data.recoil_kick if data != null else 1.0
+	var mult: float = float(modifiers.get("recoil_mult", 1.0))
+	return base_kick * mult
+
+
+## Effective ADS zoom FOV (0.0 if no zoom).
+func get_zoom_fov() -> float:
+	var zoom: float = float(modifiers.get("zoom_fov", 0.0))
+	if zoom > 0.0:
+		return zoom
+	return data.zoom_fov if data != null else 0.0
+
+
+## Effective reticle type for ADS (&"standard", &"red_dot", &"holo", &"scope").
+func get_reticle() -> StringName:
+	return StringName(str(modifiers.get("reticle", &"standard")))
 
 
 ## Darts ready to fire right now.
@@ -34,11 +93,11 @@ func consume() -> void:
 
 
 func can_reload() -> bool:
-	return not data.is_belt_fed() and magazine < data.magazine_size and reserve > 0
+	return not data.is_belt_fed() and magazine < get_magazine_size() and reserve > 0
 
 
 func reload() -> void:
-	var wanted := data.magazine_size - magazine
+	var wanted := get_magazine_size() - magazine
 	var moved := mini(wanted, reserve)
 	magazine += moved
 	if not infinite_reserve:

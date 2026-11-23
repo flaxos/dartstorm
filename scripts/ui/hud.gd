@@ -83,7 +83,10 @@ func setup(player: Player, controller: MatchController) -> void:
 	player.shield_broken.connect(_on_shield_broken)
 	player.landed_hit.connect(_on_landed_hit)
 	player.shot_fired.connect(_on_shot_fired)
-	player.aiming_changed.connect(func(is_aiming: bool) -> void: _crosshair.set_scoped(is_aiming))
+	player.aiming_changed.connect(func(is_aiming: bool) -> void:
+		if is_aiming and player.arsenal != null and player.arsenal.current() != null:
+			_crosshair.set_reticle_from_string(player.arsenal.current().get_reticle())
+		_crosshair.set_scoped(is_aiming))
 	player.tagged_out.connect(_on_player_tagged)
 	player.tagged_out_status_changed.connect(func(_a: Actor, is_out: bool) -> void:
 		if not is_out:
@@ -94,6 +97,8 @@ func setup(player: Player, controller: MatchController) -> void:
 	player.infusion_changed.connect(_on_infusion_changed)
 	player.arsenal.weapon_changed.connect(_on_weapon_changed)
 	player.arsenal.ammo_changed.connect(_on_ammo_changed)
+	if is_instance_valid(Progression):
+		Progression.weapon_mastery_updated.connect(_on_weapon_mastery_updated)
 
 	controller.countdown_tick.connect(_on_countdown_tick)
 	controller.clock_tick.connect(_on_clock_tick)
@@ -578,10 +583,20 @@ func _on_shield_broken(_actor: Actor) -> void:
 func _on_weapon_changed(state: WeaponState) -> void:
 	if _crosshair != null:
 		_crosshair.set_scoped(false)
+		if state != null:
+			_crosshair.set_reticle_from_string(state.get_reticle())
 	if state == null:
 		return
 	_weapon_label.text = state.data.display_name.to_upper()
 	_on_ammo_changed(state)
+
+
+func _on_weapon_mastery_updated(weapon_id: StringName, new_rank: int, _total_xp: int) -> void:
+	if new_rank > 1:
+		var w_name := str(weapon_id).replace("_", " ").capitalize()
+		var title: String = WeaponModding.MASTERY_TITLES[new_rank - 1] if new_rank <= WeaponModding.MASTERY_TITLES.size() else "Master"
+		_show_banner("⭐ %s RANK UP!" % w_name.to_upper(), "Rank %d: %s unlocked!" % [new_rank, title], 3.0)
+		Sfx.play(&"unlock")
 
 
 func _on_ammo_changed(state: WeaponState) -> void:
@@ -635,7 +650,8 @@ func _get_element_color(element: DartData.Element) -> Color:
 
 
 func _on_shot_fired(state: WeaponState) -> void:
-	_crosshair.kick(2.0 + state.data.spread_degrees)
+	var eff_spread := state.get_spread_degrees() if state != null else state.data.spread_degrees
+	_crosshair.kick(2.0 + eff_spread)
 
 
 func _on_landed_hit(_victim: Actor, was_tag: bool, _was_ricochet: bool) -> void:

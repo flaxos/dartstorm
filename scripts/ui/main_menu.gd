@@ -98,6 +98,8 @@ var _settings: SettingsPanel
 var _missions: MissionsPanel
 var _shop: ShopPanel
 var _multiplayer_menu: MultiplayerMenu
+var _workbench: GarageWorkbench
+var _workbench_panel: WorkbenchPanel
 var _customise: PanelContainer
 var _preview_weapon_index: int = 0
 var _weapon_inspect_label: Label
@@ -205,6 +207,46 @@ func _ready() -> void:
 	UiKit.pin(_multiplayer_menu, Vector2(0.5, 0.5), Vector2.ZERO, Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_BOTH)
 	_multiplayer_menu.closed.connect(_show_multiplayer.bind(false))
 
+	_workbench = GarageWorkbench.new()
+	_workbench.visible = false
+	_workbench.position = Vector3(120.0, 0.0, 0.0)
+	add_child(_workbench)
+
+	_workbench_panel = WorkbenchPanel.new()
+	_workbench_panel.visible = false
+	_ui.add_child(_workbench_panel)
+	_workbench_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_workbench_panel.closed.connect(_show_workbench.bind(false))
+	_workbench_panel.blaster_selected.connect(func(w_id: StringName) -> void:
+		if _workbench != null:
+			_workbench.load_blaster(w_id)
+	)
+	_workbench_panel.attachment_changed.connect(func(_slot: Variant, _att_id: Variant) -> void:
+		if _workbench != null and is_instance_valid(Progression):
+			var cur_atts := Progression.get_equipped_attachments(_workbench.active_blaster_id)
+			_workbench.update_attachments(cur_atts)
+	)
+	_workbench_panel.slot_focused.connect(func(slot: Variant) -> void:
+		if _workbench != null:
+			_workbench.focus_slot(slot)
+	)
+	_workbench_panel.test_fire_requested.connect(func() -> void:
+		if _workbench != null:
+			_workbench.test_fire()
+	)
+	_workbench_panel.orbit_requested.connect(func(delta: Vector2) -> void:
+		if _workbench != null:
+			_workbench.rotate_orbit(delta)
+	)
+	_workbench_panel.zoom_requested.connect(func(delta: float) -> void:
+		if _workbench != null:
+			_workbench.zoom_orbit(delta)
+	)
+	_workbench_panel.reset_view_requested.connect(func() -> void:
+		if _workbench != null:
+			_workbench.reset_camera_view()
+	)
+
 	var prog: Node = get_node_or_null("/root/Progression")
 	if prog != null:
 		prog.connect("xp_gained", func(_a: Variant, _t: Variant) -> void: _refresh_card())
@@ -256,7 +298,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if not event.is_action_pressed(&"ui_cancel"):
 		return
-	if _missions != null and _missions.visible:
+	if _workbench_panel != null and _workbench_panel.visible:
+		_show_workbench(false)
+		get_viewport().set_input_as_handled()
+	elif _missions != null and _missions.visible:
 		_show_missions(false)
 		get_viewport().set_input_as_handled()
 	elif _shop != null and _shop.visible:
@@ -486,6 +531,7 @@ func _build_player_card() -> void:
 
 	for entry: Array in [
 		["ONLINE MULTIPLAYER", _show_multiplayer.bind(true)],
+		["WORKBENCH", _show_workbench.bind(true)],
 		["MISSIONS", _show_missions.bind(true)],
 		["SHOP", _show_shop.bind(true)],
 		["CHARACTER", _show_customise.bind(true)],
@@ -788,6 +834,40 @@ func _show_multiplayer(shown: bool) -> void:
 	_multiplayer_menu.visible = shown
 	_menu.visible = not shown
 	if not shown:
+		_refresh_card()
+		_play_button.grab_focus()
+
+
+func _show_workbench(shown: bool) -> void:
+	if shown:
+		_menu.visible = false
+		_show_squad(false)
+		if _stage != null:
+			_stage.visible = false
+		if _camera != null:
+			_camera.current = false
+		if _workbench != null:
+			_workbench.visible = true
+			if _workbench.camera != null:
+				_workbench.camera.make_current()
+			_workbench.reset_camera_view()
+		if _workbench_panel != null:
+			_workbench_panel.visible = true
+			_workbench_panel._refresh_all()
+	else:
+		if _workbench != null:
+			_workbench.visible = false
+			if _workbench.camera != null:
+				_workbench.camera.current = false
+		if _workbench_panel != null:
+			_workbench_panel.visible = false
+		if _camera != null:
+			_camera.make_current()
+		if _stage != null:
+			_stage.visible = true
+		_show_squad(true)
+		_menu.visible = true
+		_rebuild_squad()
 		_refresh_card()
 		_play_button.grab_focus()
 

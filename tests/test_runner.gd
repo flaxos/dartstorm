@@ -122,6 +122,8 @@ func _ready() -> void:
 	await _test_classic_arenas_2fort_dust_dust2()
 	# LAN Server Discovery & Headless Dedicated Server (v2.2.0)
 	await _test_lan_server_browser_and_dedicated_server()
+	# Backyard Garage Workbench, Blaster Mastery & Aftermarket Attachments (v2.3.0)
+	await _test_weapon_modding_garage_workbench_and_mastery()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -4492,5 +4494,225 @@ func _test_lan_server_browser_and_dedicated_server() -> void:
 	check(NetworkManager.has_signal("lan_servers_updated"), "NetworkManager provides lan_servers_updated signal")
 	check(typeof(NetworkManager.get_lan_servers()) == TYPE_ARRAY, "get_lan_servers() returns Array")
 	check("is_dedicated_server" in NetworkManager, "NetworkManager has is_dedicated_server property")
+
+
+func _test_weapon_modding_garage_workbench_and_mastery() -> void:
+	section("Backyard Garage Workbench, Blaster Mastery & Aftermarket Attachments (v2.3.0)")
+
+	# 1. WeaponModding Catalog & Slots Registry
+	check(WeaponModding.WORKBENCH_BLASTERS.size() == 7, "WeaponModding defines all 7 workbench blasters")
+	check(WeaponModding.ATTACHMENTS.size() >= 19, "WeaponModding defines at least 19 aftermarket attachments")
+
+	var slots_to_test := [
+		WeaponModding.Slot.OPTIC,
+		WeaponModding.Slot.BARREL,
+		WeaponModding.Slot.SPRING,
+		WeaponModding.Slot.MAGAZINE,
+		WeaponModding.Slot.STOCK,
+	]
+	for slot: WeaponModding.Slot in slots_to_test:
+		var atts := WeaponModding.get_attachments_for_slot(slot)
+		check(not atts.is_empty(), "Slot %s has registered attachments (count: %d)" % [WeaponModding.slot_name(slot), atts.size()])
+		var def_att := WeaponModding.get_default_attachment_for_slot(slot)
+		check(not def_att.is_empty(), "Slot %s has a valid default attachment (%s)" % [WeaponModding.slot_name(slot), def_att])
+
+	var stock_loadout: Dictionary = WeaponModding.default_equipped()
+	check(stock_loadout.size() == 5, "default_equipped() returns dictionary with 5 slots")
+	check(stock_loadout.has("optic") and stock_loadout.has("barrel") and stock_loadout.has("spring") and stock_loadout.has("magazine") and stock_loadout.has("stock"),
+		"default_equipped() contains all 5 slot keys")
+
+	# 2. Weapon Mastery Curve & Details
+	check(WeaponModding.MASTERY_THRESHOLDS.size() == 10, "10 Mastery rank thresholds defined")
+	check(WeaponModding.MASTERY_TITLES.size() == 10, "10 Mastery titles defined")
+	check(WeaponModding.get_mastery_rank(0) == 1, "0 XP is Rank 1")
+	check(WeaponModding.get_mastery_rank(99) == 1, "99 XP is Rank 1")
+	check(WeaponModding.get_mastery_rank(100) == 2, "100 XP is Rank 2")
+	check(WeaponModding.get_mastery_rank(500) == 4, "500 XP is Rank 4")
+	check(WeaponModding.get_mastery_rank(4500) == 10, "4500 XP is Rank 10 (Grandmaster)")
+	check(WeaponModding.get_mastery_rank(99999) == 10, "Over-cap XP clamped to Rank 10")
+
+	var prog_zero: Dictionary = WeaponModding.get_mastery_progress(0)
+	check(prog_zero["rank"] == 1 and not bool(prog_zero["is_max"]) and float(prog_zero["ratio"]) == 0.0,
+		"get_mastery_progress(0) returns Rank 1, 0.0 ratio, is_max false")
+
+	var prog_half: Dictionary = WeaponModding.get_mastery_progress(50)
+	check(prog_half["rank"] == 1 and is_equal_approx(float(prog_half["ratio"]), 0.5),
+		"get_mastery_progress(50) returns Rank 1 with 0.5 ratio")
+
+	var prog_max: Dictionary = WeaponModding.get_mastery_progress(5000)
+	check(prog_max["rank"] == 10 and bool(prog_max["is_max"]) and float(prog_max["ratio"]) == 1.0,
+		"get_mastery_progress(5000) returns Rank 10 Grandmaster with is_max true")
+
+	# 3. Attachment Modifiers Calculation
+	var empty_mods: Dictionary = WeaponModding.compute_attachment_modifiers({})
+	check(empty_mods["spread_mult"] == 1.0 and empty_mods["velocity_mult"] == 1.0 and empty_mods["tag_power_mult"] == 1.0,
+		"empty attachments dictionary produces neutral 1.0 multipliers")
+	check(empty_mods["mag_bonus"] == 0 and empty_mods["zoom_fov"] == 0.0 and empty_mods["reticle"] == &"standard",
+		"empty attachments dictionary produces 0 mag_bonus, 0.0 zoom_fov, standard reticle")
+
+	var optic_mods: Dictionary = WeaponModding.compute_attachment_modifiers({"optic": &"red_dot"})
+	check(optic_mods["zoom_fov"] == 65.0, "red_dot attachment provides 65.0 zoom_fov")
+	check(optic_mods["reticle"] == &"red_dot", "red_dot attachment sets reticle to red_dot")
+
+	var holo_mods: Dictionary = WeaponModding.compute_attachment_modifiers({"optic": &"holo_sight"})
+	check(holo_mods["zoom_fov"] == 55.0 and holo_mods["reticle"] == &"holo", "holo_sight provides 55.0 zoom_fov and holo reticle")
+
+	var scope_mods: Dictionary = WeaponModding.compute_attachment_modifiers({"optic": &"marksman_scope"})
+	check(scope_mods["zoom_fov"] == 35.0 and scope_mods["reticle"] == &"scope", "marksman_scope provides 35.0 zoom_fov and scope reticle")
+
+	var barrel_mods: Dictionary = WeaponModding.compute_attachment_modifiers({"barrel": &"rifled_extension"})
+	check(barrel_mods["spread_mult"] < 1.0 and barrel_mods["velocity_mult"] > 1.0,
+		"rifled_extension reduces spread and increases dart velocity")
+
+	var mag_mods: Dictionary = WeaponModding.compute_attachment_modifiers({"magazine": &"extended_drum"})
+	check(mag_mods["mag_bonus"] > 0, "extended_drum provides positive dart capacity bonus")
+
+	var whisper_mods: Dictionary = WeaponModding.compute_attachment_modifiers({"barrel": &"whisper_shroud"})
+	check(whisper_mods["sound_override"] == &"whoosh", "whisper_shroud provides whoosh muffled sound override")
+
+	# 4. Progression Weapon Mastery & Attachment Storage
+	var test_w_id := &"pocket_popper"
+	var initial_mastery := Progression.get_weapon_mastery(test_w_id)
+	var initial_xp: int = int(initial_mastery.get("xp", 0))
+
+	# Record a tag
+	var res_tag := Progression.record_weapon_tag(test_w_id, false)
+	check(res_tag["xp_added"] == 50, "record_weapon_tag awards 50 XP for standard tag")
+	var mid_mastery := Progression.get_weapon_mastery(test_w_id)
+	check(int(mid_mastery.get("xp", 0)) == initial_xp + 50, "Progression recorded +50 XP on weapon")
+
+	# Record a ricochet tag
+	var res_rico := Progression.record_weapon_tag(test_w_id, true)
+	check(res_rico["xp_added"] == 75, "record_weapon_tag awards 75 XP for ricochet tag (+25 bonus)")
+	var rico_mastery := Progression.get_weapon_mastery(test_w_id)
+	check(int(rico_mastery.get("xp", 0)) == initial_xp + 125, "Progression recorded +75 XP for ricochet tag")
+
+	# Equip attachment via Progression
+	var eq_success := Progression.equip_attachment(test_w_id, &"optic", &"red_dot")
+	check(eq_success, "Progression.equip_attachment succeeded")
+	var equipped := Progression.get_equipped_attachments(test_w_id)
+	check(equipped.get("optic") == &"red_dot", "Progression stores equipped red_dot optic")
+
+	# 5. WeaponState Modifiers Integration
+	var popper_data := load("res://resources/weapons/pocket_popper.tres") as WeaponData
+	check(popper_data != null, "pocket_popper.tres weapon data loaded")
+
+	var state_modded := WeaponState.new(popper_data, false, {"optic": &"red_dot", "magazine": &"extended_drum", "barrel": &"rifled_extension"})
+	check(state_modded.get_zoom_fov() == 65.0, "WeaponState.get_zoom_fov() returns 65.0 for red_dot")
+	check(state_modded.get_reticle() == &"red_dot", "WeaponState.get_reticle() returns red_dot")
+	check(state_modded.get_magazine_size() > popper_data.magazine_size, "WeaponState.get_magazine_size() accounts for extended drum")
+	check(state_modded.get_spread_degrees() < popper_data.spread_degrees, "WeaponState.get_spread_degrees() accounts for rifled extension")
+
+	# 6. BlasterModel Attachment Mounting & Rebuilding
+	var blaster_with_mods := BlasterModel.create(popper_data, false, &"default", {
+		"optic": &"red_dot",
+		"barrel": &"rifled_extension",
+		"magazine": &"extended_drum",
+		"stock": &"skeleton_stock"
+	})
+	add_child(blaster_with_mods)
+	await physics_frames(2)
+
+	check(blaster_with_mods.attachment_nodes.has(&"optic"), "BlasterModel spawned 3D optic attachment node")
+	check(blaster_with_mods.attachment_nodes.has(&"barrel"), "BlasterModel spawned 3D barrel attachment node")
+	check(blaster_with_mods.attachment_nodes.has(&"magazine"), "BlasterModel spawned 3D magazine attachment node")
+	check(blaster_with_mods.attachment_nodes.has(&"stock"), "BlasterModel spawned 3D stock attachment node")
+
+	# Test dynamic update of attachments
+	blaster_with_mods.update_attachments({"optic": &"holo_sight", "barrel": &"whisper_shroud"})
+	await physics_frames(2)
+	check(blaster_with_mods.attachment_nodes.has(&"optic"), "BlasterModel updated optic node to holo_sight")
+	check(blaster_with_mods.attachment_nodes.has(&"barrel"), "BlasterModel updated barrel node to whisper_shroud")
+	check(not blaster_with_mods.attachment_nodes.has(&"stock"), "Unspecified stock node removed cleanly")
+
+	blaster_with_mods.queue_free()
+	await physics_frames(2)
+
+	# 7. Crosshair Reticle Modes
+	var crosshair := Crosshair.new()
+	add_child(crosshair)
+	crosshair.set_scoped(true)
+
+	crosshair.set_reticle_from_string(&"red_dot")
+	check(crosshair.reticle_type == Crosshair.ReticleType.RED_DOT, "Crosshair set to RED_DOT reticle")
+
+	crosshair.set_reticle_from_string(&"holo")
+	check(crosshair.reticle_type == Crosshair.ReticleType.HOLO, "Crosshair set to HOLO reticle")
+
+	crosshair.set_reticle_from_string(&"scope")
+	check(crosshair.reticle_type == Crosshair.ReticleType.SCOPE, "Crosshair set to SCOPE reticle")
+
+	crosshair.set_reticle_from_string(&"standard")
+	check(crosshair.reticle_type == Crosshair.ReticleType.STANDARD, "Crosshair set to STANDARD reticle")
+
+	crosshair.queue_free()
+	await physics_frames(2)
+
+	# 8. GarageWorkbench 3D Scene Node
+	var workbench := GarageWorkbench.new()
+	add_child(workbench)
+	await physics_frames(3)
+
+	check(workbench.camera != null, "GarageWorkbench initialized 3D camera")
+	check(workbench.turntable != null, "GarageWorkbench initialized 3D turntable")
+	check(workbench.dart_target != null, "GarageWorkbench initialized dart target")
+	check(workbench.active_blaster_model != null, "GarageWorkbench instantiated active blaster model on turntable")
+
+	# Test slot focus presets
+	workbench.focus_slot(WeaponModding.Slot.OPTIC)
+	check(workbench.distance < 1.0, "focus_slot(OPTIC) zoomed camera in on top rail")
+	workbench.focus_slot(WeaponModding.Slot.NONE)
+	check(workbench.distance >= 1.2, "focus_slot(NONE) zoomed camera out to overview")
+
+	# Test camera orbit & zoom helper methods
+	var prev_yaw := workbench.yaw
+	workbench.rotate_orbit(Vector2(20.0, 10.0))
+	check(workbench.yaw != prev_yaw, "GarageWorkbench.rotate_orbit changes camera yaw")
+	workbench.zoom_orbit(-0.2)
+	check(workbench.distance < 1.2, "GarageWorkbench.zoom_orbit zooms camera")
+	workbench.reset_camera_view()
+	check(is_equal_approx(workbench.distance, 1.35), "GarageWorkbench.reset_camera_view restores default distance")
+
+	# Test fire action
+	var test_fired_signal := [false]
+	var on_fired := func() -> void: test_fired_signal[0] = true
+	workbench.test_fired.connect(on_fired)
+
+	workbench.test_fire()
+	check(test_fired_signal[0], "GarageWorkbench emitted test_fired signal on test_fire()")
+	check(workbench._test_dart != null, "GarageWorkbench spawned visual test dart projectile")
+
+	if workbench.test_fired.is_connected(on_fired):
+		workbench.test_fired.disconnect(on_fired)
+	workbench.queue_free()
+	await physics_frames(3)
+
+	# 9. WorkbenchPanel UI Overlay Node
+	var panel := WorkbenchPanel.new()
+	add_child(panel)
+	await physics_frames(2)
+
+	check(panel._drag_catcher != null, "WorkbenchPanel initialized viewport drag catcher")
+	check(panel._slot_buttons.size() == 5, "WorkbenchPanel initialized 5 slot buttons")
+	check(panel._stat_bars.size() == 6, "WorkbenchPanel initialized 6 performance stat bars")
+
+	panel._select_slot(WeaponModding.Slot.OPTIC)
+	check(panel._drawer_panel.visible, "Selecting slot opens attachment drawer")
+
+	panel._close_drawer()
+	check(not panel._drawer_panel.visible, "Closing drawer hides attachment drawer")
+
+	panel.queue_free()
+	await physics_frames(3)
+
+	# 10. CharacterModel set_shirt verification
+	var char_model := CharacterModel.new()
+	add_child(char_model)
+	char_model.setup("TestPlayer", Color.BLUE, &"cap")
+	char_model.set_shirt(Color.RED)
+	check(char_model._tint == Color.RED, "CharacterModel.set_shirt updates model tint")
+	char_model.queue_free()
+	await physics_frames(3)
+
 
 

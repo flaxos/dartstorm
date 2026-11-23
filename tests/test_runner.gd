@@ -3844,6 +3844,15 @@ func _test_hero_character_and_skeletal_animations() -> void:
 	check(char_model._hat_root != null, "Hat is mounted to head socket")
 	char_model.set_hat(&"crown")
 	check(char_model.hat_id() == &"crown", "Hat swapped cleanly on head socket")
+	check(char_model._hat_root.get_child_count() > 0, "Hat has visible geometry child")
+	var hat_child := char_model._hat_root.get_child(0) as Node3D
+	check(hat_child != null, "Hat child is Node3D")
+	if hat_child != null:
+		# Crown should sit snugly near the top of the head (Y around 1.85-1.95m), NOT floating above 3.0m
+		check(hat_child.global_position.y >= 1.70 and hat_child.global_position.y <= 2.20,
+				"Hat sits snugly on character head (Y = %.2f, expected ~1.88m)" % hat_child.global_position.y)
+
+
 
 	# Zombie transformation
 	char_model.set_zombie(true)
@@ -4139,12 +4148,12 @@ func _test_ctf_and_plant_the_bomb_modes() -> void:
 	# 1. Resources and mode resolution
 	var ctf_res := load(CTF_MODE) as GameMode
 	check(ctf_res != null, "CTF resource loads cleanly")
-	check(ctf_res.mode == GameSettings.MatchMode.CAPTURE_THE_FLAG, "CTF resource mode is CAPTURE_THE_FLAG")
+	check(ctf_res.id == &"capture_the_flag", "CTF resource id is capture_the_flag")
 	check(ctf_res.is_team_mode(), "CTF is a team mode")
 
 	var bomb_res := load(PLANT_THE_BOMB_MODE) as GameMode
 	check(bomb_res != null, "Plant The Bomb resource loads cleanly")
-	check(bomb_res.mode == GameSettings.MatchMode.PLANT_THE_BOMB, "Bomb resource mode is PLANT_THE_BOMB")
+	check(bomb_res.id == &"plant_the_bomb", "Bomb resource id is plant_the_bomb")
 	check(bomb_res.is_team_mode(), "Bomb is a team mode")
 
 	var resolved_ctf := MatchScene.resolve_mode(GameSettings.MatchMode.CAPTURE_THE_FLAG)
@@ -4311,7 +4320,7 @@ func _test_classic_arenas_2fort_dust_dust2() -> void:
 	check(two_forts.flag_pedestals.size() >= 2, "TwoForts registers at least 2 flag pedestals (Blue & Orange)")
 	check(two_forts.get_flag_pedestal(0) != Vector3.ZERO, "TwoForts Blue flag pedestal defined")
 	check(two_forts.get_flag_pedestal(1) != Vector3.ZERO, "TwoForts Orange flag pedestal defined")
-	check(two_forts.spawns.size() >= 4, "TwoForts has player/bot spawns")
+	check(two_forts.spawn_points.size() >= 4, "TwoForts has player/bot spawns")
 	two_forts.queue_free()
 	await physics_frames(2)
 
@@ -4323,7 +4332,7 @@ func _test_classic_arenas_2fort_dust_dust2() -> void:
 	check(dust.geometry.get_child_count() > 0, "DustCourtyard builds geometry")
 	check(dust.bomb_sites.has("A") and dust.bomb_sites.has("B"), "DustCourtyard registers Bomb Site A and Site B")
 	check(dust.bomb_spawns.size() > 0, "DustCourtyard defines bomb spawn location")
-	check(dust.spawns.size() >= 4, "DustCourtyard defines player/bot spawns")
+	check(dust.spawn_points.size() >= 4, "DustCourtyard defines player/bot spawns")
 	dust.queue_free()
 	await physics_frames(2)
 
@@ -4335,7 +4344,7 @@ func _test_classic_arenas_2fort_dust_dust2() -> void:
 	check(dust2.geometry.get_child_count() > 0, "Dust2 builds geometry")
 	check(dust2.bomb_sites.has("A") and dust2.bomb_sites.has("B"), "Dust2 registers Bomb Site A and Site B")
 	check(dust2.bomb_spawns.size() > 0, "Dust2 defines bomb spawn location")
-	check(dust2.spawns.size() >= 4, "Dust2 defines player/bot spawns")
+	check(dust2.spawn_points.size() >= 4, "Dust2 defines player/bot spawns")
 	dust2.queue_free()
 	await physics_frames(2)
 
@@ -4412,10 +4421,12 @@ func _test_lan_server_browser_and_dedicated_server() -> void:
 		"magic": "DARTSTORM",
 		"name": "LAN Battle Arena",
 		"port": 8915,
-		"arena": "dust_2",
-		"mode": "plant_the_bomb",
+		"arena": 8,
+		"arena_name": "Duststorm II",
+		"mode": 9,
+		"mode_name": "Plant The Bomb",
 		"players": 4,
-		"max": 12,
+		"max_players": 12,
 		"dedicated": true
 	}
 	var raw_packet := JSON.stringify(payload_dict).to_utf8_buffer()
@@ -4429,9 +4440,11 @@ func _test_lan_server_browser_and_dedicated_server() -> void:
 		check(s.get("ip") == "192.168.1.105", "server IP correctly parsed (192.168.1.105)")
 		check(s.get("port") == 8915, "server port correctly parsed (8915)")
 		check(s.get("name") == "LAN Battle Arena", "server name correctly parsed")
-		check(s.get("arena") == "dust_2", "arena correctly parsed (dust_2)")
-		check(s.get("mode") == "plant_the_bomb", "mode correctly parsed (plant_the_bomb)")
-		check(s.get("players") == 4 and s.get("max") == 12, "player counts correctly parsed (4/12)")
+		check(s.get("arena") == 8, "arena correctly parsed (8)")
+		check(s.get("arena_name") == "Duststorm II", "arena_name correctly parsed (Duststorm II)")
+		check(s.get("mode") == 9, "mode correctly parsed (9)")
+		check(s.get("mode_name") == "Plant The Bomb", "mode_name correctly parsed (Plant The Bomb)")
+		check(s.get("players") == 4 and s.get("max_players") == 12, "player counts correctly parsed (4/12)")
 		check(s.get("dedicated") == true, "dedicated flag is true")
 
 	# 4. Reject invalid / alien packets

@@ -468,10 +468,11 @@ func _build_hat() -> void:
 	for child in _hat_root.get_children():
 		child.queue_free()
 	_propeller = null
+	var base_y: float = (HAT_Y - 1.66) if _hero_skeleton != null else HAT_Y
 	if is_instance_valid(ModelLoader) and ModelLoader.has_hat_model(_hat_id):
 		var hat_node := ModelLoader.instantiate_hat(_hat_id)
 		if hat_node != null:
-			hat_node.position = Vector3(0.0, HAT_Y, 0.0) if _hero_skeleton == null else Vector3.ZERO
+			hat_node.position = Vector3(0.0, base_y, 0.0)
 			_hat_root.add_child(hat_node)
 			ModelLoader.apply_materials_recursive(hat_node, {
 				"main": _cloth_mat(_tint.darkened(0.2)),
@@ -482,66 +483,66 @@ func _build_hat() -> void:
 	var main := _tint.darkened(0.2)
 	match _hat_id:
 		&"cap":
-			ArenaKit.deco_cylinder(_hat_root, 0.27, 0.13, Vector3(0.0, HAT_Y, 0.0), main)
-			ArenaKit.deco_box(_hat_root, Vector3(0.34, 0.035, 0.24), Vector3(0.0, HAT_Y - 0.05, -0.3), main)
+			ArenaKit.deco_cylinder(_hat_root, 0.27, 0.13, Vector3(0.0, base_y, 0.0), main)
+			ArenaKit.deco_box(_hat_root, Vector3(0.34, 0.035, 0.24), Vector3(0.0, base_y - 0.05, -0.3), main)
 		&"beanie":
-			ArenaKit.deco_sphere(_hat_root, 0.285, Vector3(0.0, HAT_Y - 0.04, 0.0), main, 0.75)
-			ArenaKit.deco_cylinder(_hat_root, 0.29, 0.08, Vector3(0.0, HAT_Y - 0.08, 0.0), _tint.lightened(0.3))
-			ArenaKit.deco_sphere(_hat_root, 0.08, Vector3(0.0, HAT_Y + 0.18, 0.0), Color.WHITE)
+			ArenaKit.deco_sphere(_hat_root, 0.285, Vector3(0.0, base_y - 0.04, 0.0), main, 0.75)
+			ArenaKit.deco_cylinder(_hat_root, 0.29, 0.08, Vector3(0.0, base_y - 0.08, 0.0), _tint.lightened(0.3))
+			ArenaKit.deco_sphere(_hat_root, 0.08, Vector3(0.0, base_y + 0.18, 0.0), Color.WHITE)
 		&"propeller":
-			ArenaKit.deco_sphere(_hat_root, 0.28, Vector3(0.0, HAT_Y - 0.04, 0.0), main, 0.65)
-			ArenaKit.deco_cylinder(_hat_root, 0.02, 0.14, Vector3(0.0, HAT_Y + 0.17, 0.0), Color(0.3, 0.3, 0.35))
+			ArenaKit.deco_sphere(_hat_root, 0.28, Vector3(0.0, base_y - 0.04, 0.0), main, 0.65)
+			ArenaKit.deco_cylinder(_hat_root, 0.02, 0.14, Vector3(0.0, base_y + 0.17, 0.0), Color(0.3, 0.3, 0.35))
 			_propeller = Node3D.new()
-			_propeller.position = Vector3(0.0, HAT_Y + 0.24, 0.0)
+			_propeller.position = Vector3(0.0, base_y + 0.24, 0.0)
 			_hat_root.add_child(_propeller)
 			ArenaKit.deco_box(_propeller, Vector3(0.52, 0.02, 0.08), Vector3.ZERO, Color(1.0, 0.3, 0.3))
 			ArenaKit.deco_box(_propeller, Vector3(0.08, 0.021, 0.52), Vector3.ZERO, Color(1.0, 0.85, 0.2))
 		&"party":
-			ArenaKit.deco_cylinder(_hat_root, 0.17, 0.42, Vector3(0.0, HAT_Y + 0.17, 0.0), _tint.lightened(0.25), Vector3.ZERO, 0.0)
-			ArenaKit.deco_sphere(_hat_root, 0.07, Vector3(0.0, HAT_Y + 0.4, 0.0), Color(1.0, 0.85, 0.2))
+			ArenaKit.deco_cylinder(_hat_root, 0.17, 0.42, Vector3(0.0, base_y + 0.17, 0.0), _tint.lightened(0.25), Vector3.ZERO, 0.0)
+			ArenaKit.deco_sphere(_hat_root, 0.07, Vector3(0.0, base_y + 0.4, 0.0), Color(1.0, 0.85, 0.2))
 		&"cowboy":
 			var leather := Color(0.55, 0.36, 0.2)
-			ArenaKit.deco_cylinder(_hat_root, 0.46, 0.04, Vector3(0.0, HAT_Y - 0.02, 0.0), leather)
-			ArenaKit.deco_cylinder(_hat_root, 0.22, 0.24, Vector3(0.0, HAT_Y + 0.1, 0.0), leather, Vector3.ZERO, 0.19)
-			ArenaKit.deco_cylinder(_hat_root, 0.225, 0.05, Vector3(0.0, HAT_Y + 0.02, 0.0), main)
+			ArenaKit.deco_cylinder(_hat_root, 0.46, 0.04, Vector3(0.0, base_y - 0.02, 0.0), leather)
+			ArenaKit.deco_cylinder(_hat_root, 0.22, 0.24, Vector3(0.0, base_y + 0.1, 0.0), leather, Vector3.ZERO, 0.19)
+			ArenaKit.deco_cylinder(_hat_root, 0.225, 0.05, Vector3(0.0, base_y + 0.02, 0.0), main)
 		&"crown":
-			ArenaKit.deco_cylinder(_hat_root, 0.23, 0.12, Vector3(0.0, HAT_Y + 0.02, 0.0), GOLD)
+			ArenaKit.deco_cylinder(_hat_root, 0.23, 0.12, Vector3(0.0, base_y + 0.02, 0.0), GOLD)
 			for i in 5:
 				var angle := TAU * float(i) / 5.0
-				var spot := Vector3(cos(angle) * 0.19, HAT_Y + 0.13, sin(angle) * 0.19)
+				var spot := Vector3(cos(angle) * 0.19, base_y + 0.13, sin(angle) * 0.19)
 				ArenaKit.deco_cylinder(_hat_root, 0.06, 0.13, spot, GOLD, Vector3.ZERO, 0.0)
-			ArenaKit.deco_sphere(_hat_root, 0.04, Vector3(0.0, HAT_Y + 0.03, -0.235), Color(0.9, 0.15, 0.3))
+			ArenaKit.deco_sphere(_hat_root, 0.04, Vector3(0.0, base_y + 0.03, -0.235), Color(0.9, 0.15, 0.3))
 		&"goggles":
 			# Ski goggles pushed up on the forehead.
-			ArenaKit.deco_cylinder(_hat_root, 0.265, 0.06, Vector3(0.0, 1.78, 0.0), NAVY)
+			ArenaKit.deco_cylinder(_hat_root, 0.265, 0.06, Vector3(0.0, base_y - 0.08, 0.0), NAVY)
 			for side: float in [-1.0, 1.0]:
-				ArenaKit.deco_cylinder(_hat_root, 0.088, 0.06, Vector3(side * 0.1, 1.8, -0.235), main, Vector3(90.0, 0.0, 0.0))
-				ArenaKit.deco_cylinder(_hat_root, 0.066, 0.07, Vector3(side * 0.1, 1.8, -0.24), Color(0.45, 0.88, 1.0), Vector3(90.0, 0.0, 0.0))
+				ArenaKit.deco_cylinder(_hat_root, 0.088, 0.06, Vector3(side * 0.1, base_y - 0.06, -0.235), main, Vector3(90.0, 0.0, 0.0))
+				ArenaKit.deco_cylinder(_hat_root, 0.066, 0.07, Vector3(side * 0.1, base_y - 0.06, -0.24), Color(0.45, 0.88, 1.0), Vector3(90.0, 0.0, 0.0))
 		&"bunny":
 			for side: float in [-1.0, 1.0]:
-				var ear := ArenaKit.deco_sphere(_hat_root, 0.07, Vector3(side * 0.11, HAT_Y + 0.2, 0.0), Color(0.97, 0.97, 1.0), 3.2)
+				var ear := ArenaKit.deco_sphere(_hat_root, 0.07, Vector3(side * 0.11, base_y + 0.2, 0.0), Color(0.97, 0.97, 1.0), 3.2)
 				ear.rotation_degrees.z = -side * 14.0
-				var inner := ArenaKit.deco_sphere(_hat_root, 0.04, Vector3(side * 0.112, HAT_Y + 0.2, -0.04), Color(1.0, 0.62, 0.75), 4.5)
+				var inner := ArenaKit.deco_sphere(_hat_root, 0.04, Vector3(side * 0.112, base_y + 0.2, -0.04), Color(1.0, 0.62, 0.75), 4.5)
 				inner.rotation_degrees.z = -side * 14.0
 		&"horns":
 			for side: float in [-1.0, 1.0]:
-				ArenaKit.deco_cylinder(_hat_root, 0.065, 0.22, Vector3(side * 0.14, 1.92, -0.05), Color(0.92, 0.16, 0.22),
+				ArenaKit.deco_cylinder(_hat_root, 0.065, 0.22, Vector3(side * 0.14, base_y + 0.06, -0.05), Color(0.92, 0.16, 0.22),
 						Vector3(0.0, 0.0, -side * 25.0), 0.0)
 		&"spiky":
 			# Spiky cartoon hair, straight out of a comic.
 			var hair := Color(1.0, 0.74, 0.18)
-			ArenaKit.deco_sphere(_hat_root, 0.235, Vector3(0.0, 1.7, 0.02), hair, 0.85)
+			ArenaKit.deco_sphere(_hat_root, 0.235, Vector3(0.0, base_y - 0.16, 0.02), hair, 0.85)
 			for i in 7:
 				var direction := Vector3.UP
 				if i > 0:
 					var around := TAU * float(i - 1) / 6.0
 					direction = Vector3(sin(0.7) * cos(around), cos(0.7), sin(0.7) * sin(around))
-				var spike := ArenaKit.deco_cylinder(_hat_root, 0.075, 0.24, Vector3(0.0, 1.68, 0.02) + direction * 0.27, hair,
+				var spike := ArenaKit.deco_cylinder(_hat_root, 0.075, 0.24, Vector3(0.0, base_y - 0.18, 0.02) + direction * 0.27, hair,
 						Vector3.ZERO, 0.0)
 				spike.quaternion = Quaternion(Vector3.UP, direction)
 		_:
 			# No hat: a cheerful tuft of hair.
-			ArenaKit.deco_sphere(_hat_root, 0.2, Vector3(0.0, HAT_Y - 0.06, 0.02), Color(0.4, 0.25, 0.12), 0.6)
+			ArenaKit.deco_sphere(_hat_root, 0.2, Vector3(0.0, base_y - 0.06, 0.02), Color(0.4, 0.25, 0.12), 0.6)
 
 
 func _capsule(parent: Node3D, radius: float, height: float, pos: Vector3, material: Material) -> MeshInstance3D:

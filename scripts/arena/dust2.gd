@@ -42,13 +42,19 @@ func _build_ground_and_walls() -> void:
 	ArenaKit.box(geometry, Vector3(HALF_X * 2.0, 1.0, HALF_Z * 2.0), Vector3(0.0, -0.5, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
 	ArenaKit.deco_box(decor, Vector3(500.0, 0.2, 500.0), Vector3(0.0, -0.55, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
 
-	# Boundary fortress canyon walls
+	# Boundary fortress canyon walls with architectural coping cornices
 	var wall_h := 7.5
 	var thick := 1.2
 	ArenaKit.box(geometry, Vector3(HALF_X * 2.0, wall_h, thick), Vector3(0.0, wall_h * 0.5, -HALF_Z), SANDSTONE)
 	ArenaKit.box(geometry, Vector3(HALF_X * 2.0, wall_h, thick), Vector3(0.0, wall_h * 0.5, HALF_Z), SANDSTONE)
 	ArenaKit.box(geometry, Vector3(thick, wall_h, HALF_Z * 2.0), Vector3(-HALF_X, wall_h * 0.5, 0.0), SANDSTONE)
 	ArenaKit.box(geometry, Vector3(thick, wall_h, HALF_Z * 2.0), Vector3(HALF_X, wall_h * 0.5, 0.0), SANDSTONE)
+
+	# Decorative coping trim along canyon wall tops
+	ArenaKit.cornice(decor, Vector3(0.0, wall_h + 0.15, -HALF_Z), Vector3(HALF_X * 2.0 + 0.6, 0.35, thick + 0.4))
+	ArenaKit.cornice(decor, Vector3(0.0, wall_h + 0.15, HALF_Z), Vector3(HALF_X * 2.0 + 0.6, 0.35, thick + 0.4))
+	ArenaKit.cornice(decor, Vector3(-HALF_X, wall_h + 0.15, 0.0), Vector3(thick + 0.4, 0.35, HALF_Z * 2.0 + 0.6))
+	ArenaKit.cornice(decor, Vector3(HALF_X, wall_h + 0.15, 0.0), Vector3(thick + 0.4, 0.35, HALF_Z * 2.0 + 0.6))
 
 
 func _build_t_spawn_and_approaches() -> void:
@@ -57,10 +63,13 @@ func _build_t_spawn_and_approaches() -> void:
 	# Stone curb framing the northern edge of T-Spawn towards Suicide and approaches
 	ArenaKit.box(geometry, Vector3(22.0, 0.06, 0.4), Vector3(0.0, 0.03, 28.0), SANDSTONE_DARK)
 
-	# Staging crates at T Spawn
-	ArenaKit.box(geometry, Vector3(1.8, 1.8, 1.8), Vector3(-4.0, 0.9, 36.0), CRATE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
-	ArenaKit.box(geometry, Vector3(1.6, 1.6, 1.6), Vector3(-2.0, 0.8, 36.0), CRATE_WOOD, Vector3(0.0, 15.0, 0.0), ArenaKit.SurfaceType.WOOD)
-	ArenaKit.box(geometry, Vector3(1.6, 1.6, 1.6), Vector3(3.0, 0.8, 35.0), CRATE_WOOD, Vector3(0.0, -10.0, 0.0), ArenaKit.SurfaceType.WOOD)
+	# High-poly staging crates, pallets and terracotta urns at T Spawn
+	ArenaKit.pallet(geometry, Vector3(-4.0, 0.0, 36.0))
+	ArenaKit.crate(geometry, Vector3(-4.0, 0.20, 36.0), Vector3(1.8, 1.8, 1.8))
+	ArenaKit.crate(geometry, Vector3(-2.0, 0.0, 36.0), Vector3(1.6, 1.6, 1.6), Vector3(0.0, 15.0, 0.0))
+	ArenaKit.crate(geometry, Vector3(3.0, 0.0, 35.0), Vector3(1.6, 1.6, 1.6), Vector3(0.0, -10.0, 0.0))
+	ArenaKit.urn(decor, Vector3(5.0, 0.0, 38.0), 1.2)
+	ArenaKit.urn(decor, Vector3(-6.5, 0.0, 37.0), 1.1)
 
 	# --- Suicide (Sniper Alley looking straight North into Mid) ---
 	# Corridor walls framing Suicide from Z = 28 to Z = 14
@@ -89,10 +98,10 @@ func _build_t_spawn_and_approaches() -> void:
 func _build_long_a_and_pit() -> void:
 	# --- Long Doors (Double Doors gateway at X = 20.0, Z = 14.0) ---
 	var door_w := 4.4
-	# Building enclosing Long Doors
+	# Building enclosing Long Doors with high-poly curved arch
 	ArenaKit.box(geometry, Vector3(6.0, 5.0, 0.8), Vector3(14.0, 2.5, 14.0), SANDSTONE)
 	ArenaKit.box(geometry, Vector3(6.0, 5.0, 0.8), Vector3(26.0, 2.5, 14.0), SANDSTONE)
-	ArenaKit.box(geometry, Vector3(door_w, 1.6, 0.8), Vector3(20.0, 4.2, 14.0), SANDSTONE_DARK)
+	ArenaKit.arch(geometry, Vector3(20.0, 0.0, 14.0), door_w, 5.0, 1.2)
 
 	# Propped wooden/metal doors
 	ArenaKit.box(geometry, Vector3(0.2, 3.4, 1.2), Vector3(19.6, 1.7, 14.0 - 1.1), CRATE_WOOD, Vector3(0.0, 30.0, 0.0), ArenaKit.SurfaceType.WOOD)
@@ -111,15 +120,22 @@ func _build_long_a_and_pit() -> void:
 	# Ramp emerging from Pit heading North onto A Long
 	ArenaKit.ramp(geometry, Vector3(28.0, -1.6, 6.0), Vector3(28.0, 0.0, 3.0), 5.0, SANDSTONE)
 
+	# Pit barrels and decorative pottery urn
+	ArenaKit.barrel(geometry, Vector3(28.0, -1.6, 11.0))
+	ArenaKit.barrel(geometry, Vector3(29.0, -1.6, 11.5))
+	ArenaKit.urn(decor, Vector3(31.5, -1.6, 13.0), 1.1)
+
 	# --- A Long Straightway (X = 26.0, Z from 4.0 down to -8.0) ---
 	var long_w := 8.0
 	ArenaKit.box(geometry, Vector3(long_w, 0.3, 14.0), Vector3(26.0, -0.15, -2.0), SANDSTONE)
 	# Wall separating A Long from Mid/Catwalk
 	ArenaKit.box(geometry, Vector3(0.8, 5.5, 26.0), Vector3(20.0, 2.75, -2.0), SANDSTONE)
+	# Market awning along A Long wall
+	ArenaKit.awning(decor, Vector3(20.4, 3.6, -2.0), 4.0, Vector3(0.0, 90.0, 0.0))
 
 	# A Car (wreck/crates on A Long at X = 28.0, Z = -3.0)
 	ArenaKit.box(geometry, Vector3(2.2, 1.4, 4.4), Vector3(28.0, 0.7, -3.0), CAR_BLUE, Vector3(0.0, -12.0, 0.0), ArenaKit.SurfaceType.METAL)
-	ArenaKit.box(geometry, Vector3(1.4, 1.4, 1.4), Vector3(26.0, 0.7, -3.0), CRATE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.crate(geometry, Vector3(26.0, 0.0, -3.0), Vector3(1.4, 1.4, 1.4))
 
 	# --- A Ramp (rising up onto Site A: Y = 0.0 to Y = 1.8 between Z = -8.0 and Z = -14.0) ---
 	ArenaKit.ramp(geometry, Vector3(24.0, 0.0, -8.0), Vector3(24.0, 1.8, -14.0), 6.5, SANDSTONE)
@@ -133,17 +149,21 @@ func _build_mid_and_doors() -> void:
 	# West wall of Mid (separating Mid from B Tunnels)
 	ArenaKit.box(geometry, Vector3(0.8, 5.5, 24.0), Vector3(-5.0, 2.75, 4.0), SANDSTONE)
 
+	# Top Mid barrels & pallet
+	ArenaKit.barrel(geometry, Vector3(-3.5, 0.0, 12.0))
+	ArenaKit.barrel(geometry, Vector3(-4.2, 0.0, 12.6))
+	ArenaKit.pallet(geometry, Vector3(3.2, 0.0, 8.0))
+
 	# --- X-Box (The iconic jump crate at X = 2.8, Z = 0.0) ---
-	# Dimensions 2.2m x 1.8m x 2.2m - allows players to jump up to Catwalk!
-	ArenaKit.box(geometry, Vector3(2.2, 1.8, 2.2), Vector3(2.8, 0.9, 0.0), CRATE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
-	# Smaller helper step crate
-	ArenaKit.box(geometry, Vector3(1.2, 0.9, 1.2), Vector3(2.8, 0.45, 1.8), CRATE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	# High-poly stylized crate stack allowing players to jump up to Catwalk!
+	ArenaKit.crate(geometry, Vector3(2.8, 0.0, 0.0), Vector3(2.2, 1.8, 2.2))
+	ArenaKit.crate(geometry, Vector3(2.8, 0.0, 1.8), Vector3(1.2, 0.9, 1.2))
 
 	# --- Mid Double Doors (at Z = -5.0, X = 0.0) ---
-	# Heavy stone doorway
+	# Heavy stone doorway with high-poly curved arch
 	ArenaKit.box(geometry, Vector3(2.6, 5.0, 0.8), Vector3(-3.2, 2.5, -5.0), SANDSTONE_DARK)
 	ArenaKit.box(geometry, Vector3(2.6, 5.0, 0.8), Vector3(3.2, 2.5, -5.0), SANDSTONE_DARK)
-	ArenaKit.box(geometry, Vector3(4.0, 1.6, 0.8), Vector3(0.0, 4.2, -5.0), SANDSTONE_DARK)
+	ArenaKit.arch(geometry, Vector3(0.0, 0.0, -5.0), 4.4, 5.0, 1.2)
 
 	# Metal double doors propped open with sniper slit
 	ArenaKit.box(geometry, Vector3(1.6, 3.4, 0.15), Vector3(-1.1, 1.7, -5.3), METAL_DOOR, Vector3(0.0, 26.0, 0.0), ArenaKit.SurfaceType.METAL)
@@ -154,10 +174,10 @@ func _build_mid_and_doors() -> void:
 
 	# Truck obstacle in Lower Mid (at X = -4.0, Z = -12.0)
 	ArenaKit.box(geometry, Vector3(2.4, 1.6, 4.6), Vector3(-4.0, 0.8, -12.0), CAR_BLUE, Vector3(0.0, 20.0, 0.0), ArenaKit.SurfaceType.METAL)
-	ArenaKit.box(geometry, Vector3(1.4, 1.4, 1.4), Vector3(-2.2, 0.7, -13.0), CRATE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.crate(geometry, Vector3(-2.2, 0.0, -13.0), Vector3(1.4, 1.4, 1.4))
 
 	# CT Boost box in Lower Mid (X = 3.0, Z = -10.0)
-	ArenaKit.box(geometry, Vector3(1.4, 1.4, 1.4), Vector3(3.0, 0.7, -10.0), CRATE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.crate(geometry, Vector3(3.0, 0.0, -10.0), Vector3(1.4, 1.4, 1.4))
 
 
 func _build_catwalk_short_and_site_a() -> void:
@@ -175,21 +195,25 @@ func _build_catwalk_short_and_site_a() -> void:
 	ArenaKit.box(geometry, Vector3(10.0, 4.5, 0.8), Vector3(11.5, 2.25, -14.5), SANDSTONE)
 
 	# Short Boost crate
-	ArenaKit.box(geometry, Vector3(1.4, 1.4, 1.4), Vector3(10.0, 2.5, -12.0), CRATE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.crate(geometry, Vector3(10.0, 1.8, -12.0), Vector3(1.4, 1.4, 1.4))
 
 	# --- Bombsite A Platform (Raised Y = 1.8, centered at X = 20.0, Z = -18.0) ---
 	var a_size := 14.0
 	ArenaKit.box(geometry, Vector3(a_size, 1.8, a_size), Vector3(20.0, 0.9, -18.0), SANDSTONE)
 
-	# Default plant crates on Site A
-	ArenaKit.box(geometry, Vector3(1.6, 1.6, 1.6), Vector3(18.0, 2.6, -16.0), CRATE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
-	ArenaKit.box(geometry, Vector3(1.5, 1.5, 1.5), Vector3(19.8, 2.55, -16.0), CRATE_WOOD, Vector3(0.0, 15.0, 0.0), ArenaKit.SurfaceType.WOOD)
-	ArenaKit.box(geometry, Vector3(1.4, 1.4, 1.4), Vector3(18.8, 4.1, -16.0), CRATE_WOOD, Vector3(0.0, -10.0, 0.0), ArenaKit.SurfaceType.WOOD)
+	# Default plant crates on Site A (High-Poly)
+	ArenaKit.crate(geometry, Vector3(18.0, 1.8, -16.0), Vector3(1.6, 1.6, 1.6))
+	ArenaKit.crate(geometry, Vector3(19.8, 1.8, -16.0), Vector3(1.5, 1.5, 1.5), Vector3(0.0, 15.0, 0.0))
+	ArenaKit.crate(geometry, Vector3(18.8, 3.4, -16.0), Vector3(1.4, 1.4, 1.4), Vector3(0.0, -10.0, 0.0))
 
 	# Goose corner at North-East back of Site A (X = 24.0, Z = -23.0)
-	ArenaKit.box(geometry, Vector3(1.6, 1.6, 1.6), Vector3(24.0, 2.6, -23.0), CRATE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.crate(geometry, Vector3(24.0, 1.8, -23.0), Vector3(1.6, 1.6, 1.6))
 	# Ninja hideout crate behind A ramp (X = 14.5, Z = -19.0)
-	ArenaKit.box(geometry, Vector3(1.5, 1.5, 1.5), Vector3(14.5, 2.55, -19.0), CRATE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.crate(geometry, Vector3(14.5, 1.8, -19.0), Vector3(1.5, 1.5, 1.5))
+
+	# Decorative barrels and urns on Site A
+	ArenaKit.barrel(geometry, Vector3(24.0, 1.8, -14.0))
+	ArenaKit.urn(decor, Vector3(26.0, 1.8, -20.0), 1.15)
 
 
 func _build_b_tunnels_and_site_b() -> void:
@@ -217,7 +241,7 @@ func _build_b_tunnels_and_site_b() -> void:
 	# --- B Doors entrance into Site B (at X = -20.0, Z = -4.0) ---
 	ArenaKit.box(geometry, Vector3(2.4, 4.5, 0.8), Vector3(-16.0, 2.25, -4.0), SANDSTONE_DARK)
 	ArenaKit.box(geometry, Vector3(2.4, 4.5, 0.8), Vector3(-24.0, 2.25, -4.0), SANDSTONE_DARK)
-	ArenaKit.box(geometry, Vector3(5.6, 1.5, 0.8), Vector3(-20.0, 3.75, -4.0), SANDSTONE_DARK)
+	ArenaKit.arch(geometry, Vector3(-20.0, 0.0, -4.0), 5.6, 4.6, 1.2)
 
 	# Propped wooden B Doors
 	ArenaKit.box(geometry, Vector3(1.3, 3.0, 0.15), Vector3(-18.5, 1.5, -4.3), CRATE_WOOD, Vector3(0.0, 28.0, 0.0), ArenaKit.SurfaceType.WOOD)
@@ -229,17 +253,22 @@ func _build_b_tunnels_and_site_b() -> void:
 	# Ramps up to B Platform from B Doors (South) and B Window (East)
 	ArenaKit.ramp(geometry, Vector3(-21.0, 0.0, -7.0), Vector3(-21.0, 1.0, -10.0), 4.2, SANDSTONE)
 
-	# Default plant crates at B Site
-	ArenaKit.box(geometry, Vector3(1.6, 1.6, 1.6), Vector3(-22.0, 1.8, -15.0), CRATE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
-	ArenaKit.box(geometry, Vector3(1.6, 1.6, 1.6), Vector3(-23.8, 1.8, -15.0), CRATE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
-	ArenaKit.box(geometry, Vector3(1.4, 1.4, 1.4), Vector3(-22.8, 3.3, -15.0), CRATE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	# High-poly Default plant crates at B Site
+	ArenaKit.crate(geometry, Vector3(-22.0, 1.0, -15.0), Vector3(1.6, 1.6, 1.6))
+	ArenaKit.crate(geometry, Vector3(-23.8, 1.0, -15.0), Vector3(1.6, 1.6, 1.6))
+	ArenaKit.crate(geometry, Vector3(-22.8, 2.6, -15.0), Vector3(1.4, 1.4, 1.4))
 
-	# Barrels at B Site corner
-	ArenaKit.cylinder(geometry, 0.45, 1.3, Vector3(-28.5, 1.65, -16.0), TRIM_BLUE, ArenaKit.SurfaceType.METAL)
-	ArenaKit.cylinder(geometry, 0.45, 1.3, Vector3(-28.5, 1.65, -17.2), TRIM_BLUE, ArenaKit.SurfaceType.METAL)
+	# High-poly ribbed Barrels at B Site corner
+	ArenaKit.barrel(geometry, Vector3(-28.5, 1.0, -16.0))
+	ArenaKit.barrel(geometry, Vector3(-28.5, 1.0, -17.4))
+	ArenaKit.urn(decor, Vector3(-28.8, 1.0, -14.6), 1.1)
 
-	# Snipers Box (raised wooden platform at X = -28.0, Z = -21.0, Y = 2.4)
-	ArenaKit.box(geometry, Vector3(3.2, 1.4, 3.2), Vector3(-28.0, 1.7, -20.5), CRATE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	# Snipers Box (raised wooden platform with crate at X = -28.0, Z = -21.0, Y = 1.0)
+	ArenaKit.pallet(geometry, Vector3(-28.0, 1.0, -20.5))
+	ArenaKit.crate(geometry, Vector3(-28.0, 1.2, -20.5), Vector3(2.0, 1.8, 2.0))
+
+	# Market awning on Site B back wall
+	ArenaKit.awning(decor, Vector3(-25.0, 3.6, -21.5), 3.6)
 
 	# B Car cover obstacle (X = -17.0, Z = -8.0)
 	ArenaKit.box(geometry, Vector3(2.2, 1.4, 4.4), Vector3(-17.0, 0.7, -8.0), CAR_BLUE, Vector3(0.0, -15.0, 0.0), ArenaKit.SurfaceType.METAL)

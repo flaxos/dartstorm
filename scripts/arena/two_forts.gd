@@ -33,13 +33,19 @@ func _build_terrain_and_moat() -> void:
 	ArenaKit.box(geometry, Vector3(HALF_X * 2.0, 1.0, HALF_Z * 2.0), Vector3(0.0, -0.5, 0.0), Color(0.35, 0.60, 0.28))
 	ArenaKit.deco_box(decor, Vector3(300.0, 0.2, 300.0), Vector3(0.0, -0.55, 0.0), Color(0.30, 0.52, 0.24))
 
-	# Boundary walls
+	# Boundary walls with decorative coping cornices
 	var wall_h := 6.0
 	var thick := 0.8
 	ArenaKit.box(geometry, Vector3(HALF_X * 2.0, wall_h, thick), Vector3(0.0, wall_h * 0.5, -HALF_Z), STONE)
 	ArenaKit.box(geometry, Vector3(HALF_X * 2.0, wall_h, thick), Vector3(0.0, wall_h * 0.5, HALF_Z), STONE)
 	ArenaKit.box(geometry, Vector3(thick, wall_h, HALF_Z * 2.0), Vector3(-HALF_X, wall_h * 0.5, 0.0), STONE)
 	ArenaKit.box(geometry, Vector3(thick, wall_h, HALF_Z * 2.0), Vector3(HALF_X, wall_h * 0.5, 0.0), STONE)
+
+	# Boundary coping trims
+	ArenaKit.cornice(decor, Vector3(0.0, wall_h + 0.15, -HALF_Z), Vector3(HALF_X * 2.0 + 0.4, 0.35, thick + 0.4))
+	ArenaKit.cornice(decor, Vector3(0.0, wall_h + 0.15, HALF_Z), Vector3(HALF_X * 2.0 + 0.4, 0.35, thick + 0.4))
+	ArenaKit.cornice(decor, Vector3(-HALF_X, wall_h + 0.15, 0.0), Vector3(thick + 0.4, 0.35, HALF_Z * 2.0 + 0.4))
+	ArenaKit.cornice(decor, Vector3(HALF_X, wall_h + 0.15, 0.0), Vector3(thick + 0.4, 0.35, HALF_Z * 2.0 + 0.4))
 
 	# Sunken Moat (Z between -7.0 and 7.0, X between -18.0 and 18.0, floor at Y = -2.2)
 	var moat_w := 14.0
@@ -80,8 +86,9 @@ func _build_center_bridge() -> void:
 	ArenaKit.deco_box(decor, Vector3(bw + 0.8, 0.3, bl + 0.4), Vector3(0.0, 3.2, 0.0), BRIDGE_RED)
 	ArenaKit.deco_box(decor, Vector3(bw * 0.7, 0.6, bl + 0.4), Vector3(0.0, 3.6, 0.0), BRIDGE_RED)
 
-	# Mid-bridge cover crate
-	ArenaKit.box(geometry, Vector3(1.2, 1.2, 1.2), Vector3(0.0, 0.6, 0.0), TIMBER, Vector3(0.0, 15.0, 0.0), ArenaKit.SurfaceType.WOOD)
+	# Mid-bridge high-poly cover crate and pallet
+	ArenaKit.pallet(geometry, Vector3(0.0, 0.0, 0.0), Vector3(0.0, 15.0, 0.0))
+	ArenaKit.crate(geometry, Vector3(0.0, 0.20, 0.0), Vector3(1.3, 1.3, 1.3), Vector3(0.0, 15.0, 0.0))
 
 
 func _build_fort(team_idx: int, dir_z: float) -> void:
@@ -91,11 +98,13 @@ func _build_fort(team_idx: int, dir_z: float) -> void:
 	# 1. Fort Facade Wall (facing moat at Z = 7.2 * dir_z)
 	var facade_z := 7.5 * dir_z
 	var wall_h := 5.5
-	# Left wing, Right wing, center doorway arch
+	# Left wing, Right wing, center doorway with high-poly arch
 	ArenaKit.box(geometry, Vector3(9.0, wall_h, 0.8), Vector3(-8.5, wall_h * 0.5, facade_z), team_col, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	ArenaKit.box(geometry, Vector3(9.0, wall_h, 0.8), Vector3(8.5, wall_h * 0.5, facade_z), team_col, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
-	# Archway top over center entrance
-	ArenaKit.box(geometry, Vector3(8.0, 1.8, 0.8), Vector3(0.0, wall_h - 0.9, facade_z), team_col, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.arch(geometry, Vector3(0.0, 0.0, facade_z), 7.2, wall_h, 1.2)
+
+	# Battlement coping cornice along facade top
+	ArenaKit.cornice(decor, Vector3(0.0, wall_h + 0.15, facade_z), Vector3(26.0, 0.35, 1.2))
 
 	# 2. Upper Sniper Battlement / Balcony (Y = 3.4, Z = 11.0 * dir_z)
 	var balc_z := 11.5 * dir_z
@@ -105,6 +114,8 @@ func _build_fort(team_idx: int, dir_z: float) -> void:
 	ArenaKit.box(geometry, Vector3(balc_w, 0.4, balc_d), Vector3(0.0, 3.2, balc_z), FLOOR_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	# Waist-high crenellated railing overlooking bridge
 	ArenaKit.box(geometry, Vector3(balc_w, 1.1, 0.3), Vector3(0.0, 3.95, balc_z - 2.8 * dir_z), team_col)
+	ArenaKit.crate(geometry, Vector3(balc_w * 0.5 - 2.0, 3.4, balc_z), Vector3(1.3, 1.3, 1.3))
+	ArenaKit.barrel(geometry, Vector3(-balc_w * 0.5 + 2.0, 3.4, balc_z))
 
 	# Stairs leading from courtyard up to sniper deck
 	ArenaKit.ramp(geometry, Vector3(-7.5, 0.0, 15.0 * dir_z), Vector3(-7.5, 3.2, 12.0 * dir_z), 2.4, TIMBER)
@@ -116,9 +127,9 @@ func _build_fort(team_idx: int, dir_z: float) -> void:
 	ArenaKit.box(geometry, Vector3(0.8, 4.0, 12.0), Vector3(-6.0, 2.0, center_z + 2.0 * dir_z), team_col)
 	ArenaKit.box(geometry, Vector3(0.8, 4.0, 12.0), Vector3(6.0, 2.0, center_z + 2.0 * dir_z), team_col)
 
-	# Tactical crates in courtyard
-	ArenaKit.box(geometry, Vector3(1.4, 1.4, 1.4), Vector3(-3.0, 0.7, center_z - 2.0 * dir_z), TIMBER, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
-	ArenaKit.box(geometry, Vector3(1.4, 1.4, 1.4), Vector3(3.0, 0.7, center_z + 1.0 * dir_z), TIMBER, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	# High-poly tactical crates and barrels in courtyard
+	ArenaKit.crate(geometry, Vector3(-3.0, 0.0, center_z - 2.0 * dir_z), Vector3(1.5, 1.5, 1.5))
+	ArenaKit.barrel(geometry, Vector3(3.0, 0.0, center_z + 1.0 * dir_z))
 
 	# 4. Basement Intel Vault (Y = -2.2, Z = 27.0 * dir_z)
 	var vault_z := 27.5 * dir_z
@@ -134,6 +145,7 @@ func _build_fort(team_idx: int, dir_z: float) -> void:
 
 	# Intel Desk in vault center
 	ArenaKit.box(geometry, Vector3(3.0, 0.9, 1.8), Vector3(0.0, -1.75, vault_z + 1.5 * dir_z), TIMBER, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.crate(geometry, Vector3(-4.0, -2.2, vault_z + 2.0 * dir_z), Vector3(1.4, 1.4, 1.4))
 
 	# Low-level water tunnel connecting moat to basement
 	ArenaKit.box(geometry, Vector3(2.4, 0.4, 14.0), Vector3(-12.0 * (1.0 if team_idx == 0 else -1.0), -2.4, 15.0 * dir_z), STONE)

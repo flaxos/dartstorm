@@ -57,7 +57,14 @@ const PROP_ALIASES: Dictionary = {
 	&"goal": &"soccer_goal",
 	&"table": &"picnic_table",
 	&"dog": &"dog_house",
-	&"tower": &"watchtower"
+	&"tower": &"watchtower",
+	&"crate": &"tactical_crate",
+	&"barrel": &"tactical_barrel",
+	&"barrier": &"inflatable_barrier",
+	&"arch": &"archway_curved",
+	&"awning": &"market_awning",
+	&"urn": &"desert_urn",
+	&"pallet": &"wooden_pallet"
 }
 
 

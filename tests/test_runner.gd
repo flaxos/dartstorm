@@ -4041,7 +4041,14 @@ func _test_stylized_arena_props_and_environments() -> void:
 		"inflatable_bunker",
 		"soccer_goal",
 		"cartoon_tree",
-		"watchtower"
+		"watchtower",
+		"tactical_crate",
+		"tactical_barrel",
+		"inflatable_barrier",
+		"archway_curved",
+		"market_awning",
+		"desert_urn",
+		"wooden_pallet"
 	]
 
 	for prop_id in expected_props:
@@ -4059,6 +4066,13 @@ func _test_stylized_arena_props_and_environments() -> void:
 	check(ModelLoader.resolve_prop_id(&"table") == &"picnic_table", "Alias 'table' resolves to picnic_table")
 	check(ModelLoader.resolve_prop_id(&"tree") == &"cartoon_tree", "Alias 'tree' resolves to cartoon_tree")
 	check(ModelLoader.resolve_prop_id(&"tower") == &"watchtower", "Alias 'tower' resolves to watchtower")
+	check(ModelLoader.resolve_prop_id(&"crate") == &"tactical_crate", "Alias 'crate' resolves to tactical_crate")
+	check(ModelLoader.resolve_prop_id(&"barrel") == &"tactical_barrel", "Alias 'barrel' resolves to tactical_barrel")
+	check(ModelLoader.resolve_prop_id(&"barrier") == &"inflatable_barrier", "Alias 'barrier' resolves to inflatable_barrier")
+	check(ModelLoader.resolve_prop_id(&"arch") == &"archway_curved", "Alias 'arch' resolves to archway_curved")
+	check(ModelLoader.resolve_prop_id(&"awning") == &"market_awning", "Alias 'awning' resolves to market_awning")
+	check(ModelLoader.resolve_prop_id(&"urn") == &"desert_urn", "Alias 'urn' resolves to desert_urn")
+	check(ModelLoader.resolve_prop_id(&"pallet") == &"wooden_pallet", "Alias 'pallet' resolves to wooden_pallet")
 
 	# 3. Dedicated Prop Instantiation & Physics Collision Structure
 	# Dog House
@@ -4173,7 +4187,42 @@ func _test_stylized_arena_props_and_environments() -> void:
 	soccer.queue_free()
 	await physics_frames(2)
 
-	# 7. Procedural Fallback Verification (when models_enabled = false)
+	# 7. High-Poly Tactical Props & ArenaKit Helpers
+	var test_stage := Node3D.new()
+	add_child(test_stage)
+	var crate_node := ArenaKit.crate(test_stage, Vector3.ZERO, Vector3(1.8, 1.8, 1.8))
+	check(crate_node != null, "ArenaKit.crate creates high-poly tactical crate")
+	check(crate_node is StaticBody3D, "tactical crate has StaticBody3D")
+	check((crate_node as StaticBody3D).collision_layer == Layers.WORLD, "tactical crate collides on Layers.WORLD")
+
+	var barrel_node := ArenaKit.barrel(test_stage, Vector3(3.0, 0.0, 0.0))
+	check(barrel_node != null, "ArenaKit.barrel creates high-poly ribbed barrel")
+	check(barrel_node is StaticBody3D, "tactical barrel has StaticBody3D")
+
+	var barrier_node := ArenaKit.barrier(test_stage, Vector3(-3.0, 0.0, 0.0))
+	check(barrier_node != null, "ArenaKit.barrier creates curved inflatable barrier")
+
+	var arch_node := ArenaKit.arch(test_stage, Vector3(0.0, 0.0, 5.0))
+	check(arch_node != null, "ArenaKit.arch creates curved masonry archway")
+
+	var cornice_node := ArenaKit.cornice(test_stage, Vector3(0.0, 5.0, 0.0), Vector3(10.0, 0.4, 0.8))
+	check(cornice_node != null, "ArenaKit.cornice creates decorative crown trim")
+	test_stage.queue_free()
+	await physics_frames(2)
+
+	# 8. Seamless World Triplanar Material Settings
+	var mat_sand := ArenaKit.mat_styled(Color(0.88, 0.76, 0.56)) as StandardMaterial3D
+	check(mat_sand != null, "Sand material created")
+	check(mat_sand.uv1_triplanar == true, "Sand material has uv1_triplanar enabled")
+	check(mat_sand.uv1_world_triplanar == true, "Sand material has uv1_world_triplanar enabled")
+	check(mat_sand.uv1_triplanar_sharpness >= 4.0, "Sand material has crisp triplanar sharpness (>= 4.0)")
+
+	var mat_sandstone := ArenaKit.mat_styled(Color(0.86, 0.76, 0.58)) as StandardMaterial3D
+	check(mat_sandstone != null, "Sandstone material created")
+	check(mat_sandstone.uv1_world_triplanar == true, "Sandstone has uv1_world_triplanar enabled")
+	check(mat_sandstone.uv1_triplanar_sharpness >= 4.0, "Sandstone has crisp triplanar sharpness (>= 4.0)")
+
+	# 9. Procedural Fallback Verification (when models_enabled = false)
 	ModelLoader.models_enabled = false
 	check(ModelLoader.has_prop_model(&"dog_house") == false, "has_prop_model returns false when models disabled")
 	check(ArenaKit.prop(self, &"dog_house", Vector3.ZERO) == null, "ArenaKit.prop returns null when models disabled")

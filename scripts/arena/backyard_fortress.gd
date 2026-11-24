@@ -279,16 +279,11 @@ func _build_cover() -> void:
 
 
 func _crate(at: Vector3) -> void:
-	var size := 1.1
-	var centre := at + Vector3(0.0, size * 0.5, 0.0)
-	ArenaKit.box(geometry, Vector3.ONE * size, centre, WOOD)
-	ArenaKit.deco_box(decor, Vector3(size + 0.04, 0.14, size + 0.04), centre + Vector3(0.0, size * 0.5 - 0.07, 0.0), WOOD_DARK)
-	ArenaKit.deco_box(decor, Vector3(size + 0.04, 0.14, size + 0.04), centre - Vector3(0.0, size * 0.5 - 0.07, 0.0), WOOD_DARK)
+	ArenaKit.crate(geometry, at, Vector3.ONE * 1.1)
 
 
-func _barrier(at: Vector3, yaw_degrees: float, color_index: int) -> void:
-	var tint: Color = FOAM[color_index % FOAM.size()]
-	ArenaKit.box(geometry, Vector3(2.6, 1.3, 0.6), at + Vector3(0.0, 0.65, 0.0), tint, Vector3(0.0, yaw_degrees, 0.0))
+func _barrier(at: Vector3, yaw_degrees: float, _color_index: int) -> void:
+	ArenaKit.barrier(geometry, at, Vector3(2.6, 1.3, 0.6), Vector3(0.0, yaw_degrees, 0.0))
 
 
 func _build_targets() -> void:

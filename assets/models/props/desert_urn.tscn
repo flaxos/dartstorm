@@ -1,0 +1,85 @@
+[gd_scene load_steps=9 format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gk0lh"]
+resource_name = "terracotta"
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.82, 0.44, 0.28, 1)
+roughness = 0.82
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_w0p8f"]
+top_radius = 0.22
+bottom_radius = 0.22
+height = 0.08
+radial_segments = 16
+
+[sub_resource type="SphereMesh" id="SphereMesh_uqtc2"]
+radius = 0.42
+height = 0.84
+radial_segments = 16
+rings = 8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_2cj3b"]
+top_radius = 0.2
+bottom_radius = 0.2
+height = 0.32
+radial_segments = 16
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_15pqv"]
+top_radius = 0.26
+bottom_radius = 0.26
+height = 0.08
+radial_segments = 16
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_6t47r"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 0.36
+radial_segments = 16
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_re8mb"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 0.36
+radial_segments = 16
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_3k8oy"]
+height = 1.14
+radius = 0.44
+
+[node name="DesertUrn" type="StaticBody3D"]
+collision_mask = 0
+
+[node name="UrnFoot" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, 0)
+material_override = SubResource("StandardMaterial3D_gk0lh")
+mesh = SubResource("CylinderMesh_w0p8f")
+
+[node name="UrnBelly" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1.15, 0, 0, 0, 1, 0, 0.48, 0)
+material_override = SubResource("StandardMaterial3D_gk0lh")
+mesh = SubResource("SphereMesh_uqtc2")
+
+[node name="UrnNeck" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+material_override = SubResource("StandardMaterial3D_gk0lh")
+mesh = SubResource("CylinderMesh_2cj3b")
+
+[node name="UrnLip" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.08, 0)
+material_override = SubResource("StandardMaterial3D_gk0lh")
+mesh = SubResource("CylinderMesh_15pqv")
+
+[node name="Handle" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.939693, 0.34202, 0, -0.34202, 0.939693, 0, 0, 0, 1, -0.38, 0.72, 0)
+material_override = SubResource("StandardMaterial3D_gk0lh")
+mesh = SubResource("CylinderMesh_6t47r")
+
+[node name="@MeshInstance3D@95" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.939693, -0.34202, 0, 0.34202, 0.939693, 0, 0, 0, 1, 0.38, 0.72, 0)
+material_override = SubResource("StandardMaterial3D_gk0lh")
+mesh = SubResource("CylinderMesh_re8mb")
+
+[node name="@CollisionShape3D@96" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.57, 0)
+shape = SubResource("CylinderShape3D_3k8oy")

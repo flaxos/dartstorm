@@ -24,6 +24,12 @@ const FUR_GOLD := Color(0.85, 0.62, 0.35)
 const FUR_BROWN := Color(0.52, 0.35, 0.18)
 const VINYL_BLUE := Color(0.12, 0.55, 0.95)
 const VINYL_ACCENT := Color(1.0, 0.42, 0.05)
+const SANDSTONE_COLOR := Color(0.86, 0.76, 0.58)
+const SANDSTONE_DARK := Color(0.74, 0.64, 0.46)
+const TERRACOTTA_COLOR := Color(0.82, 0.44, 0.28)
+const BARREL_YELLOW := Color(0.95, 0.75, 0.12)
+const HAZARD_BLACK := Color(0.18, 0.18, 0.20)
+const PALLET_WOOD := Color(0.70, 0.50, 0.32)
 
 var mat_wood: StandardMaterial3D
 var mat_wood_dark: StandardMaterial3D
@@ -40,6 +46,12 @@ var mat_fur: StandardMaterial3D
 var mat_fur_dark: StandardMaterial3D
 var mat_vinyl: StandardMaterial3D
 var mat_vinyl_accent: StandardMaterial3D
+var mat_sandstone: StandardMaterial3D
+var mat_sandstone_dark: StandardMaterial3D
+var mat_terracotta: StandardMaterial3D
+var mat_barrel_yellow: StandardMaterial3D
+var mat_hazard_black: StandardMaterial3D
+var mat_pallet_wood: StandardMaterial3D
 var mat_net: StandardMaterial3D
 
 
@@ -54,6 +66,15 @@ func _init() -> void:
 	_build_and_save("soccer_goal", _build_soccer_goal())
 	_build_and_save("cartoon_tree", _build_cartoon_tree())
 	_build_and_save("watchtower", _build_watchtower())
+
+	# 7 New High-Poly Stylized Tactical & Dressing Props
+	_build_and_save("tactical_crate", _build_tactical_crate())
+	_build_and_save("tactical_barrel", _build_tactical_barrel())
+	_build_and_save("inflatable_barrier", _build_inflatable_barrier())
+	_build_and_save("archway_curved", _build_archway_curved())
+	_build_and_save("market_awning", _build_market_awning())
+	_build_and_save("desert_urn", _build_desert_urn())
+	_build_and_save("wooden_pallet", _build_wooden_pallet())
 
 	print("Arena props generation complete!")
 	quit(0)
@@ -75,6 +96,12 @@ func _setup_materials() -> void:
 	mat_fur_dark = _create_mat(FUR_BROWN, "fur_dark", 0.85, 0.0)
 	mat_vinyl = _create_mat(VINYL_BLUE, "vinyl", 0.28, 0.06)
 	mat_vinyl_accent = _create_mat(VINYL_ACCENT, "vinyl_accent", 0.28, 0.06)
+	mat_sandstone = _create_mat(SANDSTONE_COLOR, "sandstone", 0.86, 0.0)
+	mat_sandstone_dark = _create_mat(SANDSTONE_DARK, "sandstone_dark", 0.88, 0.0)
+	mat_terracotta = _create_mat(TERRACOTTA_COLOR, "terracotta", 0.82, 0.0)
+	mat_barrel_yellow = _create_mat(BARREL_YELLOW, "barrel_yellow", 0.35, 0.08)
+	mat_hazard_black = _create_mat(HAZARD_BLACK, "hazard_black", 0.45, 0.0)
+	mat_pallet_wood = _create_mat(PALLET_WOOD, "pallet_wood", 0.76, 0.0)
 
 	mat_net = StandardMaterial3D.new()
 	mat_net.resource_name = "net"
@@ -538,3 +565,245 @@ func _build_watchtower() -> StaticBody3D:
 		_add_cylinder(prop_root, "Rung", 0.06, 1.2, Vector3(0.0, rung_y, 2.05), mat_steel_dark, Vector3(0.0, 0.0, 90.0))
 
 	return prop_root
+
+
+# ============================================================================
+# 8. TACTICAL CRATE
+# ============================================================================
+func _build_tactical_crate() -> StaticBody3D:
+	var prop_root := _create_static_root("TacticalCrate")
+	var size := Vector3(1.8, 1.8, 1.8)
+	# Main inner wooden block
+	_add_box(prop_root, "CrateCore", Vector3(1.72, 1.72, 1.72), Vector3(0.0, 0.9, 0.0), mat_wood)
+
+	# 4 Corner Upright Posts
+	var post_thick := 0.14
+	var post_w := 0.14
+	for ox in [-0.83, 0.83]:
+		for oz in [-0.83, 0.83]:
+			_add_box(prop_root, "Post", Vector3(post_w, 1.8, post_thick), Vector3(ox, 0.9, oz), mat_wood_dark)
+
+	# Top & Bottom Perimeter Rails
+	for y_pos in [0.07, 1.73]:
+		_add_box(prop_root, "RailX1", Vector3(1.52, post_thick, post_thick), Vector3(0.0, y_pos, -0.83), mat_wood_dark)
+		_add_box(prop_root, "RailX2", Vector3(1.52, post_thick, post_thick), Vector3(0.0, y_pos, 0.83), mat_wood_dark)
+		_add_box(prop_root, "RailZ1", Vector3(post_thick, post_thick, 1.52), Vector3(-0.83, y_pos, 0.0), mat_wood_dark)
+		_add_box(prop_root, "RailZ2", Vector3(post_thick, post_thick, 1.52), Vector3(0.83, y_pos, 0.0), mat_wood_dark)
+
+	# Diagonal cross braces on the 4 vertical faces
+	for side in [-0.85, 0.85]:
+		var b1 := _add_box(prop_root, "DiagX1", Vector3(2.1, 0.10, 0.06), Vector3(0.0, 0.9, side), mat_wood_dark)
+		b1.rotation_degrees = Vector3(0.0, 0.0, 45.0)
+		var b2 := _add_box(prop_root, "DiagX2", Vector3(2.1, 0.10, 0.06), Vector3(0.0, 0.9, side), mat_wood_dark)
+		b2.rotation_degrees = Vector3(0.0, 0.0, -45.0)
+
+		var b3 := _add_box(prop_root, "DiagZ1", Vector3(0.06, 0.10, 2.1), Vector3(side, 0.9, 0.0), mat_wood_dark)
+		b3.rotation_degrees = Vector3(45.0, 0.0, 0.0)
+		var b4 := _add_box(prop_root, "DiagZ2", Vector3(0.06, 0.10, 2.1), Vector3(side, 0.9, 0.0), mat_wood_dark)
+		b4.rotation_degrees = Vector3(-45.0, 0.0, 0.0)
+
+	# Corner metal brackets at all 8 corners
+	for ox in [-0.85, 0.85]:
+		for oy in [0.08, 1.72]:
+			for oz in [-0.85, 0.85]:
+				_add_box(prop_root, "CornerSteel", Vector3(0.18, 0.18, 0.18), Vector3(ox, oy, oz), mat_steel_dark)
+
+	_add_collision_box(prop_root, size, Vector3(0.0, 0.9, 0.0))
+	return prop_root
+
+
+# ============================================================================
+# 9. TACTICAL BARREL
+# ============================================================================
+func _build_tactical_barrel() -> StaticBody3D:
+	var prop_root := _create_static_root("TacticalBarrel")
+	var r := 0.44
+	var h := 1.40
+	# Main barrel body
+	_add_cylinder(prop_root, "BarrelBody", 0.42, 1.36, Vector3(0.0, 0.70, 0.0), mat_barrel_yellow)
+
+	# Top and bottom protruding chime rims
+	_add_cylinder(prop_root, "RimTop", 0.445, 0.06, Vector3(0.0, 1.37, 0.0), mat_steel_dark)
+	_add_cylinder(prop_root, "RimBottom", 0.445, 0.06, Vector3(0.0, 0.03, 0.0), mat_steel_dark)
+
+	# Protruding central ribs (swages)
+	_add_cylinder(prop_root, "Rib1", 0.435, 0.05, Vector3(0.0, 0.48, 0.0), mat_steel_dark)
+	_add_cylinder(prop_root, "Rib2", 0.435, 0.05, Vector3(0.0, 0.92, 0.0), mat_steel_dark)
+
+	# Hazard stripe mid-band
+	_add_cylinder(prop_root, "HazardBand", 0.425, 0.24, Vector3(0.0, 0.70, 0.0), mat_hazard_black)
+
+	# Dual bung screw plugs on top
+	_add_cylinder(prop_root, "BungPlug1", 0.045, 0.03, Vector3(0.18, 1.39, 0.0), mat_steel)
+	_add_cylinder(prop_root, "BungPlug2", 0.035, 0.03, Vector3(-0.18, 1.39, 0.0), mat_steel)
+
+	# Collision shape
+	var col := CollisionShape3D.new()
+	var shape := CylinderShape3D.new()
+	shape.radius = r
+	shape.height = h
+	col.shape = shape
+	col.position = Vector3(0.0, h * 0.5, 0.0)
+	prop_root.add_child(col)
+	return prop_root
+
+
+# ============================================================================
+# 10. INFLATABLE BARRIER
+# ============================================================================
+func _build_inflatable_barrier() -> StaticBody3D:
+	var prop_root := _create_static_root("InflatableBarrier")
+	var w := 2.4
+	var h := 1.3
+	var d := 0.65
+	# Main cylindrical air chamber oriented along X
+	var body_len := w - d
+	_add_cylinder(prop_root, "AirChamber", d * 0.5, body_len, Vector3(0.0, h * 0.5, 0.0), mat_vinyl, Vector3(0.0, 0.0, 90.0))
+
+	# Left & Right rounded domed end caps
+	_add_sphere(prop_root, "EndCapL", d * 0.5, Vector3(-body_len * 0.5, h * 0.5, 0.0), mat_vinyl_accent)
+	_add_sphere(prop_root, "EndCapR", d * 0.5, Vector3(body_len * 0.5, h * 0.5, 0.0), mat_vinyl_accent)
+
+	# Top ridge reinforcement welting
+	_add_cylinder(prop_root, "SeamWelt", 0.04, w, Vector3(0.0, h - 0.02, 0.0), mat_plastic_yellow, Vector3(0.0, 0.0, 90.0))
+
+	# Weighted base stabilizing anchor pads
+	_add_box(prop_root, "BasePadL", Vector3(0.4, 0.08, d * 1.2), Vector3(-0.7, 0.04, 0.0), mat_steel_dark)
+	_add_box(prop_root, "BasePadR", Vector3(0.4, 0.08, d * 1.2), Vector3(0.7, 0.04, 0.0), mat_steel_dark)
+
+	_add_collision_box(prop_root, Vector3(w, h, d), Vector3(0.0, h * 0.5, 0.0))
+	return prop_root
+
+
+# ============================================================================
+# 11. ARCHWAY CURVED
+# ============================================================================
+func _build_archway_curved() -> StaticBody3D:
+	var prop_root := _create_static_root("ArchwayCurved")
+	var pillar_w := 0.8
+	var pillar_h := 3.6
+	var depth := 1.2
+	var span := 3.6
+	var half_span := span * 0.5
+
+	# Left & Right Stone Pillars
+	_add_box(prop_root, "PillarLeft", Vector3(pillar_w, pillar_h, depth), Vector3(-half_span - pillar_w * 0.5, pillar_h * 0.5, 0.0), mat_sandstone)
+	_add_box(prop_root, "PillarRight", Vector3(pillar_w, pillar_h, depth), Vector3(half_span + pillar_w * 0.5, pillar_h * 0.5, 0.0), mat_sandstone)
+
+	# Pillar Molded Base Plinths
+	_add_box(prop_root, "PlinthL", Vector3(pillar_w + 0.16, 0.3, depth + 0.16), Vector3(-half_span - pillar_w * 0.5, 0.15, 0.0), mat_sandstone_dark)
+	_add_box(prop_root, "PlinthR", Vector3(pillar_w + 0.16, 0.3, depth + 0.16), Vector3(half_span + pillar_w * 0.5, 0.15, 0.0), mat_sandstone_dark)
+
+	# Pillar Capitals (Top Molding)
+	_add_box(prop_root, "CapitalL", Vector3(pillar_w + 0.18, 0.25, depth + 0.18), Vector3(-half_span - pillar_w * 0.5, pillar_h - 0.12, 0.0), mat_sandstone_dark)
+	_add_box(prop_root, "CapitalR", Vector3(pillar_w + 0.18, 0.25, depth + 0.18), Vector3(half_span + pillar_w * 0.5, pillar_h - 0.12, 0.0), mat_sandstone_dark)
+
+	# Curved Arch: 7 segmented voussoir stones
+	var segments := 7
+	var arch_r := half_span
+	for i in range(segments):
+		var angle_deg := 180.0 * (float(i) + 0.5) / float(segments)
+		var rad := deg_to_rad(angle_deg)
+		var vx := cos(rad) * arch_r
+		var vy := pillar_h + sin(rad) * 1.1
+		var seg := _add_box(prop_root, "ArchSeg_%d" % i, Vector3(0.72, 0.42, depth * 0.96), Vector3(vx, vy, 0.0), mat_sandstone)
+		seg.rotation_degrees = Vector3(0.0, 0.0, angle_deg - 90.0)
+
+	# Keystone in the center top
+	_add_box(prop_root, "Keystone", Vector3(0.65, 0.60, depth * 1.08), Vector3(0.0, pillar_h + 1.15, 0.0), mat_sandstone_dark)
+
+	# Upper Arch Cornice / Lintel
+	var top_w := (half_span + pillar_w) * 2.0 + 0.3
+	_add_box(prop_root, "TopCornice", Vector3(top_w, 0.35, depth + 0.2), Vector3(0.0, pillar_h + 1.45, 0.0), mat_sandstone_dark)
+
+	# Collision: 2 pillars + upper lintel, leaving the middle walkable
+	_add_collision_box(prop_root, Vector3(pillar_w, pillar_h, depth), Vector3(-half_span - pillar_w * 0.5, pillar_h * 0.5, 0.0))
+	_add_collision_box(prop_root, Vector3(pillar_w, pillar_h, depth), Vector3(half_span + pillar_w * 0.5, pillar_h * 0.5, 0.0))
+	_add_collision_box(prop_root, Vector3(top_w, 1.2, depth), Vector3(0.0, pillar_h + 0.9, 0.0))
+	return prop_root
+
+
+# ============================================================================
+# 12. MARKET AWNING
+# ============================================================================
+func _build_market_awning() -> StaticBody3D:
+	var prop_root := _create_static_root("MarketAwning")
+	var w := 3.6
+	var slope_len := 2.0
+	var angle := 24.0
+
+	# Angled canopy roof
+	var roof := _add_box(prop_root, "CanopyRoof", Vector3(w, 0.08, slope_len), Vector3(0.0, 0.0, -slope_len * 0.45), mat_plastic_orange)
+	roof.rotation_degrees = Vector3(angle, 0.0, 0.0)
+
+	# Contrasting canopy stripes
+	for sx in [-1.2, 0.0, 1.2]:
+		var stripe := _add_box(prop_root, "Stripe", Vector3(0.4, 0.09, slope_len), Vector3(sx, 0.005, -slope_len * 0.45), mat_steel)
+		stripe.rotation_degrees = Vector3(angle, 0.0, 0.0)
+
+	# Scalloped valence drop at front
+	var val_z := -slope_len * 0.45 - cos(deg_to_rad(angle)) * slope_len * 0.5
+	var val_y := -sin(deg_to_rad(angle)) * slope_len * 0.5 - 0.15
+	_add_box(prop_root, "ValenceDrop", Vector3(w + 0.05, 0.30, 0.05), Vector3(0.0, val_y, val_z), mat_plastic_yellow)
+
+	# Wooden triangular mounting support struts
+	for side in [-w * 0.5 + 0.15, w * 0.5 - 0.15]:
+		var strut := _add_box(prop_root, "WallStrut", Vector3(0.12, 0.12, 1.6), Vector3(side, val_y + 0.15, -0.8), mat_wood_dark)
+		strut.rotation_degrees = Vector3(-35.0, 0.0, 0.0)
+
+	# Solid collision for canopy roof
+	_add_collision_box(prop_root, Vector3(w, 0.2, slope_len), Vector3(0.0, 0.0, -slope_len * 0.45), Vector3(angle, 0.0, 0.0))
+	return prop_root
+
+
+# ============================================================================
+# 13. DESERT URN
+# ============================================================================
+func _build_desert_urn() -> StaticBody3D:
+	var prop_root := _create_static_root("DesertUrn")
+	# Base foot
+	_add_cylinder(prop_root, "UrnFoot", 0.22, 0.08, Vector3(0.0, 0.04, 0.0), mat_terracotta)
+	# Swelling pot belly
+	_add_sphere(prop_root, "UrnBelly", 0.42, Vector3(0.0, 0.48, 0.0), mat_terracotta, Vector3(1.0, 1.15, 1.0))
+	# Tapered neck
+	_add_cylinder(prop_root, "UrnNeck", 0.20, 0.32, Vector3(0.0, 0.90, 0.0), mat_terracotta)
+	# Flared mouth lip
+	_add_cylinder(prop_root, "UrnLip", 0.26, 0.08, Vector3(0.0, 1.08, 0.0), mat_terracotta)
+
+	# Two curved ear handles
+	for side in [-0.38, 0.38]:
+		_add_cylinder(prop_root, "Handle", 0.04, 0.36, Vector3(side, 0.72, 0.0), mat_terracotta, Vector3(0.0, 0.0, 20.0 if side > 0 else -20.0))
+
+	var col := CollisionShape3D.new()
+	var shape := CylinderShape3D.new()
+	shape.radius = 0.44
+	shape.height = 1.14
+	col.shape = shape
+	col.position = Vector3(0.0, 0.57, 0.0)
+	prop_root.add_child(col)
+	return prop_root
+
+
+# ============================================================================
+# 14. WOODEN PALLET
+# ============================================================================
+func _build_wooden_pallet() -> StaticBody3D:
+	var prop_root := _create_static_root("WoodenPallet")
+	var l := 1.6
+	var w := 1.4
+	var h := 0.20
+	# 3 Bottom skid runners
+	for oz in [-0.58, 0.0, 0.58]:
+		_add_box(prop_root, "Runner", Vector3(l, 0.04, 0.12), Vector3(0.0, 0.02, oz), mat_pallet_wood)
+		# 3 Spacer blocks per runner
+		for ox in [-0.68, 0.0, 0.68]:
+			_add_box(prop_root, "Block", Vector3(0.16, 0.12, 0.14), Vector3(ox, 0.10, oz), mat_pallet_wood)
+
+	# 5 Top deck planks
+	for z_i in 5:
+		var oz := -0.58 + float(z_i) * (1.16 / 4.0)
+		_add_box(prop_root, "DeckBoard", Vector3(l, 0.04, 0.18), Vector3(0.0, 0.18, oz), mat_wood)
+
+	_add_collision_box(prop_root, Vector3(l, h, w), Vector3(0.0, h * 0.5, 0.0))
+	return prop_root
+

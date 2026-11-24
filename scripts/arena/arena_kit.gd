@@ -82,7 +82,11 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 				or color.is_equal_approx(Color(0.68, 0.46, 0.28))
 				or color.is_equal_approx(Color(0.72, 0.54, 0.36))
 				or color.is_equal_approx(Color(0.55, 0.38, 0.22))
-				or color.is_equal_approx(Color(0.82, 0.28, 0.20))):
+				or color.is_equal_approx(Color(0.55, 0.37, 0.22))
+				or color.is_equal_approx(Color(0.76, 0.55, 0.33))
+				or color.is_equal_approx(Color(0.82, 0.28, 0.20))
+				or color.is_equal_approx(Color(0.45, 0.3, 0.18))
+				or color.is_equal_approx(Color(0.72, 0.50, 0.30))):
 			surface = SurfaceType.WOOD
 
 	var key := "%s|%d|%.2f|%.2f|%.2f" % [color.to_html(), surface, roughness, metallic, emission]
@@ -110,7 +114,10 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 		SurfaceType.SAND:
 			material.albedo_texture = _sand_albedo
 			material.uv1_triplanar = true
+			material.uv1_world_triplanar = true
+			material.uv1_triplanar_sharpness = 4.0
 			material.uv1_scale = Vector3(0.12, 0.12, 0.12)
+			material.albedo_color = Color.WHITE if (color.is_equal_approx(Color(0.88, 0.76, 0.56)) or color.is_equal_approx(Color(0.87, 0.75, 0.55))) else color
 			material.roughness = 0.94 if roughness < 0.0 else roughness
 			material.metallic = 0.0 if metallic < 0.0 else metallic
 			material.metallic_specular = 0.05
@@ -125,7 +132,10 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 		SurfaceType.SANDSTONE:
 			material.albedo_texture = _sandstone_albedo
 			material.uv1_triplanar = true
+			material.uv1_world_triplanar = true
+			material.uv1_triplanar_sharpness = 4.0
 			material.uv1_scale = Vector3(0.2, 0.2, 0.2)
+			material.albedo_color = Color.WHITE if (color.is_equal_approx(Color(0.86, 0.76, 0.58)) or color.is_equal_approx(Color(0.85, 0.74, 0.55))) else color
 			material.roughness = 0.86 if roughness < 0.0 else roughness
 			material.metallic = 0.0 if metallic < 0.0 else metallic
 			material.metallic_specular = 0.12
@@ -140,7 +150,10 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 		SurfaceType.COBBLE:
 			material.albedo_texture = _cobble_albedo
 			material.uv1_triplanar = true
+			material.uv1_world_triplanar = true
+			material.uv1_triplanar_sharpness = 4.0
 			material.uv1_scale = Vector3(0.18, 0.18, 0.18)
+			material.albedo_color = Color.WHITE if (color.is_equal_approx(Color(0.82, 0.72, 0.54)) or color.is_equal_approx(Color(0.78, 0.68, 0.50))) else color
 			material.roughness = 0.84 if roughness < 0.0 else roughness
 			material.metallic = 0.0 if metallic < 0.0 else metallic
 			material.metallic_specular = 0.10
@@ -155,7 +168,10 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 		SurfaceType.BRICK:
 			material.albedo_texture = _brick_albedo
 			material.uv1_triplanar = true
+			material.uv1_world_triplanar = true
+			material.uv1_triplanar_sharpness = 4.0
 			material.uv1_scale = Vector3(0.22, 0.22, 0.22)
+			material.albedo_color = Color.WHITE if (color.is_equal_approx(Color(0.68, 0.70, 0.74)) or color.is_equal_approx(Color(0.55, 0.58, 0.62))) else color
 			material.roughness = 0.88 if roughness < 0.0 else roughness
 			material.metallic = 0.0 if metallic < 0.0 else metallic
 			material.metallic_specular = 0.10
@@ -199,10 +215,21 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 			material.metallic = 0.0 if metallic < 0.0 else metallic
 			material.metallic_specular = 0.10
 		_:
-			# DEFAULT: Tactile matte toy surface
-			material.roughness = 0.80 if roughness < 0.0 else roughness
-			material.metallic = 0.0 if metallic < 0.0 else metallic
-			material.metallic_specular = 0.20
+			# DEFAULT: Tactile molded toy plastic with micro-relief, contact AO, and rim
+			material.roughness = 0.72 if roughness < 0.0 else roughness
+			material.metallic = 0.02 if metallic < 0.0 else metallic
+			material.metallic_specular = 0.28
+			material.rim_enabled = true
+			material.rim = 0.20
+			material.rim_tint = 0.25
+			material.normal_enabled = true
+			material.normal_texture = _plastic_normal
+			material.normal_scale = 0.28
+			material.ao_enabled = true
+			material.ao_texture = _plastic_orm
+			material.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+			material.roughness_texture = _plastic_orm
+			material.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
 
 	if color.a < 0.999:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -393,6 +420,92 @@ static func tree(parent: Node, at: Vector3, tree_scale: float) -> void:
 	deco_cylinder(parent, 0.5 * tree_scale, 5.0 * tree_scale, at + Vector3(0.0, 2.5 * tree_scale, 0.0), TRUNK, Vector3.ZERO, -1.0, SurfaceType.WOOD)
 	deco_sphere(parent, 3.2 * tree_scale, at + Vector3(0.0, 6.5 * tree_scale, 0.0), LEAF)
 	deco_sphere(parent, 2.3 * tree_scale, at + Vector3(1.2, 8.3, -0.6) * tree_scale, LEAF_LIGHT)
+
+
+## High-poly stylized wooden shipping crate with beveled frame rails, metal brackets, and cross-bracing.
+static func crate(parent: Node, pos: Vector3, size: Vector3 = Vector3(1.8, 1.8, 1.8),
+		rot_deg: Vector3 = Vector3.ZERO, is_center_pos: bool = false) -> Node3D:
+	var base_pos := pos if not is_center_pos else (pos - Vector3(0.0, size.y * 0.5, 0.0))
+	if ModelLoader.has_prop_model(&"tactical_crate"):
+		var p_scale := Vector3(size.x / 1.8, size.y / 1.8, size.z / 1.8)
+		var p := prop(parent, &"tactical_crate", base_pos, rot_deg, p_scale)
+		if p != null:
+			return p
+	var center := base_pos + Vector3(0.0, size.y * 0.5, 0.0)
+	return box(parent, size, center, Color(0.70, 0.48, 0.30), rot_deg, SurfaceType.WOOD)
+
+
+## High-poly stylized 55-gallon ribbed barrel with metal chimes, swage ribs, and dual bung plugs.
+static func barrel(parent: Node, pos: Vector3, radius: float = 0.45, height: float = 1.4,
+		rot_deg: Vector3 = Vector3.ZERO, is_center_pos: bool = false) -> Node3D:
+	var base_pos := pos if not is_center_pos else (pos - Vector3(0.0, height * 0.5, 0.0))
+	if ModelLoader.has_prop_model(&"tactical_barrel"):
+		var p_scale := Vector3(radius / 0.45, height / 1.4, radius / 0.45)
+		var p := prop(parent, &"tactical_barrel", base_pos, rot_deg, p_scale)
+		if p != null:
+			return p
+	var center := base_pos + Vector3(0.0, height * 0.5, 0.0)
+	return cylinder(parent, radius, height, center, Color(0.95, 0.75, 0.12), SurfaceType.PLASTIC)
+
+
+## High-poly curved pill-shaped vinyl air barrier.
+static func barrier(parent: Node, pos: Vector3, size: Vector3 = Vector3(2.4, 1.3, 0.65),
+		rot_deg: Vector3 = Vector3.ZERO, is_center_pos: bool = false) -> Node3D:
+	var base_pos := pos if not is_center_pos else (pos - Vector3(0.0, size.y * 0.5, 0.0))
+	if ModelLoader.has_prop_model(&"inflatable_barrier"):
+		var p_scale := Vector3(size.x / 2.4, size.y / 1.3, size.z / 0.65)
+		var p := prop(parent, &"inflatable_barrier", base_pos, rot_deg, p_scale)
+		if p != null:
+			return p
+	var center := base_pos + Vector3(0.0, size.y * 0.5, 0.0)
+	return box(parent, size, center, Color(0.12, 0.55, 0.95), rot_deg, SurfaceType.PLASTIC)
+
+
+## High-poly curved stone/sandstone archway with voussoirs and keystone.
+static func arch(parent: Node, pos: Vector3, width: float = 4.4, height: float = 5.0,
+		depth: float = 1.2, rot_deg: Vector3 = Vector3.ZERO) -> Node3D:
+	if ModelLoader.has_prop_model(&"archway_curved"):
+		var p_scale := Vector3(width / 4.4, height / 5.0, depth / 1.2)
+		var p := prop(parent, &"archway_curved", pos, rot_deg, p_scale)
+		if p != null:
+			return p
+	var body := _body(pos, rot_deg)
+	var pillar_w := width * 0.18
+	var span := width - pillar_w * 2.0
+	box(body, Vector3(pillar_w, height, depth), Vector3(-span * 0.5 - pillar_w * 0.5, height * 0.5, 0.0), Color(0.86, 0.76, 0.58), Vector3.ZERO, SurfaceType.SANDSTONE)
+	box(body, Vector3(pillar_w, height, depth), Vector3(span * 0.5 + pillar_w * 0.5, height * 0.5, 0.0), Color(0.86, 0.76, 0.58), Vector3.ZERO, SurfaceType.SANDSTONE)
+	box(body, Vector3(width, height * 0.25, depth), Vector3(0.0, height * 0.875, 0.0), Color(0.74, 0.64, 0.46), Vector3.ZERO, SurfaceType.SANDSTONE)
+	parent.add_child(body)
+	return body
+
+
+## Stylized fabric market awning with diagonal wall mounting struts.
+static func awning(parent: Node, pos: Vector3, width: float = 3.6, rot_deg: Vector3 = Vector3.ZERO) -> Node3D:
+	if ModelLoader.has_prop_model(&"market_awning"):
+		var p_scale := Vector3(width / 3.6, 1.0, 1.0)
+		return prop(parent, &"market_awning", pos, rot_deg, p_scale)
+	return null
+
+
+## Terracotta amphora / pottery urn.
+static func urn(parent: Node, pos: Vector3, scale_mult: float = 1.0, rot_deg: Vector3 = Vector3.ZERO) -> Node3D:
+	if ModelLoader.has_prop_model(&"desert_urn"):
+		return prop(parent, &"desert_urn", pos, rot_deg, Vector3.ONE * scale_mult)
+	return null
+
+
+## Heavy-duty wooden shipping pallet.
+static func pallet(parent: Node, pos: Vector3, rot_deg: Vector3 = Vector3.ZERO) -> Node3D:
+	if ModelLoader.has_prop_model(&"wooden_pallet"):
+		return prop(parent, &"wooden_pallet", pos, rot_deg)
+	return null
+
+
+## Decorative architectural cornice / crown molding trim along walls.
+static func cornice(parent: Node, pos: Vector3, size: Vector3, color: Color = Color(0.74, 0.64, 0.46),
+		rot_deg: Vector3 = Vector3.ZERO) -> MeshInstance3D:
+	return deco_box(parent, size, pos, color, rot_deg, 0.0, SurfaceType.SANDSTONE)
+
 
 
 static func _body(pos: Vector3, rot_deg: Vector3) -> StaticBody3D:

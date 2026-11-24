@@ -449,16 +449,22 @@ static func barrel(parent: Node, pos: Vector3, radius: float = 0.45, height: flo
 
 
 ## High-poly curved pill-shaped vinyl air barrier.
-static func barrier(parent: Node, pos: Vector3, size: Vector3 = Vector3(2.4, 1.3, 0.65),
+static func barrier(parent: Node, pos: Vector3, size_or_rot: Vector3 = Vector3(2.4, 1.3, 0.65),
 		rot_deg: Vector3 = Vector3.ZERO, is_center_pos: bool = false) -> Node3D:
+	var size := size_or_rot
+	var rotation := rot_deg
+	# If caller passed rotation degrees as 3rd parameter (e.g. Vector3(0, yaw, 0) where x or z == 0):
+	if size_or_rot.x <= 0.01 or size_or_rot.z <= 0.01:
+		rotation = size_or_rot
+		size = Vector3(2.4, 1.3, 0.65)
 	var base_pos := pos if not is_center_pos else (pos - Vector3(0.0, size.y * 0.5, 0.0))
 	if ModelLoader.has_prop_model(&"inflatable_barrier"):
-		var p_scale := Vector3(size.x / 2.4, size.y / 1.3, size.z / 0.65)
-		var p := prop(parent, &"inflatable_barrier", base_pos, rot_deg, p_scale)
+		var p_scale := Vector3(maxf(size.x / 2.4, 0.01), maxf(size.y / 1.3, 0.01), maxf(size.z / 0.65, 0.01))
+		var p := prop(parent, &"inflatable_barrier", base_pos, rotation, p_scale)
 		if p != null:
 			return p
 	var center := base_pos + Vector3(0.0, size.y * 0.5, 0.0)
-	return box(parent, size, center, Color(0.12, 0.55, 0.95), rot_deg, SurfaceType.PLASTIC)
+	return box(parent, size, center, Color(0.12, 0.55, 0.95), rotation, SurfaceType.PLASTIC)
 
 
 ## High-poly curved stone/sandstone archway with voussoirs and keystone.

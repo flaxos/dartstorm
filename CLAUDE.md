@@ -61,8 +61,8 @@ Controllers must stay plug and play: every binding uses device -1, and every scr
 - **Data lives in Resources**: blasters in `resources/weapons/*.tres` (WeaponData), darts in `resources/darts/`
   (DartData), modes in `resources/modes/` (GameMode / GunGameMode), bot skill in `resources/bots/` (BotDifficulty).
   A new blaster means a new `.tres` file, not new code. Give it a `model_style` and a `sound` that `Sfx` knows.
-- Scenes are thin `.tscn` wrappers around scripts that build their nodes in `_ready()` (see DECISIONS D-002).
-  Arenas are built in code from `ArenaKit` primitives. Anything solid must go under `arena.geometry`,
+- Scenes are thin `.tscn` wrappers around scripts that build their nodes in `_ready()` (see DECISIONS D-002, superseded in part by D-047 for art).
+  Arenas are built in code using `ArenaKit` primitives, stylized triplanar materials, and modular 3D props. Anything solid must go under `arena.geometry`,
   otherwise bots can't navigate around it.
 - Physics layers are in `scripts/core/layers.gd` and must match `project.godot`.
 - Input actions are registered in `scripts/core/input_setup.gd`, not in project.godot.

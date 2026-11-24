@@ -109,6 +109,34 @@ The photo isn't kept in the repo (it has their names on it). This is what it ask
 | **Elemental Weapon Power-Ups** | ✅ v0.8.1 | 15s elemental infusion pickups (Fire, Ice, Water, Lightning) powering all equipped blasters (§3.26) |
 | **Wishlist: Elemental Weather** | ✅ v0.9.0 | Dynamic map events: thunderstorms, lightning puddle zaps, blizzards with ice slicks, gale gusts with whirlwinds, heatwaves (§3.27) |
 
+---
+
+### 1.10 Stylized Visual Direction & Arena Architecture *(v2.5.0)*
+DARTSTORM officially moves beyond early prototyping greyboxes and flat procedural cuboids (retiring D-002's primitive box restriction; see **DECISIONS D-047**) to establish a cohesive, vibrant, commercial-grade **Stylized Chunky Toon Art Direction** inspired by titles like *Splatoon*, *Team Fortress 2*, and *Overwatch*.
+
+#### 1. Core Visual Pillars
+- **Chunky Cartoon Silhouettes:** Exaggerated, friendly proportions with soft corners and beveled transitions. Sharp 90° box intersections are replaced with architectural chamfers, wooden trim cornices, and rounded archways.
+- **Vibrant Toy Palette:** Warm terracotta, golden sandstone, sunlit lawn greens, crisp playground blues, and blazing safety oranges. Muddy military greys, desaturated army greens, and dark gritty asphalt are strictly avoided.
+- **Tactile Materiality:** Surfaces emulate high-density matte EVA foam, blow-molded vibrant plastics with soft glossy specular highlights, treated cedar woodwork, and brightly painted metal.
+- **Visual Clarity & Readability:** High-contrast character silhouettes, glowing team markers, rim-lit cover geometry, and distinct landmarks ensure instantaneous player orientation during high-speed blaster battles.
+
+#### 2. Surface Rendering & Seamless Triplanar Mapping
+- **World-Aligned Triplanar Mapping:** Floor slabs, courtyard pavers, desert sand, and monolithic walls employ world-space triplanar mapping. This completely eliminates visible seams, texture pinching, and resolution mismatches where separate modular pieces and angled ramps join.
+- **Stylized Gradients & Contact Ambient Occlusion (AO):** Avoids noisy photorealistic detail. Surfaces feature soft vertical color ramps and baked/procedural contact shadows (AO) along bases, grounding structures and props firmly onto floors without "floating box" artifacts.
+- **Edge Highlighting:** Subtle, soft highlights along architectural edges accentuate geometry contours and guide player movement.
+
+#### 3. Arena Architecture & Environment Dressing Props
+- **Beyond Bare Cuboids:** Arena layouts retain code-driven procedural precision and testability while abandoning flat, featureless cuboids. Walls feature molded baseboards and coping trims, doorways use archways or frame headers, and towers feature beveled caps.
+- **Modular 3D Dressing Props:** Arenas are enriched with thematic, kid-friendly props:
+  - *Playground & Backyard:* Curved inflatable barricades, wooden picnic tables, lawn umbrellas, toy storage chests, rubber tires, and party bunting.
+  - *Tactical & Warehouse:* Cartoon shipping crates, rounded oil/sludge barrels with foam warning symbols, wooden pallets, and hanging canvas awnings.
+  - *Desert & Temple:* Terracotta pottery urns, fabric market canopies, carved stone pillars, and sun-bleached wooden scaffolds.
+
+#### 4. Atmospheric Lighting & Particle Life
+- **Warm Directional Sunlight:** Golden-hour key lighting (3500K–4500K) casting soft, readable shadows.
+- **Ambient Skylight Fill:** Vibrant sky-bounce fill light that keeps shadowed areas bright, colourful, and playable without murky dark corners.
+- **Environmental Particles:** Floating dust motes, confetti flecks in celebratory zones, drifting autumn leaves, or gentle foam puffs that give arenas living atmospheric depth.
+
 ## 2. Brief traceability
 
 Status key: ✅ done · 🟡 partly done or untested · ⏳ planned, not started. Brief section numbers refer to
@@ -997,6 +1025,8 @@ to that (sections of `tests/test_runner.gd`). Items marked *(v0.1.1)* were added
 - Any sound can be replaced by a real recording later; the IDs stay the same.
 
 ## 8. UI and visual style
+
+**3D Environment & Stylized Art Direction:** See **§1.10 Stylized Visual Direction & Arena Architecture** and **DECISIONS D-047** for specifications on the chunky toon aesthetic, seamless world-aligned triplanar surface mapping, beveled architectural geometry, soft contact AO, and 3D dressing props.
 
 **Palette** (`scripts/core/ui_kit.gd`):
 

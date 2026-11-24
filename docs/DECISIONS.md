@@ -9,13 +9,15 @@
 shadows on any mid-range gaming PC. The game uses no Forward+-only features, so it could be switched
 to Compatibility for weaker machines.
 
-### D-002: Build scenes and arenas in code, keep .tscn files thin
+### D-002: Build scenes and arenas in code, keep .tscn files thin *(RETIRED / SUPERSEDED IN PART by D-047)*
 **Chosen:** each `.tscn` is a root node and a script. The script builds its children in `_ready()`.
 Arenas use `ArenaKit` helpers (box, ramp, cylinder, deco…).
 **Alternatives:** author everything in the Godot editor as big `.tscn` files.
 **Why:** hand-written large `.tscn` files are fragile, and procedural primitives need no art. Code is
 diffable, reviewable and testable headless. **Trade-off:** you can't drag arena pieces around in the
 editor yet. When the layout stabilises, the arena could be "baked" into a real `.tscn` for designers.
+**Status (v2.5.0):** The software architecture principle (keeping `.tscn` wrappers thin and testable via code) remains active. However, the primitive art restriction (*"procedural primitives need no art"*, restricting arenas exclusively to bare, sharp 90° cuboids) has been **formally retired and superseded by D-047**. Arena architecture now embraces a stylized chunky toon art direction, world-aligned triplanar surface mapping, and modular 3D environment dressing props.
+
 
 ### D-003: Darts are pooled nodes with manual ray sweeps, not RigidBody3D
 **Chosen:** `Node3D` darts that integrate their own velocity and `intersect_ray` from the old to the new
@@ -369,4 +371,20 @@ box in corners for bots, so walkways are at least 1.5 m (the dining chairs moved
 **Alternatives:** Separate mobile engine port; forcing Forward+ on mobile/web (fails on mobile GPUs); third-party touch plugins with heavy asset dependencies.
 **Why:** Unlocks full cross-platform access across desktop web browsers, mobile web browsers (Safari, Chrome, Firefox), and Android devices with 0 warnings, 0 leaks, and native 60 FPS performance.
 
-
+### D-047: Retiring D-002 Primitive Box Restriction & Codifying Stylized Art Direction (v2.5.0)
+**Chosen:**
+1. **Retirement of D-002 Primitive Box Mandate:**
+   - D-002 was adopted during initial prototype development (v0.1.0) under the rationale that *"procedural primitives need no art"*. While building arenas procedurally in code delivered high testability, diffability, and headless CI verification, restricting environment geometry to bare rectangular cuboids (`ArenaKit.box`) created significant visual limitations.
+   - Applying realistic PBR normal maps and photo-style textures onto rigid 90° boxes resulted in the "wallpaper on cubes" problem: jarring planar seams where floor slabs meet, texture pinching on ramps, lack of grounding, and fallback to flat unshaded primary colors when textures clashed.
+   - The primitive box restriction is formally retired. The code-driven generation architecture remains, but is upgraded to support high-fidelity stylized visuals, custom shaders, and modular 3D props.
+2. **Codification of Stylized Art Direction:**
+   - The game adopts a cohesive **Stylized / Chunky Toon Art Direction** inspired by titles like *Splatoon*, *Team Fortress 2*, and *Overwatch*, perfectly matching the core design pillar: *"Colourful and ridiculous"*.
+   - **Triplanar World-Space Surface Mapping:** Floor planes, desert sands, cobblestones, courtyard pavers, and monolithic walls use world-aligned triplanar mapping. This completely eliminates visible seams and UV stretching between adjacent modular slabs, box boundaries, and angled ramps.
+   - **Stylized Shading & Contact Ambient Occlusion (AO):** Replaces gritty, noisy photo-realism with clean, tactile surfaces, soft ambient occlusion contact shadows (grounding buildings, crates, and barriers firmly to the ground), and subtle bevel/edge highlights.
+   - **Architectural Softening & Dressing:** Replaces sharp 90-degree box edges with beveled cornices, rounded archways, chamfered transitions, and modular 3D dressing props (curved inflatable bunkers, stylized shipping crates, cartoon barrels, wooden barricades, awnings, and hanging banners).
+   - **Warm Atmospheric Lighting:** Golden-hour directional sunlight, soft skylight bounce fill, rim lighting for clear actor/cover silhouette separation, and subtle floating dust/confetti motes.
+**Alternatives Considered:**
+- *High-end photo-realistic PBR textures on boxes:* Tried and rejected; photorealism clashes with the cartoon foam-dart toy lore, highlights the rigidity of box geometry, and introduces harsh texture seams.
+- *Full static `.tscn` level meshes authored exclusively in external DCC tools (Blender):* Sacrifices code reviewability, headless diffing, and dynamic procedural arena variants.
+- *Preserving bare unshaded greybox cuboids:* Leaves the game looking like an unfinished prototype, directly violating the brief's vision of a colourful, immersive backyard fantasy.
+**Why:** Elevates DARTSTORM's visual fidelity from a prototype greybox to a polished, vibrant, and cohesive commercial-grade aesthetic. Seamless triplanar mapping solves texture boundary clashing forever, while stylized geometry respects the kid-safe, playful backyard blaster lore.

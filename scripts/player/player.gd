@@ -42,6 +42,8 @@ func _act(base: StringName) -> StringName:
 var _view_root: Node3D
 var _view_model: BlasterModel
 var _view_offset: Vector3 = Vector3(0.24, -0.2, -0.5)
+var _ads_offset: Vector3 = Vector3(0.0, -0.16, -0.28)
+var _ads_blend: float = 0.0
 var _pitch: float = 0.0
 var _coyote_left: float = 0.0
 var _jump_buffer_left: float = 0.0
@@ -370,9 +372,17 @@ func _process(delta: float) -> void:
 				_fp_left_arm.position = Vector3(-0.04 * ease_out, -0.05 * ease_out, 0.0)
 				_fp_left_arm.rotation = Vector3.ZERO
 
-	_view_root.visible = alive and not (is_aiming_down_sights and camera.fov < GameSettings.fov - 10.0)
-	_view_root.position = _view_offset + bob + idle + sprint_offset + rattle + reload_offset + Vector3(_sway_pos.x, -_sway_pos.y - 0.35 * _swap - _dip_pos, _recoil * 0.07)
-	_view_root.rotation = Vector3(_recoil * 0.12 - _swap * 0.6 + sprint_rot.x - _dip_pos * 1.2, VIEW_YAW - _sway_pos.x * 0.5 + sprint_rot.y, sprint_rot.z - _sway_pos.x * 0.3) + reload_rot
+	_ads_blend = move_toward(_ads_blend, 1.0 if is_aiming_down_sights else 0.0, delta * 14.0)
+	var is_scoped_optic := current_w != null and current_w.get_reticle() == &"scope"
+	var hide_viewmodel := is_scoped_optic and is_aiming_down_sights and camera.fov < GameSettings.fov - 15.0
+	_view_root.visible = alive and not hide_viewmodel
+
+	var base_offset: Vector3 = _view_offset.lerp(_ads_offset, _ads_blend)
+	var base_yaw: float = lerpf(VIEW_YAW, 0.0, _ads_blend)
+	var ads_stability: float = 1.0 - 0.82 * _ads_blend
+
+	_view_root.position = base_offset + (bob + idle + Vector3(_sway_pos.x, -_sway_pos.y, 0.0)) * ads_stability + sprint_offset + rattle + reload_offset + Vector3(0.0, -0.35 * _swap - _dip_pos * ads_stability, _recoil * 0.07)
+	_view_root.rotation = Vector3(_recoil * 0.12 - _swap * 0.6 + sprint_rot.x - _dip_pos * 1.2 * ads_stability, base_yaw - _sway_pos.x * 0.5 * ads_stability + sprint_rot.y, sprint_rot.z - _sway_pos.x * 0.3 * ads_stability) + reload_rot
 
 	if body_model != null:
 		var horiz := Vector2(velocity.x, velocity.z).length()
@@ -548,11 +558,13 @@ func _on_weapon_changed(state: WeaponState) -> void:
 	if _sleeve_mat != null:
 		_sleeve_mat.albedo_color = color
 	var skin: StringName = skin_id if skin_id != &"default" else (GameSettings.player2_skin if player_index == 1 else GameSettings.player_skin)
-	_view_model = BlasterModel.create(state.data, true, skin)
+	var atts: Dictionary = state.attachments if state != null else {}
+	_view_model = BlasterModel.create(state.data, true, skin, atts)
 	_view_root.add_child(_view_model)
 	if view_layer_mask != 1:
 		_set_model_layers(_view_model, view_layer_mask)
 	_view_offset = state.data.view_offset
+	_ads_offset = _view_model.get_ads_offset() if _view_model != null else Vector3(0.0, -0.16, -0.28)
 	_swap = 1.0
 	_recoil = 0.0
 	if _fp_arms != null and _view_model != null:
@@ -570,7 +582,7 @@ func _on_weapon_changed(state: WeaponState) -> void:
 				_fp_left_arm.visible = true
 				_fp_left_arm.position = Vector3.ZERO
 	if body_model != null:
-		body_model.set_weapon(state.data, skin)
+		body_model.set_weapon(state.data, skin, atts)
 	Sfx.play(&"swap")
 
 
@@ -742,7 +754,7 @@ func enable_body_model(layer_mask: int = 2) -> void:
 		var current_w := arsenal.current()
 		if current_w != null:
 			var skin: StringName = skin_id if skin_id != &"default" else (GameSettings.player2_skin if player_index == 1 else GameSettings.player_skin)
-			body_model.set_weapon(current_w.data, skin)
+			body_model.set_weapon(current_w.data, skin, current_w.attachments if current_w != null else {})
 		_set_model_layers(body_model, layer_mask)
 
 

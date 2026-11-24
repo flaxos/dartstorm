@@ -241,13 +241,13 @@ func _process(delta: float) -> void:
 		_propeller.rotate_y(delta * 14.0)
 
 
-func set_weapon(data: WeaponData, skin_id: StringName = &"") -> void:
+func set_weapon(data: WeaponData, skin_id: StringName = &"", attachments: Dictionary = {}) -> void:
 	if _weapon != null:
 		_weapon.queue_free()
 		_weapon = null
 	if data == null:
 		return
-	_weapon = BlasterModel.create(data, false, skin_id)
+	_weapon = BlasterModel.create(data, false, skin_id, attachments)
 	_weapon.scale = Vector3.ONE * 1.35
 	_weapon_mount.add_child(_weapon)
 	if _weapon.grip_marker != null:

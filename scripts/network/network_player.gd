@@ -114,4 +114,4 @@ func _on_weapon_changed(state: WeaponState) -> void:
 	if is_zombie:
 		_model.set_weapon(null)
 		return
-	_model.set_weapon(state.data if state != null else null, skin_id)
+	_model.set_weapon(state.data if state != null else null, skin_id, state.attachments if state != null else {})

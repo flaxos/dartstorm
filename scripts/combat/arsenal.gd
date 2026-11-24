@@ -150,11 +150,12 @@ func get_move_multiplier() -> float:
 	var state := current()
 	if state == null:
 		return 1.0
+	var att_mult := state.get_move_multiplier()
 	if state.data.fire_mode == WeaponData.FireMode.SPIN_UP:
-		return lerpf(1.0, state.data.firing_move_multiplier, clampf(spin * 2.0, 0.0, 1.0))
+		return lerpf(1.0, state.data.firing_move_multiplier, clampf(spin * 2.0, 0.0, 1.0)) * att_mult
 	if trigger_held and state.can_fire():
-		return state.data.firing_move_multiplier
-	return 1.0
+		return state.data.firing_move_multiplier * att_mult
+	return att_mult
 
 
 func _physics_process(delta: float) -> void:

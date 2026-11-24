@@ -124,6 +124,8 @@ func _ready() -> void:
 	await _test_lan_server_browser_and_dedicated_server()
 	# Backyard Garage Workbench, Blaster Mastery & Aftermarket Attachments (v2.3.0)
 	await _test_weapon_modding_garage_workbench_and_mastery()
+	# Objective AI: Bots in Plant the Bomb & Capture the Flag (v2.4.0)
+	await _test_objective_bot_ai()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -4669,6 +4671,37 @@ func _test_weapon_modding_garage_workbench_and_mastery() -> void:
 	blaster_with_mods.queue_free()
 	await physics_frames(2)
 
+	# Test ADS Offset Alignment
+	var test_ads_model := BlasterModel.create(popper_data, true, &"default", {"optic": &"red_dot"})
+	add_child(test_ads_model)
+	await physics_frames(2)
+	var ads_off := test_ads_model.get_ads_offset()
+	check(is_zero_approx(ads_off.x), "BlasterModel.get_ads_offset() centers X at 0.0")
+	check(ads_off.y < 0.0, "BlasterModel.get_ads_offset() elevates blaster Y to align optic")
+	test_ads_model.queue_free()
+	await physics_frames(2)
+
+	# Test CharacterModel 3rd-person attachment mounting
+	var test_char := CharacterModel.new()
+	add_child(test_char)
+	test_char.setup(&"Tester", Color.BLUE, &"cap")
+	test_char.set_weapon(popper_data, &"default", {"optic": &"holo_sight", "barrel": &"rifled_extension"})
+	await physics_frames(2)
+	var char_weapon := test_char.get_weapon()
+	check(char_weapon != null and char_weapon.attachment_nodes.has(&"optic"), "CharacterModel mounted 3D optic in third-person")
+	check(char_weapon != null and char_weapon.attachment_nodes.has(&"barrel"), "CharacterModel mounted 3D barrel in third-person")
+	test_char.queue_free()
+	await physics_frames(2)
+
+	# Test Arsenal & Stock Mobility Modifiers
+	var stock_mods := WeaponModding.compute_attachment_modifiers({"stock": &"skeleton_stock"})
+	check(stock_mods.get("move_mult", 1.0) == 1.05, "skeleton_stock provides 1.05 move_mult (+5% mobility)")
+	var crane_mods := WeaponModding.compute_attachment_modifiers({"stock": &"counterweight_stock"})
+	check(crane_mods.get("move_mult", 1.0) == 0.96, "counterweight_stock provides 0.96 move_mult (-4% mobility)")
+
+	var state_stock := WeaponState.new(popper_data, false, {"stock": &"skeleton_stock"})
+	check(state_stock.get_move_multiplier() == 1.05, "WeaponState.get_move_multiplier() returns 1.05 for skeleton_stock")
+
 	# 7. Crosshair Reticle Modes
 	var crosshair := Crosshair.new()
 	add_child(crosshair)
@@ -4754,6 +4787,245 @@ func _test_weapon_modding_garage_workbench_and_mastery() -> void:
 	check(char_model._tint == Color.RED, "CharacterModel.set_shirt updates model tint")
 	char_model.queue_free()
 	await physics_frames(3)
+
+
+func _test_objective_bot_ai() -> void:
+	section("AI: Objective Decisions in Plant The Bomb & CTF")
+
+	var stage := make_stage()
+	var arena := Arena.new()
+	arena.flag_pedestals = [Vector3(-20.0, 0.0, 0.0), Vector3(20.0, 0.0, 0.0)]
+	arena.bomb_sites = {"A": Vector3(18.0, 0.0, -10.0), "B": Vector3(-18.0, 0.0, -10.0)}
+	stage.add_child(arena)
+
+	# --- 1. Plant The Bomb: Attacker Carrier, Escort & Dropped Bomb ---
+	var bomb := BombTarget.new()
+	stage.add_child(bomb)
+	bomb.setup_sites({
+		"A": Vector3(18.0, 0.0, -10.0),
+		"B": Vector3(-18.0, 0.0, -10.0)
+	})
+	bomb.spawn_bomb(Vector3(0.0, 0.0, 20.0))
+
+	var att_carrier := Bot.new()
+	att_carrier.team_id = 1
+	att_carrier.display_name = "Attacker Carrier"
+	att_carrier.arena = arena
+	stage.add_child(att_carrier)
+	att_carrier.global_position = Vector3(0.0, 0.0, 20.0)
+
+	var att_escort := Bot.new()
+	att_escort.team_id = 1
+	att_escort.display_name = "Attacker Escort"
+	att_escort.arena = arena
+	stage.add_child(att_escort)
+	att_escort.global_position = Vector3(2.0, 0.0, 22.0)
+
+	await physics_frames(2)
+
+	# Carrier picks up bomb
+	bomb._on_pickup_entered(att_carrier)
+	check(bomb.carrier == att_carrier, "Attacker carrier picks up bomb")
+
+	# Attacker Carrier decides to push to site
+	var carrier_handled := att_carrier._think_bomb_objective(bomb)
+	check(carrier_handled, "Carrier handles bomb objective")
+	check(att_carrier.tactical_role == Bot.TacticalRole.BOMB_CARRIER, "Carrier assigns BOMB_CARRIER role")
+	check(att_carrier.assigned_bomb_site == "A" or att_carrier.assigned_bomb_site == "B", "Carrier selects bomb site A or B")
+	check(att_carrier._has_goal, "Carrier sets navigation goal towards chosen site")
+
+	# Attacker Escort establishes convoy formation around carrier
+	var escort_handled := att_escort._think_bomb_objective(bomb)
+	check(escort_handled, "Escort handles bomb objective")
+	check(att_escort.tactical_role == Bot.TacticalRole.BOMB_ESCORT, "Escort assigns BOMB_ESCORT role")
+	check(att_escort._has_goal, "Escort sets convoy movement goal near carrier")
+
+	# Carrier arrives at site A to plant
+	att_carrier.global_position = Vector3(18.0, 0.0, -10.0)
+	att_carrier._think_bomb_objective(bomb)
+	check(att_carrier._goal == att_carrier.global_position, "Carrier holds ground at site perimeter to plant")
+
+	# Planting begins
+	bomb.progress_plant(att_carrier, 1.0)
+	check(bomb.state == BombTarget.BombState.PLANTING, "Bomb is in PLANTING state")
+	att_escort._think_bomb_objective(bomb)
+	check(att_escort.tactical_role == Bot.TacticalRole.BOMB_ESCORT, "Escort protects carrier during planting")
+
+	# Plant completed -> switch to post-plant crossfire
+	bomb.progress_plant(att_carrier, 3.5)
+	check(bomb.state == BombTarget.BombState.PLANTED, "Bomb is PLANTED at site")
+	att_carrier._think_bomb_objective(bomb)
+	check(att_carrier.tactical_role == Bot.TacticalRole.BOMB_POST_PLANT, "Carrier shifts to BOMB_POST_PLANT role")
+	att_escort._think_bomb_objective(bomb)
+	check(att_escort.tactical_role == Bot.TacticalRole.BOMB_POST_PLANT, "Escort shifts to BOMB_POST_PLANT role")
+	check(att_carrier._goal != att_escort._goal, "Post-plant attackers choose distinct crossfire positions")
+
+	# --- 2. Plant The Bomb: Defender Split & Single Defuser Coordination ---
+	var def_closer := Bot.new()
+	def_closer.team_id = 0
+	def_closer.display_name = "Defender Alpha"
+	def_closer.arena = arena
+	stage.add_child(def_closer)
+	def_closer.global_position = bomb.get_bomb_position() + Vector3(3.0, 0.0, 0.0)
+
+	var def_further := Bot.new()
+	def_further.team_id = 0
+	def_further.display_name = "Defender Beta"
+	def_further.arena = arena
+	stage.add_child(def_further)
+	def_further.global_position = bomb.get_bomb_position() + Vector3(16.0, 0.0, 0.0)
+
+	await physics_frames(2)
+
+	# Pre-plant defense distribution check
+	bomb.state = BombTarget.BombState.CARRIED
+	def_closer.assigned_bomb_site = ""
+	def_further.assigned_bomb_site = ""
+	def_closer._think_bomb_objective(bomb)
+	def_further._think_bomb_objective(bomb)
+	check(def_closer.tactical_role == Bot.TacticalRole.BOMB_DEFENDER_SITE_A or def_closer.tactical_role == Bot.TacticalRole.BOMB_DEFENDER_SITE_B, "Defender Alpha chooses site defense")
+	check(def_further.tactical_role == Bot.TacticalRole.BOMB_DEFENDER_SITE_A or def_further.tactical_role == Bot.TacticalRole.BOMB_DEFENDER_SITE_B, "Defender Beta chooses site defense")
+
+	# Planted bomb defusal coordination: closer bot becomes defuser, further provides cover
+	bomb.state = BombTarget.BombState.PLANTED
+	def_closer._think_bomb_objective(bomb)
+	def_further._think_bomb_objective(bomb)
+	check(def_closer.is_designated_defuser, "Closer defender is designated as sole defuser")
+	check(def_closer.tactical_role == Bot.TacticalRole.BOMB_DEFUSER, "Closer defender adopts BOMB_DEFUSER role")
+	check(not def_further.is_designated_defuser, "Further defender is NOT designated defuser")
+	check(def_further.tactical_role == Bot.TacticalRole.BOMB_DEFUSE_COVER, "Further defender adopts BOMB_DEFUSE_COVER role")
+
+	# Post-plant attackers target the defuser
+	bomb.current_defuser = def_closer
+	att_carrier._think_bomb_objective(bomb)
+	check(att_carrier._target == def_closer, "Attackers prioritize targeting active defuser")
+
+	# Single-defuser rule in _physics_process
+	# If non-defuser is at bomb, it does NOT defuse
+	def_closer.controls_enabled = true
+	def_further.controls_enabled = true
+	def_further.is_designated_defuser = false
+	def_further._think_left = 10.0
+	var initial_defuse := bomb.defuse_progress_left
+	def_further.global_position = bomb.get_bomb_position()
+	def_further._physics_process(0.1)
+	check(bomb.defuse_progress_left == initial_defuse, "Non-defuser bot does not advance defuse progress")
+
+	# Designated defuser advances defusal
+	def_closer.is_designated_defuser = true
+	def_closer._think_left = 10.0
+	def_closer.global_position = bomb.get_bomb_position()
+	def_closer._physics_process(0.2)
+	check(bomb.defuse_progress_left > initial_defuse, "Designated defuser bot advances defuse progress")
+
+	# Human player proximity rule: bot yields defuse to nearby human teammate
+	var human_teammate := Actor.new()
+	human_teammate.team_id = 0
+	human_teammate.is_human = true
+	human_teammate.display_name = "Human Defender"
+	stage.add_child(human_teammate)
+	human_teammate.global_position = bomb.get_bomb_position() + Vector3(2.0, 0.0, 0.0)
+	await physics_frames(1)
+
+	def_closer._think_bomb_objective(bomb)
+	check(not def_closer.is_designated_defuser, "Bot yields defusal to nearby human teammate")
+	check(def_closer.tactical_role == Bot.TacticalRole.BOMB_DEFUSE_COVER, "Bot switches to cover role when human teammate defuses")
+
+	human_teammate.queue_free()
+	await physics_frames(2)
+
+	# --- 3. Capture The Flag: Roles, Interception, Carrier & Escort Convoy ---
+	var blue_flag := FlagPickup.new()
+	blue_flag.team_id = 0
+	stage.add_child(blue_flag)
+	blue_flag.global_position = Vector3(-20.0, 0.0, 0.0)
+	blue_flag.base_position = Vector3(-20.0, 0.0, 0.0)
+	blue_flag.reset_to_base()
+
+	var orange_flag := FlagPickup.new()
+	orange_flag.team_id = 1
+	stage.add_child(orange_flag)
+	orange_flag.global_position = Vector3(20.0, 0.0, 0.0)
+	orange_flag.base_position = Vector3(20.0, 0.0, 0.0)
+	orange_flag.reset_to_base()
+
+	var ctf_bot1 := Bot.new()
+	ctf_bot1.team_id = 0
+	ctf_bot1.display_name = "CTF Blue Alpha"
+	ctf_bot1.arena = arena
+	stage.add_child(ctf_bot1)
+	ctf_bot1.global_position = Vector3(-18.0, 0.0, 0.0)
+
+	var ctf_bot2 := Bot.new()
+	ctf_bot2.team_id = 0
+	ctf_bot2.display_name = "CTF Blue Bravo"
+	ctf_bot2.arena = arena
+	stage.add_child(ctf_bot2)
+	ctf_bot2.global_position = Vector3(-16.0, 0.0, 0.0)
+
+	await physics_frames(2)
+
+	# Role assignment
+	var flags_arr := [blue_flag, orange_flag]
+	ctf_bot1._think_ctf_objective(flags_arr)
+	ctf_bot2._think_ctf_objective(flags_arr)
+	check(ctf_bot1.tactical_role == Bot.TacticalRole.CTF_ANCHOR or ctf_bot1.tactical_role == Bot.TacticalRole.CTF_RUNNER, "CTF bot 1 assigns runner/anchor role")
+	check(ctf_bot2.tactical_role == Bot.TacticalRole.CTF_ANCHOR or ctf_bot2.tactical_role == Bot.TacticalRole.CTF_RUNNER, "CTF bot 2 assigns runner/anchor role")
+
+	# Flag stolen by enemy -> Interception priority
+	var enemy_thief := Actor.new()
+	enemy_thief.team_id = 1
+	enemy_thief.display_name = "Sneaky Enemy"
+	stage.add_child(enemy_thief)
+	enemy_thief.global_position = Vector3(5.0, 0.0, 5.0)
+	blue_flag.carrier = enemy_thief
+	blue_flag.state = FlagPickup.State.CARRIED
+
+	ctf_bot1._think_ctf_objective(flags_arr)
+	check(ctf_bot1._target == enemy_thief, "Bots prioritize hunting enemy flag carrier")
+	check(ctf_bot1._mood == Bot.Mood.FIGHT, "Bots enter FIGHT mood against flag thief")
+	check(ctf_bot1._goal == enemy_thief.global_position, "Bots navigate directly towards flag thief")
+
+	# Friendly teammate carrying enemy flag -> Carrier heads home, teammate escorts
+	blue_flag.carrier = null
+	blue_flag.reset_to_base()
+	orange_flag.carrier = ctf_bot1
+	orange_flag.state = FlagPickup.State.CARRIED
+
+	ctf_bot1._think_ctf_objective(flags_arr)
+	check(ctf_bot1._goal == arena.get_flag_pedestal(0), "Friendly carrier runs towards home pedestal to score")
+
+	ctf_bot2._think_ctf_objective(flags_arr)
+	check(ctf_bot2.tactical_role == Bot.TacticalRole.CTF_ESCORT, "Teammate adopts CTF_ESCORT role")
+	check(ctf_bot2._has_goal, "Escort sets convoy movement goal to clear path for carrier")
+
+	# Enemy flag dropped -> Rush to retrieve
+	orange_flag.drop()
+	ctf_bot2._think_ctf_objective(flags_arr)
+	check(ctf_bot2._goal == orange_flag.global_position, "Bots rush towards dropped enemy flag")
+
+	# Respawn resets tactical state
+	ctf_bot2.respawn(Transform3D.IDENTITY)
+	check(ctf_bot2.tactical_role == Bot.TacticalRole.UNASSIGNED, "Respawn resets tactical role to UNASSIGNED")
+	check(ctf_bot2.assigned_bomb_site.is_empty(), "Respawn resets assigned bomb site")
+	check(not ctf_bot2.is_designated_defuser, "Respawn resets designated defuser flag")
+	check(is_zero_approx(ctf_bot2._sighting_cooldown), "Respawn resets sighting cooldown")
+
+	# Clean up
+	enemy_thief.queue_free()
+	ctf_bot1.queue_free()
+	ctf_bot2.queue_free()
+	blue_flag.queue_free()
+	orange_flag.queue_free()
+	att_carrier.queue_free()
+	att_escort.queue_free()
+	def_closer.queue_free()
+	def_further.queue_free()
+	bomb.queue_free()
+	arena.queue_free()
+	stage.queue_free()
+	await physics_frames(3)
+
 
 
 

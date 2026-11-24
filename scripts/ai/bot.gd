@@ -9,6 +9,22 @@ extends Actor
 
 enum Mood { ROAM, FIGHT, RESUPPLY, RETURN_TO_BASE }
 
+enum TacticalRole {
+	UNASSIGNED,
+	# Plant The Bomb roles
+	BOMB_CARRIER,
+	BOMB_ESCORT,
+	BOMB_POST_PLANT,
+	BOMB_DEFENDER_SITE_A,
+	BOMB_DEFENDER_SITE_B,
+	BOMB_DEFUSER,
+	BOMB_DEFUSE_COVER,
+	# CTF roles
+	CTF_RUNNER,
+	CTF_ANCHOR,
+	CTF_ESCORT,
+}
+
 const EYE_HEIGHT := 1.5
 const THINK_INTERVAL := 0.25
 const LOW_AMMO := 15
@@ -30,6 +46,10 @@ var archetype: StringName = &"runner"
 var base_core: BaseCore = null
 var barricades: Array[BaseBarricade] = []
 var melee_damage: float = 15.0
+var tactical_role: TacticalRole = TacticalRole.UNASSIGNED
+var assigned_bomb_site: String = ""
+var is_designated_defuser: bool = false
+var _sighting_cooldown: float = 0.0
 var _melee_cooldown: float = 0.0
 var _lunge_cooldown: float = 0.0
 var _lunge_telegraph_left: float = 0.0
@@ -100,6 +120,7 @@ func _physics_process(delta: float) -> void:
 	_goal_age += delta
 	_grudge_left = maxf(_grudge_left - delta, 0.0)
 	_weapon_lock_left = maxf(_weapon_lock_left - delta, 0.0)
+	_sighting_cooldown = maxf(_sighting_cooldown - delta, 0.0)
 
 	var wish := Vector3.ZERO
 	var jump := false
@@ -116,7 +137,7 @@ func _physics_process(delta: float) -> void:
 			if bomb_target_node.carrier == self and not bomb_target_node.get_site_at(global_position).is_empty():
 				bomb_target_node.progress_plant(self, delta)
 				wish = Vector3.ZERO
-			elif team_id == 0 and (bomb_target_node.state == BombTarget.BombState.PLANTED or bomb_target_node.state == BombTarget.BombState.DEFUSING) and global_position.distance_to(bomb_target_node.global_position) <= BombTarget.DEFUSE_RADIUS:
+			elif team_id == 0 and is_designated_defuser and (bomb_target_node.state == BombTarget.BombState.PLANTED or bomb_target_node.state == BombTarget.BombState.DEFUSING) and global_position.distance_to(bomb_target_node.get_bomb_position()) <= BombTarget.DEFUSE_RADIUS:
 				bomb_target_node.progress_defuse(self, delta)
 				wish = Vector3.ZERO
 		_melee_cooldown = maxf(_melee_cooldown - delta, 0.0)
@@ -278,46 +299,13 @@ func _think() -> void:
 	# 1. CTF Objectives
 	var flags_in_match := get_tree().get_nodes_in_group(&"flags")
 	if not flags_in_match.is_empty():
-		var our_flag: FlagPickup = null
-		var enemy_flag: FlagPickup = null
-		for f in flags_in_match:
-			var flag := f as FlagPickup
-			if flag != null:
-				if flag.team_id == team_id:
-					our_flag = flag
-				else:
-					enemy_flag = flag
-		if enemy_flag != null and enemy_flag.carrier == self:
-			_mood = Mood.ROAM
-			var home_ped := arena.get_flag_pedestal(team_id) if arena != null else Vector3.ZERO
-			_set_goal(home_ped)
-			return
-		if our_flag != null and our_flag.carrier != null and is_instance_valid(our_flag.carrier) and our_flag.carrier.alive:
-			_target = our_flag.carrier
-			_mood = Mood.FIGHT
-			_set_goal(our_flag.carrier.global_position)
-			return
-		if enemy_flag != null and (enemy_flag.state == FlagPickup.State.DROPPED or enemy_flag.state == FlagPickup.State.AT_BASE):
-			_mood = Mood.ROAM
-			_set_goal(enemy_flag.global_position)
+		if _think_ctf_objective(flags_in_match):
 			return
 
 	# 2. Plant The Bomb Objectives
 	var bomb_target_obj: BombTarget = get_tree().get_first_node_in_group(&"bomb_target") as BombTarget
 	if bomb_target_obj != null:
-		if bomb_target_obj.carrier == self:
-			var site_choice := "A" if (int(hash(display_name)) % 2 == 0) else "B"
-			var target_pos := arena.get_bomb_site_pos(site_choice) if arena != null else Vector3.ZERO
-			_mood = Mood.ROAM
-			_set_goal(target_pos)
-			return
-		elif bomb_target_obj.state == BombTarget.BombState.DROPPED and team_id == 1:
-			_mood = Mood.ROAM
-			_set_goal(bomb_target_obj.global_position)
-			return
-		elif team_id == 0 and (bomb_target_obj.state == BombTarget.BombState.PLANTED or bomb_target_obj.state == BombTarget.BombState.DEFUSING):
-			_mood = Mood.ROAM
-			_set_goal(bomb_target_obj.global_position)
+		if _think_bomb_objective(bomb_target_obj):
 			return
 
 	if _wants_resupply():
@@ -375,6 +363,360 @@ func _think() -> void:
 			_set_goal(_grudge.global_position)  # Go and find whoever hit us.
 		else:
 			_set_goal(_random_roam_point())
+
+
+# --- Objective AI: Plant The Bomb & CTF --------------------------------------
+
+func _think_bomb_objective(bomb: BombTarget) -> bool:
+	if bomb == null or not is_instance_valid(bomb) or arena == null:
+		return false
+
+	var bomb_pos := bomb.get_bomb_position()
+
+	# --------------------------------------------------------------------------
+	# TEAM 1: ATTACKERS (INFILTRATORS)
+	# --------------------------------------------------------------------------
+	if team_id == 1:
+		match bomb.state:
+			BombTarget.BombState.CARRIED, BombTarget.BombState.PLANTING:
+				if bomb.carrier == self:
+					tactical_role = TacticalRole.BOMB_CARRIER
+					if assigned_bomb_site.is_empty():
+						var site_keys := bomb.get_site_keys()
+						if not site_keys.is_empty():
+							assigned_bomb_site = str(site_keys[posmod(int(hash(display_name)), site_keys.size())])
+						else:
+							assigned_bomb_site = "A"
+
+					var current_site := bomb.get_site_at(global_position)
+					if not current_site.is_empty():
+						# Stand ground and plant
+						_mood = Mood.ROAM
+						if _target != null and is_instance_valid(_target) and _target.alive:
+							_aim = (_target.global_position - global_position).normalized()
+						_set_goal(global_position)
+						return true
+					else:
+						# Push to target bomb site
+						var site_pos := bomb.get_site_position(assigned_bomb_site)
+						if site_pos == Vector3.ZERO and arena != null:
+							site_pos = arena.get_bomb_site_pos(assigned_bomb_site)
+						_mood = Mood.ROAM
+						_set_goal(site_pos)
+						return true
+				elif bomb.carrier != null and is_instance_valid(bomb.carrier) and bomb.carrier.alive:
+					tactical_role = TacticalRole.BOMB_ESCORT
+					var carrier_pos := bomb.carrier.global_position
+					if bomb.state == BombTarget.BombState.PLANTING:
+						# Carrier is planting: hold perimeter around site to protect them
+						if _target != null and is_instance_valid(_target) and _target.alive and _has_line_of_sight(_target):
+							_callout_sighting(_target)
+							_mood = Mood.FIGHT
+							return true
+						var guard_pos := _get_crossfire_position(carrier_pos)
+						_mood = Mood.ROAM
+						_set_goal(guard_pos)
+						_aim = (carrier_pos - global_position).normalized()
+						return true
+					else:
+						# Convoy formation around carrier
+						if _target != null and is_instance_valid(_target) and _target.alive and global_position.distance_to(_target.global_position) < 14.0:
+							_callout_sighting(_target)
+							_mood = Mood.FIGHT
+							return true
+						var fwd := -bomb.carrier.global_transform.basis.z
+						var right := bomb.carrier.global_transform.basis.x
+						var side_sign := 1.0 if posmod(int(hash(display_name)), 2) == 0 else -1.0
+						var escort_goal := carrier_pos + fwd * 4.0 + right * (3.5 * side_sign)
+						_mood = Mood.ROAM
+						_set_goal(escort_goal)
+						return true
+
+			BombTarget.BombState.DROPPED:
+				var living_attackers := _get_living_teammates()
+				living_attackers.append(self)
+				var closest_attacker: Actor = null
+				var closest_d := INF
+				for a in living_attackers:
+					var d := a.global_position.distance_to(bomb_pos)
+					if d < closest_d:
+						closest_d = d
+						closest_attacker = a
+				if closest_attacker == self:
+					tactical_role = TacticalRole.BOMB_CARRIER
+					_mood = Mood.ROAM
+					_set_goal(bomb_pos)
+					return true
+				else:
+					tactical_role = TacticalRole.BOMB_ESCORT
+					if _target != null and is_instance_valid(_target) and _target.alive and _has_line_of_sight(_target):
+						_callout_sighting(_target)
+						_mood = Mood.FIGHT
+						return true
+					var cover_pos := bomb_pos + Vector3(sin(hash(display_name)), 0.0, cos(hash(display_name))).normalized() * 6.0
+					_mood = Mood.ROAM
+					_set_goal(cover_pos)
+					return true
+
+			BombTarget.BombState.PLANTED, BombTarget.BombState.DEFUSING:
+				tactical_role = TacticalRole.BOMB_POST_PLANT
+				# Prioritize stopping the defuser!
+				if bomb.current_defuser != null and is_instance_valid(bomb.current_defuser) and bomb.current_defuser.alive:
+					_target = bomb.current_defuser
+					_mood = Mood.FIGHT
+					_callout_sighting(_target, PingBeacon.Type.DANGER)
+					_set_goal(bomb.current_defuser.global_position)
+					return true
+				if _target != null and is_instance_valid(_target) and _target.alive:
+					var dist_to_bomb := _target.global_position.distance_to(bomb_pos)
+					if dist_to_bomb < 10.0 or _has_line_of_sight(_target):
+						_mood = Mood.FIGHT
+						return true
+				# Hold post-plant crossfire watching the bomb
+				var crossfire_pos := _get_crossfire_position(bomb_pos)
+				_mood = Mood.ROAM
+				_set_goal(crossfire_pos)
+				if global_position.distance_to(crossfire_pos) < 2.5:
+					_aim = (bomb_pos - global_position).normalized()
+				return true
+
+			_:
+				pass
+
+	# --------------------------------------------------------------------------
+	# TEAM 0: DEFENDERS (GUARDIANS)
+	# --------------------------------------------------------------------------
+	elif team_id == 0:
+		match bomb.state:
+			BombTarget.BombState.CARRIED, BombTarget.BombState.DROPPED, BombTarget.BombState.PLANTING:
+				# Pre-plant defense: distribute between Site A and Site B
+				if assigned_bomb_site.is_empty():
+					var site_keys := bomb.get_site_keys()
+					if site_keys.size() >= 2:
+						assigned_bomb_site = str(site_keys[posmod(int(hash(display_name)), site_keys.size())])
+					elif not site_keys.is_empty():
+						assigned_bomb_site = str(site_keys[0])
+					else:
+						assigned_bomb_site = "A"
+
+				tactical_role = TacticalRole.BOMB_DEFENDER_SITE_A if assigned_bomb_site == "A" else TacticalRole.BOMB_DEFENDER_SITE_B
+
+				if _target != null and is_instance_valid(_target) and _target.alive and _has_line_of_sight(_target):
+					_callout_sighting(_target)
+					_mood = Mood.FIGHT
+					return true
+
+				var site_guard_pos := _get_site_guard_position(assigned_bomb_site, bomb)
+				_mood = Mood.ROAM
+				_set_goal(site_guard_pos)
+				return true
+
+			BombTarget.BombState.PLANTED, BombTarget.BombState.DEFUSING:
+				# Bomb is planted: rotate to active site and coordinate single defuser + cover
+				assigned_bomb_site = bomb.active_site
+
+				var living_defenders: Array[Actor] = []
+				var has_human_defuser_near := false
+				for act in get_tree().get_nodes_in_group(&"actors"):
+					var a := act as Actor
+					if a != null and is_instance_valid(a) and a.alive and not a.is_tagged_out and a.team_id == 0:
+						living_defenders.append(a)
+						if a.is_human and a.global_position.distance_to(bomb_pos) <= 8.0:
+							has_human_defuser_near = true
+
+				if has_human_defuser_near:
+					is_designated_defuser = false
+				else:
+					var closest_d := INF
+					var closest_actor: Actor = null
+					for d in living_defenders:
+						var dist := d.global_position.distance_to(bomb_pos)
+						if dist < closest_d:
+							closest_d = dist
+							closest_actor = d
+					is_designated_defuser = (closest_actor == self)
+
+				if is_designated_defuser:
+					tactical_role = TacticalRole.BOMB_DEFUSER
+					_mood = Mood.ROAM
+					_set_goal(bomb_pos)
+					return true
+				else:
+					tactical_role = TacticalRole.BOMB_DEFUSE_COVER
+					if _target != null and is_instance_valid(_target) and _target.alive and _has_line_of_sight(_target):
+						_mood = Mood.FIGHT
+						return true
+					var cover_pos := _get_crossfire_position(bomb_pos)
+					_mood = Mood.ROAM
+					_set_goal(cover_pos)
+					if global_position.distance_to(cover_pos) < 2.5:
+						var out_dir := (cover_pos - bomb_pos).normalized()
+						if out_dir.length_squared() > 0.01:
+							_aim = out_dir
+					return true
+
+			_:
+				pass
+
+	return false
+
+
+func _think_ctf_objective(flags: Array) -> bool:
+	if flags.is_empty() or arena == null:
+		return false
+
+	var our_flag: FlagPickup = null
+	var enemy_flag: FlagPickup = null
+	for f in flags:
+		var flag := f as FlagPickup
+		if flag != null:
+			if flag.team_id == team_id:
+				our_flag = flag
+			else:
+				enemy_flag = flag
+
+	if our_flag == null or enemy_flag == null:
+		return false
+
+	var home_ped := arena.get_flag_pedestal(team_id)
+	var enemy_ped := arena.get_flag_pedestal(1 - team_id)
+
+	# 1. OUR FLAG IS STOLEN: High priority interception!
+	if our_flag.state == FlagPickup.State.CARRIED:
+		if our_flag.carrier != null and is_instance_valid(our_flag.carrier) and our_flag.carrier.alive:
+			_target = our_flag.carrier
+			_callout_sighting(_target, PingBeacon.Type.DANGER)
+			_mood = Mood.FIGHT
+			_set_goal(our_flag.carrier.global_position)
+			return true
+
+	# 2. OUR FLAG IS DROPPED: Quick recovery
+	if our_flag.state == FlagPickup.State.DROPPED:
+		if global_position.distance_to(our_flag.global_position) < 25.0:
+			_mood = Mood.ROAM
+			_set_goal(our_flag.global_position)
+			return true
+
+	# 3. WE ARE CARRYING THE ENEMY FLAG: Run home to score!
+	if enemy_flag.carrier == self:
+		_mood = Mood.ROAM
+		_set_goal(home_ped)
+		return true
+
+	# 4. A TEAMMATE IS CARRYING THE ENEMY FLAG: Escort convoy!
+	if enemy_flag.carrier != null and is_instance_valid(enemy_flag.carrier) and enemy_flag.carrier.alive and enemy_flag.carrier.team_id == team_id:
+		tactical_role = TacticalRole.CTF_ESCORT
+		var carrier_pos := enemy_flag.carrier.global_position
+		if _target != null and is_instance_valid(_target) and _target.alive and _has_line_of_sight(_target):
+			_mood = Mood.FIGHT
+			return true
+		var to_home := (home_ped - carrier_pos).normalized()
+		var side_sign := 1.0 if posmod(int(hash(display_name)), 2) == 0 else -1.0
+		var escort_pos := carrier_pos + to_home * 4.5 + Vector3(-to_home.z, 0.0, to_home.x) * (2.8 * side_sign)
+		_mood = Mood.ROAM
+		_set_goal(escort_pos)
+		return true
+
+	# 5. ENEMY FLAG IS DROPPED: Rush to pick it up
+	if enemy_flag.state == FlagPickup.State.DROPPED:
+		_mood = Mood.ROAM
+		_set_goal(enemy_flag.global_position)
+		return true
+
+	# 6. BASELINE CTF ROLES: Runners vs Anchors
+	_assign_ctf_role()
+
+	if tactical_role == TacticalRole.CTF_ANCHOR:
+		if _target != null and is_instance_valid(_target) and _target.alive and _target.global_position.distance_to(home_ped) < 22.0:
+			_callout_sighting(_target)
+			_mood = Mood.FIGHT
+			return true
+		var patrol_angle := float(posmod(int(hash(display_name)), 360)) * (PI / 180.0)
+		var patrol_pos := home_ped + Vector3(cos(patrol_angle), 0.0, sin(patrol_angle)) * 6.5
+		_mood = Mood.ROAM
+		_set_goal(patrol_pos)
+		return true
+
+	elif tactical_role == TacticalRole.CTF_RUNNER:
+		if _target != null and is_instance_valid(_target) and _target.alive and global_position.distance_to(_target.global_position) < 10.0 and _has_line_of_sight(_target):
+			_mood = Mood.FIGHT
+			return true
+		_mood = Mood.ROAM
+		_set_goal(enemy_ped)
+		return true
+
+	return false
+
+
+func _assign_ctf_role() -> void:
+	if tactical_role == TacticalRole.CTF_RUNNER or tactical_role == TacticalRole.CTF_ANCHOR:
+		return
+	if posmod(int(hash(display_name)), 2) == 0:
+		tactical_role = TacticalRole.CTF_ANCHOR
+	else:
+		tactical_role = TacticalRole.CTF_RUNNER
+
+
+func _callout_sighting(target_actor: Actor, ping_type: PingBeacon.Type = PingBeacon.Type.RIVAL) -> void:
+	if target_actor == null or not is_instance_valid(target_actor) or _sighting_cooldown > 0.0:
+		return
+	_sighting_cooldown = 7.5
+	var parent_node := get_parent()
+	if parent_node != null:
+		var beacon := PingBeacon.spawn(parent_node, target_actor.global_position, ping_type, self)
+		if beacon != null:
+			Sfx.play_at(&"ping", global_position, randf_range(0.95, 1.05), -4.0)
+			for bot_node in get_tree().get_nodes_in_group(&"bots"):
+				var b := bot_node as Bot
+				if b != null and b != self and b.team_id == team_id and b.alive:
+					b.on_squad_ping(beacon)
+
+
+func _get_crossfire_position(bomb_pos: Vector3) -> Vector3:
+	var angle := float(posmod(int(hash(display_name)), 360)) * (PI / 180.0)
+	var dist := 7.0 + float(posmod(int(hash(display_name)), 5))
+	var offset := Vector3(cos(angle), 0.0, sin(angle)) * dist
+	var target_pos := bomb_pos + offset
+	if arena != null and not arena.roam_points.is_empty():
+		var nearest_roam := Vector3.ZERO
+		var nearest_d := INF
+		for rp in arena.roam_points:
+			var d := rp.distance_to(target_pos)
+			if d < nearest_d and d < 6.0:
+				nearest_d = d
+				nearest_roam = rp
+		if nearest_d < 6.0:
+			return nearest_roam
+	return target_pos
+
+
+func _get_site_guard_position(site_id: String, bomb: BombTarget) -> Vector3:
+	var site_pos := bomb.get_site_position(site_id)
+	if site_pos == Vector3.ZERO and arena != null:
+		site_pos = arena.get_bomb_site_pos(site_id)
+	var angle := float(posmod(int(hash(display_name)), 360)) * (PI / 180.0)
+	var dist := 3.5 + float(posmod(int(hash(display_name)), 4))
+	var target_pos := site_pos + Vector3(cos(angle), 0.0, sin(angle)) * dist
+	if arena != null and not arena.roam_points.is_empty():
+		var nearest_roam := Vector3.ZERO
+		var nearest_d := INF
+		for rp in arena.roam_points:
+			var d := rp.distance_to(target_pos)
+			if d < nearest_d and d < 5.0:
+				nearest_d = d
+				nearest_roam = rp
+		if nearest_d < 5.0:
+			return nearest_roam
+	return target_pos
+
+
+func _get_living_teammates() -> Array[Actor]:
+	var mates: Array[Actor] = []
+	for act in get_tree().get_nodes_in_group(&"actors"):
+		var a := act as Actor
+		if a != null and a != self and is_instance_valid(a) and a.alive and not a.is_tagged_out and a.team_id == team_id:
+			mates.append(a)
+	return mates
 
 
 func _pick_survivor_target() -> Actor:
@@ -814,6 +1156,10 @@ func respawn(at: Transform3D) -> void:
 	_seen_for = 0.0
 	_stuck_for = 0.0
 	_model.set_meter(0.0)
+	tactical_role = TacticalRole.UNASSIGNED
+	assigned_bomb_site = ""
+	is_designated_defuser = false
+	_sighting_cooldown = 0.0
 	if is_zombie:
 		_model.set_zombie(true)
 
@@ -822,7 +1168,7 @@ func _on_weapon_changed(state: WeaponState) -> void:
 	if is_zombie:
 		_model.set_weapon(null)
 		return
-	_model.set_weapon(state.data if state != null else null)
+	_model.set_weapon(state.data if state != null else null, &"", state.attachments if state != null else {})
 
 
 func _on_shot_feedback(state: WeaponState) -> void:

@@ -319,9 +319,9 @@ const ATTACHMENTS: Array[Dictionary] = [
 		"slot": Slot.STOCK,
 		"rank": 2,
 		"desc": "Foldable lightweight dual-wire shoulder brace with ribbed rubber buttpad.",
-		"pros": ["+20% recoil stabilization", "-10% sustained spread"],
+		"pros": ["+20% recoil stabilization", "-10% sustained spread", "+5% mobility"],
 		"cons": ["Slightly wider profile"],
-		"stats": {"recoil_mult": 0.80, "spread_mult": 0.90}
+		"stats": {"recoil_mult": 0.80, "spread_mult": 0.90, "move_mult": 1.05}
 	},
 	{
 		"id": &"tactical_grip",
@@ -329,9 +329,9 @@ const ATTACHMENTS: Array[Dictionary] = [
 		"slot": Slot.STOCK,
 		"rank": 4,
 		"desc": "Ergonomic front hand stop with textured finger grooves mounted to bottom rail.",
-		"pros": ["+20% aim recovery", "+10% sprint-to-fire speed", "-15% recoil"],
+		"pros": ["+20% aim recovery", "+10% sprint-to-fire speed", "-15% recoil", "+3% mobility"],
 		"cons": ["Requires two-handed stance"],
-		"stats": {"recoil_mult": 0.85, "spread_mult": 0.90}
+		"stats": {"recoil_mult": 0.85, "spread_mult": 0.90, "move_mult": 1.03}
 	},
 	{
 		"id": &"counterweight_stock",
@@ -340,8 +340,8 @@ const ATTACHMENTS: Array[Dictionary] = [
 		"rank": 6,
 		"desc": "Reinforced crane stock with heavy battery counterweight balancing the blaster.",
 		"pros": ["-30% camera shake", "Completely removes idle sway", "-25% recoil"],
-		"cons": ["Heavier overall weight"],
-		"stats": {"recoil_mult": 0.75}
+		"cons": ["-4% mobility", "Heavier overall weight"],
+		"stats": {"recoil_mult": 0.75, "move_mult": 0.96}
 	},
 ]
 
@@ -427,6 +427,7 @@ static func compute_attachment_modifiers(equipped: Dictionary) -> Dictionary:
 		"zoom_fov": 0.0,
 		"reticle": &"standard",
 		"sound_override": &"",
+		"move_mult": 1.0,
 	}
 	for slot_key in equipped:
 		var att_id: StringName = StringName(str(equipped[slot_key]))
@@ -450,6 +451,8 @@ static func compute_attachment_modifiers(equipped: Dictionary) -> Dictionary:
 			result["reload_mult"] *= float(stats["reload_mult"])
 		if stats.has("gravity_mult"):
 			result["gravity_mult"] *= float(stats["gravity_mult"])
+		if stats.has("move_mult"):
+			result["move_mult"] *= float(stats["move_mult"])
 		if stats.has("zoom_fov") and float(stats["zoom_fov"]) > 0.0:
 			result["zoom_fov"] = float(stats["zoom_fov"])
 		if stats.has("reticle"):

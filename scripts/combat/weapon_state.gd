@@ -75,6 +75,11 @@ func get_reticle() -> StringName:
 	return StringName(str(modifiers.get("reticle", &"standard")))
 
 
+## Effective movement multiplier from equipped attachments (e.g. stocks).
+func get_move_multiplier() -> float:
+	return float(modifiers.get("move_mult", 1.0))
+
+
 ## Darts ready to fire right now.
 func loaded() -> int:
 	return reserve if data.is_belt_fed() else magazine

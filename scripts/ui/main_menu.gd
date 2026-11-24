@@ -1119,7 +1119,8 @@ func _update_preview_weapon() -> void:
 	var path: String = ALL_WEAPONS[_preview_weapon_index]
 	var wdata := load(path) as WeaponData
 	var active_skin: StringName = GameSettings.player2_skin if _customise_profile == 1 else GameSettings.player_skin
-	player_model.set_weapon(wdata, active_skin)
+	var atts: Dictionary = Progression.get_equipped_attachments(wdata.id, _customise_profile) if (is_instance_valid(Progression) and wdata != null) else {}
+	player_model.set_weapon(wdata, active_skin, atts)
 	if _weapon_inspect_label != null and wdata != null:
 		_weapon_inspect_label.text = "%s (%d/%d)" % [wdata.display_name.to_upper(), _preview_weapon_index + 1, ALL_WEAPONS.size()]
 

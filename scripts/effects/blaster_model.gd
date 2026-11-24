@@ -276,6 +276,29 @@ func get_slot_transform(slot: StringName) -> Transform3D:
 	return tf
 
 
+## Computes the first-person ADS offset so the optic or iron sights center on the camera.
+func get_ads_offset() -> Vector3:
+	var sight_pos := Vector3(0.0, 0.10, -0.05)
+	if equipped_attachments.has(&"optic") and equipped_attachments[&"optic"] != &"none" and equipped_attachments[&"optic"] != &"iron_sights":
+		var opt_id: StringName = equipped_attachments[&"optic"]
+		var socket := get_slot_transform(&"optic").origin
+		var opt_y := 0.038
+		if opt_id == &"holo_sight":
+			opt_y = 0.045
+		sight_pos = socket + Vector3(0.0, opt_y, 0.0)
+	elif muzzle != null:
+		sight_pos = Vector3(0.0, muzzle.position.y + 0.035, muzzle.position.z * 0.5)
+	else:
+		sight_pos = Vector3(0.0, 0.08, -0.15)
+
+	var target_z := -0.28
+	return Vector3(
+		-sight_pos.x,
+		-sight_pos.y,
+		target_z - sight_pos.z
+	)
+
+
 
 func _build_from_model() -> bool:
 	if data == null or not is_instance_valid(ModelLoader):

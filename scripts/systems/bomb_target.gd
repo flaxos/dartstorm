@@ -236,6 +236,36 @@ func get_site_at(pos: Vector3) -> String:
 	return ""
 
 
+## Returns the world position of Site A or Site B.
+func get_site_position(site_id: String) -> Vector3:
+	if _sites.has(site_id):
+		var area: Area3D = _sites[site_id]
+		if area != null:
+			return area.global_position
+	return Vector3.ZERO
+
+
+## Returns current world position of the bomb.
+func get_bomb_position() -> Vector3:
+	if _bomb_model != null:
+		return _bomb_model.global_position
+	return global_position
+
+
+## Returns the closest site ("A" or "B") to a given world position.
+func get_closest_site(pos: Vector3) -> String:
+	var closest_site := ""
+	var closest_dist := INF
+	for site_id: String in _sites:
+		var area: Area3D = _sites[site_id]
+		if area != null:
+			var d := area.global_position.distance_to(pos)
+			if d < closest_dist:
+				closest_dist = d
+				closest_site = site_id
+	return closest_site
+
+
 ## Called by player or bot to start/continue planting when inside a site.
 func progress_plant(actor: Actor, delta: float) -> bool:
 	if state != BombState.CARRIED and state != BombState.PLANTING:

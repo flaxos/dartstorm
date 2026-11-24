@@ -41,9 +41,36 @@ func _build() -> void:
 
 
 func _build_ground_and_walls() -> void:
-	# Main terrain ground plane - sun-baked desert sand with continuous world-triplanar coordinates
-	ArenaKit.box(geometry, Vector3(HALF_X * 2.0, 1.0, HALF_Z * 2.0), Vector3(0.0, -0.5, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
-	ArenaKit.deco_box(decor, Vector3(500.0, 0.2, 500.0), Vector3(0.0, -0.55, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+	# Continuous infinite background desert floor (placed deep at Y = -3.5 so it never clips into trenches)
+	ArenaKit.deco_box(decor, Vector3(500.0, 0.2, 500.0), Vector3(0.0, -3.55, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+
+	# Safety bedrock base floor underneath entire map (at Y = -3.5)
+	ArenaKit.box(geometry, Vector3(HALF_X * 2.0, 1.0, HALF_Z * 2.0), Vector3(0.0, -4.0, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+
+	# --- Segmented Ground Slabs at Y = 0.0 (Preserving Pit, Suicide, and CT Spawn depth!) ---
+	# 1. West Ground (West of Suicide / Mid, south of CT Spawn): X: -44.0 to -2.5, Z: -15.0 to 44.0
+	ArenaKit.box(geometry, Vector3(41.5, 1.0, 59.0), Vector3(-23.25, -0.5, 14.5), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+
+	# 2. Far West North Ground (behind Site B, west of CT Spawn): X: -44.0 to -9.0, Z: -44.0 to -15.0
+	ArenaKit.box(geometry, Vector3(35.0, 1.0, 29.0), Vector3(-26.5, -0.5, -29.5), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+
+	# 3. East Ground (Between Suicide/Mid and Pit): X: 2.5 to 25.5, Z: -15.0 to 44.0
+	ArenaKit.box(geometry, Vector3(23.0, 1.0, 59.0), Vector3(14.0, -0.5, 14.5), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+
+	# 4. Far East Boundary Ground (East of Pit): X: 34.5 to 44.0, Z: -44.0 to 44.0
+	ArenaKit.box(geometry, Vector3(9.5, 1.0, 88.0), Vector3(39.25, -0.5, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+
+	# 5. North-East Ground (Bombsite A terrace & A Long North, east of CT Spawn): X: 9.0 to 34.5, Z: -44.0 to 4.0
+	ArenaKit.box(geometry, Vector3(25.5, 1.0, 48.0), Vector3(21.75, -0.5, -20.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+
+	# 6. Outside Long & Outside Pit South Ground (South of Pit): X: 25.5 to 34.5, Z: 14.0 to 44.0
+	ArenaKit.box(geometry, Vector3(9.0, 1.0, 30.0), Vector3(30.0, -0.5, 29.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+
+	# 7. T-Spawn South Ground (Behind Suicide start): X: -2.5 to 2.5, Z: 30.0 to 44.0
+	ArenaKit.box(geometry, Vector3(5.0, 1.0, 14.0), Vector3(0.0, -0.5, 37.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+
+	# 8. Top Mid Ground (North of Suicide): X: -2.5 to 2.5, Z: -15.0 to 12.0
+	ArenaKit.box(geometry, Vector3(5.0, 1.0, 27.0), Vector3(0.0, -0.5, -1.5), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
 
 	# Boundary fortress canyon walls with architectural coping cornices
 	var wall_h := 7.5
@@ -78,8 +105,8 @@ func _build_t_spawn_and_approaches() -> void:
 	# Drops from T-Spawn (Y = 0.0) down to Y = -1.0 (Z = 30.0 to 16.0)
 	var sui_w := 4.4
 	ArenaKit.ramp(geometry, Vector3(0.0, 0.0, 30.0), Vector3(0.0, -1.0, 16.0), sui_w, SANDSTONE)
-	ArenaKit.box(geometry, Vector3(0.8, 4.5, 14.0), Vector3(-sui_w * 0.5 - 0.4, 1.75, 23.0), SANDSTONE)
-	ArenaKit.box(geometry, Vector3(0.8, 4.5, 14.0), Vector3(sui_w * 0.5 + 0.4, 1.75, 23.0), SANDSTONE)
+	ArenaKit.box(geometry, Vector3(0.8, 6.0, 14.0), Vector3(-sui_w * 0.5 - 0.4, 1.5, 23.0), SANDSTONE)
+	ArenaKit.box(geometry, Vector3(0.8, 6.0, 14.0), Vector3(sui_w * 0.5 + 0.4, 1.5, 23.0), SANDSTONE)
 
 	# Ramp emerging from Suicide into Top Mid (Y = -1.0 to 0.0, Z = 16.0 to 12.0)
 	ArenaKit.ramp(geometry, Vector3(0.0, -1.0, 16.0), Vector3(0.0, 0.0, 12.0), sui_w, SANDSTONE)
@@ -140,9 +167,17 @@ func _build_long_a_and_pit() -> void:
 	var pit_pos := Vector3(30.0, -1.8, 9.0)
 	ArenaKit.box(geometry, Vector3(pit_w, 0.4, pit_l), pit_pos, PAVER)
 
-	# Pit retaining walls
-	ArenaKit.box(geometry, Vector3(pit_w, 2.2, 0.8), Vector3(30.0, -0.5, 14.4), SANDSTONE)
-	ArenaKit.box(geometry, Vector3(0.8, 2.2, pit_l), Vector3(34.9, -0.5, 9.0), SANDSTONE)
+	# Pit retaining walls (enclosing South, East, West, and North of Pit)
+	ArenaKit.box(geometry, Vector3(pit_w + 1.6, 2.2, 0.8), Vector3(30.0, -0.5, 14.4), SANDSTONE)
+	ArenaKit.box(geometry, Vector3(0.8, 2.2, pit_l + 1.6), Vector3(34.9, -0.5, 9.0), SANDSTONE)
+	ArenaKit.box(geometry, Vector3(0.8, 2.2, pit_l), Vector3(25.1, -0.5, 9.0), SANDSTONE)
+	ArenaKit.box(geometry, Vector3(4.2, 2.2, 0.8), Vector3(32.6, -0.5, 4.0), SANDSTONE)
+
+	# Smooth carved stone coping trim along Pit rim
+	ArenaKit.cornice(decor, Vector3(30.0, 0.7, 14.4), Vector3(pit_w + 1.6, 0.25, 1.2))
+	ArenaKit.cornice(decor, Vector3(34.9, 0.7, 9.0), Vector3(1.2, 0.25, pit_l + 1.6))
+	ArenaKit.cornice(decor, Vector3(25.1, 0.7, 9.0), Vector3(1.2, 0.25, pit_l))
+	ArenaKit.cornice(decor, Vector3(32.6, 0.7, 4.0), Vector3(4.2, 0.25, 1.2))
 
 	# Pit Plat (Elevated sniper ledge in Pit corner at X = 33.0, Z = 12.0, Y = 0.0)
 	ArenaKit.box(geometry, Vector3(3.2, 1.6, 3.2), Vector3(33.0, -0.8, 12.0), SANDSTONE)

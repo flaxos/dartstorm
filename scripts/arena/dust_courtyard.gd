@@ -35,10 +35,27 @@ func _build() -> void:
 
 
 func _build_ground_and_walls() -> void:
-	# Main courtyard ground - sun-baked desert sand with continuous world-triplanar coordinates
-	ArenaKit.box(geometry, Vector3(HALF_X * 2.0, 1.0, HALF_Z * 2.0), Vector3(0.0, -0.5, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
-	# Infinite background desert floor
-	ArenaKit.deco_box(decor, Vector3(500.0, 0.2, 500.0), Vector3(0.0, -0.55, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+	# Continuous infinite background desert floor (placed deep at Y = -4.0 so it never clips into trenches)
+	ArenaKit.deco_box(decor, Vector3(500.0, 0.2, 500.0), Vector3(0.0, -4.0, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+
+	# Safety bedrock base floor underneath entire map (at Y = -4.0)
+	ArenaKit.box(geometry, Vector3(HALF_X * 2.0, 1.0, HALF_Z * 2.0), Vector3(0.0, -4.5, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+
+	# --- Segmented Ground Slabs at Y = 0.0 (Leaving Underpass Canal completely open!) ---
+	# 1. West Ground Slab: T-Spawn West, Hallway, and West boundary (X: -40.0 to -15.5, Z: -36.0 to 36.0)
+	ArenaKit.box(geometry, Vector3(24.5, 1.0, 72.0), Vector3(-27.75, -0.5, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+
+	# 2. East Ground Slab: Grand Courtyard, Bombsite A, and East boundary (X: 5.0 to 40.0, Z: -36.0 to 36.0)
+	ArenaKit.box(geometry, Vector3(35.0, 1.0, 72.0), Vector3(22.5, -0.5, 0.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+
+	# 3. South Ground Slab: Behind T-Spawn (X: -15.5 to 5.0, Z: 20.0 to 36.0)
+	ArenaKit.box(geometry, Vector3(20.5, 1.0, 16.0), Vector3(-5.25, -0.5, 28.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+
+	# 4. North Ground Slab: CT Spawn Garrison & North area (X: -15.5 to 5.0, Z: -36.0 to -14.0)
+	ArenaKit.box(geometry, Vector3(20.5, 1.0, 22.0), Vector3(-5.25, -0.5, -25.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
+
+	# 5. Central Island: Between Underpass canal and Courtyard dividing wall, south of the exit ramp (X: -10.5 to 5.0, Z: -6.0 to 20.0)
+	ArenaKit.box(geometry, Vector3(15.5, 1.0, 26.0), Vector3(-2.75, -0.5, 7.0), DESERT_SAND, Vector3.ZERO, ArenaKit.SurfaceType.SAND)
 
 	# High canyon fortress boundary walls with architectural coping cornices
 	var wall_h := 7.5
@@ -118,56 +135,69 @@ func _build_t_spawn_and_hallway() -> void:
 func _build_underpass_and_bridge() -> void:
 	# --- The Sunken Underpass Trench (depth Y = -2.5) ---
 	var tun_w := 5.0
-	# Shallow decline ramp from T-Spawn (X = -13.0, Z = 20.0, Y = 0.0) down to (X = -13.0, Z = 10.0, Y = -2.5)
-	ArenaKit.ramp(geometry, Vector3(-13.0, 0.0, 20.0), Vector3(-13.0, -2.5, 10.0), tun_w, SANDSTONE)
+	# Shallow decline ramp from T-Spawn (X = -13.0, Z = 20.0, Y = 0.0) down to (X = -13.0, Z = 11.0, Y = -2.5)
+	ArenaKit.ramp(geometry, Vector3(-13.0, 0.0, 20.0), Vector3(-13.0, -2.5, 11.0), tun_w, SANDSTONE)
 
-	# Continuous straight underpass canal running South to North (Z: 10.0 down to -10.0 at Y = -2.5)
-	var tun_len := 20.0
-	ArenaKit.box(geometry, Vector3(tun_w, 0.4, tun_len), Vector3(-13.0, -2.7, 0.0), PAVER)
+	# Continuous straight underpass canal running South to North (Z: 11.0 down to -7.0 at Y = -2.5)
+	var tun_len := 18.0
+	ArenaKit.box(geometry, Vector3(tun_w, 0.4, tun_len), Vector3(-13.0, -2.7, 2.0), PAVER)
 
 	# Sturdy retaining stone walls flanking the sunken underpass
 	var ret_h := 3.8
-	ArenaKit.box(geometry, Vector3(0.9, ret_h, tun_len), Vector3(-13.0 - tun_w * 0.5 - 0.45, -0.8, 0.0), SANDSTONE_DARK)
-	ArenaKit.box(geometry, Vector3(0.9, ret_h, tun_len), Vector3(-13.0 + tun_w * 0.5 + 0.45, -0.8, 0.0), SANDSTONE_DARK)
+	# Left retaining wall (X = -15.95, runs from Z = 20.0 to Z = -13.0)
+	ArenaKit.box(geometry, Vector3(0.9, ret_h, 33.0), Vector3(-13.0 - tun_w * 0.5 - 0.45, -0.8, 3.5), SANDSTONE_DARK)
+	# Right retaining wall (X = -10.05, runs from Z = 20.0 to Z = -6.0)
+	ArenaKit.box(geometry, Vector3(0.9, ret_h, 26.0), Vector3(-13.0 + tun_w * 0.5 + 0.45, -0.8, 7.0), SANDSTONE_DARK)
 
-	# Retaining wall coping cornices
-	ArenaKit.cornice(decor, Vector3(-13.0 - tun_w * 0.5 - 0.45, 1.15, 0.0), Vector3(1.3, 0.3, tun_len))
-	ArenaKit.cornice(decor, Vector3(-13.0 + tun_w * 0.5 + 0.45, 1.15, 0.0), Vector3(1.3, 0.3, tun_len))
+	# Retaining wall coping cornices (smooth carved stone coping without brick lines)
+	ArenaKit.cornice(decor, Vector3(-13.0 - tun_w * 0.5 - 0.45, 1.15, 3.5), Vector3(1.3, 0.3, 33.0))
+	ArenaKit.cornice(decor, Vector3(-13.0 + tun_w * 0.5 + 0.45, 1.15, 7.0), Vector3(1.3, 0.3, 26.0))
 
 	# Underpass tactical cover underneath and approaching the bridge
-	ArenaKit.pallet(geometry, Vector3(-14.0, -2.5, 4.0))
-	ArenaKit.crate(geometry, Vector3(-14.0, -2.3, 4.0), Vector3(1.6, 1.6, 1.6))
-	ArenaKit.barrel(geometry, Vector3(-11.5, -2.5, 3.5))
-	ArenaKit.crate(geometry, Vector3(-12.0, -2.5, -4.0), Vector3(1.5, 1.5, 1.5), Vector3(0.0, 15.0, 0.0))
-	ArenaKit.barrel(geometry, Vector3(-14.2, -2.5, -4.5))
+	ArenaKit.pallet(geometry, Vector3(-14.0, -2.5, 5.0))
+	ArenaKit.crate(geometry, Vector3(-14.0, -2.3, 5.0), Vector3(1.6, 1.6, 1.6))
+	ArenaKit.barrel(geometry, Vector3(-11.5, -2.5, 4.5))
+	ArenaKit.crate(geometry, Vector3(-12.0, -2.5, -3.0), Vector3(1.5, 1.5, 1.5), Vector3(0.0, 15.0, 0.0))
+	ArenaKit.barrel(geometry, Vector3(-14.2, -2.5, -3.5))
 
-	# --- The Overhead Sniper Bridge (at Z = 0.0, spanning X from -16.0 to -10.0 at Y = 1.0) ---
+	# --- The Overhead Sniper Bridge (deck Y = 1.0, spanning underpass at Z = 0.0) ---
 	var bridge_w := 4.4
 	# Elevated walkway deck crossing over the underpass
-	ArenaKit.box(geometry, Vector3(tun_w + 1.8, 0.5, bridge_w), Vector3(-13.0, 0.75, 0.0), SANDSTONE)
+	ArenaKit.box(geometry, Vector3(tun_w + 1.8, 0.4, bridge_w), Vector3(-13.0, 1.0, 0.0), PAVER)
 
-	# High-poly stone arch underneath the bridge framing the underpass passage
+	# High-poly stone arch underneath the bridge framing the underpass passage with full 3.5m clearance
 	ArenaKit.arch(geometry, Vector3(-13.0, -2.5, 0.0), tun_w + 0.4, 3.5, bridge_w)
 
-	# Solid stone parapet railings on both sides of the bridge with sniper firing apertures
-	ArenaKit.box(geometry, Vector3(tun_w + 1.8, 1.1, 0.4), Vector3(-13.0, 1.55, -bridge_w * 0.5 + 0.2), SANDSTONE_DARK)
-	ArenaKit.box(geometry, Vector3(tun_w + 1.8, 1.1, 0.4), Vector3(-13.0, 1.55, bridge_w * 0.5 - 0.2), SANDSTONE_DARK)
+	# Solid stone parapet railings on both sides of the bridge
+	ArenaKit.box(geometry, Vector3(tun_w + 1.8, 1.0, 0.4), Vector3(-13.0, 1.7, -bridge_w * 0.5 + 0.2), SANDSTONE_DARK)
+	ArenaKit.box(geometry, Vector3(tun_w + 1.8, 1.0, 0.4), Vector3(-13.0, 1.7, bridge_w * 0.5 - 0.2), SANDSTONE_DARK)
 
 	# Bridge walkway connecting to Central Intersection (North-West)
-	ArenaKit.box(geometry, Vector3(bridge_w, 0.5, 8.0), Vector3(-8.0, 0.75, -4.0), SANDSTONE)
-	ArenaKit.box(geometry, Vector3(6.0, 0.5, bridge_w), Vector3(-10.0, 0.75, 0.0), SANDSTONE)
+	ArenaKit.box(geometry, Vector3(bridge_w, 0.4, 8.0), Vector3(-8.0, 1.0, -4.0), PAVER)
+	ArenaKit.box(geometry, Vector3(6.0, 0.4, bridge_w), Vector3(-10.0, 1.0, 0.0), PAVER)
+	# Ramp connecting bridge walkway down to courtyard level
+	ArenaKit.ramp(geometry, Vector3(-5.0, 1.0, -4.0), Vector3(0.0, 0.0, -4.0), bridge_w, SANDSTONE)
 
 	# Bridge walkway continuing North into CT Spawn compound
-	ArenaKit.box(geometry, Vector3(bridge_w, 0.5, 10.0), Vector3(-13.0, 0.75, -9.0), SANDSTONE)
+	ArenaKit.box(geometry, Vector3(bridge_w, 0.4, 10.0), Vector3(-13.0, 1.0, -9.0), PAVER)
 
 	# --- Underpass Canal Exit into Courtyard ---
-	# At Z = -10.0, the Underpass turns East and ascends via a wide ramp into the Courtyard
-	var exit_w := 5.2
-	ArenaKit.box(geometry, Vector3(8.0, 0.4, exit_w), Vector3(-7.0, -2.7, -10.0), PAVER)
-	ArenaKit.ramp(geometry, Vector3(-3.0, -2.5, -10.0), Vector3(5.0, 0.0, -10.0), exit_w, SANDSTONE)
+	# At Z = -7.0 to -13.0, the Underpass turns East and ascends via a wide ramp into the Courtyard
+	var exit_w := 5.4
+	# Canal floor turning East
+	ArenaKit.box(geometry, Vector3(8.0, 0.4, exit_w), Vector3(-7.0, -2.7, -9.5), PAVER)
+	# North retaining wall of canal turn (Z = -13.0)
+	ArenaKit.box(geometry, Vector3(18.0, ret_h, 0.9), Vector3(-5.0, -0.8, -12.65), SANDSTONE_DARK)
+	ArenaKit.cornice(decor, Vector3(-5.0, 1.15, -12.65), Vector3(18.0, 0.3, 1.3))
+	# South retaining wall of canal turn (Z = -6.0)
+	ArenaKit.box(geometry, Vector3(12.0, ret_h, 0.9), Vector3(-2.0, -0.8, -6.35), SANDSTONE_DARK)
+	ArenaKit.cornice(decor, Vector3(-2.0, 1.15, -6.35), Vector3(12.0, 0.3, 1.3))
+
+	# Ramp ascending from Underpass canal (Y = -2.5) up to Courtyard (Y = 0.0)
+	ArenaKit.ramp(geometry, Vector3(-3.0, -2.5, -9.5), Vector3(5.0, 0.0, -9.5), exit_w, SANDSTONE)
 
 	# High-poly curved arch framing the Underpass exit portal into the open Courtyard
-	ArenaKit.arch(geometry, Vector3(5.0, 0.0, -10.0), exit_w + 0.8, 4.8, 1.4, Vector3(0.0, 90.0, 0.0))
+	ArenaKit.arch(geometry, Vector3(5.0, 0.0, -9.5), exit_w + 0.8, 4.8, 1.4, Vector3(0.0, 90.0, 0.0))
 
 
 func _build_east_courtyard_and_bombsite_a() -> void:

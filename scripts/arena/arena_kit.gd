@@ -14,6 +14,7 @@ enum SurfaceType {
 	COBBLE,
 	BRICK,
 	SAND,
+	SANDSTONE_SMOOTH,
 }
 
 const WOOD_SHADER := preload("res://assets/materials/toy_wood.gdshader")
@@ -27,6 +28,10 @@ static var _materials: Dictionary = {}
 static var _sandstone_albedo: Texture2D = preload("res://assets/textures/arenas/sandstone_albedo.png")
 static var _sandstone_normal: Texture2D = preload("res://assets/textures/arenas/sandstone_normal.png")
 static var _sandstone_orm: Texture2D = preload("res://assets/textures/arenas/sandstone_orm.png")
+
+static var _sandstone_smooth_albedo: Texture2D = preload("res://assets/textures/arenas/sandstone_smooth_albedo.png")
+static var _sandstone_smooth_normal: Texture2D = preload("res://assets/textures/arenas/sandstone_smooth_normal.png")
+static var _sandstone_smooth_orm: Texture2D = preload("res://assets/textures/arenas/sandstone_smooth_orm.png")
 
 static var _cobble_albedo: Texture2D = preload("res://assets/textures/arenas/cobble_albedo.png")
 static var _cobble_normal: Texture2D = preload("res://assets/textures/arenas/cobble_normal.png")
@@ -115,7 +120,7 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 			material.albedo_texture = _sand_albedo
 			material.uv1_triplanar = true
 			material.uv1_world_triplanar = true
-			material.uv1_triplanar_sharpness = 4.0
+			material.uv1_triplanar_sharpness = 24.0
 			material.uv1_scale = Vector3(0.12, 0.12, 0.12)
 			material.albedo_color = Color.WHITE if (color.is_equal_approx(Color(0.88, 0.76, 0.56)) or color.is_equal_approx(Color(0.87, 0.75, 0.55))) else color
 			material.roughness = 0.94 if roughness < 0.0 else roughness
@@ -133,9 +138,9 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 			material.albedo_texture = _sandstone_albedo
 			material.uv1_triplanar = true
 			material.uv1_world_triplanar = true
-			material.uv1_triplanar_sharpness = 4.0
+			material.uv1_triplanar_sharpness = 24.0
 			material.uv1_scale = Vector3(0.2, 0.2, 0.2)
-			material.albedo_color = Color.WHITE if (color.is_equal_approx(Color(0.86, 0.76, 0.58)) or color.is_equal_approx(Color(0.85, 0.74, 0.55))) else color
+			material.albedo_color = Color.WHITE if (color.is_equal_approx(Color(0.86, 0.76, 0.58)) or color.is_equal_approx(Color(0.85, 0.74, 0.55)) or color.is_equal_approx(Color(0.74, 0.64, 0.46)) or color.is_equal_approx(Color(0.72, 0.62, 0.44))) else color
 			material.roughness = 0.86 if roughness < 0.0 else roughness
 			material.metallic = 0.0 if metallic < 0.0 else metallic
 			material.metallic_specular = 0.12
@@ -147,13 +152,31 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 			material.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
 			material.roughness_texture = _sandstone_orm
 			material.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
+		SurfaceType.SANDSTONE_SMOOTH:
+			material.albedo_texture = _sandstone_smooth_albedo
+			material.uv1_triplanar = true
+			material.uv1_world_triplanar = true
+			material.uv1_triplanar_sharpness = 24.0
+			material.uv1_scale = Vector3(0.2, 0.2, 0.2)
+			material.albedo_color = Color.WHITE if (color.is_equal_approx(Color(0.86, 0.76, 0.58)) or color.is_equal_approx(Color(0.85, 0.74, 0.55)) or color.is_equal_approx(Color(0.74, 0.64, 0.46)) or color.is_equal_approx(Color(0.72, 0.62, 0.44))) else color
+			material.roughness = 0.78 if roughness < 0.0 else roughness
+			material.metallic = 0.0 if metallic < 0.0 else metallic
+			material.metallic_specular = 0.10
+			material.normal_enabled = true
+			material.normal_texture = _sandstone_smooth_normal
+			material.normal_scale = 0.45
+			material.ao_enabled = true
+			material.ao_texture = _sandstone_smooth_orm
+			material.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+			material.roughness_texture = _sandstone_smooth_orm
+			material.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
 		SurfaceType.COBBLE:
 			material.albedo_texture = _cobble_albedo
 			material.uv1_triplanar = true
 			material.uv1_world_triplanar = true
-			material.uv1_triplanar_sharpness = 4.0
+			material.uv1_triplanar_sharpness = 24.0
 			material.uv1_scale = Vector3(0.18, 0.18, 0.18)
-			material.albedo_color = Color.WHITE if (color.is_equal_approx(Color(0.82, 0.72, 0.54)) or color.is_equal_approx(Color(0.78, 0.68, 0.50))) else color
+			material.albedo_color = Color.WHITE if (color.is_equal_approx(Color(0.82, 0.72, 0.54)) or color.is_equal_approx(Color(0.78, 0.68, 0.50)) or color.is_equal_approx(Color(0.66, 0.60, 0.50)) or color.is_equal_approx(Color(0.65, 0.58, 0.48))) else color
 			material.roughness = 0.84 if roughness < 0.0 else roughness
 			material.metallic = 0.0 if metallic < 0.0 else metallic
 			material.metallic_specular = 0.10
@@ -169,7 +192,7 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 			material.albedo_texture = _brick_albedo
 			material.uv1_triplanar = true
 			material.uv1_world_triplanar = true
-			material.uv1_triplanar_sharpness = 4.0
+			material.uv1_triplanar_sharpness = 24.0
 			material.uv1_scale = Vector3(0.22, 0.22, 0.22)
 			material.albedo_color = Color.WHITE if (color.is_equal_approx(Color(0.68, 0.70, 0.74)) or color.is_equal_approx(Color(0.55, 0.58, 0.62))) else color
 			material.roughness = 0.88 if roughness < 0.0 else roughness
@@ -478,9 +501,9 @@ static func arch(parent: Node, pos: Vector3, width: float = 4.4, height: float =
 	var body := _body(pos, rot_deg)
 	var pillar_w := width * 0.18
 	var span := width - pillar_w * 2.0
-	box(body, Vector3(pillar_w, height, depth), Vector3(-span * 0.5 - pillar_w * 0.5, height * 0.5, 0.0), Color(0.86, 0.76, 0.58), Vector3.ZERO, SurfaceType.SANDSTONE)
-	box(body, Vector3(pillar_w, height, depth), Vector3(span * 0.5 + pillar_w * 0.5, height * 0.5, 0.0), Color(0.86, 0.76, 0.58), Vector3.ZERO, SurfaceType.SANDSTONE)
-	box(body, Vector3(width, height * 0.25, depth), Vector3(0.0, height * 0.875, 0.0), Color(0.74, 0.64, 0.46), Vector3.ZERO, SurfaceType.SANDSTONE)
+	box(body, Vector3(pillar_w, height, depth), Vector3(-span * 0.5 - pillar_w * 0.5, height * 0.5, 0.0), Color(0.86, 0.76, 0.58), Vector3.ZERO, SurfaceType.SANDSTONE_SMOOTH)
+	box(body, Vector3(pillar_w, height, depth), Vector3(span * 0.5 + pillar_w * 0.5, height * 0.5, 0.0), Color(0.86, 0.76, 0.58), Vector3.ZERO, SurfaceType.SANDSTONE_SMOOTH)
+	box(body, Vector3(width, height * 0.25, depth), Vector3(0.0, height * 0.875, 0.0), Color(0.74, 0.64, 0.46), Vector3.ZERO, SurfaceType.SANDSTONE_SMOOTH)
 	parent.add_child(body)
 	return body
 
@@ -510,7 +533,7 @@ static func pallet(parent: Node, pos: Vector3, rot_deg: Vector3 = Vector3.ZERO) 
 ## Decorative architectural cornice / crown molding trim along walls.
 static func cornice(parent: Node, pos: Vector3, size: Vector3, color: Color = Color(0.74, 0.64, 0.46),
 		rot_deg: Vector3 = Vector3.ZERO) -> MeshInstance3D:
-	return deco_box(parent, size, pos, color, rot_deg, 0.0, SurfaceType.SANDSTONE)
+	return deco_box(parent, size, pos, color, rot_deg, 0.0, SurfaceType.SANDSTONE_SMOOTH)
 
 
 

@@ -35,13 +35,17 @@ func _ready() -> void:
 	_resume.pressed.connect(close)
 	box.add_child(_resume)
 	var restart := UiKit.button("RESTART MATCH")
-	restart.pressed.connect(func() -> void: restart_requested.emit())
+	restart.pressed.connect(func() -> void:
+		Sfx.duck_music(false)
+		restart_requested.emit())
 	box.add_child(restart)
 	var settings := UiKit.button("SETTINGS")
 	settings.pressed.connect(_show_settings.bind(true))
 	box.add_child(settings)
 	var quit := UiKit.small_button("MAIN MENU", Vector2(300, 50))
-	quit.pressed.connect(func() -> void: menu_requested.emit())
+	quit.pressed.connect(func() -> void:
+		Sfx.duck_music(false)
+		menu_requested.emit())
 	box.add_child(quit)
 
 	_settings = SettingsPanel.new()
@@ -86,7 +90,7 @@ func is_open() -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	# B / Esc-style "back": leave settings first, then resume.
+	# B / Esc-style "back": step back one level (Bindings -> Settings -> Pause -> Resume).
 	if _dim.visible and event.is_action_pressed(&"ui_cancel") and not event.is_action_pressed(&"pause"):
 		if _settings.visible:
 			_settings.close()
@@ -99,7 +103,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _controller != null and _controller.state == MatchController.State.ENDED:
 		return
 	if _dim.visible:
-		close()
+		if _settings.visible:
+			_settings.close()
+		else:
+			close()
 	else:
 		open()
 	get_viewport().set_input_as_handled()
@@ -117,6 +124,7 @@ func open() -> void:
 
 func close() -> void:
 	GameSettings.save_settings()
+	Sfx.duck_music(false)
 	_dim.visible = false
 	get_tree().paused = false
 	if not OS.has_feature("mobile") and not OS.has_feature("web_android") and not OS.has_feature("web_ios") and GameSettings.touch_controls_mode != GameSettings.TouchMode.ALWAYS:

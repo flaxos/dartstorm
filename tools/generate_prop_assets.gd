@@ -282,11 +282,12 @@ func _build_dog_house() -> StaticBody3D:
 	_add_sphere(prop_root, "Kibble1", 0.06, bowl_pos + Vector3(0.04, 0.12, 0.02), mat_plastic_orange)
 	_add_sphere(prop_root, "Kibble2", 0.06, bowl_pos + Vector3(-0.05, 0.12, -0.04), mat_plastic_yellow)
 
-	# Animated Cartoon Puppy (_dog node)
+	# Animated Cartoon Puppy (_dog node) with matching collider so players cannot walk through it
 	var dog := Node3D.new()
 	dog.name = "_dog"
 	dog.position = Vector3(0.0, 0.0, size.z * 0.5 + 0.9)
 	prop_root.add_child(dog)
+	_add_collision_box(prop_root, Vector3(0.85, 0.85, 1.35), Vector3(0.0, 0.425, size.z * 0.5 + 0.9))
 
 	# Body loaf
 	_add_sphere(dog, "DogBody", 0.38, Vector3(0.0, 0.30, 0.10), mat_fur, Vector3(0.95, 0.95, 1.35))
@@ -656,20 +657,30 @@ func _build_inflatable_barrier() -> StaticBody3D:
 	var w := 2.4
 	var h := 1.3
 	var d := 0.65
-	# Main cylindrical air chamber oriented along X
+	var r := d * 0.5
 	var body_len := w - d
-	_add_cylinder(prop_root, "AirChamber", d * 0.5, body_len, Vector3(0.0, h * 0.5, 0.0), mat_vinyl, Vector3(0.0, 0.0, 90.0))
 
-	# Left & Right rounded domed end caps
-	_add_sphere(prop_root, "EndCapL", d * 0.5, Vector3(-body_len * 0.5, h * 0.5, 0.0), mat_vinyl_accent)
-	_add_sphere(prop_root, "EndCapR", d * 0.5, Vector3(body_len * 0.5, h * 0.5, 0.0), mat_vinyl_accent)
+	# Twin stacked vinyl air chambers grounded flush onto the base pads (no floating gap!)
+	var low_y := 0.08 + r
+	var high_y := low_y + r * 1.65
+	_add_cylinder(prop_root, "AirChamberLower", r, body_len, Vector3(0.0, low_y, 0.0), mat_vinyl, Vector3(0.0, 0.0, 90.0))
+	_add_sphere(prop_root, "EndCapLowerL", r, Vector3(-body_len * 0.5, low_y, 0.0), mat_vinyl_accent)
+	_add_sphere(prop_root, "EndCapLowerR", r, Vector3(body_len * 0.5, low_y, 0.0), mat_vinyl_accent)
 
-	# Top ridge reinforcement welting
-	_add_cylinder(prop_root, "SeamWelt", 0.04, w, Vector3(0.0, h - 0.02, 0.0), mat_plastic_yellow, Vector3(0.0, 0.0, 90.0))
+	_add_cylinder(prop_root, "AirChamberUpper", r * 0.94, body_len, Vector3(0.0, high_y, 0.0), mat_vinyl, Vector3(0.0, 0.0, 90.0))
+	_add_sphere(prop_root, "EndCapUpperL", r * 0.94, Vector3(-body_len * 0.5, high_y, 0.0), mat_vinyl_accent)
+	_add_sphere(prop_root, "EndCapUpperR", r * 0.94, Vector3(body_len * 0.5, high_y, 0.0), mat_vinyl_accent)
+
+	# Vertical anchor straps tying chambers down to the weighted feet
+	for sx in [-0.7, 0.7]:
+		_add_box(prop_root, "StrapL", Vector3(0.14, high_y, d * 1.02), Vector3(sx, high_y * 0.5 + 0.04, 0.0), mat_hazard_black)
+
+	# Top ridge reinforcement welting flush along upper chamber crown
+	_add_cylinder(prop_root, "SeamWelt", 0.045, body_len + 0.25, Vector3(0.0, high_y + r * 0.94, 0.0), mat_plastic_yellow, Vector3(0.0, 0.0, 90.0))
 
 	# Weighted base stabilizing anchor pads
-	_add_box(prop_root, "BasePadL", Vector3(0.4, 0.08, d * 1.2), Vector3(-0.7, 0.04, 0.0), mat_steel_dark)
-	_add_box(prop_root, "BasePadR", Vector3(0.4, 0.08, d * 1.2), Vector3(0.7, 0.04, 0.0), mat_steel_dark)
+	_add_box(prop_root, "BasePadL", Vector3(0.42, 0.08, d * 1.25), Vector3(-0.7, 0.04, 0.0), mat_steel_dark)
+	_add_box(prop_root, "BasePadR", Vector3(0.42, 0.08, d * 1.25), Vector3(0.7, 0.04, 0.0), mat_steel_dark)
 
 	_add_collision_box(prop_root, Vector3(w, h, d), Vector3(0.0, h * 0.5, 0.0))
 	return prop_root

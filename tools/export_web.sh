@@ -99,6 +99,7 @@ if old_js in txt_js:
     open(p_js, 'w').write(txt_js.replace(old_js, new_js))
 "
 
+rm -f "$ROOT/$ARCHIVE"
 (cd "$OUT" && zip -q -r "$ROOT/$ARCHIVE" ./*)
 
 echo

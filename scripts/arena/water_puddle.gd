@@ -15,6 +15,8 @@ var _area: Area3D
 var _water_mesh: MeshInstance3D
 var _electric_mesh: MeshInstance3D
 var _time: float = 0.0
+var _shock_tick_timer: float = 0.0
+var _electrifier: Actor = null
 
 
 static var _water_shader: Shader = preload("res://assets/materials/stylized_water.gdshader")
@@ -36,6 +38,7 @@ func _ready() -> void:
 	mat.shader = _water_shader
 	mat.set_shader_parameter(&"shallow_color", puddle_color.lightened(0.2))
 	mat.set_shader_parameter(&"deep_color", puddle_color.darkened(0.3))
+	mat.set_shader_parameter(&"puddle_radius", radius)
 	_water_mesh.material_override = mat
 	_water_mesh.position.y = 0.02
 	_water_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -79,26 +82,35 @@ func is_electrified() -> bool:
 	return electrified_left > 0.0
 
 
-func electrify(duration: float = 2.0) -> void:
+func electrify(duration: float = 2.0, by_actor: Actor = null) -> void:
 	electrified_left = maxf(electrified_left, duration)
+	if by_actor != null and is_instance_valid(by_actor):
+		_electrifier = by_actor
+	_shock_tick_timer = 0.25
 	_electric_mesh.visible = true
 	Sfx.play_at(&"zap", global_position + Vector3.UP * 0.5, 0.95, 2.0)
 	puddle_electrified.emit(self)
 	_shock_occupants()
 
 
+func should_consume_dart(dart: DartProjectile) -> bool:
+	if dart == null or dart.data == null:
+		return false
+	return dart.data.element == DartData.Element.LIGHTNING or dart.data.element == DartData.Element.FIRE
+
+
 func on_dart_hit(dart: DartProjectile, _hit_point: Vector3) -> void:
 	if dart == null or dart.data == null:
 		return
 	if dart.data.element == DartData.Element.LIGHTNING:
-		electrify(2.0)
+		electrify(2.0, dart.shooter if is_instance_valid(dart.shooter) else null)
 	elif dart.data.element == DartData.Element.FIRE:
 		Sfx.play_at(&"steam", global_position + Vector3.UP * 0.3, 1.2, -3.0)
 
 
 func _on_body_entered(body: Node3D) -> void:
 	var actor := body as Actor
-	if actor == null or not actor.alive:
+	if actor == null or not actor.alive or actor.is_tagged_out:
 		return
 	_splash_actor(actor)
 	if is_electrified():
@@ -109,13 +121,17 @@ func _physics_process(delta: float) -> void:
 	_time += delta
 	if electrified_left > 0.0:
 		electrified_left -= delta
+		_shock_tick_timer -= delta
 		_electric_mesh.visible = true
 		_electric_mesh.scale = Vector3.ONE * (1.0 + sin(_time * 40.0) * 0.06)
 		if _water_mesh != null and _water_mesh.material_override is ShaderMaterial:
 			(_water_mesh.material_override as ShaderMaterial).set_shader_parameter(&"electrified", 1.0)
-		_shock_occupants()
+		if _shock_tick_timer <= 0.0:
+			_shock_tick_timer = 0.25
+			_shock_occupants()
 		if electrified_left <= 0.0:
 			_electric_mesh.visible = false
+			_electrifier = null
 			if _water_mesh != null and _water_mesh.material_override is ShaderMaterial:
 				(_water_mesh.material_override as ShaderMaterial).set_shader_parameter(&"electrified", 0.0)
 
@@ -130,29 +146,14 @@ func _splash_actor(actor: Actor) -> void:
 func _shock_occupants() -> void:
 	for body in _area.get_overlapping_bodies():
 		var actor := body as Actor
-		if actor != null and actor.alive and not actor.is_protected():
+		if actor != null and actor.alive and not actor.is_tagged_out and not actor.is_protected():
 			_shock_actor(actor)
 
 
 func _shock_actor(actor: Actor) -> void:
-	# Electrocution damage tick
-	var power := 15.0
-	if actor.shield_points > 0.0:
-		if power <= actor.shield_points:
-			actor.shield_points -= power
-			actor.shield_changed.emit(actor.shield_points, Actor.SHIELD_MAX)
-			Sfx.play_at(&"shield_hit", actor.global_position, 1.0, 0.0, 0.1)
-			return
-		else:
-			power -= actor.shield_points
-			actor.shield_points = 0.0
-			actor.shield_changed.emit(0.0, Actor.SHIELD_MAX)
-			actor.shield_broken.emit(actor)
-			Sfx.play_at(&"shield_pop", actor.global_position, 1.0, 0.0)
-
-	actor.tag_meter = minf(actor.tag_meter + power, actor.tag_meter_max)
-	actor.meter_changed.emit(actor.tag_meter, actor.tag_meter_max)
-	if actor.elemental != null and actor.elemental.wet_left > 0.0:
+	var attacker: Actor = _electrifier if is_instance_valid(_electrifier) else null
+	var is_wet := actor.elemental != null and actor.elemental.wet_left > 0.0
+	var power := 10.0 if is_wet else 8.0
+	actor.apply_hazard_tag(power, self, attacker)
+	if is_wet and actor.alive:
 		actor.elemental.combo_triggered.emit(&"conductive_shock", actor.global_position + Vector3.UP)
-	if actor.tag_meter >= actor.tag_meter_max:
-		actor._tag_out(null, null, false)

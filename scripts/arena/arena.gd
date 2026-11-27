@@ -50,6 +50,8 @@ var lava_hazard: LavaHazard = null
 var grenade_pickups: Array[GrenadePickup] = []
 var elemental_pickups: Array[ElementalPickup] = []
 var weather_director: Node = null
+var world_environment: WorldEnvironment = null
+var sun_light: DirectionalLight3D = null
 
 var _spawn_root: Node3D
 var _clouds: Node3D
@@ -88,85 +90,262 @@ func _process(delta: float) -> void:
 			cloud.position.x = -150.0
 
 
-## The shared sunny sky: procedural sky, a warm sun with shadows, gentle glow, and puffy clouds.
-## `sun_pitch` is the sun's angle below the horizon line (more negative = higher
-## sun, shorter shadows). `warm_fill` (0..1) swaps some of the sky's blue fill
-## light for warm light, so shaded areas (indoors) don't look cold.
+## Curated per-arena atmosphere & sky lighting: AgX tonemapping, SSIL color bounce,
+## ReflectionProbe IBL, volumetric sun-haze on Forward+, and clean depth fog on Web/Mobile.
 func _build_sky_and_sun(sun_pitch: float = -52.0, warm_fill: float = 0.0) -> void:
+	var preset := _atmosphere_preset(sun_pitch, warm_fill)
+
 	var sky_material := ProceduralSkyMaterial.new()
-	sky_material.sky_top_color = Color(0.20, 0.44, 0.88)
-	sky_material.sky_horizon_color = Color(0.86, 0.74, 0.62)
-	sky_material.ground_horizon_color = Color(0.72, 0.68, 0.58)
-	sky_material.ground_bottom_color = Color(0.28, 0.48, 0.24)
-	sky_material.sun_angle_max = 24.0
-	sky_material.sun_curve = 0.08
+	sky_material.sky_top_color = preset["sky_top"]
+	sky_material.sky_horizon_color = preset["sky_horizon"]
+	sky_material.ground_horizon_color = preset["ground_horizon"]
+	sky_material.ground_bottom_color = preset["ground_bottom"]
+	sky_material.sun_angle_max = preset["sun_angle_max"]
+	sky_material.sun_curve = preset["sun_curve"]
 	var sky := Sky.new()
 	sky.sky_material = sky_material
 	var environment := Environment.new()
 	environment.background_mode = Environment.BG_SKY
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	environment.ambient_light_energy = 0.8
-	if warm_fill > 0.0:
-		environment.ambient_light_color = Color(1.0, 0.9, 0.78)
-		environment.ambient_light_sky_contribution = 1.0 - warm_fill
-		environment.ambient_light_energy = 0.8 + warm_fill * 0.2
-	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	environment.ambient_light_energy = preset["ambient_energy"]
+	var eff_warm: float = preset["warm_fill"]
+	if eff_warm > 0.0:
+		environment.ambient_light_color = preset["ambient_color"]
+		environment.ambient_light_sky_contribution = 1.0 - eff_warm
+		environment.ambient_light_energy = preset["ambient_energy"] + eff_warm * 0.22
+	environment.tonemap_mode = Environment.TONE_MAPPER_AGX
+	environment.tonemap_exposure = preset["exposure"]
 	environment.adjustment_enabled = true
-	environment.adjustment_contrast = 1.05
-	environment.adjustment_saturation = 1.16
+	environment.adjustment_contrast = preset["contrast"]
+	environment.adjustment_saturation = preset["saturation"]
 	environment.glow_enabled = true
-	environment.glow_intensity = 0.20
-	environment.glow_bloom = 0.02
-	environment.glow_hdr_threshold = 1.25
-	# SSAO and Volumetric Fog require a RenderingDevice (Forward+ / Mobile Vulkan).
-	# Guard them so the Compatibility (WebGL2 / OpenGL ES3) renderer stays warning-free.
-	# Note: SSR (Screen-Space Reflections) disabled to eliminate blinding wet-gloss on terrain.
+	environment.glow_intensity = preset["glow_intensity"]
+	environment.glow_bloom = preset["glow_bloom"]
+	environment.glow_hdr_threshold = 1.15
+	# Forward+ / Vulkan gets SSAO + SSIL bounce lighting + Volumetric Sun Haze + ReflectionProbe.
+	# Compatibility (WebGL2 / OpenGL ES3) gets clean depth fog so it stays warning-free and atmospheric.
 	if RenderingServer.get_rendering_device() != null:
 		environment.ssao_enabled = true
-		environment.ssao_radius = 1.5
-		environment.ssao_intensity = 1.6
+		environment.ssao_radius = 1.4
+		environment.ssao_intensity = 1.55
 		environment.ssao_detail = 0.65
+		environment.ssil_enabled = true
+		environment.ssil_radius = 4.2
+		environment.ssil_intensity = 0.78
+		environment.ssil_normal_rejection = 1.0
 		environment.ssr_enabled = false
 		environment.volumetric_fog_enabled = true
-		environment.volumetric_fog_density = 0.003
-		environment.volumetric_fog_albedo = Color(0.96, 0.90, 0.80)
-		environment.volumetric_fog_ambient_inject = 0.10
-	var world := WorldEnvironment.new()
-	world.environment = environment
-	add_child(world)
+		environment.volumetric_fog_density = preset["vol_fog_density"]
+		environment.volumetric_fog_albedo = preset["vol_fog_albedo"]
+		environment.volumetric_fog_ambient_inject = 0.14
+		var probe := ReflectionProbe.new()
+		probe.name = "ArenaReflectionProbe"
+		probe.size = Vector3(115.0, 48.0, 115.0)
+		probe.position = Vector3(0.0, 8.0, 0.0)
+		probe.intensity = 0.65
+		probe.update_mode = ReflectionProbe.UPDATE_ONCE
+		probe.ambient_mode = ReflectionProbe.AMBIENT_ENVIRONMENT
+		add_child(probe)
+	else:
+		environment.fog_enabled = true
+		environment.fog_mode = Environment.FOG_MODE_DEPTH
+		environment.fog_light_color = preset["vol_fog_albedo"]
+		environment.fog_light_energy = 0.85
+		environment.fog_depth_begin = 36.0
+		environment.fog_depth_end = 155.0
 
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(sun_pitch, 38.0, 0.0)
-	sun.light_energy = 1.0
-	sun.light_color = Color(1.0, 0.95, 0.88)
-	sun.shadow_enabled = true
-	sun.shadow_blur = 1.6
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
-	sun.directional_shadow_split_1 = 0.08
-	sun.directional_shadow_split_2 = 0.22
-	sun.directional_shadow_split_3 = 0.55
-	sun.directional_shadow_blend_splits = true
-	sun.directional_shadow_fade_start = 0.85
-	sun.directional_shadow_max_distance = 120.0
-	sun.shadow_bias = 0.02
-	sun.shadow_normal_bias = 1.2
-	add_child(sun)
+	world_environment = WorldEnvironment.new()
+	world_environment.name = "WorldEnvironment"
+	world_environment.environment = environment
+	add_child(world_environment)
+
+	sun_light = DirectionalLight3D.new()
+	sun_light.name = "SunLight"
+	sun_light.rotation_degrees = Vector3(preset["sun_pitch"], preset["sun_yaw"], 0.0)
+	sun_light.light_energy = preset["sun_energy"]
+	sun_light.light_color = preset["sun_color"]
+	sun_light.shadow_enabled = true
+	sun_light.shadow_blur = 1.5
+	sun_light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	sun_light.directional_shadow_split_1 = 0.08
+	sun_light.directional_shadow_split_2 = 0.22
+	sun_light.directional_shadow_split_3 = 0.55
+	sun_light.directional_shadow_blend_splits = true
+	sun_light.directional_shadow_fade_start = 0.85
+	sun_light.directional_shadow_max_distance = 130.0
+	sun_light.shadow_bias = 0.02
+	sun_light.shadow_normal_bias = 1.2
+	add_child(sun_light)
 
 	_clouds = Node3D.new()
 	_clouds.name = "Clouds"
 	decor.add_child(_clouds)
+	var cloud_tint: Color = preset["cloud_color"]
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 2026
-	for i in 10:
+	for i in 12:
 		var cloud := Node3D.new()
-		cloud.position = Vector3(rng.randf_range(-150.0, 150.0), rng.randf_range(42.0, 60.0), rng.randf_range(-120.0, 120.0))
+		cloud.position = Vector3(rng.randf_range(-150.0, 150.0), rng.randf_range(44.0, 62.0), rng.randf_range(-120.0, 120.0))
 		_clouds.add_child(cloud)
 		for puff in 4:
-			var radius := rng.randf_range(4.0, 7.5)
+			var radius := rng.randf_range(4.0, 7.8)
 			var offset := Vector3(rng.randf_range(-8.0, 8.0), rng.randf_range(-1.0, 1.5), rng.randf_range(-4.0, 4.0))
-			var ball := ArenaKit.deco_sphere(cloud, radius, offset, Color(1.0, 1.0, 1.0), 0.6, 0.35)
+			var ball := ArenaKit.deco_sphere(cloud, radius, offset, cloud_tint, 0.58, 0.35)
 			ball.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+func _atmosphere_preset(default_pitch: float, default_warm: float) -> Dictionary:
+	var n := arena_name.to_lower()
+	# 1. Soccer Stadium: Dramatic Twilight Floodlit Stadium!
+	if "soccer" in n:
+		return {
+			"sky_top": Color(0.03, 0.07, 0.22),
+			"sky_horizon": Color(0.22, 0.34, 0.62),
+			"ground_horizon": Color(0.16, 0.20, 0.34),
+			"ground_bottom": Color(0.08, 0.14, 0.12),
+			"sun_angle_max": 28.0,
+			"sun_curve": 0.07,
+			"sun_pitch": -20.0,
+			"sun_yaw": 48.0,
+			"sun_energy": 0.72,
+			"sun_color": Color(0.95, 0.88, 0.78),
+			"ambient_energy": 0.68,
+			"ambient_color": Color(0.68, 0.78, 1.0),
+			"warm_fill": 0.12,
+			"exposure": 1.06,
+			"contrast": 1.07,
+			"saturation": 1.16,
+			"glow_intensity": 0.36,
+			"glow_bloom": 0.07,
+			"vol_fog_density": 0.0038,
+			"vol_fog_albedo": Color(0.45, 0.58, 0.82),
+			"cloud_color": Color(0.76, 0.82, 0.96),
+		}
+	# 2. Dust 1 / Dust 2: Scorching Desert Amber with sandy ground bounce
+	if "dust" in n:
+		return {
+			"sky_top": Color(0.14, 0.38, 0.84),
+			"sky_horizon": Color(0.96, 0.76, 0.52),
+			"ground_horizon": Color(0.84, 0.68, 0.46),
+			"ground_bottom": Color(0.72, 0.56, 0.36),
+			"sun_angle_max": 28.0,
+			"sun_curve": 0.07,
+			"sun_pitch": default_pitch,
+			"sun_yaw": 34.0,
+			"sun_energy": 1.24,
+			"sun_color": Color(1.0, 0.92, 0.76),
+			"ambient_energy": 0.78,
+			"ambient_color": Color(1.0, 0.88, 0.70),
+			"warm_fill": maxf(default_warm, 0.22),
+			"exposure": 1.02,
+			"contrast": 1.06,
+			"saturation": 1.14,
+			"glow_intensity": 0.24,
+			"glow_bloom": 0.03,
+			"vol_fog_density": 0.0046,
+			"vol_fog_albedo": Color(0.98, 0.84, 0.64),
+			"cloud_color": Color(1.0, 0.94, 0.84),
+		}
+	# 3. Tempest Treehouse: Canopy Forest Sunbeams
+	if "treehouse" in n or "tempest" in n:
+		return {
+			"sky_top": Color(0.18, 0.48, 0.88),
+			"sky_horizon": Color(0.76, 0.88, 0.78),
+			"ground_horizon": Color(0.46, 0.66, 0.44),
+			"ground_bottom": Color(0.20, 0.42, 0.20),
+			"sun_angle_max": 26.0,
+			"sun_curve": 0.08,
+			"sun_pitch": -42.0,
+			"sun_yaw": 42.0,
+			"sun_energy": 1.18,
+			"sun_color": Color(1.0, 0.95, 0.82),
+			"ambient_energy": 0.82,
+			"ambient_color": Color(0.92, 0.98, 0.86),
+			"warm_fill": maxf(default_warm, 0.14),
+			"exposure": 1.04,
+			"contrast": 1.05,
+			"saturation": 1.18,
+			"glow_intensity": 0.26,
+			"glow_bloom": 0.04,
+			"vol_fog_density": 0.0052,
+			"vol_fog_albedo": Color(0.90, 0.96, 0.84),
+			"cloud_color": Color(0.98, 1.0, 0.97),
+		}
+	# 4. Two Fortresses: Crisp Alpine Valley Morning
+	if "fortress" in n and "two" in n:
+		return {
+			"sky_top": Color(0.16, 0.44, 0.90),
+			"sky_horizon": Color(0.84, 0.90, 0.96),
+			"ground_horizon": Color(0.64, 0.72, 0.62),
+			"ground_bottom": Color(0.26, 0.48, 0.24),
+			"sun_angle_max": 22.0,
+			"sun_curve": 0.09,
+			"sun_pitch": default_pitch,
+			"sun_yaw": 36.0,
+			"sun_energy": 1.16,
+			"sun_color": Color(1.0, 0.96, 0.90),
+			"ambient_energy": 0.84,
+			"ambient_color": Color(0.96, 0.94, 0.88),
+			"warm_fill": maxf(default_warm, 0.10),
+			"exposure": 1.03,
+			"contrast": 1.05,
+			"saturation": 1.16,
+			"glow_intensity": 0.22,
+			"glow_bloom": 0.03,
+			"vol_fog_density": 0.0032,
+			"vol_fog_albedo": Color(0.90, 0.93, 0.96),
+			"cloud_color": Color(1.0, 1.0, 1.0),
+		}
+	# 5. Home Turf: Warm Sunlit Dollhouse / Indoor-Outdoor Blend
+	if "home" in n:
+		return {
+			"sky_top": Color(0.22, 0.48, 0.90),
+			"sky_horizon": Color(0.94, 0.82, 0.68),
+			"ground_horizon": Color(0.76, 0.70, 0.58),
+			"ground_bottom": Color(0.32, 0.54, 0.26),
+			"sun_angle_max": 24.0,
+			"sun_curve": 0.08,
+			"sun_pitch": default_pitch,
+			"sun_yaw": 40.0,
+			"sun_energy": 1.10,
+			"sun_color": Color(1.0, 0.94, 0.84),
+			"ambient_energy": 0.86,
+			"ambient_color": Color(1.0, 0.92, 0.80),
+			"warm_fill": maxf(default_warm, 0.34),
+			"exposure": 1.04,
+			"contrast": 1.04,
+			"saturation": 1.15,
+			"glow_intensity": 0.22,
+			"glow_bloom": 0.03,
+			"vol_fog_density": 0.0024,
+			"vol_fog_albedo": Color(0.98, 0.92, 0.84),
+			"cloud_color": Color(1.0, 0.98, 0.95),
+		}
+	# Default (Backyard Fortress, Sunny Park, Playground): Golden Afternoon
+	return {
+		"sky_top": Color(0.18, 0.44, 0.90),
+		"sky_horizon": Color(0.92, 0.78, 0.64),
+		"ground_horizon": Color(0.72, 0.70, 0.56),
+		"ground_bottom": Color(0.28, 0.50, 0.24),
+		"sun_angle_max": 26.0,
+		"sun_curve": 0.08,
+		"sun_pitch": default_pitch,
+		"sun_yaw": 38.0,
+		"sun_energy": 1.14,
+		"sun_color": Color(1.0, 0.94, 0.84),
+		"ambient_energy": 0.82,
+		"ambient_color": Color(1.0, 0.91, 0.78),
+		"warm_fill": maxf(default_warm, 0.12),
+		"exposure": 1.04,
+		"contrast": 1.05,
+		"saturation": 1.17,
+		"glow_intensity": 0.24,
+		"glow_bloom": 0.03,
+		"vol_fog_density": 0.0030,
+		"vol_fog_albedo": Color(0.96, 0.90, 0.80),
+		"cloud_color": Color(1.0, 0.99, 0.96),
+	}
 
 
 func add_spawn(at: Vector3, facing: Vector3) -> Marker3D:

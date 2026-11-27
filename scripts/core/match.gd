@@ -145,7 +145,11 @@ static func arena_path(index: int) -> String:
 ## the teams would otherwise be uneven (never more than the roster).
 static func team_bot_count(mode: GameMode, requested: int) -> int:
 	var wanted := clampi(requested, 1, BOT_ROSTER.size())
-	return mini(mode.bots_for(wanted), BOT_ROSTER.size())
+	var count := mini(mode.bots_for(wanted), BOT_ROSTER.size())
+	var humans := 2 if (GameSettings != null and GameSettings.split_screen) else 1
+	if mode.is_team_mode() and not (mode is ZombieMode or mode is ZombieSiegeMode) and (count + humans) % 2 == 1 and count > 1:
+		count -= 1
+	return count
 
 
 ## The BotDifficulty for a menu index. Always returns something usable.
@@ -255,12 +259,12 @@ func _ready() -> void:
 		player2.display_name = GameSettings.display_name_p2()
 		player2.hat_id = GameSettings.player2_hat
 		player2.skin_id = GameSettings.player2_skin
-		if mode.teams == GameMode.Teams.DUOS:
+		if mode is ZombieMode or mode is ZombieSiegeMode:
+			player2.team_id = mode.team_for(0)
+		elif mode.teams == GameMode.Teams.DUOS:
 			player2.team_id = mode.team_for(0)
 		elif mode.teams == GameMode.Teams.BLUE_VS_ORANGE:
 			player2.team_id = 1
-		elif mode is ZombieMode or mode is ZombieSiegeMode:
-			player2.team_id = mode.team_for(0)
 		else:
 			player2.team_id = mode.team_for(1)
 		player2.color = GameMode.team_color(player2.team_id) if mode.is_team_mode() else GameSettings.color_p2()
@@ -282,7 +286,7 @@ func _ready() -> void:
 			player.display_name = str(my_entry.get("name", GameSettings.display_name()))
 			player.hat_id = StringName(str(my_entry.get("hat", GameSettings.player_hat)))
 			player.skin_id = StringName(str(my_entry.get("skin", GameSettings.player_skin)))
-			player.team_id = int(my_entry.get("team_id", 0))
+			player.team_id = int(my_entry.get("team_id", 0)) if mode.is_team_mode() else mode.team_for(0)
 			player.color = GameMode.team_color(player.team_id) if mode.is_team_mode() else Cosmetics.color_at(int(my_entry.get("color", 0)))
 			player.dart_pool = dart_pool
 			add_child(player)
@@ -317,7 +321,7 @@ func _ready() -> void:
 
 	var bot_count := 0
 	if NetworkManager != null and NetworkManager.is_online:
-		if NetworkManager.is_host:
+		if NetworkManager.is_host and NetworkManager.bot_fill_count > 0:
 			bot_count = team_bot_count(mode, NetworkManager.bot_fill_count)
 	else:
 		bot_count = team_bot_count(mode, GameSettings.bot_count)
@@ -385,7 +389,6 @@ func _ready() -> void:
 		siege.horde_director = horde_director
 		horde_director.all_waves_cleared.connect(controller.end_match)
 		horde_director.defeat.connect(controller.end_match)
-		horde_director.start()
 
 	if mode is FloorIsLavaMode:
 		var lava_mode := mode as FloorIsLavaMode
@@ -440,8 +443,8 @@ func _ready() -> void:
 				if act.team_id == 1:
 					initial_carrier = act
 					break
-		bomb_target.spawn_bomb(b_spawn, initial_carrier)
 		controller.setup_bomb(bomb_mode, bomb_target)
+		bomb_target.spawn_bomb(b_spawn, initial_carrier)
 
 	if GameSettings.weather_events and not mode is FloorIsLavaMode:
 		weather_director = WeatherDirector.new()
@@ -460,7 +463,16 @@ func _ready() -> void:
 		if arena != null:
 			for sp in arena.shield_pickups:
 				if sp != null:
-					sp.active = playing)
+					sp.active = playing
+			for gp in arena.grenade_pickups:
+				if gp != null:
+					gp.active = playing
+			for ep in arena.elemental_pickups:
+				if ep != null:
+					ep.active = playing
+		for fl in flags:
+			if fl != null:
+				fl.active = playing)
 
 	for node in get_tree().get_nodes_in_group(&"wobble_targets"):
 		var target := node as WobbleTarget
@@ -483,6 +495,10 @@ func _ready() -> void:
 		hud2.setup(player2, controller)
 		hud2.restart_requested.connect(restart)
 		hud2.menu_requested.connect(quit_to_menu)
+		GameSettings._apply_graphics_quality()
+
+	if horde_director != null:
+		horde_director.start()
 
 	pause_menu = PAUSE_SCENE.instantiate() as PauseMenu
 	add_child(pause_menu)
@@ -520,7 +536,13 @@ func quit_to_menu() -> void:
 func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	Sfx.stop_music()
+	# In split-screen, reparent P1's HUD to root before hiding split_container
+	# so the end-of-match results & Rematch/Menu buttons remain visible and clickable!
 	if split_container != null:
+		if hud != null and hud.get_parent() != self:
+			hud.reparent(self)
+		if hud2 != null:
+			hud2.visible = false
 		split_container.visible = false
 	if power_up != null:
 		power_up.active = false
@@ -528,6 +550,15 @@ func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 		for sp in arena.shield_pickups:
 			if sp != null:
 				sp.active = false
+		for gp in arena.grenade_pickups:
+			if gp != null:
+				gp.active = false
+		for ep in arena.elemental_pickups:
+			if ep != null:
+				ep.active = false
+	for fl in flags:
+		if fl != null:
+			fl.active = false
 	podium = Podium.new()
 	podium.name = "Podium"
 	add_child(podium)
@@ -537,10 +568,10 @@ func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 		var summary_text := "MATCH COMPLETED"
 		if not ranking.is_empty():
 			if not mode.is_team_mode():
-				summary_text = "%s WON (%d TAGS)" % [ranking[0].name, ranking[0].tags]
+				summary_text = "%s WON (%d TAGS)" % [ranking[0].display_name, ranking[0].tags]
 			else:
 				var team := mode.winning_team(controller.board)
-				summary_text = "%s TEAM WON" % GameMode.team_name(team)
+				summary_text = "%s TEAM WON" % mode.get_team_name(team)
 		var srv: Node = get_node_or_null("/root/DedicatedServer")
 		if srv != null and srv.has_method("on_match_completed"):
 			srv.call("on_match_completed", summary_text)
@@ -563,10 +594,7 @@ func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 				else:
 					var winning_team := mode.winning_team(controller.board)
 					won = winning_team == p.team_id
-			var xp_earned: int = tags * int(prog.get("XP_PER_TAG")) + int(prog.get("XP_MATCH_FINISH")) + (int(prog.get("XP_MATCH_WIN")) if won else 0)
-			var coins_earned: int = tags * int(prog.get("COINS_PER_TAG")) + int(prog.get("COINS_MATCH_FINISH")) + (int(prog.get("COINS_MATCH_WIN")) if won else 0)
-			prog.call("add_xp", xp_earned)
-			prog.call("add_coins", coins_earned)
+			prog.call("award_match_rewards", p.player_index, tags, won, true)
 	if ranking.is_empty():
 		podium.show_places([], "MATCH\nOVER", UiKit.ORANGE_HOT)
 	elif not mode.is_team_mode():
@@ -578,13 +606,13 @@ func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 		if team < 0:
 			banner = "IT'S A\nDRAW!"
 			tint = UiKit.CREAM
-		elif mode is ZombieMode:
+		elif mode is ZombieMode or mode is ZombieSiegeMode or mode is PlantTheBombMode:
 			banner = "%s\nWIN!" % mode.get_team_name(team)
 			tint = mode.get_team_color(team).lightened(0.25)
 		else:
 			banner = "%s TEAM\nWINS!" % GameMode.team_name(team)
 			tint = GameMode.team_color(team).lightened(0.25)
-		podium.show_places(mode.podium_places(controller.board), banner, tint)
+		podium.show_places(mode.podium_places(controller.board), banner, tint, mode is ZombieMode or mode is ZombieSiegeMode)
 	get_tree().create_timer(RESULTS_MUSIC_DELAY).timeout.connect(func() -> void: Sfx.play_music(&"menu"))
 
 

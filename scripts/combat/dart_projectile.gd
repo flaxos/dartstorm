@@ -22,8 +22,9 @@ const FOAM_RADIUS := 0.04
 
 static var _foam_mesh: CylinderMesh
 static var _tip_mesh: CylinderMesh
-static var _trail_mesh: BoxMesh
+static var _trail_mesh: CylinderMesh
 static var _tip_material: StandardMaterial3D
+static var _foam_shader: Shader = preload("res://assets/materials/foam_dart.gdshader")
 static var _foam_materials: Dictionary = {}
 static var _trail_materials: Dictionary = {}
 
@@ -87,6 +88,7 @@ func _ready() -> void:
 
 	_trail = MeshInstance3D.new()
 	_trail.mesh = _trail_mesh
+	_trail.rotation_degrees.x = 90.0
 	_trail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_trail)
 
@@ -111,6 +113,8 @@ func launch(p_data: DartData, origin: Vector3, direction: Vector3, p_shooter: Ac
 	_spent = false
 	_resting = false
 	persists_as_pickup = pool != null and pool.persists_as_pickup
+	if scavengeable:
+		resting_pickups.erase(self)
 	scavengeable = false
 	_exclude.assign(exclude)
 	_ricochet_ignore.clear()
@@ -199,9 +203,17 @@ func _physics_process(delta: float) -> void:
 	var from := global_position
 	var to := from + velocity * delta
 	var hit := _sweep(from, to)
-	if hit.is_empty():
+	var pass_throughs := 0
+	while not hit.is_empty() and not _spent and pass_throughs < 4:
+		var consumed := _on_hit(hit)
+		if consumed or not active or _resting or _spent:
+			break
+		pass_throughs += 1
+		from = hit["position"]
+		hit = _sweep(from, to)
+	if hit.is_empty() and active and not _resting:
 		global_position = to
-	else:
+	elif not hit.is_empty() and _spent and active and not _resting:
 		_on_hit(hit)
 	if not active or _resting:
 		return
@@ -217,11 +229,13 @@ func _sweep(from: Vector3, to: Vector3) -> Dictionary:
 	_query.to = to
 	_query.collision_mask = Layers.WORLD if _spent else data.collision_mask
 	_query.collide_with_areas = not _spent
+	_query.hit_from_inside = not _spent
 	_query.exclude = _exclude
 	return get_world_3d().direct_space_state.intersect_ray(_query)
 
 
-func _on_hit(hit: Dictionary) -> void:
+## Returns true if the dart was consumed/bounced/settled; false if it passed straight through.
+func _on_hit(hit: Dictionary) -> bool:
 	var collider: Object = hit.get("collider")
 	var point: Vector3 = hit["position"]
 	var normal: Vector3 = hit["normal"]
@@ -229,18 +243,19 @@ func _on_hit(hit: Dictionary) -> void:
 
 	if _spent:
 		_settle_or_bounce(point, normal)
-		return
+		return true
 
 	if collider is Hitbox:
 		var victim := (collider as Hitbox).actor
-		global_position = point
 		if victim == null or victim == shooter or not victim.accepts_dart_from(team_id):
-			_exclude.append(rid)  # Pass straight through friends and ghosts.
-			return
+			if not _exclude.has(rid):
+				_exclude.append(rid)  # Pass straight through friends and ghosts.
+			return false
+		global_position = point
 		victim.receive_dart(self)
 		_report(Impact.ACTOR, point, normal)
 		retire()
-		return
+		return true
 
 	var target_collider: Object = collider
 	if target_collider != null and not target_collider.has_method(&"on_dart_hit") and target_collider is Node:
@@ -249,21 +264,26 @@ func _on_hit(hit: Dictionary) -> void:
 			target_collider = parent
 
 	if target_collider != null and target_collider.has_method(&"on_dart_hit"):
+		if target_collider.has_method(&"should_consume_dart") and not bool(target_collider.call(&"should_consume_dart", self)):
+			if not _exclude.has(rid):
+				_exclude.append(rid)
+			return false
 		global_position = point
 		target_collider.call(&"on_dart_hit", self, point)
 		_report(Impact.TARGET, point, normal)
 		retire()
-		return
+		return true
 
 	var reflective := data.ricochet_any_surface
 	if not reflective and collider is Node:
 		reflective = (collider as Node).is_in_group(&"reflective")
 	if reflective and ricochet_count < data.max_ricochets:
 		_ricochet(collider, rid, point, normal)
-		return
+		return true
 
 	_report(Impact.WORLD, point, normal)
 	_become_spent(point, normal)
+	return true
 
 
 func _ricochet(collider: Object, rid: RID, point: Vector3, normal: Vector3) -> void:
@@ -331,8 +351,8 @@ func _face_velocity() -> void:
 
 
 func _stretch_trail() -> void:
-	var length := clampf(velocity.length() * 0.035, 0.3, 1.8)
-	_trail.scale = Vector3(1.0, 1.0, length)
+	var length := clampf(velocity.length() * 0.038, 0.35, 2.0)
+	_trail.scale = Vector3(1.0, length, 1.0)
 	_trail.position = Vector3(0.0, 0.0, FOAM_LENGTH * 0.5 + length * 0.5)
 
 
@@ -343,32 +363,36 @@ static func _ensure_shared_resources() -> void:
 	_foam_mesh.top_radius = FOAM_RADIUS
 	_foam_mesh.bottom_radius = FOAM_RADIUS
 	_foam_mesh.height = FOAM_LENGTH
-	_foam_mesh.radial_segments = 8
+	_foam_mesh.radial_segments = 10
 	_foam_mesh.rings = 1
 	_tip_mesh = CylinderMesh.new()
 	_tip_mesh.top_radius = FOAM_RADIUS * 1.25
 	_tip_mesh.bottom_radius = FOAM_RADIUS * 1.25
 	_tip_mesh.height = 0.07
-	_tip_mesh.radial_segments = 8
+	_tip_mesh.radial_segments = 10
 	_tip_mesh.rings = 1
-	_trail_mesh = BoxMesh.new()
-	_trail_mesh.size = Vector3(0.035, 0.035, 1.0)
+	# Tapered needle-tail aerodynamic streak (thick at dart tail, needle-thin behind)
+	_trail_mesh = CylinderMesh.new()
+	_trail_mesh.top_radius = 0.002
+	_trail_mesh.bottom_radius = 0.026
+	_trail_mesh.height = 1.0
+	_trail_mesh.radial_segments = 6
+	_trail_mesh.rings = 1
 	_tip_material = StandardMaterial3D.new()
 	_tip_material.albedo_color = Color(1.0, 0.45, 0.05)
 	_tip_material.emission_enabled = true
 	_tip_material.emission = Color(1.0, 0.4, 0.0)
-	_tip_material.emission_energy_multiplier = 0.6
+	_tip_material.emission_energy_multiplier = 0.75
 
 
-static func _foam_material(tint: Color) -> StandardMaterial3D:
+static func _foam_material(tint: Color) -> Material:
 	var key := tint.to_html()
 	if not _foam_materials.has(key):
-		var material := StandardMaterial3D.new()
-		material.albedo_color = tint
-		material.roughness = 0.9
-		material.emission_enabled = true
-		material.emission = tint
-		material.emission_energy_multiplier = 0.35
+		var material := ShaderMaterial.new()
+		material.shader = _foam_shader
+		material.set_shader_parameter(&"albedo", Color(tint.r, tint.g, tint.b, 1.0))
+		material.set_shader_parameter(&"roughness", 0.88)
+		material.set_shader_parameter(&"emission_energy", 0.55)
 		_foam_materials[key] = material
 	return _foam_materials[key]
 
@@ -379,6 +403,6 @@ static func _trail_material(tint: Color) -> StandardMaterial3D:
 		var material := StandardMaterial3D.new()
 		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		material.albedo_color = Color(tint.lightened(0.45), 0.4)
+		material.albedo_color = Color(tint.lightened(0.5), 0.52)
 		_trail_materials[key] = material
 	return _trail_materials[key]

@@ -35,6 +35,9 @@ func fire(data: DartData, origin: Vector3, direction: Vector3, shooter: Actor,
 	var dart: DartProjectile
 	if _live.size() >= max_active:
 		dart = _live.pop_front()  # Recycle the oldest dart still flying.
+		if dart.scavengeable:
+			DartProjectile.resting_pickups.erase(dart)
+			dart.scavengeable = false
 	elif not _idle.is_empty():
 		dart = _idle.pop_back()
 	else:

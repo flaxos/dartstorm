@@ -11,6 +11,7 @@ signal item_unlocked(category: StringName, id: Variant)
 signal mission_progress(mission_id: StringName, current: int, target: int)
 signal mission_completed(mission: Dictionary)
 signal weapon_mastery_updated(weapon_id: StringName, new_rank: int, total_xp: int)
+signal weapon_mastery_ranked_up(weapon_id: StringName, new_rank: int, player_idx: int)
 signal attachment_equipped(weapon_id: StringName, slot: StringName, attachment_id: StringName)
 signal progression_saved
 signal progression_loaded
@@ -45,7 +46,7 @@ const MISSION_POOL: Array[Dictionary] = [
 		"target": 2,
 		"xp_reward": XP_MISSION_REWARD,
 		"coin_reward": COINS_MISSION_REWARD,
-		"icon": "🪞",
+		"icon": "MIRROR",
 	},
 	{
 		"id": &"chain_zaps",
@@ -55,7 +56,7 @@ const MISSION_POOL: Array[Dictionary] = [
 		"target": 3,
 		"xp_reward": XP_MISSION_REWARD,
 		"coin_reward": COINS_MISSION_REWARD,
-		"icon": "⚡",
+		"icon": "VOLT",
 	},
 	{
 		"id": &"extinguish",
@@ -65,7 +66,7 @@ const MISSION_POOL: Array[Dictionary] = [
 		"target": 1,
 		"xp_reward": XP_MISSION_REWARD,
 		"coin_reward": COINS_MISSION_REWARD,
-		"icon": "💧",
+		"icon": "HYDRO",
 	},
 	{
 		"id": &"ice_slides",
@@ -75,7 +76,7 @@ const MISSION_POOL: Array[Dictionary] = [
 		"target": 2,
 		"xp_reward": XP_MISSION_REWARD,
 		"coin_reward": COINS_MISSION_REWARD,
-		"icon": "🧊",
+		"icon": "FROST",
 	},
 	{
 		"id": &"shield_absorb",
@@ -85,7 +86,7 @@ const MISSION_POOL: Array[Dictionary] = [
 		"target": 1,
 		"xp_reward": XP_MISSION_REWARD,
 		"coin_reward": COINS_MISSION_REWARD,
-		"icon": "🛡️",
+		"icon": "SHIELD",
 	},
 	{
 		"id": &"zombie_tags",
@@ -95,7 +96,7 @@ const MISSION_POOL: Array[Dictionary] = [
 		"target": 2,
 		"xp_reward": XP_MISSION_REWARD,
 		"coin_reward": COINS_MISSION_REWARD,
-		"icon": "🧟",
+		"icon": "ZOMBIE",
 	},
 	{
 		"id": &"popper_tags",
@@ -105,7 +106,7 @@ const MISSION_POOL: Array[Dictionary] = [
 		"target": 3,
 		"xp_reward": XP_MISSION_REWARD,
 		"coin_reward": COINS_MISSION_REWARD,
-		"icon": "🔫",
+		"icon": "POPPER",
 	},
 ]
 
@@ -263,7 +264,7 @@ func set_active_profile(idx: int) -> void:
 	active_profile_index = clampi(idx, 0, 1)
 	_sync_active_profile()
 	coins_changed.emit(coins)
-	progression_saved.emit()
+	save_progression()
 
 
 func get_profile_data(idx: int = active_profile_index) -> Dictionary:
@@ -338,6 +339,8 @@ func _normalize_weapon_id(weapon_id: Variant) -> StringName:
 	var s := str(weapon_id).to_lower().strip_edges()
 	if s.begins_with("res://"):
 		s = s.get_file().get_basename()
+	if s == "six_shot":
+		return &"ricochet_ranger"
 	if s.is_empty():
 		return &"pocket_popper"
 	return StringName(s)
@@ -374,6 +377,8 @@ func record_weapon_tag(weapon_id: Variant, ricochet: bool = false, player_idx: i
 	if p_idx == active_profile_index:
 		weapon_mastery = wm.duplicate(true)
 		weapon_mastery_updated.emit(w_id, new_rank, new_xp)
+	if ranked_up:
+		weapon_mastery_ranked_up.emit(w_id, new_rank, p_idx)
 
 	save_progression()
 	return {
@@ -407,6 +412,11 @@ func get_weapon_mastery(weapon_id: Variant, profile_idx: int = active_profile_in
 		"title": str(progress["title"]),
 		"progress": progress,
 	}
+
+
+## Convenience helper matching WeaponState's profile-first lookup signature.
+func get_equipped_attachments_for_profile(profile_idx: int, weapon_id: Variant) -> Dictionary:
+	return get_equipped_attachments(weapon_id, profile_idx)
 
 
 ## Returns equipped attachments for a weapon. Returns default stock if none equipped.
@@ -752,9 +762,12 @@ func save_progression() -> void:
 	var tmp_path := SAVE_PATH + ".tmp"
 	var err := file.save(tmp_path)
 	if err == OK:
-		var copy_err := DirAccess.copy_absolute(tmp_path, SAVE_PATH)
-		if copy_err != OK:
-			file.save(SAVE_PATH)
+		var rename_err := DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp_path), ProjectSettings.globalize_path(SAVE_PATH))
+		if rename_err != OK:
+			var copy_err := DirAccess.copy_absolute(tmp_path, SAVE_PATH)
+			if copy_err != OK:
+				file.save(SAVE_PATH)
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp_path))
 	else:
 		file.save(SAVE_PATH)
 	progression_saved.emit()

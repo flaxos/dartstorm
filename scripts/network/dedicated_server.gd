@@ -6,7 +6,7 @@ extends Node
 
 const BANNER := """
 ============================================================
-  ⚡ DARTSTORM HEADLESS DEDICATED SERVER v0.8.0 ⚡
+  DARTSTORM HEADLESS DEDICATED SERVER v1.0.0
 ============================================================
 """
 
@@ -81,7 +81,8 @@ func _parse_cmdline_args() -> void:
 
 
 func _start_server() -> void:
-	print(BANNER)
+	var ver := str(ProjectSettings.get_setting("application/config/version", "1.0.0"))
+	print("\n============================================================\n  DARTSTORM HEADLESS DEDICATED SERVER v%s\n============================================================\n" % ver)
 	NetworkManager.is_dedicated_server = true
 	NetworkManager.server_name = server_name
 	NetworkManager.selected_arena = selected_arena
@@ -89,7 +90,7 @@ func _start_server() -> void:
 	NetworkManager.bot_fill_count = bot_fill
 	NetworkManager.bot_difficulty = bot_difficulty
 
-	var err := NetworkManager.host_game(port, max_players, server_name)
+	var err := NetworkManager.host_game(port, max_players, server_name, true)
 	if err != OK:
 		push_error("[SERVER ERROR] Could not start server on port %d (code %d)" % [port, err])
 		get_tree().quit(1)
@@ -189,16 +190,16 @@ static func parse_mode(val: String) -> int:
 	if val.is_valid_int():
 		return clampi(int(val), 0, MatchScene.MODE_PATHS.size() - 1)
 	match val:
-		"ffa", "free_for_all": return 0
-		"duos": return 1
-		"teams", "tdm": return 2
-		"gun_game", "gungame": return 3
-		"zombies", "infection": return 4
-		"zombie_siege", "siege": return 5
-		"lava", "floor_is_lava": return 6
-		"realistic": return 7
-		"ctf", "capture_the_flag": return 8
-		"bomb", "plant_the_bomb", "sd": return 9
+		"ffa", "free_for_all": return GameSettings.MatchMode.FREE_FOR_ALL
+		"gun_game", "gungame": return GameSettings.MatchMode.GUN_GAME
+		"duos": return GameSettings.MatchMode.DUOS
+		"teams", "tdm": return GameSettings.MatchMode.TEAMS
+		"zombies", "infection": return GameSettings.MatchMode.ZOMBIES
+		"zombie_siege", "siege": return GameSettings.MatchMode.ZOMBIE_SIEGE
+		"lava", "floor_is_lava": return GameSettings.MatchMode.FLOOR_IS_LAVA
+		"realistic": return GameSettings.MatchMode.REALISTIC
+		"ctf", "capture_the_flag": return GameSettings.MatchMode.CAPTURE_THE_FLAG
+		"bomb", "plant_the_bomb", "sd": return GameSettings.MatchMode.PLANT_THE_BOMB
 	return 0
 
 

@@ -1,9 +1,29 @@
 # DARTSTORM — Roadmap
 
-*Updated: 2026-11-16. Every milestone must end with a playable, validated build. Releases also need a UAT pass
+*Updated: 2026-11-28. Every milestone must end with a playable, validated build. Releases also need a UAT pass
 ([UAT.md](UAT.md)).*
 
 ## Status at a glance
+
+| Milestone | State |
+|---|---|
+| **v1.0.0 Production Release (Full Polish, Hardening & Graphics Overhaul)** | ✅ Built and validated. ⏳ UAT |
+| Phase 0–6 Core Game & Modes (v0.1.0–v0.9.2) | ✅ Done |
+| Local Split-Screen, Web/Android, Stylized Uplift, 9 Arenas & 10 Modes | ✅ Done |
+
+## v1.0.0: Production Release — Full-Stack Hardening, Unconstrained Graphics Overhaul & Tactical UI (this release)
+
+Goal: Polish DARTSTORM from prototype/beta into a ship-ready 1.0 release with zero known gameplay bugs, zero geometry/navmesh defects across all 9 arenas, commercial-grade stylized Forward+ visuals (with clean Compatibility fallback), a Tactical Radar HUD, zero missing font glyphs, and strict release hygiene.
+
+- [x] **Player, Combat, Physics & Input Fixes:** Separated Gamepad LT ADS from sprint; preserved secondary bindings on key rebind; eliminated recoil pitch drift and split-screen end-of-match HUD loss; isolated bot weapon attachments from local progression; aliased legacy `six_shot` -> `ricochet_ranger`; fixed split-screen Zombie Siege co-op teams, CTF anchored flag pedestals, Plant the Bomb round scoring, and DedicatedServer mode IDs.
+- [x] **All 9 Arenas Audited & Repaired:** Added explicit `bomb_sites`, `flag_pedestals`, and `bomb_spawns` to all 9 arenas; rebuilt Two Fortresses moat/vaults/water tunnels/stairs; sealed Dusty Courtyard canal gap, opened courtyard arch, aligned sniper bridge & CT compound, and fixed horizon emission; opened Duststorm II Lower B Tunnel, cleared Pit ramp, sealed CT void, and widened B Window; regenerated fixed `dog_house` & `inflatable_barrier` props.
+- [x] **Unconstrained Graphics & Game-Feel Overhaul:** Curated per-arena AgX + SSIL + ReflectionProbe lighting (including Floodlit Twilight Soccer Stadium) and 4096 desktop shadows; repaired all 9 `.gdshader` files (Forward+ lava depth, radial water caustics, smooth triplanar wood/shield, live toon combat/elemental uniforms, EVA foam darts); fixed CharacterModel eyes/cheeks/hand-grip pose + Chainstorm pack; unified BlasterModel recoil & 3D starburst flash + hollow holo-sight; upgraded WeatherEffects/WeatherDirector atmosphere morphing, metallic spotlight Podium, and enclosed GarageWorkbench.
+- [x] **HUD, Tactical Radar & Zero-Emoji UI:** Added circular `TacticalMinimap` radar, directional damage arcs, dynamic crosshair/hitmarkers, weapon slot strip, reload bar, and contextual `[F]` objective prompts; stripped all emoji glyphs unsupported by Lilita One; added live 3D arena switcher & `v1.0.0` badge in Main Menu; fixed pause audio unducking, mastery rank-up spam, permanent hurt flash, and controller focus across every screen.
+- [x] **Release Hygiene & Regression Suite:** Unified `1.0.0` version in `project.godot` & `export_presets.cfg`; stripped all personal paths/IPs; deleted orphan `.uid` files; hardened `tools/serve_download.py` against path traversal; aligned export/server scripts; expanded automated regression tests in `tests/test_runner.gd`.
+
+---
+
+### Earlier Milestone History
 
 | Milestone | State |
 |---|---|

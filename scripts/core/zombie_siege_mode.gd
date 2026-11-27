@@ -97,5 +97,5 @@ func get_team_color(team: int) -> Color:
 
 func describe_progress(_entry: ScoreEntry) -> String:
 	if horde_director != null and horde_director.current_wave > 0:
-		return "WAVE %d / 5 • DEFEND THE BASE!" % horde_director.current_wave
+		return "WAVE %d / 5 | DEFEND THE BASE!" % horde_director.current_wave
 	return "DEFEND THE BASE!"

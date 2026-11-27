@@ -1,28 +1,65 @@
 #!/usr/bin/env python3
-"""ZeroTier APK Download Server for DARTSTORM.
+"""Local APK Download Server for DARTSTORM.
 
-Binds natively to host port 8085 (0.0.0.0:8085) so mobile devices connected
-via ZeroTier (192.168.193.11:8085) can download DARTSTORM.apk reliably without
-Docker bridge routing or proxy issues.
+Binds natively to host port 8085 (0.0.0.0:8085) so mobile devices on the local
+network or overlay VPN can download DARTSTORM.apk reliably with Range resume.
 
 Features:
 - Native Range header support (HTTP 206 Partial Content) for resilient mobile downloads
 - Proper Android APK MIME type and Content-Disposition headers
 - Route aliases: /, /apk, /download, /DARTSTORM.apk
+- Strict path confinement inside build/download (prevents directory traversal)
 - Multi-threaded request handling
+
+Usage:
+    python3 tools/serve_download.py [port]
 """
 
+import argparse
 import http.server
 import os
 import re
+import socket
 import socketserver
 import sys
 import urllib.parse
 
-PORT = 8085
-DOWNLOAD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "build", "download"))
+DEFAULT_PORT = 8085
+DOWNLOAD_DIR = os.path.realpath(
+    os.path.join(os.path.dirname(__file__), "..", "build", "download")
+)
 APK_PATH = os.path.join(DOWNLOAD_DIR, "DARTSTORM.apk")
 HTML_PATH = os.path.join(DOWNLOAD_DIR, "index.html")
+
+
+def _safe_download_path(rel_path: str):
+    """Resolve rel_path strictly inside DOWNLOAD_DIR; return None on traversal or dotfiles."""
+    decoded = urllib.parse.unquote(rel_path).lstrip("/")
+    if not decoded:
+        return None
+    parts = [p for p in decoded.replace("\\", "/").split("/") if p]
+    if any(p in (".", "..") or p.startswith(".") for p in parts):
+        return None
+    candidate = os.path.realpath(os.path.join(DOWNLOAD_DIR, *parts))
+    try:
+        if os.path.commonpath([DOWNLOAD_DIR, candidate]) != DOWNLOAD_DIR:
+            return None
+    except ValueError:
+        return None
+    return candidate if os.path.isfile(candidate) else None
+
+
+def _detect_local_ip() -> str:
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        if ip and not ip.startswith("127."):
+            return ip
+    except Exception:
+        pass
+    return "127.0.0.1"
 
 
 class DownloadHandler(http.server.BaseHTTPRequestHandler):
@@ -40,17 +77,37 @@ class DownloadHandler(http.server.BaseHTTPRequestHandler):
 
         # Route aliases
         if path in ("", "/", "/apk", "/download", "/index.html"):
-            self._serve_file(HTML_PATH, "text/html; charset=utf-8", send_body)
-        elif path.endswith("DARTSTORM.apk") or path in ("/download/DARTSTORM.apk", "/apk/DARTSTORM.apk"):
+            if os.path.isfile(HTML_PATH):
+                self._serve_file(HTML_PATH, "text/html; charset=utf-8", send_body)
+            else:
+                self._serve_fallback_index(send_body)
+        elif path in ("/DARTSTORM.apk", "/download/DARTSTORM.apk", "/apk/DARTSTORM.apk"):
             self._serve_apk(send_body)
         else:
-            # Try serving from download directory
-            rel_path = parsed.path.lstrip("/")
-            file_path = os.path.join(DOWNLOAD_DIR, rel_path)
-            if os.path.isfile(file_path):
+            file_path = _safe_download_path(parsed.path)
+            if file_path is not None:
                 self._serve_file(file_path, "application/octet-stream", send_body)
             else:
-                self.send_error(404, f"File Not Found: {self.path}")
+                self.send_error(404, "File Not Found")
+
+    def _serve_fallback_index(self, send_body=True):
+        apk_ready = os.path.isfile(APK_PATH)
+        status = (
+            '<p><a href="/DARTSTORM.apk">Download DARTSTORM.apk</a></p>'
+            if apk_ready
+            else "<p>DARTSTORM.apk has not been built yet. Run <code>./tools/export_apk.sh</code> first.</p>"
+        )
+        body = f"<!doctype html><html><head><meta charset='utf-8'><title>DARTSTORM Download</title></head><body><h1>DARTSTORM</h1>{status}</body></html>".encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-cache, must-revalidate")
+        self.end_headers()
+        if send_body:
+            try:
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
 
     def _serve_apk(self, send_body=True):
         if not os.path.isfile(APK_PATH):
@@ -144,11 +201,22 @@ class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
 
 
 def main():
-    server_address = ("0.0.0.0", PORT)
+    parser = argparse.ArgumentParser(description="DARTSTORM APK Download Server")
+    parser.add_argument("port", nargs="?", type=int, default=DEFAULT_PORT, help="Listen port (default 8085)")
+    args = parser.parse_args()
+
+    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+    server_address = ("0.0.0.0", args.port)
     httpd = ThreadedHTTPServer(server_address, DownloadHandler)
-    print(f"DARTSTORM APK Download Server active on port {PORT}")
-    print(f"Serving APK: {APK_PATH} ({os.path.getsize(APK_PATH):,} bytes)")
-    print(f"ZeroTier URL: http://192.168.193.11:{PORT}/")
+    local_ip = _detect_local_ip()
+    print(f"DARTSTORM APK Download Server active on port {args.port}")
+    if os.path.isfile(APK_PATH):
+        print(f"Serving APK: {APK_PATH} ({os.path.getsize(APK_PATH):,} bytes)")
+    else:
+        print(f"Notice: {APK_PATH} not found yet (copy or build APK to serve downloads).")
+    print(f"Local URL:   http://localhost:{args.port}/")
+    if local_ip != "127.0.0.1":
+        print(f"Network URL: http://{local_ip}:{args.port}/")
     sys.stdout.flush()
     try:
         httpd.serve_forever()

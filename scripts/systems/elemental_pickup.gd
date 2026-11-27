@@ -173,6 +173,11 @@ func _process(delta: float) -> void:
 	if _available:
 		_display.position.y = 1.3 + sin(_time * 2.8) * 0.12
 		_display.rotation.y += 2.0 * delta
+		if _area != null:
+			for body in _area.get_overlapping_bodies():
+				_try_collect(body)
+				if not _available:
+					return
 		return
 
 	_wait_left -= delta
@@ -194,10 +199,14 @@ func _refresh() -> void:
 
 
 func _on_body_entered(body: Node) -> void:
-	if not _available:
+	_try_collect(body)
+
+
+func _try_collect(body: Node) -> void:
+	if not active or not _available:
 		return
 	var actor := body as Actor
-	if actor == null or not is_instance_valid(actor) or not actor.alive:
+	if actor == null or not is_instance_valid(actor) or not actor.alive or actor.is_zombie or actor.is_tagged_out:
 		return
 
 	actor.apply_elemental_infusion(element, INFUSION_DURATION)

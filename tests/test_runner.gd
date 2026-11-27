@@ -126,6 +126,8 @@ func _ready() -> void:
 	await _test_weapon_modding_garage_workbench_and_mastery()
 	# Objective AI: Bots in Plant the Bomb & Capture the Flag (v2.4.0)
 	await _test_objective_bot_ai()
+	# Production 1.0 Release Regressions (v1.0.0)
+	await _test_v1_0_release_regressions()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -2742,10 +2744,10 @@ func _test_duos_buddy_spawning_and_pings() -> void:
 	var beacon := PingBeacon.spawn(arena, Vector3(4.0, 0.0, 4.0), PingBeacon.Type.REGROUP, actor_a)
 	check(beacon != null and beacon.is_inside_tree(), "PingBeacon spawned into scene tree")
 	check(beacon.type == PingBeacon.Type.REGROUP, "PingBeacon type initialized to REGROUP")
-	check(beacon._text_for_type(PingBeacon.Type.AMMO) == "📦 AMMO", "PingBeacon formats AMMO label correctly")
-	check(beacon._text_for_type(PingBeacon.Type.POWERUP) == "✨ POWER-UP", "PingBeacon formats POWERUP label correctly")
-	check(beacon._text_for_type(PingBeacon.Type.RIVAL) == "⚠️ RIVAL", "PingBeacon formats RIVAL label correctly")
-	check(beacon._text_for_type(PingBeacon.Type.DANGER) == "💥 DANGER", "PingBeacon formats DANGER label correctly")
+	check(beacon._text_for_type(PingBeacon.Type.AMMO) == "AMMO", "PingBeacon formats AMMO label without missing glyphs")
+	check(beacon._text_for_type(PingBeacon.Type.POWERUP) == "POWER-UP", "PingBeacon formats POWERUP label without missing glyphs")
+	check(beacon._text_for_type(PingBeacon.Type.RIVAL) == "RIVAL", "PingBeacon formats RIVAL label without missing glyphs")
+	check(beacon._text_for_type(PingBeacon.Type.DANGER) == "DANGER", "PingBeacon formats DANGER label without missing glyphs")
 
 	# 4. Bot Squad Ping Reaction
 	var bot := Bot.new()
@@ -3248,7 +3250,7 @@ func _test_environment_and_splat_decals() -> void:
 	if world_env != null and world_env.environment != null:
 		var env := world_env.environment
 		check(env.background_mode == Environment.BG_SKY, "Sky background mode is active")
-		check(env.tonemap_mode == Environment.TONE_MAPPER_FILMIC, "Filmic tonemapping is enabled")
+		check(env.tonemap_mode == Environment.TONE_MAPPER_AGX, "AgX tonemapping is enabled")
 		check(env.adjustment_enabled, "Color adjustments enabled")
 		check(env.adjustment_saturation >= 1.15, "Filmic saturation boost active (1.16)")
 		check(env.glow_enabled, "Glow bloom is enabled for energy and shield effects")
@@ -4571,10 +4573,12 @@ func _test_lan_server_browser_and_dedicated_server() -> void:
 	check(DedicatedServer.parse_arena("dust") == 7, "parse_arena('dust') -> 7 (Dusty Courtyard)")
 	check(DedicatedServer.parse_arena("dust2") == 8, "parse_arena('dust2') -> 8 (Duststorm II)")
 	check(DedicatedServer.parse_arena("tempest") == 2, "parse_arena('tempest') -> 2 (Treehouse)")
-	check(DedicatedServer.parse_mode("ctf") == 8, "parse_mode('ctf') -> 8 (Capture The Flag)")
-	check(DedicatedServer.parse_mode("bomb") == 9, "parse_mode('bomb') -> 9 (Plant The Bomb)")
-	check(DedicatedServer.parse_mode("tdm") == 2, "parse_mode('tdm') -> 2 (Team Deathmatch)")
-	check(DedicatedServer.parse_mode("realistic") == 7, "parse_mode('realistic') -> 7 (Realistic)")
+	check(DedicatedServer.parse_mode("ctf") == GameSettings.MatchMode.CAPTURE_THE_FLAG, "parse_mode('ctf') -> CAPTURE_THE_FLAG (8)")
+	check(DedicatedServer.parse_mode("bomb") == GameSettings.MatchMode.PLANT_THE_BOMB, "parse_mode('bomb') -> PLANT_THE_BOMB (9)")
+	check(DedicatedServer.parse_mode("tdm") == GameSettings.MatchMode.TEAMS, "parse_mode('tdm') -> TEAMS (3)")
+	check(DedicatedServer.parse_mode("duos") == GameSettings.MatchMode.DUOS, "parse_mode('duos') -> DUOS (2)")
+	check(DedicatedServer.parse_mode("gun_game") == GameSettings.MatchMode.GUN_GAME, "parse_mode('gun_game') -> GUN_GAME (1)")
+	check(DedicatedServer.parse_mode("realistic") == GameSettings.MatchMode.REALISTIC, "parse_mode('realistic') -> REALISTIC (7)")
 
 	# Map rotation parser
 	var rot := DedicatedServer.parse_map_rotation("2fort, dust2, backyard")
@@ -5074,6 +5078,164 @@ func _test_objective_bot_ai() -> void:
 	arena.queue_free()
 	stage.queue_free()
 	await physics_frames(3)
+
+
+func _test_v1_0_release_regressions() -> void:
+	section("v1.0.0 Production Polish, Gameplay Hardening & Arena Integrity")
+
+	# 1. Version metadata check
+	check(str(ProjectSettings.get_setting("application/config/version", "")) == "1.0.0",
+		"project.godot application/config/version is 1.0.0")
+
+	# 2. All 9 arenas have explicit objectives, spawns, roam points, and AgX atmosphere
+	check(MatchScene.ARENAS.size() == 9, "MatchScene registers all 9 arenas")
+	for i in MatchScene.ARENAS.size():
+		var info: Dictionary = MatchScene.ARENAS[i]
+		var arena_path: String = str(info["path"])
+		var arena_name: String = str(info["name"])
+		var arena_inst := (load(arena_path) as PackedScene).instantiate() as Arena
+		add_child(arena_inst)
+		await physics_frames(2)
+		check(arena_inst.spawn_points.size() >= 6, "%s has >= 6 spawn points (%d)" % [arena_name, arena_inst.spawn_points.size()])
+		check(arena_inst.roam_points.size() >= 6, "%s has >= 6 roam points (%d)" % [arena_name, arena_inst.roam_points.size()])
+		check(arena_inst.bomb_sites.has("A") and arena_inst.bomb_sites.has("B"), "%s defines explicit Bomb Sites A and B" % arena_name)
+		check(arena_inst.flag_pedestals.size() >= 2, "%s defines >= 2 explicit CTF flag pedestals" % arena_name)
+		check(not arena_inst.bomb_spawns.is_empty(), "%s defines explicit bomb_spawns" % arena_name)
+		check(arena_inst.world_environment != null and arena_inst.sun_light != null, "%s exposes world_environment and sun_light" % arena_name)
+		arena_inst.queue_free()
+		await physics_frames(2)
+
+	# 3. Workbench ricochet_ranger ID & six_shot alias
+	var has_ricochet := false
+	var has_dead_six_shot := false
+	for b: Dictionary in WeaponModding.WORKBENCH_BLASTERS:
+		if b["id"] == &"ricochet_ranger":
+			has_ricochet = true
+		if b["id"] == &"six_shot":
+			has_dead_six_shot = true
+	check(has_ricochet and not has_dead_six_shot, "WeaponModding uses ricochet_ranger instead of dead six_shot ID")
+	Progression.equip_attachment(&"six_shot", &"optic", &"red_dot")
+	check(Progression.get_equipped_attachments(&"ricochet_ranger").get("optic") == &"red_dot",
+		"Progression aliases legacy six_shot attachments onto ricochet_ranger")
+
+	# 4. Bot weapon attachment isolation from local player's Progression
+	var popper := load(POPPER) as WeaponData
+	Progression.equip_attachment(&"pocket_popper", &"magazine", &"extended_drum")
+	var player_arsenal := Arsenal.new()
+	player_arsenal.apply_profile_attachments = true
+	player_arsenal.profile_index = 0
+	add_child(player_arsenal)
+	player_arsenal.set_loadout([popper], false)
+	var bot_arsenal := Arsenal.new()
+	add_child(bot_arsenal)
+	bot_arsenal.set_loadout([popper], false)
+	check(player_arsenal.current().get_magazine_size() > popper.magazine_size,
+		"Human Arsenal applies extended_drum from Progression")
+	check(bot_arsenal.current().get_magazine_size() == popper.magazine_size,
+		"Bot Arsenal stays isolated from local player's Progression attachments")
+	player_arsenal.queue_free()
+	bot_arsenal.queue_free()
+	Progression.equip_attachment(&"pocket_popper", &"magazine", &"stock_mag")
+	await physics_frames(2)
+
+	# 5. InputSetup LT ADS separation & secondary-binding preservation on rebind
+	InputSetup.reset_to_defaults()
+	var lt_on_sprint := false
+	for ev: InputEvent in InputMap.action_get_events(&"sprint"):
+		if ev is InputEventJoypadMotion and (ev as InputEventJoypadMotion).axis == JOY_AXIS_TRIGGER_LEFT:
+			lt_on_sprint = true
+	check(not lt_on_sprint, "Gamepad LT is no longer bound to sprint (reserved for ADS)")
+	var custom_fwd := InputEventKey.new()
+	custom_fwd.physical_keycode = KEY_I
+	InputSetup.rebind_action_event(&"move_forward", custom_fwd, false)
+	var has_up_arrow := false
+	for ev: InputEvent in InputMap.action_get_events(&"move_forward"):
+		if ev is InputEventKey and (ev as InputEventKey).physical_keycode == KEY_UP:
+			has_up_arrow = true
+	check(has_up_arrow, "Rebinding primary move_forward key preserves secondary UP arrow binding")
+	InputSetup.reset_to_defaults()
+
+	# 6. Progression.weapon_mastery_ranked_up emits only on actual rank-up
+	var rank_events := [0]
+	var on_rank := func(_wid: StringName, _rank: int, _pidx: int) -> void: rank_events[0] += 1
+	Progression.weapon_mastery_ranked_up.connect(on_rank)
+	var fresh_wid := &"dart_sprayer"
+	Progression.weapon_mastery.erase(fresh_wid)
+	Progression.record_weapon_tag(fresh_wid, false)  # 50 XP -> still Rank 1
+	check(rank_events[0] == 0, "weapon_mastery_ranked_up does not fire when staying Rank 1")
+	Progression.record_weapon_tag(fresh_wid, false)  # 100 XP -> Rank 2!
+	check(rank_events[0] == 1, "weapon_mastery_ranked_up fires exactly once upon reaching Rank 2")
+	Progression.weapon_mastery_ranked_up.disconnect(on_rank)
+
+	# 7. Podium does NOT turn Orange Team (team 1) into zombies outside Zombies mode
+	var podium_stage := make_stage()
+	var orange_entry := ScoreEntry.new()
+	orange_entry.display_name = "OrangeHero"
+	orange_entry.color = GameMode.team_color(1)
+	orange_entry.team = 1
+	orange_entry.score = 500
+	var podium := Podium.new()
+	podium_stage.add_child(podium)
+	podium.show_places([[orange_entry]], "ORANGE WINS!", Color.ORANGE, false)
+	await physics_frames(2)
+	check(podium.dancers.size() == 1 and not podium.dancers[0].is_zombie(),
+		"Podium preserves non-zombie appearance for Team 1 in normal team modes")
+	podium.queue_free()
+	var z_podium := Podium.new()
+	podium_stage.add_child(z_podium)
+	z_podium.show_places([[orange_entry]], "ZOMBIES WIN!", Color.GREEN, true)
+	await physics_frames(2)
+	check(z_podium.dancers.size() == 1 and z_podium.dancers[0].is_zombie(),
+		"Podium displays Team 1 as zombies when is_zombie_mode is true")
+	podium_stage.queue_free()
+	await physics_frames(2)
+
+	# 8. FlagPickup keeps pedestal anchored when carried away
+	var ctf_stage := make_stage()
+	var flag := FlagPickup.new()
+	flag.team_id = 0
+	ctf_stage.add_child(flag)
+	var home_pos := Vector3(-12.0, 0.0, 0.0)
+	flag.global_position = home_pos
+	flag.base_position = home_pos
+	flag.reset_to_base()
+	var runner := make_actor(ctf_stage, home_pos, 1)
+	await physics_frames(2)
+	flag._pickup(runner)
+	runner.global_position = Vector3(15.0, 0.0, 10.0)
+	await physics_frames(3)
+	check(flag._pedestal != null and flag._pedestal.global_position.distance_to(home_pos) < 0.25,
+		"FlagPickup pedestal stays anchored at home base while flag is carried away")
+	ctf_stage.queue_free()
+	await physics_frames(2)
+
+	# 9. Split-screen Zombie Siege co-op teams & end-of-match HUD reparenting + TacticalMinimap
+	var saved_split := GameSettings.split_screen
+	var saved_mode := GameSettings.match_mode
+	var saved_bots := GameSettings.bot_count
+	GameSettings.split_screen = true
+	GameSettings.bot_count = 2
+	var ss_game := start_match(GameSettings.MatchMode.ZOMBIE_SIEGE)
+	await physics_frames(6)
+	var p1: Player = ss_game.get("player") as Player
+	var p2: Player = ss_game.get("player2") as Player
+	var hud1: Hud = ss_game.get("hud") as Hud
+	check(p1 != null and p2 != null, "Split-screen Zombie Siege spawns both Player 1 and Player 2")
+	if p1 != null and p2 != null:
+		check(p1.team_id == 0 and p2.team_id == 0, "Split-screen Zombie Siege assigns both human players to Defenders (team 0)")
+	check(hud1 != null and hud1._minimap != null, "Hud mounts TacticalMinimap radar cleanly")
+	# Force match finish and verify HUD reparents out of hidden split container so results stay visible
+	var ctrl: MatchController = ss_game.get("controller") as MatchController
+	if ctrl != null:
+		ctrl.time_left = 0.05
+	await physics_frames(10)
+	if hud1 != null:
+		check(hud1.get_parent() == ss_game and hud1.visible,
+			"Split-screen match end reparents Hud onto MatchScene so results screen stays visible")
+	GameSettings.split_screen = saved_split
+	GameSettings.bot_count = saved_bots
+	await end_match(ss_game, saved_mode)
+
 
 
 

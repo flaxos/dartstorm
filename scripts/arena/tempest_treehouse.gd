@@ -79,13 +79,18 @@ func _build_ground_and_trees() -> void:
 	# Surrounding neighbourhood backdrop
 	ArenaKit.deco_box(decor, Vector3(400.0, 0.2, 400.0), Vector3(0.0, -0.16, 0.0), Color(0.28, 0.58, 0.24))
 
-	# Boundary walls
-	var wall_h := 22.0
+	# Rustic wooden perimeter fence + invisible sky blockers so forest skyline stays open!
+	var fence_h := 3.8
+	var sky_h := 22.0
 	var thick := 0.6
-	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, wall_h, thick), Vector3(0.0, wall_h * 0.5, -HALF_Z - thick * 0.5), FENCE)
-	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, wall_h, thick), Vector3(0.0, wall_h * 0.5, HALF_Z + thick * 0.5), FENCE)
-	ArenaKit.box(geometry, Vector3(thick, wall_h, HALF_Z * 2.0), Vector3(-HALF_X - thick * 0.5, wall_h * 0.5, 0.0), FENCE)
-	ArenaKit.box(geometry, Vector3(thick, wall_h, HALF_Z * 2.0), Vector3(HALF_X + thick * 0.5, wall_h * 0.5, 0.0), FENCE)
+	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, fence_h, thick), Vector3(0.0, fence_h * 0.5, -HALF_Z - thick * 0.5), WOOD_DARK, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, fence_h, thick), Vector3(0.0, fence_h * 0.5, HALF_Z + thick * 0.5), WOOD_DARK, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.box(geometry, Vector3(thick, fence_h, HALF_Z * 2.0), Vector3(-HALF_X - thick * 0.5, fence_h * 0.5, 0.0), WOOD_DARK, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.box(geometry, Vector3(thick, fence_h, HALF_Z * 2.0), Vector3(HALF_X + thick * 0.5, fence_h * 0.5, 0.0), WOOD_DARK, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.blocker(geometry, Vector3(HALF_X * 2.0 + 2.0, sky_h, thick), Vector3(0.0, fence_h + sky_h * 0.5, -HALF_Z - thick * 0.5))
+	ArenaKit.blocker(geometry, Vector3(HALF_X * 2.0 + 2.0, sky_h, thick), Vector3(0.0, fence_h + sky_h * 0.5, HALF_Z + thick * 0.5))
+	ArenaKit.blocker(geometry, Vector3(thick, sky_h, HALF_Z * 2.0), Vector3(-HALF_X - thick * 0.5, fence_h + sky_h * 0.5, 0.0))
+	ArenaKit.blocker(geometry, Vector3(thick, sky_h, HALF_Z * 2.0), Vector3(HALF_X + thick * 0.5, fence_h + sky_h * 0.5, 0.0))
 
 	# 4 Giant Ancient Tree Trunks (Walkable colliders in geometry)
 	# 1. West Tree (Blue Base Trunk)
@@ -130,13 +135,11 @@ func _build_canopy_forts() -> void:
 	# Team 1 Fort (East: +X)
 	_build_fort_deck(Vector3(16.0, DECK_Y, 0.0), c1, c1.darkened(0.25), "%s CANOPY FORT" % GameMode.team_name(1))
 
-	# Ramps from ground up to mid-decks
+	# Ramps from ground up to mid-decks with properly pitched railings
 	ArenaKit.ramp(geometry, Vector3(-16.0, 0.0, 14.0), Vector3(-16.0, DECK_Y, 6.0), 2.8, WOOD, 0.3, ArenaKit.SurfaceType.WOOD)
 	ArenaKit.ramp(geometry, Vector3(16.0, 0.0, 14.0), Vector3(16.0, DECK_Y, 6.0), 2.8, WOOD, 0.3, ArenaKit.SurfaceType.WOOD)
-
-	# Railings along ramps
-	ArenaKit.deco_box(decor, Vector3(0.2, 1.0, 9.0), Vector3(-14.4, DECK_Y * 0.5 + 0.5, 10.0), WOOD_DARK, Vector3(-20.0, 0.0, 0.0), 0.0, ArenaKit.SurfaceType.WOOD)
-	ArenaKit.deco_box(decor, Vector3(0.2, 1.0, 9.0), Vector3(14.4, DECK_Y * 0.5 + 0.5, 10.0), WOOD_DARK, Vector3(-20.0, 0.0, 0.0), 0.0, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.ramp(geometry, Vector3(-14.5, 0.5, 14.0), Vector3(-14.5, DECK_Y + 0.5, 6.0), 0.18, WOOD_DARK, 0.85, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.ramp(geometry, Vector3(14.5, 0.5, 14.0), Vector3(14.5, DECK_Y + 0.5, 6.0), 0.18, WOOD_DARK, 0.85, ArenaKit.SurfaceType.WOOD)
 
 
 func _build_fort_deck(at: Vector3, tint: Color, tint_dark: Color, sign_title: String) -> void:
@@ -167,9 +170,10 @@ func _build_fort_deck(at: Vector3, tint: Color, tint_dark: Color, sign_title: St
 	ArenaKit.box(geometry, Vector3(0.4, 3.2, 5.0), hut_pos + Vector3(-2.0 if at.x < 0 else 2.0, 1.6, 0.0), tint)
 	ArenaKit.box(geometry, Vector3(4.6, 0.3, 5.6), hut_pos + Vector3(0.0, 3.3, 0.0), tint_dark)
 
-	# Team Name Sign
-	ArenaKit.sign_text(geometry, sign_title, hut_pos + Vector3(0.0, 2.4, -2.2 if at.x < 0 else 2.2),
-			Vector3(0.0, 0.0 if at.x < 0 else 180.0, 0.0), Color.WHITE, 72, 0.007)
+	# Team Name Sign facing inward across the canopy chasm
+	var inward_x := 2.25 if at.x < 0 else -2.25
+	ArenaKit.sign_text(decor, sign_title, hut_pos + Vector3(inward_x, 3.85, 0.0),
+			Vector3(0.0, 90.0 if at.x < 0 else -90.0, 0.0), Color.WHITE, 72, 0.008)
 
 	# Fort cover crates & foam barricades
 	ArenaKit.box(geometry, Vector3(1.2, 1.2, 1.2), at + Vector3(3.0 if at.x < 0 else -3.0, 0.6, -3.0), WOOD_DARK)
@@ -186,8 +190,8 @@ func _build_suspension_bridge() -> void:
 	var end_x := 10.0
 	var step_x := (end_x - start_x) / float(plank_count)
 
-	# Continuous walking beam underlay for 100% reliable navmesh
-	ArenaKit.box(geometry, Vector3(20.0, 0.3, bridge_w), Vector3(0.0, DECK_Y - 0.2, 0.0), WOOD)
+	# Continuous walking beam underlay placed cleanly below catenary plank dip (zero Z-fighting)
+	ArenaKit.box(geometry, Vector3(20.0, 0.25, bridge_w - 0.1), Vector3(0.0, DECK_Y - 0.55, 0.0), WOOD_DARK, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 
 	for i in plank_count:
 		var x := start_x + step_x * (float(i) + 0.5)
@@ -235,10 +239,10 @@ func _build_crow_nest() -> void:
 	ArenaKit.box(geometry, Vector3(1.1, 1.1, 1.1), nest_pos + Vector3(2.2, 0.55, -2.0), Color(0.2, 0.8, 0.9))
 
 	# Chainstorm Power-Up Spot on the high lookout (North of trunk)
-	add_power_up_spot(nest_pos + Vector3(0.0, 0.2, -2.8))
+	add_power_up_spot(nest_pos + Vector3(0.0, 0.0, -2.8))
 
 	# High Canopy Foam Shield Pickup (South of trunk)
-	add_shield_pickup(nest_pos + Vector3(0.0, 0.2, 2.8))
+	add_shield_pickup(nest_pos + Vector3(0.0, 0.0, 2.8))
 
 
 # --- Traversals, Jump-Pads & Elemental Hazards ---
@@ -250,18 +254,18 @@ func _build_traversals_and_hazards() -> void:
 	# Ground Jump-Pad: launches straight up to the bridge deck
 	add_jump_pad(Vector3(0.0, 0.0, 8.0), 15.5)
 
-	# 2. Canopy Escape Ice Slide Chute
-	# Smooth frictionless slide from Crow's Nest (Y=10.5, Z=-2.0) down across bridge to (Y=5.4, Z=4.5)
+	# 2. Canopy Escape Ice Slide Chute + Bridge Landing Apron
+	# Smooth frictionless slide descending from Crow's Nest (Y=10.5, Z=-2.0) to landing deck (Y=5.4, Z=4.5)
+	ArenaKit.box(geometry, Vector3(3.8, 0.35, 3.6), Vector3(0.0, DECK_Y - 0.175, 3.4), WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	var slide_len := 8.3
 	var slide_drop := HIGH_NEST_Y - DECK_Y
 	var slide_mid := Vector3(0.0, (HIGH_NEST_Y + DECK_Y) * 0.5, 1.25)
-	var slide_angle := -rad_to_deg(atan2(slide_drop, 6.5))
-	var slide_dir := Vector3(0.0, -slide_drop, 6.5).normalized()
-	# Frictionless Ice Slick trigger
-	add_ice_slick(slide_mid + Vector3(0.0, 0.2, 0.0), Vector3(2.6, 0.25, slide_len),
-			slide_dir, Vector3(slide_angle, 0.0, 0.0))
+	var slide_angle := rad_to_deg(atan2(slide_drop, 6.5))
 	# Solid supporting slide slab
-	ArenaKit.box(geometry, Vector3(2.6, 0.3, slide_len), slide_mid, Color(0.65, 0.85, 0.95), Vector3(slide_angle, 0.0, 0.0))
+	ArenaKit.ramp(geometry, Vector3(0.0, DECK_Y, 4.5), Vector3(0.0, HIGH_NEST_Y, -2.0), 2.6, Color(0.65, 0.85, 0.95), 0.3, ArenaKit.SurfaceType.PLASTIC)
+	# Frictionless Ice Slick trigger tilted downward toward +Z
+	add_ice_slick(slide_mid + Vector3(0.0, 0.14, 0.0), Vector3(2.4, 0.16, slide_len),
+			Vector3(0.0, 0.0, 1.0), Vector3(slide_angle, 0.0, 0.0))
 
 	# 3. Gale-Force Wind Tunnels
 	# Upper canopy wind zone blowing West to East strongly through the chasm
@@ -269,9 +273,8 @@ func _build_traversals_and_hazards() -> void:
 	# Forest floor cross-breeze
 	add_wind_zone(Vector3(0.0, 2.0, 10.0), Vector3(28.0, 4.0, 12.0), Vector3(-1.0, 0.0, 0.0), 12.0, false)
 
-	# 4. Canopy Wind Vent on the Forest Floor
-	# Centered under the bridge: launches players up through the canopy opening
-	add_wind_vent(Vector3(0.0, 0.0, -2.0), 1.8, 16.5)
+	# 4. Canopy Wind Vent on the Forest Floor (clear of bridge deck overhead)
+	add_wind_vent(Vector3(5.2, 0.0, 4.2), 1.8, 16.5)
 
 	# 5. Conductive Bird-Bath Puddle on the forest floor
 	add_water_puddle(Vector3(0.0, 0.0, 2.5), 3.2)
@@ -279,25 +282,30 @@ func _build_traversals_and_hazards() -> void:
 	# 6. Ammo Buckets (Blue base, Orange base, Forest floor)
 	add_bucket(Vector3(-18.5, DECK_Y, 2.5), BLUE, 150)
 	add_bucket(Vector3(18.5, DECK_Y, 2.5), ORANGE, 150)
-	add_bucket(Vector3(0.0, 0.0, 14.0), Color(0.25, 0.8, 0.4), 150)
+	add_bucket(Vector3(0.0, 0.0, 12.5), Color(0.25, 0.8, 0.4), 150)
 
-	# 7. Reflective Mirrors for Trick Ricochet Tags
-	add_mirror(Vector3(-12.0, DECK_Y + 1.2, -6.5), 35.0, Vector2(3.2, 2.2))
-	add_mirror(Vector3(12.0, DECK_Y + 1.2, -6.5), -35.0, Vector2(3.2, 2.2))
-	add_mirror(Vector3(0.0, DECK_Y + 2.0, -7.0), 0.0, Vector2(4.0, 2.4))
+	# 7. Reflective Mirrors for Trick Ricochet Tags (clear of ramps & trunks)
+	add_mirror(Vector3(-18.5, DECK_Y + 1.5, -5.6), 25.0, Vector2(3.2, 2.2))
+	add_mirror(Vector3(18.5, DECK_Y + 1.5, -5.6), -25.0, Vector2(3.2, 2.2))
+	add_mirror(Vector3(0.0, HIGH_NEST_Y + 1.6, -9.8), 0.0, Vector2(4.0, 2.4))
 
-	# 8. Wobble Bullseye Targets
+	# 8. Wobble Bullseye Targets (mounted cleanly in front of trunk)
 	add_target(Vector3(-10.0, DECK_Y + 2.2, 4.5), 45.0)
 	add_target(Vector3(10.0, DECK_Y + 2.2, 4.5), -45.0)
-	add_target(Vector3(0.0, 1.8, -6.0), 0.0)
+	add_target(Vector3(0.0, 1.8, -3.9), 0.0)
 
 
 # --- Spawns, Roam Points & Team Bases ---
 
 func _build_spawns_and_points() -> void:
-	# Team Bases for Blue vs Orange mode
-	team_bases.append(Vector3(-16.0, DECK_Y, 0.0))  # Team 0: Blue Fort
-	team_bases.append(Vector3(16.0, DECK_Y, 0.0))   # Team 1: Orange Fort
+	# Team Bases, Flag Pedestals & Bomb Sites clear of the 4m tree trunks
+	team_bases = [Vector3(-12.5, DECK_Y, 0.0), Vector3(12.5, DECK_Y, 0.0)]
+	flag_pedestals = [Vector3(-12.5, DECK_Y, 0.0), Vector3(12.5, DECK_Y, 0.0)]
+	bomb_sites = {
+		"A": Vector3(0.0, HIGH_NEST_Y, -3.0),
+		"B": Vector3(-12.5, DECK_Y, -3.2),
+	}
+	bomb_spawns = [Vector3(12.5, DECK_Y, 2.8)]
 
 	# 14 Spawns covering all tiers and locations
 	# West Fort Spawns

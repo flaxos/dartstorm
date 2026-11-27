@@ -60,6 +60,13 @@ func _build_drag_catcher() -> void:
 	add_child(_drag_catcher)
 
 
+func focus_default() -> void:
+	if _slot_buttons.has(WeaponModding.Slot.OPTIC):
+		var btn: Button = _slot_buttons[WeaponModding.Slot.OPTIC]
+		if btn != null:
+			btn.grab_focus()
+
+
 func _on_drag_catcher_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
@@ -76,7 +83,7 @@ func _on_drag_catcher_gui_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion and _is_dragging_orbit:
 		var mm := event as InputEventMouseMotion
 		orbit_requested.emit(mm.relative)
-	elif event is InputEventScreenDrag:
+	elif event is InputEventScreenDrag and not _is_dragging_orbit:
 		var sd := event as InputEventScreenDrag
 		orbit_requested.emit(sd.relative)
 
@@ -153,7 +160,7 @@ func _build_top_bar() -> void:
 	var title_hbox := HBoxContainer.new()
 	mastery_vbox.add_child(title_hbox)
 
-	_mastery_title_label = UiKit.label("⭐ RANK 1: STOCK ISSUE", 18, UiKit.ORANGE_HOT, 6)
+	_mastery_title_label = UiKit.label("RANK 1: STOCK ISSUE", 18, UiKit.ORANGE_HOT, 6)
 	title_hbox.add_child(_mastery_title_label)
 
 	title_hbox.add_child(Control.new())
@@ -171,7 +178,7 @@ func _build_top_bar() -> void:
 	_mastery_bar.add_theme_stylebox_override("fill", UiKit.panel_style(UiKit.ORANGE, 1.0, 6, 0))
 	mastery_vbox.add_child(_mastery_bar)
 
-	_tags_label = UiKit.label("Tags: 0  •  Ricochets: 0", 13, UiKit.CREAM, 4)
+	_tags_label = UiKit.label("Tags: 0  |  XP: 0", 13, UiKit.CREAM, 4)
 	mastery_vbox.add_child(_tags_label)
 
 
@@ -283,8 +290,8 @@ func _build_stats_column() -> void:
 func _build_attachment_drawer() -> void:
 	_drawer_panel = UiKit.panel(UiKit.NAVY_DARK, 0.95, 18, 2, UiKit.ORANGE, 12)
 	add_child(_drawer_panel)
-	UiKit.pin(_drawer_panel, Vector2(0.5, 1.0), Vector2(0.0, -78.0), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_BEGIN)
-	_drawer_panel.custom_minimum_size = Vector2(720, 205)
+	UiKit.pin(_drawer_panel, Vector2(0.5, 1.0), Vector2(0.0, -76.0), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_BEGIN)
+	_drawer_panel.custom_minimum_size = Vector2(680, 198)
 	_drawer_panel.visible = false
 
 	var vbox := VBoxContainer.new()
@@ -300,18 +307,19 @@ func _build_attachment_drawer() -> void:
 	title_bar.add_child(Control.new())
 	title_bar.get_child(1).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
-	var close_drawer_btn := UiKit.small_button("✕", Vector2(34, 30))
+	var close_drawer_btn := UiKit.small_button("X", Vector2(34, 30))
 	close_drawer_btn.pressed.connect(func() -> void: _close_drawer())
 	title_bar.add_child(close_drawer_btn)
 
 	_drawer_scroll = ScrollContainer.new()
-	_drawer_scroll.custom_minimum_size = Vector2(696, 142)
+	_drawer_scroll.custom_minimum_size = Vector2(656, 138)
 	_drawer_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_drawer_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	_drawer_scroll.follow_focus = true
 	vbox.add_child(_drawer_scroll)
 
 	_drawer_container = HBoxContainer.new()
-	_drawer_container.add_theme_constant_override("separation", 14)
+	_drawer_container.add_theme_constant_override("separation", 12)
 	_drawer_scroll.add_child(_drawer_container)
 
 
@@ -323,7 +331,7 @@ func _build_bottom_bar() -> void:
 
 	var hbox := HBoxContainer.new()
 	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	hbox.add_theme_constant_override("separation", 24)
+	hbox.add_theme_constant_override("separation", 20)
 	bottom_panel.add_child(hbox)
 
 	var back_btn := UiKit.small_button("< BACK TO MENU", Vector2(170, 40))
@@ -334,11 +342,11 @@ func _build_bottom_bar() -> void:
 	reset_btn.pressed.connect(_on_reset_to_stock)
 	hbox.add_child(reset_btn)
 
-	var test_btn := UiKit.button("🎯 TEST FIRE (SPACE)", 19, Vector2(220, 42))
+	var test_btn := UiKit.button("TEST FIRE [T]", 19, Vector2(200, 42))
 	test_btn.pressed.connect(func() -> void: test_fire_requested.emit())
 	hbox.add_child(test_btn)
 
-	var hint_label := UiKit.label("Left Drag: Orbit  •  Scroll: Zoom  •  Double-Click: Reset", 13, UiKit.GREY, 4)
+	var hint_label := UiKit.label("Left Drag: Orbit  |  Scroll: Zoom  |  Double-Click: Reset", 13, UiKit.GREY, 4)
 	hbox.add_child(hint_label)
 
 
@@ -451,25 +459,28 @@ func _build_attachment_card(att: Dictionary, is_unlocked: bool, is_equipped: boo
 		btn.disabled = true
 		btn.add_theme_stylebox_override("disabled", UiKit.panel_style(UiKit.ORANGE, 0.9, 8, 0))
 	elif not is_unlocked:
-		btn.text = "🔒 LOCKED (RANK %d)" % int(att.get("rank", 1))
+		btn.text = "LOCKED (RANK %d)" % int(att.get("rank", 1))
 		btn.disabled = true
 		btn.add_theme_stylebox_override("disabled", UiKit.panel_style(UiKit.NAVY_DARK, 0.8, 8, 0))
 	else:
 		btn.text = "EQUIP"
 		btn.add_theme_stylebox_override("normal", UiKit.panel_style(UiKit.BLUE, 1.0, 8, 0))
 		btn.add_theme_stylebox_override("hover", UiKit.panel_style(UiKit.SKY, 1.0, 8, 2, UiKit.CREAM))
+		btn.add_theme_stylebox_override("focus", UiKit.panel_style(UiKit.SKY, 1.0, 8, 3, UiKit.CREAM))
 		btn.pressed.connect(func() -> void: _equip_attachment(att_id))
 
-	# Mouse hover preview triggers live stat diff comparison!
-	panel.mouse_entered.connect(func() -> void:
+	# Mouse hover AND controller/keyboard focus trigger live stat diff comparison!
+	var on_enter := func() -> void:
 		hovered_attachment_id = att_id
 		_refresh_stats()
-	)
-	panel.mouse_exited.connect(func() -> void:
+	var on_exit := func() -> void:
 		if hovered_attachment_id == att_id:
 			hovered_attachment_id = &""
 			_refresh_stats()
-	)
+	panel.mouse_entered.connect(on_enter)
+	panel.mouse_exited.connect(on_exit)
+	btn.focus_entered.connect(on_enter)
+	btn.focus_exited.connect(on_exit)
 
 	vbox.add_child(btn)
 	return panel
@@ -498,6 +509,7 @@ func _on_reset_to_stock() -> void:
 			Progression.equip_attachment(w_id, WeaponModding.slot_string(slot), default_att)
 
 	Sfx.play(&"swap")
+	attachment_changed.emit(WeaponModding.Slot.NONE, &"")
 	_refresh_all()
 	if active_slot != WeaponModding.Slot.NONE:
 		_open_drawer(active_slot)
@@ -518,14 +530,14 @@ func _refresh_all() -> void:
 
 	var rank: int = int(progress["rank"])
 	var title: String = str(progress["title"])
-	_mastery_title_label.text = "⭐ RANK %d: %s" % [rank, title.to_upper()]
+	_mastery_title_label.text = "RANK %d: %s" % [rank, title.to_upper()]
 	_mastery_bar.value = float(progress["ratio"])
 	if bool(progress["is_max"]):
 		_mastery_xp_label.text = "MAX RANK (GOLD MASTER)"
 	else:
 		_mastery_xp_label.text = "%d / %d XP" % [int(progress["current_xp"]), int(progress["needed_xp"])]
 
-	_tags_label.text = "Tags: %d  •  XP: %d" % [tags, xp]
+	_tags_label.text = "Tags: %d  |  XP: %d" % [tags, xp]
 
 	# Refresh Slot Buttons text
 	var equipped_atts := Progression.get_equipped_attachments(w_id) if is_instance_valid(Progression) else {}
@@ -536,7 +548,7 @@ func _refresh_all() -> void:
 		var btn: Button = _slot_buttons[slot_enum]
 		var slot_name: String = WeaponModding.slot_name(slot_enum)
 		var att_name: String = String(att_def.get("name", "Factory Stock"))
-		btn.text = "%s\n  ▸ %s" % [slot_name.to_upper(), att_name]
+		btn.text = "%s\n  > %s" % [slot_name.to_upper(), att_name]
 
 	# Refresh Performance Stat Bars
 	_refresh_stats()
@@ -619,10 +631,12 @@ func _update_stat_bar(key: String, curr_val: float, prev_val: float, max_val: fl
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
-	if event.is_action_pressed(&"jump") or (event is InputEventKey and event.pressed and (event as InputEventKey).keycode == KEY_SPACE):
+	if (event is InputEventKey and event.pressed and not event.echo and (event as InputEventKey).keycode == KEY_T) \
+			or (event is InputEventJoypadButton and event.pressed and (event as InputEventJoypadButton).button_index == JOY_BUTTON_Y):
 		test_fire_requested.emit()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"ui_cancel"):
 		if active_slot != WeaponModding.Slot.NONE:
 			_close_drawer()
+			focus_default()
 			get_viewport().set_input_as_handled()

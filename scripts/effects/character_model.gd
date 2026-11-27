@@ -13,6 +13,7 @@ const ZOMBIE_SKIN := Color(0.48, 0.82, 0.38)
 
 static var _cloth_normal: Texture2D = preload("res://assets/textures/pbr/cloth_fabric_normal.png")
 static var _sneaker_normal: Texture2D = preload("res://assets/textures/pbr/sneaker_rubber_normal.png")
+static var _toon_shader: Shader = preload("res://assets/materials/toon_character.gdshader")
 
 static var _cached_cloth_mats: Dictionary = {}
 static var _cached_sneaker_mat: StandardMaterial3D = null
@@ -22,6 +23,23 @@ static func clear_character_materials() -> void:
 	_cached_cloth_mats.clear()
 	_cached_sneaker_mat = null
 	_cached_skin_mats.clear()
+
+
+static func _make_toon_mat(color: Color, roughness: float, normal_tex: Texture2D = null, normal_scale: float = 0.35) -> ShaderMaterial:
+	var mat := ShaderMaterial.new()
+	mat.shader = _toon_shader
+	mat.set_shader_parameter(&"albedo_color", Color(color.r, color.g, color.b, 1.0))
+	mat.set_shader_parameter(&"roughness", roughness)
+	mat.set_shader_parameter(&"rim_strength", 0.55)
+	mat.set_shader_parameter(&"rim_color", Color(1.0, 0.96, 0.88, 1.0))
+	if normal_tex != null:
+		mat.set_shader_parameter(&"use_normal_map", true)
+		mat.set_shader_parameter(&"texture_normal", normal_tex)
+		mat.set_shader_parameter(&"normal_scale", normal_scale)
+	else:
+		mat.set_shader_parameter(&"use_normal_map", false)
+	return mat
+
 
 static func _cloth_mat(color: Color) -> StandardMaterial3D:
 	var key := color.to_html(false)
@@ -98,6 +116,7 @@ var _meter_fill: MeshInstance3D
 var _meter_back: MeshInstance3D
 var _walk_phase: float = 0.0
 var _flinch: float = 0.0
+var _aim_pitch: float = 0.0
 var _hat_root: Node3D
 var _propeller: Node3D
 var _hat_id: StringName = &"cap"
@@ -105,6 +124,15 @@ var _is_zombie: bool = false
 var _shield_bubble: MeshInstance3D
 var _hero_model_node: Node3D = null
 var _hero_skeleton: Skeleton3D = null
+var _victory_mode: bool = false
+
+## Per-character stylized toon ShaderMaterials enabling live hit-flash & elemental visuals.
+var _my_shirt_mat: ShaderMaterial = null
+var _my_pants_mat: ShaderMaterial = null
+var _my_skin_mat: ShaderMaterial = null
+var _my_sneaker_mat: ShaderMaterial = null
+var _hit_flash_left: float = 0.0
+var _electric_flash_left: float = 0.0
 
 
 var _raw_display_name: String = ""
@@ -152,22 +180,85 @@ func hat_id() -> StringName:
 	return _hat_id
 
 
+func _ensure_instance_materials() -> void:
+	if _my_shirt_mat == null:
+		_my_shirt_mat = _make_toon_mat(_tint, 0.84, _cloth_normal, 0.35)
+	if _my_pants_mat == null:
+		_my_pants_mat = _make_toon_mat(NAVY, 0.86, _cloth_normal, 0.35)
+	if _my_skin_mat == null:
+		_my_skin_mat = _make_toon_mat(SKIN, 0.72, null, 0.0)
+	if _my_sneaker_mat == null:
+		_my_sneaker_mat = _make_toon_mat(Color(0.96, 0.96, 0.98), 0.68, _sneaker_normal, 0.42)
+
+
+func _set_toon_param(param: StringName, value: float) -> void:
+	for mat in [_my_shirt_mat, _my_pants_mat, _my_skin_mat, _my_sneaker_mat]:
+		if mat != null:
+			mat.set_shader_parameter(param, value)
+
+
+## Brief bright hit-confirm silhouette flash when tagged by a dart or blast.
+func trigger_hit_flash() -> void:
+	_hit_flash_left = 0.14
+	_set_toon_param(&"hit_flash", 1.0)
+
+
+## Updates live elemental status visuals on the character's toon shader.
+func set_elemental_visual(element: DartData.Element, active: bool) -> void:
+	var val := 1.0 if active else 0.0
+	match element:
+		DartData.Element.ICE:
+			_set_toon_param(&"frost_amount", val)
+		DartData.Element.FIRE:
+			_set_toon_param(&"fire_glow", val)
+		DartData.Element.WATER:
+			_set_toon_param(&"wet_gloss", val)
+		DartData.Element.LIGHTNING:
+			if active:
+				_electric_flash_left = 0.45
+				_set_toon_param(&"electric_arc", 1.0)
+			else:
+				_electric_flash_left = 0.0
+				_set_toon_param(&"electric_arc", 0.0)
+
+
+func clear_elemental_visuals() -> void:
+	_hit_flash_left = 0.0
+	_electric_flash_left = 0.0
+	_set_toon_param(&"hit_flash", 0.0)
+	_set_toon_param(&"frost_amount", 0.0)
+	_set_toon_param(&"fire_glow", 0.0)
+	_set_toon_param(&"wet_gloss", 0.0)
+	_set_toon_param(&"electric_arc", 0.0)
+
+
+## Plays the cheerful victory wave animation (used on the end-of-match podium).
+func play_victory() -> void:
+	_victory_mode = true
+	if _hero_model_node != null:
+		var anim_player: AnimationPlayer = _hero_model_node.find_child("AnimationPlayer", true, false) as AnimationPlayer
+		if anim_player != null and anim_player.has_animation("victory"):
+			anim_player.play("victory")
+
+
 ## Swaps shirt / clothing color (used by customise screen).
 func set_shirt(color: Color) -> void:
 	_tint = color
+	_ensure_instance_materials()
+	if not _is_zombie:
+		_my_shirt_mat.set_shader_parameter(&"albedo_color", Color(_tint.r, _tint.g, _tint.b, 1.0))
 	if _name_label != null:
 		_name_label.modulate = _tint.lightened(0.35)
 	if _hero_model_node != null and is_instance_valid(ModelLoader):
 		var overrides := {
-			"clothing": _cloth_mat(_tint),
-			"shirt": _cloth_mat(_tint),
+			"clothing": _my_shirt_mat,
+			"shirt": _my_shirt_mat,
 		}
 		ModelLoader.apply_materials_recursive(_hero_model_node, overrides)
 	elif _torso != null:
-		var shirt := _cloth_mat(_tint)
-		_torso.material_override = shirt
+		_torso.material_override = _my_shirt_mat
 		for arm in _arms:
-			arm.material_override = shirt
+			arm.material_override = _my_shirt_mat
 	else:
 		_build()
 	_build_hat()
@@ -183,51 +274,55 @@ func show_overhead(shown: bool) -> void:
 
 func set_zombie(enabled: bool) -> void:
 	_is_zombie = enabled
+	_ensure_instance_materials()
+	var shirt_col := ZOMBIE_GREEN if enabled else _tint
+	var pants_col := ZOMBIE_GREEN.darkened(0.25) if enabled else NAVY
+	var skin_col := ZOMBIE_SKIN if enabled else SKIN
+	_my_shirt_mat.set_shader_parameter(&"albedo_color", Color(shirt_col.r, shirt_col.g, shirt_col.b, 1.0))
+	_my_pants_mat.set_shader_parameter(&"albedo_color", Color(pants_col.r, pants_col.g, pants_col.b, 1.0))
+	_my_skin_mat.set_shader_parameter(&"albedo_color", Color(skin_col.r, skin_col.g, skin_col.b, 1.0))
+
 	if _hero_model_node != null and is_instance_valid(ModelLoader):
-		var zombie_mat := _cloth_mat(ZOMBIE_GREEN)
-		var zombie_skin_mat := _skin_mat(ZOMBIE_SKIN)
 		var zombie_map := {
-			"clothing": zombie_mat if enabled else _cloth_mat(_tint),
-			"pants": _cloth_mat(ZOMBIE_GREEN.darkened(0.25)) if enabled else _cloth_mat(NAVY),
-			"skin": zombie_skin_mat if enabled else _skin_mat(SKIN)
+			"clothing": _my_shirt_mat,
+			"pants": _my_pants_mat,
+			"skin": _my_skin_mat,
 		}
 		ModelLoader.apply_materials_recursive(_hero_model_node, zombie_map)
 		if enabled:
 			set_weapon(null)
 		if _name_label != null:
 			_name_label.modulate = Color(0.5, 0.95, 0.35) if enabled else _tint.lightened(0.35)
+		_apply_hero_arm_poses()
 		return
 
 	if enabled:
-		var zombie_mat := _cloth_mat(ZOMBIE_GREEN)
-		var zombie_skin_mat := _skin_mat(ZOMBIE_SKIN)
 		if _torso != null:
-			_torso.material_override = zombie_mat
+			_torso.material_override = _my_shirt_mat
 		if _head != null:
-			_head.material_override = zombie_skin_mat
+			_head.material_override = _my_skin_mat
 		for i in _arms.size():
 			var arm := _arms[i]
 			var side: float = -1.0 if i == 0 else 1.0
-			arm.material_override = zombie_mat
+			arm.material_override = _my_shirt_mat
 			arm.rotation_degrees = Vector3(90.0, side * -5.0, 0.0)
 		for leg in _legs:
-			leg.material_override = _cloth_mat(ZOMBIE_GREEN.darkened(0.25))
+			leg.material_override = _my_pants_mat
 		set_weapon(null)
 		if _name_label != null:
 			_name_label.modulate = Color(0.5, 0.95, 0.35)
 	else:
-		var shirt := _cloth_mat(_tint)
 		if _torso != null:
-			_torso.material_override = shirt
+			_torso.material_override = _my_shirt_mat
 		if _head != null:
-			_head.material_override = _skin_mat(SKIN)
+			_head.material_override = _my_skin_mat
 		for i in _arms.size():
 			var arm := _arms[i]
 			var side: float = -1.0 if i == 0 else 1.0
-			arm.material_override = shirt
+			arm.material_override = _my_shirt_mat
 			arm.rotation_degrees = Vector3(80.0, side * -18.0, 0.0)
 		for leg in _legs:
-			leg.material_override = _cloth_mat(NAVY)
+			leg.material_override = _my_pants_mat
 		if _name_label != null:
 			_name_label.modulate = _tint.lightened(0.35)
 
@@ -239,6 +334,12 @@ func is_zombie() -> bool:
 func _process(delta: float) -> void:
 	if _propeller != null and is_instance_valid(_propeller):
 		_propeller.rotate_y(delta * 14.0)
+	if _hit_flash_left > 0.0:
+		_hit_flash_left = maxf(_hit_flash_left - delta, 0.0)
+		_set_toon_param(&"hit_flash", _hit_flash_left / 0.14)
+	if _electric_flash_left > 0.0:
+		_electric_flash_left = maxf(_electric_flash_left - delta, 0.0)
+		_set_toon_param(&"electric_arc", clampf(_electric_flash_left / 0.45, 0.0, 1.0))
 
 
 func set_weapon(data: WeaponData, skin_id: StringName = &"", attachments: Dictionary = {}) -> void:
@@ -246,29 +347,65 @@ func set_weapon(data: WeaponData, skin_id: StringName = &"", attachments: Dictio
 		_weapon.queue_free()
 		_weapon = null
 	if data == null:
+		if _backpack != null:
+			_backpack.visible = false
+		_apply_hero_arm_poses()
 		return
 	_weapon = BlasterModel.create(data, false, skin_id, attachments)
-	_weapon.scale = Vector3.ONE * 1.35
+	_weapon.scale = Vector3.ONE * 1.25
 	_weapon_mount.add_child(_weapon)
-	if _weapon.grip_marker != null:
-		_weapon.position = -_weapon.grip_marker.position * 1.35
-	_backpack.visible = data.model_style == WeaponData.ModelStyle.ROTARY
+	if _hero_skeleton != null:
+		# Right arm raises +72 deg forward around X so the grip sits right inside the palm;
+		# counter-rotate the blaster -72 deg so its barrel aims straight forward (-Z).
+		_weapon.rotation_degrees = Vector3(-72.0, 0.0, 0.0)
+		if _weapon.grip_marker != null:
+			var rotated_grip := _weapon.transform.basis * _weapon.grip_marker.position
+			_weapon.position = -rotated_grip
+		else:
+			_weapon.position = Vector3(0.0, 0.04, 0.02)
+	else:
+		if _weapon.grip_marker != null:
+			_weapon.position = -_weapon.grip_marker.position * 1.25
+	if _backpack != null:
+		_backpack.visible = data.model_style == WeaponData.ModelStyle.ROTARY
+	_apply_hero_arm_poses()
 
 
 func get_weapon() -> BlasterModel:
 	return _weapon
 
 
-## Tilts the upper body to match where the bot is aiming.
+## Tilts the upper body / aiming arm to match where the character is aiming.
 func set_aim_pitch(radians: float) -> void:
+	_aim_pitch = clampf(radians, -0.85, 0.85)
 	if _hero_skeleton != null:
-		var bone_idx := _hero_skeleton.find_bone("Chest")
-		if bone_idx >= 0:
-			var pitch := clampf(radians, -0.9, 0.9)
-			_hero_skeleton.set_bone_pose_rotation(bone_idx, Quaternion(Vector3.RIGHT, pitch))
-			return
+		_apply_hero_arm_poses()
+		return
 	if _upper != null:
-		_upper.rotation.x = clampf(radians, -0.9, 0.9)
+		_upper.rotation.x = _aim_pitch
+
+
+func _apply_hero_arm_poses() -> void:
+	if _hero_skeleton == null or _victory_mode:
+		return
+	var arm_r_idx := _hero_skeleton.find_bone("UpperArm_R")
+	var arm_l_idx := _hero_skeleton.find_bone("UpperArm_L")
+	var chest_idx := _hero_skeleton.find_bone("Chest")
+	if _is_zombie:
+		var lurch := sin(_walk_phase * 0.9) * 0.14
+		if arm_r_idx >= 0:
+			_hero_skeleton.set_bone_pose_rotation(arm_r_idx, Quaternion(Vector3.RIGHT, deg_to_rad(86.0) + lurch))
+		if arm_l_idx >= 0:
+			_hero_skeleton.set_bone_pose_rotation(arm_l_idx, Quaternion(Vector3.RIGHT, deg_to_rad(86.0) - lurch))
+	else:
+		if arm_r_idx >= 0:
+			if _weapon != null:
+				_hero_skeleton.set_bone_pose_rotation(arm_r_idx, Quaternion(Vector3.RIGHT, deg_to_rad(72.0) + _aim_pitch * 0.65))
+			else:
+				_hero_skeleton.set_bone_pose_rotation(arm_r_idx, Quaternion.IDENTITY)
+		if chest_idx >= 0 and absf(_aim_pitch) > 0.01:
+			var base_rot := _hero_skeleton.get_bone_pose_rotation(chest_idx)
+			_hero_skeleton.set_bone_pose_rotation(chest_idx, base_rot * Quaternion(Vector3.RIGHT, _aim_pitch * 0.35))
 
 
 ## 0 = fresh, 1 = about to be tagged out.
@@ -279,12 +416,14 @@ func set_meter(ratio: float) -> void:
 
 func flinch() -> void:
 	_flinch = 1.0
+	trigger_hit_flash()
 
 
 func animate(horizontal_speed: float, delta: float) -> void:
+	_walk_phase += delta * maxf(horizontal_speed, 1.2) * 1.6
 	if _hero_model_node != null:
 		var anim_player: AnimationPlayer = _hero_model_node.find_child("AnimationPlayer", true, false) as AnimationPlayer
-		if anim_player != null:
+		if anim_player != null and not _victory_mode:
 			if _flinch > 0.05 and anim_player.has_animation("flinch"):
 				if anim_player.current_animation != "flinch":
 					anim_player.play("flinch")
@@ -295,9 +434,9 @@ func animate(horizontal_speed: float, delta: float) -> void:
 				if anim_player.has_animation("idle") and anim_player.current_animation != "idle":
 					anim_player.play("idle")
 		_flinch = move_toward(_flinch, 0.0, delta * 5.0)
+		_apply_hero_arm_poses()
 		return
 
-	_walk_phase += delta * horizontal_speed * 1.6
 	var swing := sin(_walk_phase) * clampf(horizontal_speed / 6.0, 0.0, 1.0) * 0.6
 	_legs[0].rotation.x = swing
 	_legs[1].rotation.x = -swing
@@ -455,13 +594,14 @@ func _build_from_hero_model() -> bool:
 					c.transform = _hero_skeleton.get_bone_global_rest(b_idx)
 					_hero_skeleton.force_update_bone_child_transform(b_idx)
 
+	_ensure_instance_materials()
 	var mat_map := {
-		"clothing": _cloth_mat(_tint),
-		"shirt": _cloth_mat(_tint),
-		"pants": _cloth_mat(NAVY),
-		"skin": _skin_mat(SKIN),
-		"shoes": _sneaker_mat(),
-		"sneaker": _sneaker_mat()
+		"clothing": _my_shirt_mat,
+		"shirt": _my_shirt_mat,
+		"pants": _my_pants_mat,
+		"skin": _my_skin_mat,
+		"shoes": _my_sneaker_mat,
+		"sneaker": _my_sneaker_mat,
 	}
 	ModelLoader.apply_materials_recursive(_hero_model_node, mat_map)
 
@@ -483,6 +623,11 @@ func _build_from_hero_model() -> bool:
 	_weapon_mount = ModelLoader.get_or_create_socket(_hero_model_node, &"Socket_Hand_R", &"Hand_R")
 	_hat_root = ModelLoader.get_or_create_socket(_hero_model_node, &"Socket_Head", &"Head")
 	_backpack = ModelLoader.get_or_create_socket(_hero_model_node, &"Socket_Back", &"Chest")
+	# Populate Chainstorm ammo pack geometry on the back socket (only visible while carrying Rotary)
+	if _backpack != null and _backpack.get_child_count() == 0:
+		ArenaKit.deco_box(_backpack, Vector3(0.46, 0.56, 0.24), Vector3(0.0, -0.08, 0.16), Color(1.0, 0.5, 0.1))
+		ArenaKit.deco_box(_backpack, Vector3(0.48, 0.09, 0.26), Vector3(0.0, 0.10, 0.16), Color(1.0, 0.85, 0.2))
+		_backpack.visible = false
 
 	var anim_player: AnimationPlayer = _hero_model_node.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if anim_player != null and anim_player.has_animation("idle"):

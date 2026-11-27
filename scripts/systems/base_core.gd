@@ -25,6 +25,7 @@ var _rot_speed: float = 1.5
 
 
 func _ready() -> void:
+	add_to_group(&"base_core")
 	collision_layer = Layers.WORLD
 	collision_mask = 0
 	_build_visuals()

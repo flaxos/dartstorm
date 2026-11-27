@@ -22,11 +22,11 @@ const SLOT_NAMES: Dictionary = {
 }
 
 const SLOT_ICONS: Dictionary = {
-	Slot.OPTIC: "🎯",
-	Slot.BARREL: "🔧",
-	Slot.SPRING: "⚡",
-	Slot.MAGAZINE: "📦",
-	Slot.STOCK: "🪵",
+	Slot.OPTIC: "[OPT]",
+	Slot.BARREL: "[BRL]",
+	Slot.SPRING: "[SPR]",
+	Slot.MAGAZINE: "[MAG]",
+	Slot.STOCK: "[STK]",
 }
 
 ## Standard 7 blasters in the arsenal that support workbench modding
@@ -37,15 +37,16 @@ const WORKBENCH_BLASTERS: Array[Dictionary] = [
 		"base_model": &"popper",
 		"res_path": "res://resources/weapons/pocket_popper.tres",
 		"desc": "Compact single-shot spring pistol. High mobility and snappy handling.",
-		"icon": "🔫"
+		"icon": "I"
 	},
 	{
-		"id": &"six_shot",
-		"name": "Six Shot",
+		"id": &"ricochet_ranger",
+		"alias_id": &"six_shot",
+		"name": "Ricochet Ranger",
 		"base_model": &"six_shot",
 		"res_path": "res://resources/weapons/ricochet_ranger.tres",
 		"desc": "Heavy revolving 6-dart cylinder. Hard-hitting ricochet rounds.",
-		"icon": "💥"
+		"icon": "II"
 	},
 	{
 		"id": &"dart_sprayer",
@@ -53,7 +54,7 @@ const WORKBENCH_BLASTERS: Array[Dictionary] = [
 		"base_model": &"storm",
 		"res_path": "res://resources/weapons/dart_sprayer.tres",
 		"desc": "Full-auto motorized dart blaster. Rapid-fire lawn control.",
-		"icon": "🌪️"
+		"icon": "III"
 	},
 	{
 		"id": &"double_trouble",
@@ -61,7 +62,7 @@ const WORKBENCH_BLASTERS: Array[Dictionary] = [
 		"base_model": &"sweeper",
 		"res_path": "res://resources/weapons/double_trouble.tres",
 		"desc": "Pump-action dual-barrel blaster. Fires two darts in wide spread.",
-		"icon": "⚡"
+		"icon": "IV"
 	},
 	{
 		"id": &"longshot",
@@ -69,7 +70,7 @@ const WORKBENCH_BLASTERS: Array[Dictionary] = [
 		"base_model": &"whisper",
 		"res_path": "res://resources/weapons/longshot.tres",
 		"desc": "Bolt-action precision marksman rifle. Unmatched range and accuracy.",
-		"icon": "🔭"
+		"icon": "V"
 	},
 	{
 		"id": &"flaxs_chainstorm",
@@ -77,7 +78,7 @@ const WORKBENCH_BLASTERS: Array[Dictionary] = [
 		"base_model": &"chainstorm",
 		"res_path": "res://resources/weapons/flaxs_chainstorm.tres",
 		"desc": "Rotating 6-barrel belt-fed heavy minigun. Massive suppressing firepower.",
-		"icon": "🔥"
+		"icon": "VI"
 	},
 	{
 		"id": &"thunder_cannon",
@@ -85,7 +86,7 @@ const WORKBENCH_BLASTERS: Array[Dictionary] = [
 		"base_model": &"rocket",
 		"res_path": "res://resources/weapons/thunder_cannon.tres",
 		"desc": "High-pressure rocket blaster with heavy explosive foam warheads.",
-		"icon": "🚀"
+		"icon": "VII"
 	},
 ]
 
@@ -329,9 +330,9 @@ const ATTACHMENTS: Array[Dictionary] = [
 		"slot": Slot.STOCK,
 		"rank": 4,
 		"desc": "Ergonomic front hand stop with textured finger grooves mounted to bottom rail.",
-		"pros": ["+20% aim recovery", "+10% sprint-to-fire speed", "-15% recoil", "+3% mobility"],
+		"pros": ["+20% aim recovery", "+25% ADS speed", "-15% recoil", "+3% mobility"],
 		"cons": ["Requires two-handed stance"],
-		"stats": {"recoil_mult": 0.85, "spread_mult": 0.90, "move_mult": 1.03}
+		"stats": {"recoil_mult": 0.85, "spread_mult": 0.90, "move_mult": 1.03, "ads_speed_mult": 1.25}
 	},
 	{
 		"id": &"counterweight_stock",
@@ -341,7 +342,7 @@ const ATTACHMENTS: Array[Dictionary] = [
 		"desc": "Reinforced crane stock with heavy battery counterweight balancing the blaster.",
 		"pros": ["-30% camera shake", "Completely removes idle sway", "-25% recoil"],
 		"cons": ["-4% mobility", "Heavier overall weight"],
-		"stats": {"recoil_mult": 0.75, "move_mult": 0.96}
+		"stats": {"recoil_mult": 0.75, "move_mult": 0.96, "sway_mult": 0.0, "shake_mult": 0.70}
 	},
 ]
 
@@ -428,6 +429,9 @@ static func compute_attachment_modifiers(equipped: Dictionary) -> Dictionary:
 		"reticle": &"standard",
 		"sound_override": &"",
 		"move_mult": 1.0,
+		"sway_mult": 1.0,
+		"shake_mult": 1.0,
+		"ads_speed_mult": 1.0,
 	}
 	for slot_key in equipped:
 		var att_id: StringName = StringName(str(equipped[slot_key]))
@@ -453,6 +457,12 @@ static func compute_attachment_modifiers(equipped: Dictionary) -> Dictionary:
 			result["gravity_mult"] *= float(stats["gravity_mult"])
 		if stats.has("move_mult"):
 			result["move_mult"] *= float(stats["move_mult"])
+		if stats.has("sway_mult"):
+			result["sway_mult"] *= float(stats["sway_mult"])
+		if stats.has("shake_mult"):
+			result["shake_mult"] *= float(stats["shake_mult"])
+		if stats.has("ads_speed_mult"):
+			result["ads_speed_mult"] *= float(stats["ads_speed_mult"])
 		if stats.has("zoom_fov") and float(stats["zoom_fov"]) > 0.0:
 			result["zoom_fov"] = float(stats["zoom_fov"])
 		if stats.has("reticle"):
@@ -462,10 +472,10 @@ static func compute_attachment_modifiers(equipped: Dictionary) -> Dictionary:
 	return result
 
 
-## Finds workbench blaster definition by weapon ID.
+## Finds workbench blaster definition by weapon ID (or legacy alias).
 static func find_workbench_blaster(weapon_id: StringName) -> Dictionary:
 	for b in WORKBENCH_BLASTERS:
-		if b.get("id", &"") == weapon_id:
+		if b.get("id", &"") == weapon_id or b.get("alias_id", &"") == weapon_id:
 			return b
 	return {}
 

@@ -60,8 +60,9 @@ static func clear_materials() -> void:
 
 ## Cached tactile material. Supports molded toy plastic, procedural timber, and brushed metal.
 static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
-		roughness: float = -1.0, metallic: float = -1.0, emission: float = 0.0) -> Material:
-	if surface == SurfaceType.DEFAULT:
+		roughness: float = -1.0, metallic: float = -1.0, emission: float = 0.0,
+		force_standard: bool = false) -> Material:
+	if surface == SurfaceType.DEFAULT and not force_standard:
 		# Detect desert sand / earth tones
 		if (color.is_equal_approx(Color(0.88, 0.76, 0.56))
 				or color.is_equal_approx(Color(0.87, 0.75, 0.55))):
@@ -94,11 +95,11 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 				or color.is_equal_approx(Color(0.72, 0.50, 0.30))):
 			surface = SurfaceType.WOOD
 
-	var key := "%s|%d|%.2f|%.2f|%.2f" % [color.to_html(), surface, roughness, metallic, emission]
+	var key := "%s|%d|%.2f|%.2f|%.2f|%s" % [color.to_html(), surface, roughness, metallic, emission, "S" if force_standard else "A"]
 	if _materials.has(key):
 		return _materials[key]
 
-	if surface == SurfaceType.WOOD:
+	if surface == SurfaceType.WOOD and not force_standard:
 		var sm := ShaderMaterial.new()
 		sm.shader = WOOD_SHADER
 		sm.set_shader_parameter(&"wood_tint", color)
@@ -140,7 +141,12 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 			material.uv1_world_triplanar = true
 			material.uv1_triplanar_sharpness = 24.0
 			material.uv1_scale = Vector3(0.2, 0.2, 0.2)
-			material.albedo_color = Color.WHITE if (color.is_equal_approx(Color(0.86, 0.76, 0.58)) or color.is_equal_approx(Color(0.85, 0.74, 0.55)) or color.is_equal_approx(Color(0.74, 0.64, 0.46)) or color.is_equal_approx(Color(0.72, 0.62, 0.44))) else color
+			if color.is_equal_approx(Color(0.86, 0.76, 0.58)) or color.is_equal_approx(Color(0.85, 0.74, 0.55)):
+				material.albedo_color = Color.WHITE
+			elif color.is_equal_approx(Color(0.74, 0.64, 0.46)) or color.is_equal_approx(Color(0.72, 0.62, 0.44)):
+				material.albedo_color = Color(0.82, 0.78, 0.72)
+			else:
+				material.albedo_color = color
 			material.roughness = 0.86 if roughness < 0.0 else roughness
 			material.metallic = 0.0 if metallic < 0.0 else metallic
 			material.metallic_specular = 0.12
@@ -158,7 +164,12 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 			material.uv1_world_triplanar = true
 			material.uv1_triplanar_sharpness = 24.0
 			material.uv1_scale = Vector3(0.2, 0.2, 0.2)
-			material.albedo_color = Color.WHITE if (color.is_equal_approx(Color(0.86, 0.76, 0.58)) or color.is_equal_approx(Color(0.85, 0.74, 0.55)) or color.is_equal_approx(Color(0.74, 0.64, 0.46)) or color.is_equal_approx(Color(0.72, 0.62, 0.44))) else color
+			if color.is_equal_approx(Color(0.86, 0.76, 0.58)) or color.is_equal_approx(Color(0.85, 0.74, 0.55)):
+				material.albedo_color = Color.WHITE
+			elif color.is_equal_approx(Color(0.74, 0.64, 0.46)) or color.is_equal_approx(Color(0.72, 0.62, 0.44)):
+				material.albedo_color = Color(0.84, 0.79, 0.72)
+			else:
+				material.albedo_color = color
 			material.roughness = 0.78 if roughness < 0.0 else roughness
 			material.metallic = 0.0 if metallic < 0.0 else metallic
 			material.metallic_specular = 0.10
@@ -176,7 +187,12 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 			material.uv1_world_triplanar = true
 			material.uv1_triplanar_sharpness = 24.0
 			material.uv1_scale = Vector3(0.18, 0.18, 0.18)
-			material.albedo_color = Color.WHITE if (color.is_equal_approx(Color(0.82, 0.72, 0.54)) or color.is_equal_approx(Color(0.78, 0.68, 0.50)) or color.is_equal_approx(Color(0.66, 0.60, 0.50)) or color.is_equal_approx(Color(0.65, 0.58, 0.48))) else color
+			if color.is_equal_approx(Color(0.82, 0.72, 0.54)) or color.is_equal_approx(Color(0.78, 0.68, 0.50)):
+				material.albedo_color = Color.WHITE
+			elif color.is_equal_approx(Color(0.66, 0.60, 0.50)) or color.is_equal_approx(Color(0.65, 0.58, 0.48)):
+				material.albedo_color = Color(0.82, 0.80, 0.76)
+			else:
+				material.albedo_color = color
 			material.roughness = 0.84 if roughness < 0.0 else roughness
 			material.metallic = 0.0 if metallic < 0.0 else metallic
 			material.metallic_specular = 0.10
@@ -265,10 +281,10 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 	return material
 
 
-## Cached flat-colour material. Sharing materials keeps draw calls low.
+## Cached flat-colour StandardMaterial3D. Always returns a valid StandardMaterial3D.
 static func mat(color: Color, roughness: float = 0.75, metallic: float = 0.0,
 		emission: float = 0.0) -> StandardMaterial3D:
-	return mat_styled(color, SurfaceType.DEFAULT, roughness, metallic, emission) as StandardMaterial3D
+	return mat_styled(color, SurfaceType.DEFAULT, roughness, metallic, emission, true) as StandardMaterial3D
 
 
 ## Solid coloured box. `pos` is the box centre.
@@ -428,10 +444,27 @@ static func prop(parent: Node, prop_id: StringName, pos: Vector3,
 	instance.rotation_degrees = rot_deg
 	if prop_scale != Vector3.ONE:
 		instance.scale = prop_scale
-	if parent != null and parent.name == "Decor" and instance is CollisionObject3D:
-		(instance as CollisionObject3D).collision_layer = 0
+	if _is_under_decor(parent):
+		_strip_collision_recursive(instance)
 	parent.add_child(instance)
 	return instance
+
+
+static func _is_under_decor(node: Node) -> bool:
+	var cur := node
+	while cur != null:
+		if cur.name == "Decor":
+			return true
+		cur = cur.get_parent()
+	return false
+
+
+static func _strip_collision_recursive(node: Node) -> void:
+	if node is CollisionObject3D:
+		(node as CollisionObject3D).collision_layer = 0
+		(node as CollisionObject3D).collision_mask = 0
+	for child in node.get_children():
+		_strip_collision_recursive(child)
 
 
 ## A round cartoon tree. Uses 3D model if available with graceful procedural fallback.
@@ -491,10 +524,10 @@ static func barrier(parent: Node, pos: Vector3, size_or_rot: Vector3 = Vector3(2
 
 
 ## High-poly curved stone/sandstone archway with voussoirs and keystone.
-static func arch(parent: Node, pos: Vector3, width: float = 4.4, height: float = 5.0,
+static func arch(parent: Node, pos: Vector3, width: float = 5.2, height: float = 5.0,
 		depth: float = 1.2, rot_deg: Vector3 = Vector3.ZERO) -> Node3D:
 	if ModelLoader.has_prop_model(&"archway_curved"):
-		var p_scale := Vector3(width / 4.4, height / 5.0, depth / 1.2)
+		var p_scale := Vector3(width / 5.2, height / 5.0, depth / 1.2)
 		var p := prop(parent, &"archway_curved", pos, rot_deg, p_scale)
 		if p != null:
 			return p

@@ -45,37 +45,37 @@ func _build_pitch_and_chalk() -> void:
 	# Stadium running track & outer grass backdrop
 	ArenaKit.deco_box(decor, Vector3(400.0, 0.2, 400.0), Vector3(0.0, -0.55, 0.0), Color(0.75, 0.32, 0.22))
 
-	# Boundary advertising boards / field walls (waist-high and solid)
+	# Boundary advertising boards / field walls + invisible stadium sky blockers
 	var wall_h := 1.2
 	var thick := 0.4
-	# North and South boundary
 	ArenaKit.box(geometry, Vector3(HALF_X * 2.0, wall_h, thick), Vector3(0.0, wall_h * 0.5, -HALF_Z), BLAZE_ORANGE, Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
 	ArenaKit.box(geometry, Vector3(HALF_X * 2.0, wall_h, thick), Vector3(0.0, wall_h * 0.5, HALF_Z), CYAN_BLUE, Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
-	# East and West boundary
 	ArenaKit.box(geometry, Vector3(thick, wall_h, HALF_Z * 2.0), Vector3(-HALF_X, wall_h * 0.5, 0.0), WHITE_WOOD_COLOR(), Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
 	ArenaKit.box(geometry, Vector3(thick, wall_h, HALF_Z * 2.0), Vector3(HALF_X, wall_h * 0.5, 0.0), WHITE_WOOD_COLOR(), Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
+	var sky_h := 18.0
+	ArenaKit.blocker(geometry, Vector3(HALF_X * 2.0 + 1.0, sky_h, thick), Vector3(0.0, wall_h + sky_h * 0.5, -HALF_Z))
+	ArenaKit.blocker(geometry, Vector3(HALF_X * 2.0 + 1.0, sky_h, thick), Vector3(0.0, wall_h + sky_h * 0.5, HALF_Z))
+	ArenaKit.blocker(geometry, Vector3(thick, sky_h, HALF_Z * 2.0 + 1.0), Vector3(-HALF_X, wall_h + sky_h * 0.5, 0.0))
+	ArenaKit.blocker(geometry, Vector3(thick, sky_h, HALF_Z * 2.0 + 1.0), Vector3(HALF_X, wall_h + sky_h * 0.5, 0.0))
 
-	# Chalk lines (flush decals with ground)
+	# Non-colliding chalk lines in decor (zero navmesh fragmentation)
 	var line_w := 0.18
-	# Halfway line (along X)
-	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 - 1.0, 0.02, line_w), Vector3(0.0, 0.01, 0.0), CHALK)
-	# Center circle (approximate with ring of small segments)
+	ArenaKit.deco_box(decor, Vector3(HALF_X * 2.0 - 1.0, 0.02, line_w), Vector3(0.0, 0.015, 0.0), CHALK)
 	for i in 24:
 		var a := float(i) * TAU / 24.0
-		var cp := Vector3(cos(a) * 5.0, 0.01, sin(a) * 5.0)
-		ArenaKit.box(geometry, Vector3(1.3, 0.02, line_w), cp, CHALK, Vector3(0.0, -rad_to_deg(a), 0.0))
-	# Center spot
-	ArenaKit.cylinder(geometry, 0.45, 0.02, Vector3(0.0, 0.01, 0.0), CHALK)
+		var cp := Vector3(cos(a) * 5.0, 0.015, sin(a) * 5.0)
+		ArenaKit.deco_box(decor, Vector3(1.3, 0.02, line_w), cp, CHALK, Vector3(0.0, -rad_to_deg(a), 0.0))
+	ArenaKit.deco_cylinder(decor, 0.45, 0.02, Vector3(0.0, 0.015, 0.0), CHALK)
 
 	# North penalty box
-	ArenaKit.box(geometry, Vector3(16.0, 0.02, line_w), Vector3(0.0, 0.01, -HALF_Z + 8.0), CHALK)
-	ArenaKit.box(geometry, Vector3(line_w, 0.02, 8.0), Vector3(-8.0, 0.01, -HALF_Z + 4.0), CHALK)
-	ArenaKit.box(geometry, Vector3(line_w, 0.02, 8.0), Vector3(8.0, 0.01, -HALF_Z + 4.0), CHALK)
+	ArenaKit.deco_box(decor, Vector3(16.0, 0.02, line_w), Vector3(0.0, 0.015, -HALF_Z + 8.0), CHALK)
+	ArenaKit.deco_box(decor, Vector3(line_w, 0.02, 8.0), Vector3(-8.0, 0.015, -HALF_Z + 4.0), CHALK)
+	ArenaKit.deco_box(decor, Vector3(line_w, 0.02, 8.0), Vector3(8.0, 0.015, -HALF_Z + 4.0), CHALK)
 
 	# South penalty box
-	ArenaKit.box(geometry, Vector3(16.0, 0.02, line_w), Vector3(0.0, 0.01, HALF_Z - 8.0), CHALK)
-	ArenaKit.box(geometry, Vector3(line_w, 0.02, 8.0), Vector3(-8.0, 0.01, HALF_Z - 4.0), CHALK)
-	ArenaKit.box(geometry, Vector3(line_w, 0.02, 8.0), Vector3(8.0, 0.01, HALF_Z - 4.0), CHALK)
+	ArenaKit.deco_box(decor, Vector3(16.0, 0.02, line_w), Vector3(0.0, 0.015, HALF_Z - 8.0), CHALK)
+	ArenaKit.deco_box(decor, Vector3(line_w, 0.02, 8.0), Vector3(-8.0, 0.015, HALF_Z - 4.0), CHALK)
+	ArenaKit.deco_box(decor, Vector3(line_w, 0.02, 8.0), Vector3(8.0, 0.015, HALF_Z - 4.0), CHALK)
 
 
 func WHITE_WOOD_COLOR() -> Color:
@@ -83,10 +83,9 @@ func WHITE_WOOD_COLOR() -> Color:
 
 
 func _build_soccer_goals() -> void:
-	# North Goal (Blue end)
-	_build_single_goal(Vector3(0.0, 0.0, -HALF_Z + 0.8), 0.0)
-	# South Goal (Orange end)
-	_build_single_goal(Vector3(0.0, 0.0, HALF_Z - 0.8), 180.0)
+	# Goals placed fully inside the pitch bounds so nets never clip outside the boards
+	_build_single_goal(Vector3(0.0, 0.0, -HALF_Z + 2.5), 0.0)
+	_build_single_goal(Vector3(0.0, 0.0, HALF_Z - 2.5), 180.0)
 
 
 func _build_single_goal(at: Vector3, rot_y: float) -> void:
@@ -185,7 +184,7 @@ func _build_foam_soccer_ball(at: Vector3, radius: float) -> void:
 	body.shape_owner_add_shape(owner_id, shape)
 	geometry.add_child(body)
 
-	# Visual decorated sphere
+	# Visual decorated soccer ball with black pentagon patches
 	var mesh_inst := MeshInstance3D.new()
 	var sphere_mesh := SphereMesh.new()
 	sphere_mesh.radius = radius
@@ -193,6 +192,25 @@ func _build_foam_soccer_ball(at: Vector3, radius: float) -> void:
 	mesh_inst.mesh = sphere_mesh
 	mesh_inst.material_override = ArenaKit.mat_styled(Color(0.96, 0.96, 0.98), ArenaKit.SurfaceType.PLASTIC)
 	body.add_child(mesh_inst)
+	var patch_dirs: Array[Vector3] = [
+		Vector3.UP, Vector3.DOWN, Vector3.LEFT, Vector3.RIGHT, Vector3.FORWARD, Vector3.BACK,
+		Vector3(0.7, 0.7, 0.0).normalized(), Vector3(-0.7, 0.7, 0.0).normalized(),
+		Vector3(0.0, 0.7, 0.7).normalized(), Vector3(0.0, 0.7, -0.7).normalized(),
+	]
+	for d in patch_dirs:
+		var patch := MeshInstance3D.new()
+		var p_cyl := CylinderMesh.new()
+		p_cyl.top_radius = radius * 0.28
+		p_cyl.bottom_radius = radius * 0.28
+		p_cyl.height = 0.06
+		p_cyl.radial_segments = 5
+		patch.mesh = p_cyl
+		patch.material_override = ArenaKit.mat_styled(Color(0.10, 0.12, 0.16), ArenaKit.SurfaceType.PLASTIC)
+		var up_ref := Vector3.FORWARD if absf(d.y) > 0.9 else Vector3.UP
+		var x_axis := up_ref.cross(d).normalized()
+		var z_axis := d.cross(x_axis).normalized()
+		patch.transform = Transform3D(Basis(x_axis, d, z_axis), d * (radius - 0.015))
+		body.add_child(patch)
 
 
 func _build_agility_obstacles() -> void:
@@ -246,21 +264,34 @@ func _build_floodlight_towers() -> void:
 		ArenaKit.cylinder(geometry, 0.35, h, p + Vector3(0.0, h * 0.5, 0.0), STEEL, ArenaKit.SurfaceType.METAL)
 		# Crossbar light fixture in decor
 		ArenaKit.deco_box(decor, Vector3(3.2, 0.8, 0.8), p + Vector3(0.0, h, 0.0), STEEL)
-		# 3 Floodlight emissive heads
+		# 3 Emissive floodlight heads + twilight stadium spotlight aimed at midfield
 		for lx in [-1.0, 0.0, 1.0]:
-			ArenaKit.deco_sphere(decor, 0.45, p + Vector3(lx, h, 0.0), FLOODLIGHT, 0.75)
+			ArenaKit.deco_sphere(decor, 0.45, p + Vector3(lx, h, 0.0), FLOODLIGHT, 0.85, 4.0)
+		var spot := SpotLight3D.new()
+		spot.position = p + Vector3(0.0, h - 0.4, 0.0)
+		spot.light_color = Color(0.95, 0.97, 1.0)
+		spot.light_energy = 5.5
+		spot.spot_range = 65.0
+		spot.spot_angle = 52.0
+		spot.spot_attenuation = 0.6
+		decor.add_child(spot)
+		spot.look_at(Vector3(p.x * 0.2, 0.0, p.z * 0.2), Vector3.UP)
 
 
 func _build_spawns_and_points() -> void:
-	# Team bases: North Goal (Blue Base) vs South Goal (Orange Base)
-	team_bases.clear()
-	team_bases.append(Vector3(0.0, 0.0, -HALF_Z + 3.0))   # Blue Base (North Goal)
-	team_bases.append(Vector3(0.0, 0.0, HALF_Z - 3.0))    # Orange Base (South Goal)
+	# Team bases, Flag pedestals & Bomb sites
+	team_bases = [Vector3(0.0, 0.0, -HALF_Z + 5.0), Vector3(0.0, 0.0, HALF_Z - 5.0)]
+	flag_pedestals = [Vector3(0.0, 0.0, -HALF_Z + 5.0), Vector3(0.0, 0.0, HALF_Z - 5.0)]
+	bomb_sites = {
+		"A": Vector3(-19.5, 0.0, 0.0),
+		"B": Vector3(19.5, 0.0, 0.0),
+	}
+	bomb_spawns = [Vector3(0.0, 0.0, HALF_Z - 6.0)]
 
 	# 12 Spawn points across both halves and sidelines
 	var spawns: Array[Vector3] = [
-		Vector3(-12.0, 0.0, -HALF_Z + 4.0),
-		Vector3(12.0, 0.0, -HALF_Z + 4.0),
+		Vector3(-12.0, 0.0, -HALF_Z + 4.5),
+		Vector3(12.0, 0.0, -HALF_Z + 4.5),
 		Vector3(-20.0, 0.0, -10.0),
 		Vector3(20.0, 0.0, -10.0),
 		Vector3(-6.0, 0.0, -2.0),
@@ -269,23 +300,23 @@ func _build_spawns_and_points() -> void:
 		Vector3(6.0, 0.0, 2.0),
 		Vector3(-20.0, 0.0, 10.0),
 		Vector3(20.0, 0.0, 10.0),
-		Vector3(-12.0, 0.0, HALF_Z - 4.0),
-		Vector3(12.0, 0.0, HALF_Z - 4.0),
+		Vector3(-12.0, 0.0, HALF_Z - 4.5),
+		Vector3(12.0, 0.0, HALF_Z - 4.5),
 	]
 	for p in spawns:
 		add_spawn(p, Vector3.ZERO.direction_to(Vector3(0.0, 0.0, -p.z)))
 
-	# Roam points for bots
+	# Clear unobstructed roam points around bunkers & balls
 	roam_points.clear()
-	roam_points.append(Vector3(0.0, 0.0, 0.0))        # Center spot
-	roam_points.append(Vector3(-8.0, 0.0, 0.0))       # West midfield
-	roam_points.append(Vector3(8.0, 0.0, 0.0))        # East midfield
-	roam_points.append(Vector3(0.0, 0.0, -12.0))      # North giant soccer ball
-	roam_points.append(Vector3(0.0, 0.0, 12.0))       # South giant soccer ball
-	roam_points.append(Vector3(-16.0, 0.0, -8.0))     # NW pyramid
-	roam_points.append(Vector3(16.0, 0.0, 8.0))       # SE pyramid
-	roam_points.append(Vector3(0.0, 0.0, -HALF_Z + 4.0)) # North penalty box
-	roam_points.append(Vector3(0.0, 0.0, HALF_Z - 4.0))  # South penalty box
+	roam_points.append(Vector3(0.0, 0.0, 0.0))          # Center spot
+	roam_points.append(Vector3(-11.5, 0.0, 0.0))        # West midfield lane
+	roam_points.append(Vector3(11.5, 0.0, 0.0))         # East midfield lane
+	roam_points.append(Vector3(0.0, 0.0, -8.5))         # North midfield
+	roam_points.append(Vector3(0.0, 0.0, 8.5))          # South midfield
+	roam_points.append(Vector3(-11.5, 0.0, -10.0))      # NW wing
+	roam_points.append(Vector3(11.5, 0.0, 10.0))        # SE wing
+	roam_points.append(Vector3(0.0, 0.0, -HALF_Z + 6.0)) # North penalty box
+	roam_points.append(Vector3(0.0, 0.0, HALF_Z - 6.0))  # South penalty box
 
 	# Power-up spot (Center Circle)
 	power_up_spots.clear()
@@ -297,8 +328,5 @@ func _build_spawns_and_points() -> void:
 	add_bucket(Vector3(-18.0, 0.0, 12.0), Color(0.2, 0.6, 0.95))
 	add_bucket(Vector3(18.0, 0.0, 12.0), Color(0.95, 0.45, 0.15))
 
-	# Foam shield pickup in midfield
-	var shield := ShieldPickup.new()
-	shield.position = Vector3(0.0, 0.8, 0.0)
-	geometry.add_child(shield)
-	shield_pickups.append(shield)
+	# Foam shield pickup grounded cleanly in midfield
+	add_shield_pickup(Vector3(0.0, 0.0, 0.0))

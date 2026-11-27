@@ -79,7 +79,7 @@ func _build_ui() -> void:
 	add_child(pause_btn)
 
 	# 4. Quick Touch Fire Mode Toggle Pill (top-right, adjacent to Pause)
-	_mode_toggle = _create_touch_button("🎯 HOLD AIM", Vector2(136, 48), Color(UiKit.NAVY_DARK, 0.88), UiKit.ORANGE, 13)
+	_mode_toggle = _create_touch_button("HOLD AIM", Vector2(136, 48), Color(UiKit.NAVY_DARK, 0.88), UiKit.ORANGE, 13)
 	_mode_toggle.name = "FireModeToggle"
 	_mode_toggle.anchor_left = 1.0
 	_mode_toggle.anchor_top = 0.0
@@ -178,7 +178,7 @@ func _build_ui() -> void:
 	swap_btn.offset_right = -54.0
 	swap_btn.offset_bottom = -284.0
 	swap_btn.pressed.connect(func() -> void:
-		if player != null and player.arsenal != null:
+		if player != null and player.alive and player.controls_enabled and not player.is_zombie and not player.is_tagged_out and player.arsenal != null:
 			player.arsenal.cycle(1))
 	add_child(swap_btn)
 
@@ -202,10 +202,10 @@ func refresh_fire_mode() -> void:
 	var scale_mult: float = GameSettings.touch_fire_btn_size
 	if _mode_toggle != null:
 		if mode == GameSettings.TouchFireMode.HOLD_AND_AIM:
-			_mode_toggle.label_text = "🎯 HOLD AIM"
+			_mode_toggle.label_text = "HOLD AIM"
 			_mode_toggle.border_color = UiKit.ORANGE
 		else:
-			_mode_toggle.label_text = "👆 TAP FIRE"
+			_mode_toggle.label_text = "TAP FIRE"
 			_mode_toggle.border_color = UiKit.SKY
 		_mode_toggle.queue_redraw()
 
@@ -227,12 +227,14 @@ func _on_toggle_fire_mode() -> void:
 	GameSettings.save_settings()
 	refresh_fire_mode()
 	fire_mode_changed.emit(next_mode)
-	Sfx.play(&"click")
+	Sfx.play(&"ui_click")
 	var msg: String = "Touch Mode: Hold-to-Aim Auto-Fire" if next_mode == GameSettings.TouchFireMode.HOLD_AND_AIM else "Touch Mode: Aim then Tap Fire"
 	GameSettings.notify(msg)
 
 
 func _on_look_zone_input(event: InputEvent) -> void:
+	if not is_visible_in_tree():
+		return
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
 		if touch.pressed and _look_touch_id == -1:
@@ -246,9 +248,15 @@ func _on_look_zone_input(event: InputEvent) -> void:
 		if drag.index == _look_touch_id:
 			_handle_look(drag.relative)
 			accept_event()
+	elif _look_touch_id >= 0 and (event is InputEventMouseButton or event is InputEventMouseMotion):
+		accept_event()
 
 
 func _input(event: InputEvent) -> void:
+	if not is_visible_in_tree():
+		if _look_touch_id != -1:
+			_look_touch_id = -1
+		return
 	if _look_touch_id == -1:
 		return
 	if event is InputEventScreenDrag:
@@ -261,6 +269,8 @@ func _input(event: InputEvent) -> void:
 		if touch.index == _look_touch_id and (not touch.pressed or touch.canceled):
 			_look_touch_id = -1
 			get_viewport().set_input_as_handled()
+	elif _look_touch_id >= 0 and (event is InputEventMouseButton or event is InputEventMouseMotion):
+		get_viewport().set_input_as_handled()
 
 
 func _handle_look(delta: Vector2) -> void:
@@ -361,6 +371,8 @@ class TouchButton:
 
 
 	func _gui_input(event: InputEvent) -> void:
+		if not is_visible_in_tree():
+			return
 		if event is InputEventScreenTouch:
 			var touch := event as InputEventScreenTouch
 			if touch.pressed and _touch_id == -1:
@@ -371,6 +383,8 @@ class TouchButton:
 				_touch_id = -1
 				_set_pressed(false)
 				accept_event()
+		elif _touch_id >= 0 and (event is InputEventMouseButton or event is InputEventMouseMotion):
+			accept_event()
 		elif event is InputEventMouseButton and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 			var mb := event as InputEventMouseButton
 			if mb.button_index == MOUSE_BUTTON_LEFT:
@@ -385,6 +399,10 @@ class TouchButton:
 
 
 	func _input(event: InputEvent) -> void:
+		if not is_visible_in_tree():
+			if _touch_id != -1 or is_pressed:
+				reset()
+			return
 		if _touch_id == -1:
 			return
 		if event is InputEventScreenTouch:
@@ -393,6 +411,8 @@ class TouchButton:
 				_touch_id = -1
 				_set_pressed(false)
 				get_viewport().set_input_as_handled()
+		elif _touch_id >= 0 and (event is InputEventMouseButton or event is InputEventMouseMotion):
+			get_viewport().set_input_as_handled()
 		elif _touch_id == -2 and event is InputEventMouseButton:
 			var mb := event as InputEventMouseButton
 			if mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
@@ -447,8 +467,8 @@ class SmartFireButton:
 	func _process(delta: float) -> void:
 		_pulse_timer += delta * 6.0
 		if is_pressed:
-			# Auto-cycle semi-auto blasters while button is held
-			if player != null and player.alive and player.controls_enabled and player.arsenal != null:
+			# Auto-cycle semi-auto blasters while button is held only in HOLD_AND_AIM mode
+			if fire_mode == GameSettings.TouchFireMode.HOLD_AND_AIM and player != null and player.alive and player.controls_enabled and player.arsenal != null:
 				var w := player.arsenal.current()
 				if w != null and w.data.fire_mode == WeaponData.FireMode.SEMI and not player.is_tagged_out:
 					if player.arsenal._cooldown <= 0.0 and player.arsenal._semi_latched:
@@ -517,6 +537,8 @@ class SmartFireButton:
 
 
 	func _gui_input(event: InputEvent) -> void:
+		if not is_visible_in_tree():
+			return
 		if event is InputEventScreenTouch:
 			var touch := event as InputEventScreenTouch
 			if touch.pressed and _touch_id == -1:
@@ -532,6 +554,8 @@ class SmartFireButton:
 			if drag.index == _touch_id:
 				_handle_drag(drag.relative)
 				accept_event()
+		elif _touch_id >= 0 and (event is InputEventMouseButton or event is InputEventMouseMotion):
+			accept_event()
 		elif event is InputEventMouseButton and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 			var mb := event as InputEventMouseButton
 			if mb.button_index == MOUSE_BUTTON_LEFT:
@@ -550,6 +574,10 @@ class SmartFireButton:
 
 
 	func _input(event: InputEvent) -> void:
+		if not is_visible_in_tree():
+			if _touch_id != -1 or is_pressed:
+				reset()
+			return
 		if _touch_id == -1:
 			return
 		if event is InputEventScreenDrag:
@@ -563,6 +591,8 @@ class SmartFireButton:
 				_touch_id = -1
 				_set_pressed(false)
 				get_viewport().set_input_as_handled()
+		elif _touch_id >= 0 and (event is InputEventMouseButton or event is InputEventMouseMotion):
+			get_viewport().set_input_as_handled()
 		elif _touch_id == -2:
 			if event is InputEventMouseMotion:
 				var mm := event as InputEventMouseMotion

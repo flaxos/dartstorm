@@ -21,6 +21,7 @@ const PEAK_HEIGHT := 1.35
 
 var phase: Phase = Phase.CALM
 var time_left: float = CALM_DURATION
+var calm_height: float = CALM_HEIGHT
 var current_height: float = CALM_HEIGHT
 var cycle_count: int = 0
 
@@ -32,7 +33,16 @@ var _last_whole_warning: int = -1
 func setup(p_hazard: LavaHazard, p_controller: MatchController) -> void:
 	hazard = p_hazard
 	controller = p_controller
-	current_height = CALM_HEIGHT
+	calm_height = CALM_HEIGHT
+	if controller != null and controller.arena != null:
+		var min_y := 0.0
+		for sp in controller.arena.spawn_points:
+			min_y = minf(min_y, sp.global_position.y)
+		for rp in controller.arena.roam_points:
+			min_y = minf(min_y, rp.y)
+		if min_y < -0.2:
+			calm_height = minf(CALM_HEIGHT, min_y - 1.2)
+	current_height = calm_height
 	if hazard != null:
 		hazard.set_lava_height(current_height)
 
@@ -47,7 +57,7 @@ func _set_phase(new_phase: Phase) -> void:
 	match phase:
 		Phase.CALM:
 			time_left = CALM_DURATION
-			current_height = CALM_HEIGHT
+			current_height = calm_height
 			if hazard != null:
 				hazard.set_lava_height(current_height)
 			if controller != null and cycle_count > 0:
@@ -68,7 +78,7 @@ func _set_phase(new_phase: Phase) -> void:
 				hazard.set_lava_height(current_height)
 			cycle_count += 1
 			if controller != null:
-				controller.announce(null, "HIGH TIDE — STAY HIGH!", UiKit.ORANGE_HOT, &"announce")
+				controller.announce(null, "HIGH TIDE - STAY HIGH!", UiKit.ORANGE_HOT, &"announce")
 		Phase.RECEDING:
 			time_left = RECEDING_DURATION
 			Sfx.play(&"steam", 1.0, 0.0)
@@ -80,6 +90,8 @@ func _set_phase(new_phase: Phase) -> void:
 
 
 func _process(delta: float) -> void:
+	if controller != null and controller.state != MatchController.State.PLAYING:
+		return
 	time_left -= delta
 
 	match phase:
@@ -98,7 +110,7 @@ func _process(delta: float) -> void:
 
 		Phase.RISING:
 			var progress := 1.0 - clampf(time_left / RISING_DURATION, 0.0, 1.0)
-			current_height = lerpf(CALM_HEIGHT, PEAK_HEIGHT, progress)
+			current_height = lerpf(calm_height, PEAK_HEIGHT, progress)
 			if hazard != null:
 				hazard.set_lava_height(current_height)
 			lava_height_updated.emit(current_height)
@@ -111,7 +123,7 @@ func _process(delta: float) -> void:
 
 		Phase.RECEDING:
 			var progress := 1.0 - clampf(time_left / RECEDING_DURATION, 0.0, 1.0)
-			current_height = lerpf(PEAK_HEIGHT, CALM_HEIGHT, progress)
+			current_height = lerpf(PEAK_HEIGHT, calm_height, progress)
 			if hazard != null:
 				hazard.set_lava_height(current_height)
 			lava_height_updated.emit(current_height)

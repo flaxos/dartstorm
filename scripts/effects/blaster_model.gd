@@ -57,7 +57,8 @@ var _slide_cycle: float = 0.0
 var _belt: Array[Node3D] = []
 var _belt_phase: float = 0.0
 var _spin: float = 0.0
-var _flash: MeshInstance3D
+var _flash: Node3D
+var _flash_light: OmniLight3D = null
 var _flash_left: float = 0.0
 
 
@@ -84,15 +85,19 @@ func set_spin(ratio: float) -> void:
 	_spin = ratio
 
 
-## Shows the muzzle puff for one shot.
-func flash() -> void:
+## Shows the muzzle star burst + brief dynamic light for one shot.
+func flash(recoil_mult: float = 1.0) -> void:
 	if _flash == null:
 		return
-	_flash_left = 0.05
+	_flash_left = 0.055
 	_flash.visible = true
-	var burst := randf_range(0.7, 1.3) * clampf(GameSettings.visual_intensity, 0.3, 1.5)
+	var intensity := clampf(GameSettings.visual_intensity, 0.3, 1.5)
+	var burst := randf_range(0.75, 1.35) * intensity
 	_flash.scale = Vector3.ONE * burst
 	_flash.rotation.z = randf() * TAU
+	if _flash_light != null:
+		_flash_light.visible = true
+		_flash_light.light_energy = (2.8 if data != null and data.model_style == WeaponData.ModelStyle.ROTARY else 2.2) * intensity
 	if not _belt.is_empty():
 		_belt_phase = fposmod(_belt_phase - 0.5, 1.0)
 		_layout_belt()
@@ -105,7 +110,7 @@ func flash() -> void:
 	if _slide != null:
 		_slide_cycle = 1.0
 
-	var kick := data.recoil_kick if data != null else 1.0
+	var kick := (data.recoil_kick if data != null else 1.0) * recoil_mult
 	_recoil_z = 0.03 * kick
 	_recoil_pitch = 0.04 * kick
 
@@ -115,8 +120,12 @@ func _process(delta: float) -> void:
 		_spinner.rotate_z(_spin * BARREL_SPIN_SPEED * delta)
 	if _flash_left > 0.0:
 		_flash_left -= delta
+		if _flash_light != null:
+			_flash_light.light_energy = maxf(_flash_light.light_energy - delta * 55.0, 0.0)
 		if _flash_left <= 0.0:
 			_flash.visible = false
+			if _flash_light != null:
+				_flash_light.visible = false
 
 	# Procedural recoil damping
 	if _recoil_z > 0.001 or _recoil_pitch > 0.001:
@@ -141,8 +150,11 @@ func _process(delta: float) -> void:
 
 func _build() -> void:
 	muzzle = Marker3D.new()
-	add_child(muzzle)
 	if not _build_from_model():
+		model_root = Node3D.new()
+		model_root.name = "ProceduralRoot"
+		add_child(model_root)
+		model_root.add_child(muzzle)
 		match data.model_style:
 			WeaponData.ModelStyle.PISTOL:
 				_build_pistol(false)
@@ -156,6 +168,10 @@ func _build() -> void:
 				_build_hammer()
 			WeaponData.ModelStyle.RIFLE:
 				_build_rifle()
+	else:
+		model_root.add_child(muzzle)
+		if first_person:
+			_disable_shadows_recursive(model_root)
 	_build_flash()
 	_build_attachments()
 
@@ -172,23 +188,33 @@ func _build_attachments() -> void:
 			child.queue_free()
 	attachment_nodes.clear()
 
+	# Always reset muzzle flash to base barrel tip so unequipping a barrel resets it cleanly
+	if _flash != null and muzzle != null:
+		_flash.position = muzzle.position + Vector3(0.0, 0.0, -0.04)
+
 	if equipped_attachments.is_empty():
 		return
 
+	var attach_parent: Node3D = model_root if model_root != null else self
 	var b_id: StringName = data.id if data != null else &""
 	for slot_name in equipped_attachments:
 		var att_id: StringName = equipped_attachments[slot_name]
 		if att_id.is_empty() or att_id == &"none":
 			continue
-		var node := BlasterAttachments.build_attachment(self, att_id, slot_name, b_id)
+		var node := BlasterAttachments.build_attachment(attach_parent, att_id, slot_name, b_id)
 		if node != null:
-			node.transform = get_slot_transform(slot_name)
+			if att_id == &"tactical_grip":
+				# Angled foregrip mounts on the under-barrel front rail instead of rear buttstock
+				var grip_pos := foregrip_marker.position if foregrip_marker != null else Vector3(0.0, -0.055, -0.18)
+				node.transform = Transform3D(Basis.IDENTITY, grip_pos)
+			else:
+				node.transform = get_slot_transform(slot_name)
 			if first_person:
 				_disable_shadows_recursive(node)
 			attachment_nodes[slot_name] = node
 
 			# If muzzle attachment, offset flash forward
-			if slot_name == &"barrel" and _flash != null:
+			if slot_name == &"barrel" and _flash != null and muzzle != null:
 				match att_id:
 					&"rifled_extension":
 						_flash.position.z = muzzle.position.z - 0.15
@@ -247,17 +273,17 @@ func get_slot_transform(slot: StringName) -> Transform3D:
 		"stock":
 			match style:
 				WeaponData.ModelStyle.PISTOL, WeaponData.ModelStyle.DOUBLE:
-					tf.origin = Vector3(0.0, -0.03, 0.10)
+					tf.origin = Vector3(0.0, -0.02, 0.10)
 				WeaponData.ModelStyle.SPRAYER:
-					tf.origin = Vector3(0.0, -0.01, 0.34)
+					tf.origin = Vector3(0.0, -0.01, 0.22)
 				WeaponData.ModelStyle.HAMMER:
-					tf.origin = Vector3(0.0, -0.02, 0.37)
+					tf.origin = Vector3(0.0, -0.02, 0.24)
 				WeaponData.ModelStyle.RIFLE:
-					tf.origin = Vector3(0.0, -0.02, 0.43)
+					tf.origin = Vector3(0.0, -0.02, 0.27)
 				WeaponData.ModelStyle.ROTARY:
-					tf.origin = Vector3(0.0, -0.05, 0.22)
+					tf.origin = Vector3(0.0, -0.04, 0.19)
 				_:
-					tf.origin = Vector3(0.0, -0.02, 0.25)
+					tf.origin = Vector3(0.0, -0.02, 0.20)
 		"spring":
 			match style:
 				WeaponData.ModelStyle.PISTOL, WeaponData.ModelStyle.DOUBLE:
@@ -472,9 +498,10 @@ func _build_rotary() -> void:
 	# Ammo feed box on the right where the belt enters.
 	_box(Vector3(0.1, 0.13, 0.15), Vector3(0.15, -0.01, 0.07), accent)
 
+	var rot_parent: Node3D = model_root if model_root != null else self
 	_spinner = Node3D.new()
 	_spinner.position = Vector3(0.0, 0.0, -0.22)
-	add_child(_spinner)
+	rot_parent.add_child(_spinner)
 	for i in 6:
 		var angle := TAU * float(i) / 6.0
 		var offset := Vector3(cos(angle), sin(angle), 0.0) * 0.078
@@ -488,7 +515,7 @@ func _build_rotary() -> void:
 	# The belt of darts hanging down toward the backpack.
 	for i in BELT_LINKS:
 		var link := Node3D.new()
-		add_child(link)
+		rot_parent.add_child(link)
 		_tube(0.017, 0.085, Vector3.ZERO, Color(0.3, 0.65, 1.0), link)
 		_tube(0.021, 0.022, Vector3(0.0, 0.0, -0.05), ORANGE_TIP, link)
 		_belt.append(link)
@@ -504,7 +531,7 @@ func _build_rotary() -> void:
 	plate.modulate = UiKit.CREAM
 	plate.position = Vector3(-0.106, 0.0, 0.05)
 	plate.rotation_degrees.y = -90.0
-	add_child(plate)
+	rot_parent.add_child(plate)
 
 
 func _layout_belt() -> void:
@@ -519,23 +546,71 @@ func _layout_belt() -> void:
 
 
 func _build_flash() -> void:
-	_flash = MeshInstance3D.new()
-	var mesh := SphereMesh.new()
-	var flash_radius := 0.09 if data.model_style == WeaponData.ModelStyle.ROTARY else 0.06
-	mesh.radius = flash_radius
-	mesh.height = flash_radius * 2.0
-	mesh.radial_segments = 8
-	mesh.rings = 4
-	_flash.mesh = mesh
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.albedo_color = Color(1.0, 0.95, 0.6, 0.75)
-	_flash.material_override = material
-	_flash.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_flash = Node3D.new()
+	_flash.name = "MuzzleFlash"
+	var flash_radius := 0.085 if data.model_style == WeaponData.ModelStyle.ROTARY else 0.058
+
+	var core_mat := StandardMaterial3D.new()
+	core_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	core_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	core_mat.albedo_color = Color(1.0, 0.97, 0.72, 0.92)
+	core_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+
+	var spike_mat := StandardMaterial3D.new()
+	spike_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	spike_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	spike_mat.albedo_color = Color(1.0, 0.68, 0.18, 0.78)
+	spike_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+
+	# Bright central core puff
+	var core := MeshInstance3D.new()
+	var sph := SphereMesh.new()
+	sph.radius = flash_radius * 0.75
+	sph.height = flash_radius * 1.5
+	sph.radial_segments = 10
+	sph.rings = 5
+	core.mesh = sph
+	core.material_override = core_mat
+	core.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_flash.add_child(core)
+
+	# 4-point cartoon starburst petals + forward muzzle plume
+	var spike_mesh := CylinderMesh.new()
+	spike_mesh.top_radius = 0.0
+	spike_mesh.bottom_radius = flash_radius * 0.45
+	spike_mesh.height = flash_radius * 2.6
+	spike_mesh.radial_segments = 6
+	for i in 4:
+		var petal := MeshInstance3D.new()
+		petal.mesh = spike_mesh
+		petal.material_override = spike_mat
+		petal.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var ang := float(i) * PI * 0.5
+		petal.rotation = Vector3(0.0, 0.0, ang)
+		petal.position = Vector3(-sin(ang), cos(ang), 0.0) * (flash_radius * 0.85)
+		_flash.add_child(petal)
+
+	var fwd_spike := MeshInstance3D.new()
+	fwd_spike.mesh = spike_mesh
+	fwd_spike.material_override = spike_mat
+	fwd_spike.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	fwd_spike.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
+	fwd_spike.position = Vector3(0.0, 0.0, -flash_radius * 1.1)
+	_flash.add_child(fwd_spike)
+
+	# Brief dynamic muzzle OmniLight3D illuminating nearby walls/hands
+	_flash_light = OmniLight3D.new()
+	_flash_light.light_color = Color(1.0, 0.82, 0.42)
+	_flash_light.light_energy = 0.0
+	_flash_light.omni_range = 4.5
+	_flash_light.shadow_enabled = false
+	_flash_light.visible = false
+	_flash.add_child(_flash_light)
+
 	_flash.position = muzzle.position + Vector3(0.0, 0.0, -0.04)
 	_flash.visible = false
-	add_child(_flash)
+	var parent_node: Node3D = model_root if model_root != null else self
+	parent_node.add_child(_flash)
 
 
 func _box(size: Vector3, pos: Vector3, color: Color, rot_deg: Vector3 = Vector3.ZERO,
@@ -603,6 +678,8 @@ func _part(mesh: Mesh, pos: Vector3, color: Color, rot_deg: Vector3, parent: Nod
 		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	if parent != null:
 		parent.add_child(instance)
+	elif model_root != null:
+		model_root.add_child(instance)
 	else:
 		add_child(instance)
 	return instance

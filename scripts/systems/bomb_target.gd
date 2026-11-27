@@ -30,9 +30,11 @@ var fuse_left: float = FUSE_TIME
 var plant_progress_left: float = 0.0
 var defuse_progress_left: float = 0.0
 var current_defuser: Actor = null
+var fuse_paused: bool = false
 
 var _time: float = 0.0
 var _last_beep: float = 0.0
+var _drop_base_y: float = 0.0
 var _sites: Dictionary = {} # "A": Area3D, "B": Area3D
 var _bomb_model: Node3D
 var _bomb_light: OmniLight3D
@@ -166,6 +168,7 @@ func _build_bomb_model() -> void:
 ## Spawns the bomb at `pos` and assigns it to `initial_carrier` (or leaves it dropped).
 func spawn_bomb(pos: Vector3, initial_carrier: Actor = null) -> void:
 	fuse_left = FUSE_TIME
+	fuse_paused = false
 	plant_progress_left = 0.0
 	defuse_progress_left = 0.0
 	current_defuser = null
@@ -178,8 +181,27 @@ func spawn_bomb(pos: Vector3, initial_carrier: Actor = null) -> void:
 	else:
 		state = BombState.DROPPED
 		carrier = null
-		_bomb_model.global_position = pos
+		var ground_pos := _snap_to_ground(pos)
+		_bomb_model.global_position = ground_pos
+		_drop_base_y = _bomb_model.position.y
 		_update_label()
+
+
+func _snap_to_ground(pos: Vector3) -> Vector3:
+	if not is_inside_tree() or get_world_3d() == null:
+		return pos
+	var q := PhysicsRayQueryParameters3D.new()
+	q.from = pos + Vector3.UP * 0.8
+	q.to = pos + Vector3.DOWN * 30.0
+	q.collision_mask = Layers.WORLD
+	q.collide_with_areas = false
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	if not hit.is_empty():
+		return hit["position"] as Vector3
+	# Dropped over void: recover to Site A if available, else clamp Y >= 0.
+	if not _sites.is_empty():
+		return get_site_position(str(_sites.keys()[0]))
+	return Vector3(pos.x, maxf(pos.y, 0.0), pos.z)
 
 
 func _attach_carrier(actor: Actor) -> void:
@@ -205,10 +227,12 @@ func drop_bomb(drop_pos: Vector3) -> void:
 	state = BombState.DROPPED
 	plant_progress_left = 0.0
 	defuse_progress_left = 0.0
-	_bomb_model.global_position = drop_pos
+	var ground_pos := _snap_to_ground(drop_pos)
+	_bomb_model.global_position = ground_pos
+	_drop_base_y = _bomb_model.position.y
 	_bomb_model.rotation = Vector3.ZERO
 	_update_label()
-	bomb_dropped.emit(drop_pos)
+	bomb_dropped.emit(ground_pos)
 
 
 func _on_carrier_tagged_out(_victim: Actor, _attacker: Actor, _weapon: WeaponData, _ricochet: bool) -> void:
@@ -231,7 +255,9 @@ func _on_pickup_entered(body: Node3D) -> void:
 func get_site_at(pos: Vector3) -> String:
 	for site_id: String in _sites:
 		var area: Area3D = _sites[site_id]
-		if area.global_position.distance_to(pos) <= SITE_RADIUS:
+		var diff := pos - area.global_position
+		var horiz := Vector2(diff.x, diff.z).length()
+		if horiz <= SITE_RADIUS and absf(diff.y) <= 2.5:
 			return site_id
 	return ""
 
@@ -270,7 +296,7 @@ func get_closest_site(pos: Vector3) -> String:
 func progress_plant(actor: Actor, delta: float) -> bool:
 	if state != BombState.CARRIED and state != BombState.PLANTING:
 		return false
-	if actor != carrier:
+	if actor == null or not is_instance_valid(actor) or not actor.alive or actor.is_tagged_out or actor != carrier:
 		return false
 	var site := get_site_at(actor.global_position)
 	if site.is_empty():
@@ -304,6 +330,7 @@ func cancel_plant() -> void:
 
 
 func _complete_plant(site: String, plant_pos: Vector3) -> void:
+	var planter := carrier
 	if carrier != null and is_instance_valid(carrier):
 		if carrier.tagged_out.is_connected(_on_carrier_tagged_out):
 			carrier.tagged_out.disconnect(_on_carrier_tagged_out)
@@ -311,22 +338,29 @@ func _complete_plant(site: String, plant_pos: Vector3) -> void:
 	state = BombState.PLANTED
 	active_site = site
 	fuse_left = FUSE_TIME
-	_bomb_model.global_position = plant_pos
+	_bomb_model.global_position = _snap_to_ground(plant_pos)
 	_bomb_model.rotation = Vector3.ZERO
 	_last_beep = 0.0
 	_update_label()
 	plant_progress.emit(1.0)
-	bomb_planted.emit(site, plant_pos)
+	if planter != null and is_instance_valid(planter):
+		set_meta(&"last_planter", planter)
+	bomb_planted.emit(site, _bomb_model.global_position)
 
 
 ## Called by player or bot (Defenders, team 0) to defuse a planted bomb.
 func progress_defuse(actor: Actor, delta: float) -> bool:
 	if state != BombState.PLANTED and state != BombState.DEFUSING:
 		return false
-	if actor.team_id != 0: # Defenders only
+	if actor == null or not is_instance_valid(actor) or not actor.alive or actor.is_tagged_out or actor.team_id != 0:
 		return false
-	if actor.global_position.distance_to(_bomb_model.global_position) > DEFUSE_RADIUS:
+	if state == BombState.DEFUSING and current_defuser != null and current_defuser != actor:
+		if is_instance_valid(current_defuser) and current_defuser.alive and not current_defuser.is_tagged_out:
+			return false
 		cancel_defuse()
+	if actor.global_position.distance_to(_bomb_model.global_position) > DEFUSE_RADIUS:
+		if current_defuser == actor:
+			cancel_defuse()
 		return false
 
 	if state != BombState.DEFUSING:
@@ -377,9 +411,22 @@ func _physics_process(delta: float) -> void:
 			_bomb_model.rotation = carrier.rotation
 			_bomb_light.light_energy = 0.8 + sin(_time * 4.0) * 0.5
 		BombState.DROPPED:
-			_bomb_model.position.y += sin(_time * 3.0) * 0.002
+			_bomb_model.position.y = _drop_base_y + sin(_time * 3.0) * 0.06
 			_bomb_light.light_energy = 0.5 + sin(_time * 2.0) * 0.3
+			if _pickup_area != null:
+				for body in _pickup_area.get_overlapping_bodies():
+					var actor := body as Actor
+					if actor != null and actor.alive and not actor.is_tagged_out and actor.team_id == 1:
+						_attach_carrier(actor)
+						break
 		BombState.PLANTED, BombState.DEFUSING:
+			if state == BombState.DEFUSING:
+				if current_defuser == null or not is_instance_valid(current_defuser) \
+						or not current_defuser.alive or current_defuser.is_tagged_out \
+						or current_defuser.global_position.distance_to(_bomb_model.global_position) > DEFUSE_RADIUS:
+					cancel_defuse()
+			if fuse_paused:
+				return
 			fuse_left -= delta
 			_update_label()
 
@@ -416,7 +463,7 @@ func _update_label() -> void:
 		BombState.CARRIED:
 			_label.text = "CARRIED"
 		BombState.DROPPED:
-			_label.text = "FOAM BOMB (E TO TAKE)"
+			_label.text = "FOAM BOMB (WALK OVER)"
 		BombState.PLANTING:
 			_label.text = "ARMING..."
 		BombState.PLANTED, BombState.DEFUSING:

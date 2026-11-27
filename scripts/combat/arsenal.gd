@@ -10,6 +10,7 @@ signal fired(state: WeaponState)
 signal dry_fired(state: WeaponState)
 signal reload_started(state: WeaponState, seconds: float)
 signal reload_finished(state: WeaponState)
+signal reload_cancelled(state: WeaponState)
 
 const SWAP_TIME := 0.3
 const MAX_SHOTS_PER_TICK := 4
@@ -20,7 +21,11 @@ var enabled: bool = true
 var trigger_held: bool = false
 ## Barrel spin for SPIN_UP weapons, 0..1.
 var spin: float = 0.0
+## Only local human players should equip Workbench attachments from Progression.
+var apply_profile_attachments: bool = false
+var profile_index: int = 0
 
+var _infinite_reserve: bool = false
 var _cooldown: float = 0.0
 var _reload_left: float = 0.0
 var _reload_total: float = 0.0
@@ -29,13 +34,19 @@ var _dry_latched: bool = false
 
 
 func set_loadout(list: Array[WeaponData], infinite_reserve: bool = false) -> void:
+	var prev_state := current()
+	var was_reloading := _reload_left > 0.0
+	_infinite_reserve = infinite_reserve
 	weapons.clear()
 	for data in list:
 		if data != null:
-			weapons.append(WeaponState.new(data, infinite_reserve))
+			weapons.append(WeaponState.new(data, infinite_reserve, {}, apply_profile_attachments, profile_index))
 	current_index = -1
 	_reload_left = 0.0
+	_reload_total = 0.0
 	spin = 0.0
+	if was_reloading:
+		reload_cancelled.emit(prev_state)
 	if not weapons.is_empty():
 		select(0, true)
 
@@ -45,12 +56,12 @@ func set_loadout(list: Array[WeaponData], infinite_reserve: bool = false) -> voi
 func add_weapon(data: WeaponData, reserve: int) -> WeaponState:
 	for i in weapons.size():
 		if weapons[i].data.id == data.id:
-			weapons[i].reserve = mini(weapons[i].reserve + reserve, data.reserve_max)
+			weapons[i].reserve = mini(weapons[i].reserve + reserve, weapons[i].get_reserve_max())
 			select(i)
 			ammo_changed.emit(weapons[i])
 			return weapons[i]
-	var state := WeaponState.new(data)
-	state.reserve = mini(reserve, data.reserve_max)
+	var state := WeaponState.new(data, _infinite_reserve, {}, apply_profile_attachments, profile_index)
+	state.reserve = mini(reserve, state.get_reserve_max())
 	weapons.append(state)
 	select(weapons.size() - 1)
 	return state
@@ -73,13 +84,26 @@ func current() -> WeaponState:
 func select(index: int, instant: bool = false) -> void:
 	if index < 0 or index >= weapons.size() or index == current_index:
 		return
+	var prev_state := current()
+	var was_reloading := _reload_left > 0.0
 	current_index = index
 	_reload_left = 0.0
+	_reload_total = 0.0
 	spin = 0.0
 	_cooldown = 0.0 if instant else SWAP_TIME
 	_semi_latched = trigger_held
+	if was_reloading:
+		reload_cancelled.emit(prev_state)
 	weapon_changed.emit(current())
 	ammo_changed.emit(current())
+
+
+func cancel_reload() -> void:
+	if _reload_left > 0.0:
+		var state := current()
+		_reload_left = 0.0
+		_reload_total = 0.0
+		reload_cancelled.emit(state)
 
 
 func cycle(step: int) -> void:
@@ -164,6 +188,18 @@ func _physics_process(delta: float) -> void:
 		return
 	var data := state.data
 	_cooldown -= delta
+
+	if not enabled:
+		if _reload_left > 0.0:
+			cancel_reload()
+		if data.fire_mode == WeaponData.FireMode.SPIN_UP and spin > 0.0:
+			spin = move_toward(spin, 0.0, delta / maxf(data.spin_down_time, 0.01))
+		else:
+			spin = 0.0
+		_semi_latched = false
+		_dry_latched = false
+		_cooldown = maxf(_cooldown, 0.0)
+		return
 
 	if _reload_left > 0.0:
 		_reload_left -= delta

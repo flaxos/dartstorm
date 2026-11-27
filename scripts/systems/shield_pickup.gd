@@ -122,7 +122,7 @@ func _physics_process(delta: float) -> void:
 
 	for body in _area.get_overlapping_bodies():
 		var actor := body as Actor
-		if actor != null and actor.alive and actor.controls_enabled and not actor.has_shield():
+		if actor != null and actor.alive and actor.controls_enabled and not actor.is_zombie and not actor.is_tagged_out and not actor.has_shield():
 			give_to(actor)
 			return
 

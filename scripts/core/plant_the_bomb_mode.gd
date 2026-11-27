@@ -33,6 +33,21 @@ func is_plant_the_bomb() -> bool:
 	return true
 
 
+func should_respawn(_actor: Actor) -> bool:
+	return false
+
+
+func get_team_name(team: int) -> String:
+	return "GUARDIANS" if team == 0 else "INFILTRATORS"
+
+
+func winning_team(board: Scoreboard) -> int:
+	var by_rounds := winning_team_by_rounds()
+	if by_rounds >= 0:
+		return by_rounds
+	return super.winning_team(board)
+
+
 func reset_rounds() -> void:
 	team_rounds[0] = 0
 	team_rounds[1] = 0

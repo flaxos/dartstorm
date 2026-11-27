@@ -48,6 +48,7 @@ func _build() -> void:
 	scroll.custom_minimum_size = Vector2(740, 380)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.follow_focus = true
 	_box.add_child(scroll)
 
 	_rows_box = VBoxContainer.new()
@@ -129,7 +130,7 @@ func _start_listening(action: StringName, is_controller: bool, button: Button) -
 
 	button.text = "[ PRESS KEY/CLICK... ]" if not is_controller else "[ PRESS BUTTON... ]"
 	button.modulate = UiKit.ORANGE_HOT
-	Sfx.play(&"click")
+	Sfx.play(&"ui_click")
 
 
 func _cancel_listening() -> void:
@@ -150,6 +151,9 @@ func _finish_listening() -> void:
 	_listening_action = &""
 	_listening_controller = false
 	_listening_button = null
+	if GameSettings.split_screen or InputMap.has_action(&"p1_fire"):
+		InputSetup.setup_split_screen_actions()
+	Sfx.play(&"ui_click")
 
 
 func _refresh_all_buttons() -> void:
@@ -167,8 +171,10 @@ func _refresh_all_buttons() -> void:
 
 func _reset_bindings() -> void:
 	InputSetup.reset_to_defaults()
+	if GameSettings.split_screen or InputMap.has_action(&"p1_fire"):
+		InputSetup.setup_split_screen_actions()
 	_refresh_all_buttons()
-	Sfx.play(&"click")
+	Sfx.play(&"ui_click")
 
 
 func close() -> void:
@@ -180,6 +186,9 @@ func close() -> void:
 func _input(event: InputEvent) -> void:
 	if _listening_action == &"" or _listening_button == null:
 		return
+	if event.is_echo():
+		get_viewport().set_input_as_handled()
+		return
 
 	# Cancel handling
 	if event is InputEventKey and event.pressed:
@@ -190,7 +199,8 @@ func _input(event: InputEvent) -> void:
 			return
 
 	if event is InputEventJoypadButton and event.pressed:
-		if event.button_index == JOY_BUTTON_START or event.button_index == JOY_BUTTON_BACK:
+		if event.button_index == JOY_BUTTON_START or event.button_index == JOY_BUTTON_BACK \
+				or (not _listening_controller and event.button_index == JOY_BUTTON_B):
 			_cancel_listening()
 			get_viewport().set_input_as_handled()
 			return

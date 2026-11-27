@@ -85,9 +85,10 @@ func _create_mission_card(mission: Dictionary) -> PanelContainer:
 	row.add_theme_constant_override("separation", 16)
 	card.add_child(row)
 
-	var icon_lbl := UiKit.label(str(mission.get("icon", "🎯")), 32, UiKit.CREAM, 4)
-	icon_lbl.custom_minimum_size = Vector2(40, 40)
+	var icon_lbl := UiKit.label(str(mission.get("icon", "TARGET")), 15, UiKit.ORANGE_HOT, 4)
+	icon_lbl.custom_minimum_size = Vector2(74, 40)
 	icon_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	icon_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(icon_lbl)
 
 	var details := VBoxContainer.new()
@@ -121,12 +122,12 @@ func _create_mission_card(mission: Dictionary) -> PanelContainer:
 	rewards.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_child(rewards)
 
-	var coin_text := "🪙 +%d" % int(mission.get("coin_reward", 100))
-	var coins_lbl := UiKit.label(coin_text, 18, UiKit.ORANGE_HOT, 4)
+	var coin_text := "+%d COINS" % int(mission.get("coin_reward", 100))
+	var coins_lbl := UiKit.label(coin_text, 17, UiKit.ORANGE_HOT, 4)
 	coins_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	rewards.add_child(coins_lbl)
 
-	var xp_text := "⭐ +%d XP" % int(mission.get("xp_reward", 200))
+	var xp_text := "+%d XP" % int(mission.get("xp_reward", 200))
 	var xp_lbl := UiKit.label(xp_text, 16, UiKit.LIME, 4)
 	xp_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	rewards.add_child(xp_lbl)

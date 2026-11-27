@@ -128,22 +128,29 @@ func _build_fort(side: float, main: Color, dark: Color, title: String) -> void:
 	var centre_x := side * 28.0
 	var top := FORT_HEIGHT
 
-	# Raised platform.
-	ArenaKit.box(geometry, Vector3(8.0, FORT_HEIGHT, 12.0), Vector3(centre_x, FORT_HEIGHT * 0.5, 0.0), main, Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
-	ArenaKit.deco_box(decor, Vector3(8.1, 0.25, 12.1), Vector3(centre_x, FORT_HEIGHT - 0.1, 0.0), WOOD, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.WOOD)
+	# Raised timber-framed fort platform (crafty backyard play-fort aesthetic).
+	ArenaKit.box(geometry, Vector3(8.0, FORT_HEIGHT, 12.0), Vector3(centre_x, FORT_HEIGHT * 0.5, 0.0), main.darkened(0.12), Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.deco_box(decor, Vector3(8.16, 0.26, 12.16), Vector3(centre_x, FORT_HEIGHT - 0.12, 0.0), WOOD, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.deco_box(decor, Vector3(8.22, 0.32, 12.22), Vector3(centre_x, 0.16, 0.0), WOOD_DARK, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.WOOD)
+	# Vertical corner timber posts & decorative painted team stripe
+	for px: float in [-3.95, 3.95]:
+		for pz: float in [-5.95, 5.95]:
+			ArenaKit.deco_box(decor, Vector3(0.32, FORT_HEIGHT + 0.1, 0.32), Vector3(centre_x + px, FORT_HEIGHT * 0.5, pz), WOOD_DARK, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.deco_box(decor, Vector3(8.14, 0.42, 12.14), Vector3(centre_x, FORT_HEIGHT * 0.52, 0.0), main, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.PLASTIC)
 
 	# Two ramps down toward the middle of the yard.
 	for ramp_z: float in [-4.5, 4.5]:
 		ArenaKit.ramp(geometry, Vector3(side * 17.5, 0.0, ramp_z), Vector3(front, top, ramp_z), 3.0, WOOD, 0.3, ArenaKit.SurfaceType.WOOD)
 
-	# Battlements: low walls to duck behind, with gaps to shoot through.
+	# Battlements: low walls to duck behind, with gaps to shoot through + timber caps.
 	var wall_y := top + 0.5
 	for wall_z: float in [-2.15, 2.15]:
-		ArenaKit.box(geometry, Vector3(0.3, 1.0, 1.7), Vector3(front - side * 0.15, wall_y, wall_z), dark)
-	for wall_z: float in [-5.85, 5.85]:
-		ArenaKit.box(geometry, Vector3(3.0, 1.0, 0.3), Vector3(side * 25.5, wall_y, wall_z), dark)
-		ArenaKit.box(geometry, Vector3(3.5, 1.0, 0.3), Vector3(side * 30.25, wall_y, wall_z), dark)
-	ArenaKit.box(geometry, Vector3(0.3, 2.4, 12.0), Vector3(back - side * 0.15, top + 1.2, 0.0), dark)
+		ArenaKit.box(geometry, Vector3(0.3, 1.0, 1.7), Vector3(front - side * 0.16, wall_y, wall_z), dark, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+		ArenaKit.deco_box(decor, Vector3(0.36, 0.1, 1.76), Vector3(front - side * 0.16, top + 1.02, wall_z), WOOD_DARK, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.WOOD)
+	for wall_z: float in [-5.84, 5.84]:
+		ArenaKit.box(geometry, Vector3(2.96, 1.0, 0.3), Vector3(side * 25.52, wall_y, wall_z), dark, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+		ArenaKit.box(geometry, Vector3(3.34, 1.0, 0.3), Vector3(side * 30.18, wall_y, wall_z), dark, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.box(geometry, Vector3(0.3, 2.4, 11.96), Vector3(back - side * 0.15, top + 1.2, 0.0), dark, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 
 	# Roof over the back half, on four posts.
 	for post_z: float in [-5.6, 5.6]:
@@ -204,8 +211,8 @@ func _build_treehouse() -> void:
 		ArenaKit.ramp(geometry, slide_low + lift, slide_high + lift, 0.12, SLIDE.darkened(0.2), 0.35, ArenaKit.SurfaceType.PLASTIC)
 
 	# Environmental hazards and power-ups:
-	# Ice slick down the yellow slide!
-	add_ice_slick(Vector3(0.0, DECK_HEIGHT * 0.5, -9.5), Vector3(2.4, 0.2, 9.2), Vector3(0.0, -0.4, -1.0), Vector3(-24.0, 0.0, 0.0))
+	# Ice slick aligned flush down the yellow slide!
+	add_ice_slick(Vector3(0.0, DECK_HEIGHT * 0.5 + 0.08, -9.25), Vector3(2.2, 0.14, 9.4), Vector3(0.0, 0.0, -1.0), Vector3(-25.8, 0.0, 0.0))
 	# Foam Shield on the treehouse deck
 	add_shield_pickup(Vector3(0.0, DECK_HEIGHT, -2.2))
 	# Water puddles in the courtyard and near the garden tap
@@ -213,12 +220,12 @@ func _build_treehouse() -> void:
 	add_water_puddle(Vector3(-11.5, 0.0, 6.0), 2.6)
 	# Updraft wind vent near the central walkway
 	add_wind_vent(Vector3(8.5, 0.0, 0.0), 1.8, 14.5)
-	# Foam Grenades and Elemental Infusion pickups
+	# Foam Grenades and Elemental Infusion pickups (clear of ramp/slide bases)
 	add_grenade_pickup(Vector3(-14.0, 0.0, -14.0))
 	add_grenade_pickup(Vector3(14.0, 0.0, 14.0))
-	add_elemental_pickup(Vector3(0.0, 0.0, 14.0), DartData.Element.FIRE)
+	add_elemental_pickup(Vector3(4.5, 0.0, 13.5), DartData.Element.FIRE)
 	add_elemental_pickup(Vector3(3.2, DECK_HEIGHT, 0.0), DartData.Element.ICE)
-	add_elemental_pickup(Vector3(0.0, 0.0, -14.0), DartData.Element.LIGHTNING)
+	add_elemental_pickup(Vector3(-4.5, 0.0, -13.5), DartData.Element.LIGHTNING)
 
 	# Trampolines that bounce you onto the deck corners.
 	add_jump_pad(Vector3(6.8, 0.0, -6.8))
@@ -298,6 +305,12 @@ func _build_targets() -> void:
 func _build_spawns() -> void:
 	var centre := Vector3.ZERO
 	team_bases = [Vector3(-28.0, FORT_HEIGHT, 0.0), Vector3(28.0, FORT_HEIGHT, 0.0)]
+	flag_pedestals = [Vector3(-28.0, FORT_HEIGHT, 0.0), Vector3(28.0, FORT_HEIGHT, 0.0)]
+	bomb_sites = {
+		"A": Vector3(0.0, DECK_HEIGHT, 2.8),
+		"B": Vector3(-28.0, FORT_HEIGHT, 0.0),
+	}
+	bomb_spawns = [Vector3(26.0, FORT_HEIGHT, 0.0)]
 	for side: float in [-1.0, 1.0]:
 		add_spawn(Vector3(side * 28.5, FORT_HEIGHT, -3.0), centre)
 		add_spawn(Vector3(side * 28.5, FORT_HEIGHT, 3.0), centre)
@@ -353,6 +366,12 @@ func _build_paddling_pool(at: Vector3) -> void:
 	ring.outer_radius = 2.25
 	ArenaKit.deco(decor, ring, at + Vector3(0.0, 0.2, 0.0), Color(0.2, 0.55, 1.0)).scale = Vector3(1.0, 1.4, 1.0)
 	var water := ArenaKit.deco_cylinder(decor, 1.95, 0.05, at + Vector3(0.0, 0.32, 0.0), Color(0.45, 0.8, 1.0, 0.75))
+	var water_mat := ShaderMaterial.new()
+	water_mat.shader = preload("res://assets/materials/stylized_water.gdshader")
+	water_mat.set_shader_parameter(&"shallow_color", Color(0.35, 0.84, 1.0, 0.82))
+	water_mat.set_shader_parameter(&"deep_color", Color(0.12, 0.52, 0.88, 0.92))
+	water_mat.set_shader_parameter(&"puddle_radius", 1.95)
+	water.material_override = water_mat
 	water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_duck = Node3D.new()
 	_duck.position = at + Vector3(0.6, 0.38, 0.3)

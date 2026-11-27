@@ -38,17 +38,19 @@ static func ensure_actions() -> void:
 	_add(&"move_left", [_key(KEY_A), _key(KEY_LEFT), _axis(JOY_AXIS_LEFT_X, -1.0)])
 	_add(&"move_right", [_key(KEY_D), _key(KEY_RIGHT), _axis(JOY_AXIS_LEFT_X, 1.0)])
 	_add(&"jump", [_key(KEY_SPACE), _pad(JOY_BUTTON_A)])
-	_add(&"sprint", [_key(KEY_SHIFT), _pad(JOY_BUTTON_LEFT_STICK), _axis(JOY_AXIS_TRIGGER_LEFT, 1.0)])
+	_add(&"sprint", [_key(KEY_SHIFT), _pad(JOY_BUTTON_LEFT_STICK)])
 	_add(&"fire", [_mouse(MOUSE_BUTTON_LEFT), _axis(JOY_AXIS_TRIGGER_RIGHT, 1.0)])
 	_add(&"aim_down_sights", [_mouse(MOUSE_BUTTON_RIGHT), _axis(JOY_AXIS_TRIGGER_LEFT, 1.0)])
 	_add(&"throw_grenade", [_key(KEY_G), _pad(JOY_BUTTON_DPAD_DOWN)])
 	_add(&"ping", [_key(KEY_T), _mouse(MOUSE_BUTTON_MIDDLE), _pad(JOY_BUTTON_DPAD_UP)])
 	_add(&"reload", [_key(KEY_R), _pad(JOY_BUTTON_X)])
-	_add(&"interact", [_key(KEY_F), _key(KEY_E), _pad(JOY_BUTTON_X)])
+	_add(&"interact", [_key(KEY_F), _key(KEY_E), _pad(JOY_BUTTON_DPAD_RIGHT)])
+	_add(&"inspect", [_key(KEY_V), _pad(JOY_BUTTON_DPAD_LEFT)])
 	_add(&"weapon_1", [_key(KEY_1)])
 	_add(&"weapon_2", [_key(KEY_2)])
 	_add(&"weapon_3", [_key(KEY_3)])
-	_add(&"weapon_next", [_mouse(MOUSE_BUTTON_WHEEL_DOWN), _key(KEY_E), _pad(JOY_BUTTON_RIGHT_SHOULDER), _pad(JOY_BUTTON_Y)])
+	_add(&"weapon_4", [_key(KEY_4)])
+	_add(&"weapon_next", [_mouse(MOUSE_BUTTON_WHEEL_DOWN), _pad(JOY_BUTTON_RIGHT_SHOULDER), _pad(JOY_BUTTON_Y)])
 	_add(&"weapon_prev", [_mouse(MOUSE_BUTTON_WHEEL_UP), _key(KEY_Q), _pad(JOY_BUTTON_LEFT_SHOULDER)])
 	_add(&"pause", [_key(KEY_ESCAPE), _key(KEY_P), _pad(JOY_BUTTON_START)])
 	_add(&"scoreboard", [_key(KEY_TAB), _pad(JOY_BUTTON_BACK)])
@@ -126,18 +128,35 @@ static func get_controller_event(action: StringName) -> InputEvent:
 static func rebind_action_event(action: StringName, new_event: InputEvent, is_controller: bool) -> void:
 	if not InputMap.has_action(action):
 		InputMap.add_action(action, DEFAULT_DEADZONE)
-	var to_remove: Array[InputEvent] = []
-	for event in InputMap.action_get_events(action):
-		if is_controller:
-			if event is InputEventJoypadButton or event is InputEventJoypadMotion:
-				to_remove.append(event)
+	var existing := InputMap.action_get_events(action)
+	var preserved_same_class: Array[InputEvent] = []
+	var other_class: Array[InputEvent] = []
+	var skipped_primary := false
+	for event in existing:
+		var ev_is_pad := event is InputEventJoypadButton or event is InputEventJoypadMotion
+		if ev_is_pad == is_controller:
+			if not skipped_primary:
+				skipped_primary = true  # Replace only the primary binding for this device class.
+			else:
+				preserved_same_class.append(event)
 		else:
-			if event is InputEventKey or event is InputEventMouseButton:
-				to_remove.append(event)
-	for event in to_remove:
+			other_class.append(event)
+	for event in existing:
 		InputMap.action_erase_event(action, event)
 	if new_event != null:
-		InputMap.action_add_event(action, new_event)
+		var clean_ev: InputEvent = new_event.duplicate()
+		if is_controller:
+			clean_ev.device = -1
+			if clean_ev is InputEventJoypadMotion:
+				var motion := clean_ev as InputEventJoypadMotion
+				motion.axis_value = 1.0 if motion.axis_value >= 0.0 else -1.0
+		InputMap.action_add_event(action, clean_ev)
+	for event in preserved_same_class:
+		if not InputMap.action_has_event(action, event):
+			InputMap.action_add_event(action, event)
+	for event in other_class:
+		if not InputMap.action_has_event(action, event):
+			InputMap.action_add_event(action, event)
 
 
 static func event_to_label(event: InputEvent) -> String:
@@ -253,22 +272,25 @@ static func setup_split_screen_actions(p1_is_pad: bool = false, p2_device: int =
 	clear_split_screen_actions()
 
 	var pads := Input.get_connected_joypads()
+	var p1_device: int = pads[0] if pads.size() >= 1 else 0
 	if pads.size() >= 2:
 		p1_is_pad = true
-		p2_device = 1
+		p1_device = pads[0]
+		p2_device = pads[1]
 	elif pads.size() == 1:
 		p1_is_pad = false
-		p2_device = 0
+		p2_device = pads[0]
 
 	var core_actions := [
 		&"move_forward", &"move_back", &"move_left", &"move_right",
 		&"jump", &"sprint", &"fire", &"aim_down_sights", &"throw_grenade",
-		&"ping", &"reload", &"weapon_1", &"weapon_2", &"weapon_3",
+		&"ping", &"reload", &"interact", &"inspect",
+		&"weapon_1", &"weapon_2", &"weapon_3", &"weapon_4",
 		&"weapon_next", &"weapon_prev", &"scoreboard",
 		&"look_left", &"look_right", &"look_up", &"look_down"
 	]
 
-	# Build Player 1 actions (p1_*)
+	# Build Player 1 actions (p1_*). Exclude Arrow keys so P2's keyboard fallback never moves P1.
 	for act in core_actions:
 		var p1_act := StringName("p1_" + String(act))
 		var deadzone := LOOK_DEADZONE if act.begins_with(&"look_") else DEFAULT_DEADZONE
@@ -277,11 +299,16 @@ static func setup_split_screen_actions(p1_is_pad: bool = false, p2_device: int =
 		# Add keyboard & mouse events from base action
 		if InputMap.has_action(act):
 			for event in InputMap.action_get_events(act):
-				if event is InputEventKey or event is InputEventMouseButton:
+				if event is InputEventKey:
+					var k: Key = (event as InputEventKey).physical_keycode
+					if k == KEY_UP or k == KEY_DOWN or k == KEY_LEFT or k == KEY_RIGHT:
+						continue
+					InputMap.action_add_event(p1_act, event.duplicate())
+				elif event is InputEventMouseButton:
 					InputMap.action_add_event(p1_act, event.duplicate())
 				elif p1_is_pad and (event is InputEventJoypadButton or event is InputEventJoypadMotion):
 					var pad_event: InputEvent = event.duplicate()
-					pad_event.device = 0
+					pad_event.device = p1_device
 					InputMap.action_add_event(p1_act, pad_event)
 
 	# Build Player 2 actions (p2_*)
@@ -309,10 +336,12 @@ static func setup_split_screen_actions(p1_is_pad: bool = false, p2_device: int =
 	_add_event(&"p2_reload", _key(KEY_KP_1))
 	_add_event(&"p2_throw_grenade", _key(KEY_KP_2))
 	_add_event(&"p2_ping", _key(KEY_KP_3))
+	_add_event(&"p2_interact", _key(KEY_KP_4))
 	_add_event(&"p2_weapon_next", _key(KEY_KP_ADD))
 	_add_event(&"p2_weapon_prev", _key(KEY_KP_SUBTRACT))
 	_add_event(&"p2_sprint", _key(KEY_KP_5))
 	_add_event(&"p2_scoreboard", _key(KEY_KP_7))
+	_add_event(&"p2_inspect", _key(KEY_KP_8))
 	_add_event(&"p2_look_left", _key(KEY_J))
 	_add_event(&"p2_look_right", _key(KEY_L))
 	_add_event(&"p2_look_up", _key(KEY_I))

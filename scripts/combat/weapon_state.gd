@@ -11,26 +11,43 @@ var attachments: Dictionary = {}
 var modifiers: Dictionary = {}
 
 
-func _init(p_data: WeaponData, p_infinite_reserve: bool = false, p_attachments: Dictionary = {}) -> void:
+func _init(p_data: WeaponData, p_infinite_reserve: bool = false, p_attachments: Dictionary = {}, p_use_progression: bool = false, p_profile_idx: int = -1) -> void:
 	data = p_data
 	infinite_reserve = p_infinite_reserve
-	attachments = p_attachments.duplicate()
+	attachments = {}
+	for k in p_attachments:
+		attachments[String(k)] = StringName(str(p_attachments[k]))
 	if not attachments.is_empty():
 		modifiers = WeaponModding.compute_attachment_modifiers(attachments)
-	elif is_instance_valid(Progression) and p_data != null:
-		attachments = Progression.get_equipped_attachments(p_data.id)
+	elif p_use_progression and is_instance_valid(Progression) and p_data != null:
+		var raw_atts: Dictionary = Progression.get_equipped_attachments_for_profile(p_profile_idx, p_data.id) if p_profile_idx >= 0 and Progression.has_method(&"get_equipped_attachments_for_profile") else Progression.get_equipped_attachments(p_data.id)
+		for k in raw_atts:
+			attachments[String(k)] = StringName(str(raw_atts[k]))
 		modifiers = WeaponModding.compute_attachment_modifiers(attachments)
 	else:
 		modifiers = WeaponModding.compute_attachment_modifiers({})
 	magazine = get_magazine_size()
-	reserve = data.reserve_max if infinite_reserve else data.reserve_start
+	var belt_bonus: int = int(modifiers.get("mag_bonus", 0)) * 5 if (data != null and data.is_belt_fed()) else 0
+	var max_res: int = (data.reserve_max if data != null else 0) + belt_bonus
+	var start_res: int = (data.reserve_start if data != null else 0) + belt_bonus
+	reserve = max_res if infinite_reserve else start_res
 
 
 ## Effective magazine size accounting for extended drum or attachment modifiers.
 func get_magazine_size() -> int:
+	if data != null and data.is_belt_fed():
+		return 0
 	var base_size := data.magazine_size if data != null else 6
 	var bonus: int = int(modifiers.get("mag_bonus", 0))
 	return maxi(1, base_size + bonus)
+
+
+## Effective reserve cap (belt-fed weapons gain extra drum capacity from magazine mods).
+func get_reserve_max() -> int:
+	var base_max := data.reserve_max if data != null else 0
+	if data != null and data.is_belt_fed():
+		return base_max + int(modifiers.get("mag_bonus", 0)) * 5
+	return base_max
 
 
 ## Effective reload duration in seconds.
@@ -72,7 +89,10 @@ func get_zoom_fov() -> float:
 
 ## Effective reticle type for ADS (&"standard", &"red_dot", &"holo", &"scope").
 func get_reticle() -> StringName:
-	return StringName(str(modifiers.get("reticle", &"standard")))
+	var ret := StringName(str(modifiers.get("reticle", &"standard")))
+	if ret == &"standard" and data != null and data.zoom_fov > 0.0 and data.zoom_fov <= 45.0:
+		return &"scope"
+	return ret
 
 
 ## Effective movement multiplier from equipped attachments (e.g. stocks).
@@ -112,7 +132,7 @@ func reload() -> void:
 func missing() -> int:
 	if infinite_reserve:
 		return 0
-	return maxi(data.reserve_max - reserve, 0)
+	return maxi(get_reserve_max() - reserve, 0)
 
 
 ## Adds darts to the reserve and returns how many were actually taken.

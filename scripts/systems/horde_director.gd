@@ -50,6 +50,10 @@ var _spawn_timer: float = 0.0
 var _last_whole_intermission_sec: int = -1
 
 
+func _ready() -> void:
+	add_to_group(&"horde_director")
+
+
 func setup(p_arena: Arena, p_controller: MatchController, p_core: BaseCore,
 		p_barricades: Array[BaseBarricade], p_pool: DartPool, p_diff: BotDifficulty) -> void:
 	arena = p_arena
@@ -82,9 +86,9 @@ func _start_wave(wave_num: int) -> void:
 		_pending_spawns.append(&"runner")
 	for i in brutes:
 		_pending_spawns.append(&"brute")
+	_pending_spawns.shuffle()
 	if has_boss:
 		_pending_spawns.append(&"titan_boss")
-	_pending_spawns.shuffle()
 
 	total_wave_enemies = _pending_spawns.size()
 	remaining_enemies = total_wave_enemies
@@ -98,6 +102,8 @@ func _start_wave(wave_num: int) -> void:
 
 
 func _process(delta: float) -> void:
+	if controller != null and controller.state != MatchController.State.PLAYING:
+		return
 	match state:
 		State.SPAWNING:
 			_spawn_timer -= delta
@@ -144,10 +150,15 @@ func _spawn_single_enemy(archetype: StringName) -> void:
 
 	if controller != null:
 		controller.register(bot)
-		# Add all defenders as rivals
+		bot.controls_enabled = (controller.state == MatchController.State.PLAYING)
+		# Link defenders and horde zombie as mutual rivals
 		for actor in controller.actors:
-			if actor != bot and actor.team_id == 0:
+			if actor != bot and is_instance_valid(actor) and actor.team_id == 0:
 				bot.rivals.append(actor)
+				if actor is Bot:
+					(actor as Bot).rivals.append(bot)
+	else:
+		bot.controls_enabled = true
 
 	bot.tagged_out.connect(_on_zombie_tagged_out)
 	active_zombies.append(bot)
@@ -191,8 +202,15 @@ func _on_zombie_tagged_out(victim: Actor, attacker: Actor, _weapon: WeaponData, 
 	add_scrap(scrap_award)
 	enemy_eliminated.emit(bot, remaining_enemies)
 
-	if controller != null and attacker != null and attacker.is_human:
+	if controller != null and attacker != null and attacker.is_local_human():
 		controller.popup.emit(attacker, "+%d SCRAP" % scrap_award, UiKit.LIME)
+
+	# Remove from defender rivals & match controller before freeing
+	if controller != null:
+		for actor in controller.actors:
+			if actor is Bot and is_instance_valid(actor):
+				(actor as Bot).rivals.erase(bot)
+		controller.unregister(bot)
 
 	# Clean up zombie actor node
 	bot.queue_free()
@@ -232,7 +250,6 @@ func _start_intermission() -> void:
 
 func _trigger_victory() -> void:
 	_set_state(State.VICTORY)
-	all_waves_cleared.emit()
 
 	# Unlock exclusive Toxic Slime blaster skin & award bonus coins/XP
 	if Engine.has_singleton("Progression") or get_node_or_null("/root/Progression") != null:
@@ -244,15 +261,16 @@ func _trigger_victory() -> void:
 	if controller != null:
 		controller.announce(null, "VICTORY! BASE SECURED! UNLOCKED TOXIC SLIME SKIN!",
 				UiKit.LIME, &"announce")
+	all_waves_cleared.emit()
 
 
 func _on_base_core_destroyed() -> void:
 	if state == State.VICTORY or state == State.DEFEAT:
 		return
 	_set_state(State.DEFEAT)
-	defeat.emit()
 	if controller != null:
 		controller.announce(null, "BASE CORE DESTROYED! RETREAT!", Color(0.95, 0.22, 0.25), &"shutdown")
+	defeat.emit()
 
 
 func _set_state(new_state: State) -> void:

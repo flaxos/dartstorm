@@ -5201,7 +5201,7 @@ func _test_v1_0_release_regressions() -> void:
 	flag.reset_to_base()
 	var runner := make_actor(ctf_stage, home_pos, 1)
 	await physics_frames(2)
-	flag._pickup(runner)
+	flag._on_body_entered(runner)
 	runner.global_position = Vector3(15.0, 0.0, 10.0)
 	await physics_frames(3)
 	check(flag._pedestal != null and flag._pedestal.global_position.distance_to(home_pos) < 0.25,
@@ -5227,14 +5227,46 @@ func _test_v1_0_release_regressions() -> void:
 	# Force match finish and verify HUD reparents out of hidden split container so results stay visible
 	var ctrl: MatchController = ss_game.get("controller") as MatchController
 	if ctrl != null:
-		ctrl.time_left = 0.05
-	await physics_frames(10)
+		ctrl._finish()
+	await physics_frames(4)
 	if hud1 != null:
 		check(hud1.get_parent() == ss_game and hud1.visible,
 			"Split-screen match end reparents Hud onto MatchScene so results screen stays visible")
 	GameSettings.split_screen = saved_split
 	GameSettings.bot_count = saved_bots
 	await end_match(ss_game, saved_mode)
+
+	# 10. Iron sight & optic ADS alignment never clips camera across all blasters (especially Dart Sprayer)
+	var sprayer_data := load(SPRAYER) as WeaponData
+	var sprayer_iron := BlasterModel.create(sprayer_data, true, &"default", {"optic": &"iron_sights"})
+	add_child(sprayer_iron)
+	await physics_frames(1)
+	var sprayer_ads := sprayer_iron.get_ads_offset()
+	check(is_zero_approx(sprayer_ads.x), "Dart Sprayer iron-sight ADS centers X at 0.0")
+	check(-sprayer_ads.y >= 0.145, "Dart Sprayer iron-sight ADS eye sits cleanly above top rail Y=0.13 (got %.3f)" % (-sprayer_ads.y))
+	check(sprayer_ads.z + 0.245 <= -0.10, "Dart Sprayer iron-sight ADS keeps buttpad safely ahead of camera.near (rear Z=%.3f)" % (sprayer_ads.z + 0.245))
+	check(sprayer_iron._iron_sights_node != null, "Dart Sprayer mounts 3D iron sights when no optic is equipped")
+	# Equipping aftermarket optic (String key like WeaponState) raises eye line and hides iron sights
+	sprayer_iron.update_attachments({"optic": &"red_dot"})
+	var sprayer_rd_ads := sprayer_iron.get_ads_offset()
+	check(sprayer_iron._iron_sights_node == null, "Dart Sprayer hides iron sights when red_dot optic is equipped")
+	check(-sprayer_rd_ads.y > -sprayer_ads.y, "Dart Sprayer red_dot ADS aligns above iron sights (%.3f > %.3f)" % [-sprayer_rd_ads.y, -sprayer_ads.y])
+	sprayer_iron.queue_free()
+
+	for file_name in DirAccess.get_files_at(WEAPON_DIR):
+		if not file_name.ends_with(".tres"):
+			continue
+		var wdata := load(WEAPON_DIR + "/" + file_name) as WeaponData
+		if wdata == null:
+			continue
+		var bm := BlasterModel.create(wdata, true, &"default", {"optic": &"iron_sights"})
+		add_child(bm)
+		var off := bm.get_ads_offset()
+		var rear_world_z := off.z + bm._get_max_rear_z()
+		check(is_zero_approx(off.x) and off.y < -0.07 and rear_world_z <= -0.10,
+			"%s iron-sight ADS stays above receiver and ahead of near plane (off=%s, rearZ=%.3f)" % [wdata.id, str(off), rear_world_z])
+		bm.queue_free()
+	await physics_frames(2)
 
 
 

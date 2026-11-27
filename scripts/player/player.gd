@@ -530,10 +530,11 @@ func _process(delta: float) -> void:
 	var base_offset: Vector3 = _view_offset.lerp(_ads_offset, _ads_blend)
 	var base_yaw: float = lerpf(VIEW_YAW, 0.0, _ads_blend)
 	var ads_stability: float = (1.0 - 0.82 * _ads_blend) * sway_mult
-	var wall_offset := Vector3(0.0, -0.04 * _wall_pullback, 0.22 * _wall_pullback) * (1.0 - 0.5 * _ads_blend)
-	var wall_rot := Vector3(0.32 * _wall_pullback, 0.0, 0.0) * (1.0 - 0.7 * _ads_blend)
+	var wall_offset := Vector3(0.0, -0.04 * _wall_pullback, 0.22 * _wall_pullback) * (1.0 - 0.85 * _ads_blend)
+	var wall_rot := Vector3(0.32 * _wall_pullback, 0.0, 0.0) * (1.0 - 0.85 * _ads_blend)
+	var recoil_z_scale := lerpf(0.07, 0.022, _ads_blend)
 
-	_view_root.position = base_offset + (bob + idle + Vector3(_sway_pos.x, -_sway_pos.y + _air_lag, 0.0)) * ads_stability + sprint_offset + inspect_offset + wall_offset + rattle + reload_offset + Vector3(0.0, -0.35 * _swap - _dip_pos * ads_stability, _recoil * 0.07)
+	_view_root.position = base_offset + (bob + idle + Vector3(_sway_pos.x, -_sway_pos.y + _air_lag, 0.0)) * ads_stability + sprint_offset + inspect_offset + wall_offset + rattle + reload_offset + Vector3(0.0, -0.35 * _swap - _dip_pos * ads_stability, _recoil * recoil_z_scale)
 	_view_root.rotation = Vector3(_recoil * 0.12 - _swap * 0.6 + sprint_rot.x - _dip_pos * 1.2 * ads_stability, base_yaw - _sway_pos.x * 0.5 * ads_stability + sprint_rot.y, sprint_rot.z - _sway_pos.x * 0.3 * ads_stability + _strafe_tilt * ads_stability) + reload_rot + inspect_rot + wall_rot
 
 	if body_model != null:

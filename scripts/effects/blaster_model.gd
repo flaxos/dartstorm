@@ -46,6 +46,8 @@ var grip_marker: Marker3D = null
 var foregrip_marker: Marker3D = null
 var equipped_attachments: Dictionary = {}
 var attachment_nodes: Dictionary = {}
+var _model_asset_id: StringName = &""
+var _iron_sights_node: Node3D = null
 var _spinner: Node3D
 var _cylinder: Node3D = null
 var _pump_slide: Node3D = null
@@ -182,39 +184,59 @@ func update_attachments(p_attachments: Dictionary) -> void:
 	_build_attachments()
 
 
+func _equipped_attachment(slot: StringName) -> StringName:
+	var raw: Variant = equipped_attachments.get(slot, equipped_attachments.get(String(slot), &"none"))
+	var att := StringName(str(raw))
+	return att if not att.is_empty() else &"none"
+
+
+func _has_aftermarket_optic() -> bool:
+	var opt := _equipped_attachment(&"optic")
+	return opt != &"none" and opt != &"iron_sights"
+
+
 func _build_attachments() -> void:
 	for child in attachment_nodes.values():
 		if is_instance_valid(child):
 			child.queue_free()
 	attachment_nodes.clear()
+	if _iron_sights_node != null and is_instance_valid(_iron_sights_node):
+		_iron_sights_node.queue_free()
+		_iron_sights_node = null
 
 	# Always reset muzzle flash to base barrel tip so unequipping a barrel resets it cleanly
 	if _flash != null and muzzle != null:
 		_flash.position = muzzle.position + Vector3(0.0, 0.0, -0.04)
 
-	if equipped_attachments.is_empty():
-		return
-
 	var attach_parent: Node3D = model_root if model_root != null else self
+	var has_custom_optic := _has_aftermarket_optic()
+
+	# Hide built-in Scope on whisper models when an aftermarket optic replaces it
+	if model_root != null:
+		var builtin_scope := model_root.find_child("Scope", false, false) as Node3D
+		if builtin_scope != null:
+			builtin_scope.visible = not has_custom_optic
+
 	var b_id: StringName = data.id if data != null else &""
 	for slot_name in equipped_attachments:
-		var att_id: StringName = equipped_attachments[slot_name]
-		if att_id.is_empty() or att_id == &"none":
+		var slot_key := StringName(str(slot_name))
+		var att_id := StringName(str(equipped_attachments[slot_name]))
+		if att_id.is_empty() or att_id == &"none" or att_id == &"iron_sights":
 			continue
-		var node := BlasterAttachments.build_attachment(attach_parent, att_id, slot_name, b_id)
+		var node := BlasterAttachments.build_attachment(attach_parent, att_id, slot_key, b_id)
 		if node != null:
 			if att_id == &"tactical_grip":
 				# Angled foregrip mounts on the under-barrel front rail instead of rear buttstock
 				var grip_pos := foregrip_marker.position if foregrip_marker != null else Vector3(0.0, -0.055, -0.18)
 				node.transform = Transform3D(Basis.IDENTITY, grip_pos)
 			else:
-				node.transform = get_slot_transform(slot_name)
+				node.transform = get_slot_transform(slot_key)
 			if first_person:
 				_disable_shadows_recursive(node)
-			attachment_nodes[slot_name] = node
+			attachment_nodes[slot_key] = node
 
 			# If muzzle attachment, offset flash forward
-			if slot_name == &"barrel" and _flash != null and muzzle != null:
+			if slot_key == &"barrel" and _flash != null and muzzle != null:
 				match att_id:
 					&"rifled_extension":
 						_flash.position.z = muzzle.position.z - 0.15
@@ -222,6 +244,132 @@ func _build_attachments() -> void:
 						_flash.position.z = muzzle.position.z - 0.07
 					&"whisper_shroud":
 						_flash.position.z = muzzle.position.z - 0.17
+
+	if not has_custom_optic:
+		_build_iron_sights(attach_parent)
+
+
+## Builds crisp low-profile 3D flip-up iron sights on top of the rail/receiver
+## whenever no aftermarket optic is mounted.
+func _build_iron_sights(attach_parent: Node3D) -> void:
+	if _model_asset_id == &"whisper" or _model_asset_id == &"rocket":
+		return
+	var spec := _iron_sight_spec()
+	var base_y: float = spec["base_y"]
+	var rear_z: float = spec["rear_z"]
+	var front_z: float = spec["front_z"]
+	var post_h: float = spec["post_h"]
+
+	var root := Node3D.new()
+	root.name = "IronSights"
+	attach_parent.add_child(root)
+	_iron_sights_node = root
+
+	var dark_mat := ArenaKit.mat_styled(DARK, ArenaKit.SurfaceType.METAL, 0.35, 0.55)
+	var pip_mat := StandardMaterial3D.new()
+	pip_mat.albedo_color = Color(0.95, 0.98, 1.0)
+	pip_mat.emission_enabled = true
+	pip_mat.emission = Color(0.85, 0.95, 1.0)
+	pip_mat.emission_energy_multiplier = 1.1
+	var front_tip_mat := StandardMaterial3D.new()
+	front_tip_mat.albedo_color = ORANGE_TIP
+	front_tip_mat.emission_enabled = true
+	front_tip_mat.emission = ORANGE_TIP
+	front_tip_mat.emission_energy_multiplier = 1.4
+
+	# Rear sight clamp + wide-open U-notch ears with bright alignment dots
+	var rear_base := ArenaKit.deco_box(root, Vector3(0.044, 0.005, 0.018), Vector3(0.0, base_y + 0.0025, rear_z), DARK)
+	rear_base.material_override = dark_mat
+	for side: float in [-1.0, 1.0]:
+		var ear := ArenaKit.deco_box(root, Vector3(0.0065, post_h, 0.013), Vector3(side * 0.019, base_y + 0.005 + post_h * 0.5, rear_z), DARK)
+		ear.material_override = dark_mat
+		var dot := ArenaKit.deco_sphere(root, 0.0024, Vector3(side * 0.019, base_y + 0.005 + post_h * 0.78, rear_z + 0.007), Color.WHITE)
+		dot.material_override = pip_mat
+
+	# Front sight base + protective side wings + blazing orange center blade post
+	var front_base := ArenaKit.deco_box(root, Vector3(0.036, 0.005, 0.018), Vector3(0.0, base_y + 0.0025, front_z), DARK)
+	front_base.material_override = dark_mat
+	for side: float in [-1.0, 1.0]:
+		var wing := ArenaKit.deco_box(root, Vector3(0.0045, post_h, 0.013), Vector3(side * 0.015, base_y + 0.005 + post_h * 0.5, front_z), DARK)
+		wing.material_override = dark_mat
+	var blade_h := post_h * 0.92
+	var blade := ArenaKit.deco_box(root, Vector3(0.004, blade_h, 0.008), Vector3(0.0, base_y + 0.005 + blade_h * 0.5, front_z), ORANGE_TIP)
+	blade.material_override = front_tip_mat
+
+	if first_person:
+		_disable_shadows_recursive(root)
+
+
+## Returns exact top surface Y, rear/front sight Z, post height, and eye alignment Y
+## for the active blaster model so iron sights sit flush on top and never clip the camera.
+func _iron_sight_spec() -> Dictionary:
+	match _model_asset_id:
+		&"popper":
+			return {"base_y": 0.064, "rear_z": 0.055, "front_z": -0.16, "post_h": 0.018, "eye_y": 0.085}
+		&"six_shot":
+			return {"base_y": 0.078, "rear_z": -0.02, "front_z": -0.22, "post_h": 0.020, "eye_y": 0.101}
+		&"storm":
+			# Upper receiver top is 0.11, Mesh_Hardware_Rail top is 0.13 (Z: -0.23..+0.09)
+			return {"base_y": 0.130, "rear_z": 0.065, "front_z": -0.215, "post_h": 0.024, "eye_y": 0.159}
+		&"sweeper":
+			return {"base_y": 0.065, "rear_z": 0.09, "front_z": -0.18, "post_h": 0.020, "eye_y": 0.088}
+		&"whisper":
+			return {"base_y": 0.093, "rear_z": 0.05, "front_z": -0.18, "post_h": 0.024, "eye_y": 0.178}
+		&"chainstorm":
+			return {"base_y": 0.155, "rear_z": 0.06, "front_z": -0.15, "post_h": 0.022, "eye_y": 0.180}
+		&"rocket":
+			return {"base_y": 0.115, "rear_z": 0.02, "front_z": -0.18, "post_h": 0.024, "eye_y": 0.145}
+	# Procedural fallback geometry specs
+	var style: int = data.model_style if data != null else WeaponData.ModelStyle.PISTOL
+	match style:
+		WeaponData.ModelStyle.PISTOL, WeaponData.ModelStyle.DOUBLE:
+			return {"base_y": 0.084, "rear_z": 0.08, "front_z": -0.18, "post_h": 0.018, "eye_y": 0.105}
+		WeaponData.ModelStyle.SPRAYER:
+			return {"base_y": 0.090, "rear_z": 0.04, "front_z": -0.24, "post_h": 0.022, "eye_y": 0.114}
+		WeaponData.ModelStyle.HAMMER:
+			return {"base_y": 0.065, "rear_z": 0.08, "front_z": -0.22, "post_h": 0.020, "eye_y": 0.088}
+		WeaponData.ModelStyle.RIFLE:
+			return {"base_y": 0.128, "rear_z": 0.06, "front_z": -0.22, "post_h": 0.022, "eye_y": 0.152}
+		WeaponData.ModelStyle.ROTARY:
+			return {"base_y": 0.185, "rear_z": 0.12, "front_z": -0.07, "post_h": 0.022, "eye_y": 0.210}
+	return {"base_y": 0.090, "rear_z": 0.05, "front_z": -0.18, "post_h": 0.020, "eye_y": 0.112}
+
+
+## Rearmost local +Z extent of the blaster geometry (used to guarantee near-plane clearance in ADS).
+func _get_max_rear_z() -> float:
+	var rear_z := 0.20
+	match _model_asset_id:
+		&"popper":
+			rear_z = 0.085
+		&"six_shot":
+			rear_z = 0.105
+		&"storm":
+			rear_z = 0.245
+		&"sweeper":
+			rear_z = 0.145
+		&"whisper":
+			rear_z = 0.325
+		&"chainstorm":
+			rear_z = 0.215
+		&"rocket":
+			rear_z = 0.325
+		_:
+			var style: int = data.model_style if data != null else WeaponData.ModelStyle.PISTOL
+			match style:
+				WeaponData.ModelStyle.PISTOL, WeaponData.ModelStyle.DOUBLE:
+					rear_z = 0.11
+				WeaponData.ModelStyle.SPRAYER:
+					rear_z = 0.34
+				WeaponData.ModelStyle.HAMMER:
+					rear_z = 0.37
+				WeaponData.ModelStyle.RIFLE:
+					rear_z = 0.43
+				WeaponData.ModelStyle.ROTARY:
+					rear_z = 0.23
+	var stock_att := _equipped_attachment(&"stock")
+	if stock_att != &"none" and stock_att != &"stock_none" and stock_att != &"tactical_grip":
+		rear_z = maxf(rear_z, get_slot_transform(&"stock").origin.z + 0.14)
+	return rear_z
 
 
 func _disable_shadows_recursive(node: Node) -> void:
@@ -238,19 +386,36 @@ func get_slot_transform(slot: StringName) -> Transform3D:
 
 	match s:
 		"optic":
-			match style:
-				WeaponData.ModelStyle.PISTOL, WeaponData.ModelStyle.DOUBLE:
-					tf.origin = Vector3(0.0, 0.08, -0.05)
-				WeaponData.ModelStyle.SPRAYER:
-					tf.origin = Vector3(0.0, 0.09, -0.1)
-				WeaponData.ModelStyle.HAMMER:
-					tf.origin = Vector3(0.0, 0.08, -0.05)
-				WeaponData.ModelStyle.RIFLE:
-					tf.origin = Vector3(0.0, 0.12, -0.05)
-				WeaponData.ModelStyle.ROTARY:
-					tf.origin = Vector3(0.0, 0.19, 0.03)
+			match _model_asset_id:
+				&"popper":
+					tf.origin = Vector3(0.0, 0.064, -0.05)
+				&"six_shot":
+					tf.origin = Vector3(0.0, 0.078, -0.10)
+				&"storm":
+					# Top surface of Mesh_Hardware_Rail is Y = 0.13 (Z: -0.23..+0.09)
+					tf.origin = Vector3(0.0, 0.130, -0.07)
+				&"sweeper":
+					tf.origin = Vector3(0.0, 0.065, -0.04)
+				&"whisper":
+					tf.origin = Vector3(0.0, 0.093, -0.06)
+				&"chainstorm":
+					tf.origin = Vector3(0.0, 0.155, -0.04)
+				&"rocket":
+					tf.origin = Vector3(0.0, 0.115, -0.10)
 				_:
-					tf.origin = Vector3(0.0, muzzle.position.y + 0.07, muzzle.position.z * 0.4)
+					match style:
+						WeaponData.ModelStyle.PISTOL, WeaponData.ModelStyle.DOUBLE:
+							tf.origin = Vector3(0.0, 0.084, -0.05)
+						WeaponData.ModelStyle.SPRAYER:
+							tf.origin = Vector3(0.0, 0.09, -0.1)
+						WeaponData.ModelStyle.HAMMER:
+							tf.origin = Vector3(0.0, 0.065, -0.05)
+						WeaponData.ModelStyle.RIFLE:
+							tf.origin = Vector3(0.0, 0.125, -0.05)
+						WeaponData.ModelStyle.ROTARY:
+							tf.origin = Vector3(0.0, 0.185, 0.03)
+						_:
+							tf.origin = Vector3(0.0, muzzle.position.y + 0.07, muzzle.position.z * 0.4)
 		"barrel":
 			if muzzle != null:
 				tf.origin = muzzle.position
@@ -302,26 +467,37 @@ func get_slot_transform(slot: StringName) -> Transform3D:
 	return tf
 
 
-## Computes the first-person ADS offset so the optic or iron sights center on the camera.
+## Computes the first-person ADS offset so the optic or iron sights center cleanly
+## on the camera while guaranteeing the rear receiver/stock stays safely ahead of camera.near.
 func get_ads_offset() -> Vector3:
-	var sight_pos := Vector3(0.0, 0.10, -0.05)
-	if equipped_attachments.has(&"optic") and equipped_attachments[&"optic"] != &"none" and equipped_attachments[&"optic"] != &"iron_sights":
-		var opt_id: StringName = equipped_attachments[&"optic"]
+	var sight_pos := Vector3.ZERO
+	var desired_eye_z := -0.26
+
+	if _has_aftermarket_optic():
+		var opt_id := _equipped_attachment(&"optic")
 		var socket := get_slot_transform(&"optic").origin
 		var opt_y := 0.038
 		if opt_id == &"holo_sight":
 			opt_y = 0.045
+		elif opt_id == &"marksman_scope":
+			opt_y = 0.052
 		sight_pos = socket + Vector3(0.0, opt_y, 0.0)
-	elif muzzle != null:
-		sight_pos = Vector3(0.0, muzzle.position.y + 0.035, muzzle.position.z * 0.5)
+		desired_eye_z = -0.24
 	else:
-		sight_pos = Vector3(0.0, 0.08, -0.15)
+		var spec := _iron_sight_spec()
+		sight_pos = Vector3(0.0, float(spec["eye_y"]), float(spec["rear_z"]))
+		desired_eye_z = -0.26
 
-	var target_z := -0.28
+	# Guarantee the rearmost part of the blaster stays well ahead of camera.near (0.04m)
+	# even under full-auto recoil and subtle movement sway.
+	var max_rear_z := _get_max_rear_z()
+	var min_safe_z := -(max_rear_z + 0.14)
+	var ads_z := minf(desired_eye_z - sight_pos.z, min_safe_z)
+
 	return Vector3(
 		-sight_pos.x,
 		-sight_pos.y,
-		target_z - sight_pos.z
+		ads_z
 	)
 
 
@@ -334,6 +510,7 @@ func _build_from_model() -> bool:
 	var model_node := ModelLoader.instantiate_blaster(data.id)
 	if model_node == null:
 		return false
+	_model_asset_id = ModelLoader.resolve_blaster_id(data.id)
 	model_root = model_node
 	add_child(model_node)
 

@@ -72,6 +72,7 @@ var viewport2: SubViewport
 var pause_menu: PauseMenu
 var podium: Podium
 var power_up: PowerUpPickup
+var bat_pickup: BatPickup = null
 var base_core: BaseCore
 var horde_director: HordeDirector
 var lava_hazard: LavaHazard
@@ -458,8 +459,13 @@ func _ready() -> void:
 	if mode.uses_power_up() and not arena.power_up_spots.is_empty():
 		_create_power_up(mode)
 
+	if not (mode is GunGameMode or mode is ZombieMode or mode is ZombieSiegeMode):
+		_create_bat_pickup()
+
 	controller.state_changed.connect(func(state: MatchController.State) -> void:
 		var playing := state == MatchController.State.PLAYING
+		if bat_pickup != null:
+			bat_pickup.active = playing
 		if arena != null:
 			for sp in arena.shield_pickups:
 				if sp != null:
@@ -546,6 +552,8 @@ func _on_match_ended(ranking: Array[ScoreEntry]) -> void:
 		split_container.visible = false
 	if power_up != null:
 		power_up.active = false
+	if bat_pickup != null:
+		bat_pickup.active = false
 	if arena != null:
 		for sp in arena.shield_pickups:
 			if sp != null:
@@ -633,6 +641,40 @@ func _create_power_up(mode: GameMode) -> void:
 		var prize := mode.power_weapon.display_name.to_upper()
 		var text := "%s GRABBED %s!" % [actor.display_name.to_upper(), prize] if (not actor.is_human or GameSettings.split_screen) else "YOU GRABBED %s!" % prize
 		controller.announce(entry, text, MatchController.color_for(entry), &"announce"))
+
+
+func _create_bat_pickup() -> void:
+	if arena == null:
+		return
+	var bat_pos := Vector3.ZERO
+	var power_pos := power_up.global_position if power_up != null else Vector3(9999.0, 9999.0, 9999.0)
+	if arena.power_up_spots.size() >= 2:
+		bat_pos = arena.power_up_spots[1]
+	else:
+		# Pick an open ground-level roam point near the centre of the arena, clear of the Chainstorm pad
+		var best_dist := INF
+		var found := false
+		for rp in arena.roam_points:
+			if rp.distance_to(power_pos) < 3.5:
+				continue
+			if rp.y < -1.0 or rp.y > 4.0:
+				continue
+			var d := Vector2(rp.x, rp.z).length()
+			if d < best_dist:
+				best_dist = d
+				bat_pos = rp
+				found = true
+		if not found and not arena.power_up_spots.is_empty():
+			bat_pos = arena.power_up_spots[0] + Vector3(3.0, 0.0, 0.0)
+	bat_pickup = BatPickup.new()
+	bat_pickup.name = "FoamBatPickup"
+	bat_pickup.active = false
+	arena.add_child(bat_pickup)
+	bat_pickup.global_position = bat_pos
+	bat_pickup.collected.connect(func(actor: Actor) -> void:
+		var entry := controller.board.entry_for(actor)
+		var text := "%s GRABBED THE FOAM BAT!" % actor.display_name.to_upper() if (not actor.is_human or GameSettings.split_screen) else "YOU GRABBED THE FOAM BAT!"
+		controller.announce(entry, text, Color(1.0, 0.65, 0.15), &"announce"))
 
 
 func _exit_tree() -> void:

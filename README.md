@@ -12,20 +12,14 @@ Zero pay-to-win, zero microtransactions, and 100% kid-safe.
 
 ## How to Install & Play
 
-### Option 1: Standalone Linux Release (No Godot Required)
-Build a portable, double-clickable standalone Linux release with the included build tool:
+### Option 1: Standalone Releases (Windows `.exe` & Linux — No Godot Required)
+Build double-clickable standalone releases with the included build tools:
 ```bash
-./tools/export_linux.sh
+./tools/export_windows.sh   # -> build/windows/DARTSTORM/DARTSTORM.exe + zip archive
+./tools/export_linux.sh     # -> build/linux/DARTSTORM/DARTSTORM.x86_64 + tar.gz archive
 ```
-This produces:
-- `build/linux/DARTSTORM/`: A self-contained folder containing the 64-bit executable (`DARTSTORM.x86_64`), icon, and desktop shortcut installer.
-- `build/DARTSTORM-1.0.0-linux-x86_64.tar.gz`: A compressed archive ready to copy to any 64-bit Linux PC.
-
-**To install and launch on any 64-bit Linux desktop:**
-1. Extract the archive or open `build/linux/DARTSTORM/`.
-2. Double-click `DARTSTORM.x86_64` to play immediately, **OR**
-3. Run `./install-shortcut.sh` once in that directory (or in a terminal) to install DARTSTORM with its icon into your Linux application launcher menu and desktop.
-4. *(To uninstall the desktop shortcut later: `./install-shortcut.sh --remove`)*.
+- **Windows (64-bit):** Extract `build/DARTSTORM-1.0.0-windows-x86_64.zip` and double-click `DARTSTORM.exe` (single self-contained executable with embedded data).
+- **Linux (64-bit):** Extract `build/DARTSTORM-1.0.0-linux-x86_64.tar.gz` and double-click `DARTSTORM.x86_64`, or run `./install-shortcut.sh` once to add DARTSTORM to your application menu (`./install-shortcut.sh --remove` to uninstall).
 
 > *Note: Building the release requires Godot's export templates. In the Godot editor, select **Editor > Manage Export Templates** to install them once.*
 
@@ -61,7 +55,7 @@ Fully playable with keyboard & mouse or any standard gamepad (Xbox, PlayStation,
 | **Interact (Plant / Defuse / Repair)** | F / E | D-Pad Right |
 | **Reload** | R | X / Square |
 | **Squad Ping** | T | D-Pad Up |
-| **Switch Blaster** | 1, 2, 3, Scroll Wheel, Q / E | Y / Triangle, LB, RB |
+| **Switch Weapon / Foam Bat** | 1–5, Scroll Wheel, Q / E | Y / Triangle, LB, RB |
 | **Scoreboard** | Tab (hold) | Back / View / Share |
 | **Pause Game** | Esc or P | Start / Menu / Options |
 | **Menu Navigation** | Mouse or Arrow keys + Enter | D-pad or Left Stick |
@@ -74,7 +68,7 @@ Fully playable with keyboard & mouse or any standard gamepad (Xbox, PlayStation,
 Choose from **10 distinct match types** in the 3D lobby (solo, 2-player couch split-screen, or LAN/online WebSocket multiplayer):
 
 1. **SOLO (Backyard Battle):** Fast-paced 5-minute free-for-all against 2–7 bots.
-2. **GUN GAME:** 10-rung elemental blaster progression ladder. Every tag advances your weapon; score a tag with Flax's Chainstorm on the final rung to win.
+2. **GUN GAME:** 11-rung elemental blaster progression ladder. Every tag advances your weapon — climb past Flax's Chainstorm and land the final melee bonk with the **Foam Bat** to win!
 3. **DUOS:** Partner with a bot buddy (or Player 2 in split-screen) against competing rival duos with coordinated buddy spawning and squad pings.
 4. **TEAMS (Blue vs Orange):** Large-scale team battles (up to 4 v 4) with no friendly fire, home-base respawns, live team score chips, and team podium ceremonies.
 5. **ZOMBIES:** Asymmetrical infection tag. 1 Alpha Zombie hunts survivors; tagged survivors join the green foam horde.
@@ -126,7 +120,7 @@ Directly inspired by the young players' design sketches:
 ## For Developers
 
 - `./tools/validate.sh`: Comprehensive automated test runner. Imports the project, compiles all scripts with warnings treated as errors, boots the main menu and match headless, runs the full automated unit & integration test suite, and verifies zero memory leaks at exit.
-- `./tools/export_linux.sh`: Builds and packages the standalone Linux release, running headless smoke tests on the exported binary.
+- `./tools/export_windows.sh` / `./tools/export_linux.sh`: Build standalone Windows `.exe` and Linux releases.
 - `./tools/export_web.sh` / `./tools/export_apk.sh` / `./tools/export_server.sh`: Build HTML5/WASM web, Android APK, and Linux Dedicated Server releases.
 - `./tools/check_scripts.gd`: Strict compiler validation (fails on any GDScript warning).
 - `./tools/generate_skins.py`: Generates the 8 seamless 1024x1024 vector pattern textures used by the tri-planar blaster shader.

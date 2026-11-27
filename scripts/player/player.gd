@@ -206,6 +206,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		arsenal.select(2)
 	elif event.is_action_pressed(_act(&"weapon_4")):
 		arsenal.select(3)
+	elif event.is_action_pressed(_act(&"weapon_5")):
+		arsenal.select(4)
 	elif event.is_action_pressed(_act(&"reload")):
 		arsenal.request_reload()
 	elif event.is_action_pressed(_act(&"inspect")):
@@ -252,7 +254,7 @@ func _physics_process(delta: float) -> void:
 				_fire_blocked_until_release = false
 
 		var current_w := arsenal.current()
-		var wants_aim := Input.is_action_pressed(_act(&"aim_down_sights")) and not is_zombie and not is_tagged_out and not _sprinting and not _reloading and current_w != null
+		var wants_aim := Input.is_action_pressed(_act(&"aim_down_sights")) and not is_zombie and not is_tagged_out and not _sprinting and not _reloading and current_w != null and not current_w.data.is_melee()
 		if wants_aim != is_aiming_down_sights:
 			is_aiming_down_sights = wants_aim
 			if is_aiming_down_sights:
@@ -799,6 +801,8 @@ func _on_shot_feedback(state: WeaponState) -> void:
 	add_trauma(shake)
 	if _view_model != null:
 		_view_model.flash(recoil_mult)
+	if body_model != null and weapon.is_melee():
+		body_model.play_melee_swing()
 	GameSettings.vibrate(0.12 * kick + 0.05, 0.0, 0.06, player_index)
 	shot_fired.emit(state)
 

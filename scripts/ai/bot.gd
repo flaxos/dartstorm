@@ -211,7 +211,11 @@ func _physics_process(delta: float) -> void:
 	else:
 		arsenal.set_trigger(false)
 
-	move_actor(wish * difficulty.move_speed_scale, is_zombie, jump, delta)
+	var melee_sprint := false
+	var held_state := arsenal.current()
+	if not is_zombie and held_state != null and held_state.data.is_melee() and _target != null:
+		melee_sprint = true
+	move_actor(wish * difficulty.move_speed_scale, is_zombie or melee_sprint, jump, delta)
 	_model.animate(Vector2(velocity.x, velocity.z).length(), delta)
 	var held := _model.get_weapon()
 	if held != null:
@@ -370,6 +374,13 @@ func _think() -> void:
 		if ep != null:
 			_mood = Mood.ROAM
 			_set_goal(ep.global_position)
+			return
+
+	if _wants_bat_pickup():
+		var bp := _nearest_bat_pickup()
+		if bp != null:
+			_mood = Mood.ROAM
+			_set_goal(bp.global_position)
 			return
 
 	if _target != null:
@@ -798,11 +809,16 @@ func _choose_weapon() -> void:
 	var best_score := -INF
 	for i in arsenal.weapons.size():
 		var state := arsenal.weapons[i]
-		if state.total() <= 0:
+		if not state.can_fire():
 			continue
 		var data := state.data
 		var score := data.ai_preference + randf() * 0.6
-		if distance < data.ai_min_range or distance > data.ai_max_range:
+		if data.is_melee():
+			if distance <= data.melee_range + 0.6:
+				score += 2.5
+			else:
+				score -= 8.0
+		elif distance < data.ai_min_range or distance > data.ai_max_range:
 			score -= 2.0
 		if data.fire_mode == WeaponData.FireMode.SPIN_UP and state.total() < 40:
 			score -= 3.0
@@ -895,6 +911,28 @@ func _nearest_elemental_pickup() -> ElementalPickup:
 	return best
 
 
+func _wants_bat_pickup() -> bool:
+	if is_zombie or arsenal.has_weapon(&"foam_bat"):
+		return false
+	var nearest := _nearest_bat_pickup()
+	if nearest == null or not nearest.is_available():
+		return false
+	return _target == null or global_position.distance_to(nearest.global_position) < 12.0
+
+
+func _nearest_bat_pickup() -> BatPickup:
+	var best: BatPickup = null
+	var best_dist := INF
+	for node in get_tree().get_nodes_in_group(&"bat_pickups"):
+		var bp := node as BatPickup
+		if bp != null and is_instance_valid(bp) and bp.is_available():
+			var d := global_position.distance_to(bp.global_position)
+			if d < best_dist:
+				best_dist = d
+				best = bp
+	return best
+
+
 func _consider_grenade_throw() -> void:
 	if is_zombie or grenade_count <= 0 or _target == null or not is_instance_valid(_target) or not _target.alive:
 		return
@@ -919,10 +957,10 @@ func _wants_resupply() -> bool:
 ## even if we only just switched to it.
 func _ensure_loaded_weapon() -> void:
 	var held := arsenal.current()
-	if held == null or held.total() > 0 or arsenal.weapons.size() < 2:
+	if held == null or held.can_fire() or arsenal.weapons.size() < 2:
 		return
 	for i in arsenal.weapons.size():
-		if arsenal.weapons[i].total() > 0:
+		if arsenal.weapons[i].can_fire():
 			arsenal.select(i)
 			_weapon_lock_left = WEAPON_LOCK_SECONDS
 			return
@@ -1070,9 +1108,16 @@ func _update_trigger(delta: float) -> void:
 		return
 	var state := arsenal.current()
 	var wants_fire := state != null and _target != null and _on_target and _seen_for >= difficulty.reaction_time
+	if wants_fire and state.data.is_melee():
+		var dist := global_position.distance_to(_target.global_position)
+		if dist > state.data.melee_range + 0.55:
+			wants_fire = false
 	if not wants_fire:
 		arsenal.set_trigger(false)
 		_trigger_clock = 0.0
+		return
+	if state.data.is_melee():
+		arsenal.set_trigger(true)
 		return
 	var hold := 0.07
 	var rest := difficulty.semi_interval
@@ -1128,6 +1173,9 @@ func _fight_direction(delta: float) -> Vector3:
 	to_target.y = 0.0
 	var toward := to_target.normalized()
 	var state := arsenal.current()
+	if state != null and state.data.is_melee():
+		# Melee wielder (e.g. Gun Game final Foam Bat rung) charges straight into bonking range!
+		return _path_direction(_target.global_position)
 	var ideal := 12.0
 	if state != null:
 		ideal = lerpf(state.data.ai_min_range, minf(state.data.ai_max_range, 26.0), 0.4)
@@ -1214,6 +1262,9 @@ func _on_weapon_changed(state: WeaponState) -> void:
 
 func _on_shot_feedback(state: WeaponState) -> void:
 	Sfx.play_at(state.data.sound, global_position + Vector3.UP * 1.3, state.data.sound_pitch, -4.0, 0.08)
+	if state != null and state.data.is_melee():
+		_model.play_melee_swing()
+		return
 	var held := _model.get_weapon()
 	if held != null:
 		held.flash()

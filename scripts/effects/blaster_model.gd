@@ -54,6 +54,7 @@ var _pump_slide: Node3D = null
 var _slide: Node3D = null
 var _recoil_z: float = 0.0
 var _recoil_pitch: float = 0.0
+var _swing_phase: float = -1.0
 var _pump_cycle: float = 0.0
 var _slide_cycle: float = 0.0
 var _belt: Array[Node3D] = []
@@ -74,7 +75,9 @@ static func create(p_data: WeaponData, p_first_person: bool, p_skin_id: StringNa
 		model.skin_id = GameSettings.player_skin
 	else:
 		model.skin_id = &"default"
-	if not p_attachments.is_empty():
+	if p_data != null and p_data.is_melee():
+		model.equipped_attachments = {}
+	elif not p_attachments.is_empty():
 		model.equipped_attachments = p_attachments.duplicate()
 	elif p_first_person and is_instance_valid(Progression) and p_data != null:
 		model.equipped_attachments = Progression.get_equipped_attachments(p_data.id)
@@ -87,8 +90,16 @@ func set_spin(ratio: float) -> void:
 	_spin = ratio
 
 
-## Shows the muzzle star burst + brief dynamic light for one shot.
+## Plays a snappy diagonal cartoon baseball swing animation on melee models.
+func swing() -> void:
+	_swing_phase = 0.0
+
+
+## Shows the muzzle star burst + brief dynamic light for one shot (or swings for melee).
 func flash(recoil_mult: float = 1.0) -> void:
+	if data != null and data.is_melee():
+		swing()
+		return
 	if _flash == null:
 		return
 	_flash_left = 0.055
@@ -129,8 +140,33 @@ func _process(delta: float) -> void:
 			if _flash_light != null:
 				_flash_light.visible = false
 
+	# Diagonal cartoon foam-bat swing animation
+	if _swing_phase >= 0.0:
+		_swing_phase += delta / 0.36
+		if _swing_phase >= 1.0:
+			_swing_phase = -1.0
+			if model_root != null:
+				model_root.position = Vector3.ZERO
+				model_root.rotation = Vector3.ZERO
+		elif model_root != null:
+			if _swing_phase < 0.20:
+				# Crisp wind-up cock back to upper-right
+				var u := smoothstep(0.0, 0.20, _swing_phase)
+				model_root.position = Vector3(0.11 * u, 0.07 * u, 0.05 * u)
+				model_root.rotation = Vector3(0.32 * u, -0.35 * u, -0.35 * u)
+			elif _swing_phase < 0.52:
+				# Explosive diagonal home-run slash across screen center
+				var u := smoothstep(0.20, 0.52, _swing_phase)
+				model_root.position = Vector3(lerpf(0.11, -0.38, u), lerpf(0.07, -0.06, u), lerpf(0.05, -0.18, u))
+				model_root.rotation = Vector3(lerpf(0.32, -1.15, u), lerpf(-0.35, 0.95, u), lerpf(-0.35, 1.38, u))
+			else:
+				# Smooth eased recovery to ready batting stance
+				var u := smoothstep(0.52, 1.0, _swing_phase)
+				model_root.position = Vector3(lerpf(-0.38, 0.0, u), lerpf(-0.06, 0.0, u), lerpf(-0.18, 0.0, u))
+				model_root.rotation = Vector3(lerpf(-1.15, 0.0, u), lerpf(0.95, 0.0, u), lerpf(1.38, 0.0, u))
+
 	# Procedural recoil damping
-	if _recoil_z > 0.001 or _recoil_pitch > 0.001:
+	if _swing_phase < 0.0 and (_recoil_z > 0.001 or _recoil_pitch > 0.001):
 		_recoil_z = move_toward(_recoil_z, 0.0, delta * 0.35)
 		_recoil_pitch = move_toward(_recoil_pitch, 0.0, delta * 0.5)
 		if model_root != null:
@@ -170,6 +206,8 @@ func _build() -> void:
 				_build_hammer()
 			WeaponData.ModelStyle.RIFLE:
 				_build_rifle()
+			WeaponData.ModelStyle.BAT:
+				_build_bat()
 	else:
 		model_root.add_child(muzzle)
 		if first_person:
@@ -207,6 +245,9 @@ func _build_attachments() -> void:
 	# Always reset muzzle flash to base barrel tip so unequipping a barrel resets it cleanly
 	if _flash != null and muzzle != null:
 		_flash.position = muzzle.position + Vector3(0.0, 0.0, -0.04)
+
+	if data != null and data.is_melee():
+		return
 
 	var attach_parent: Node3D = model_root if model_root != null else self
 	var has_custom_optic := _has_aftermarket_optic()
@@ -252,7 +293,7 @@ func _build_attachments() -> void:
 ## Builds crisp low-profile 3D flip-up iron sights on top of the rail/receiver
 ## whenever no aftermarket optic is mounted.
 func _build_iron_sights(attach_parent: Node3D) -> void:
-	if _model_asset_id == &"whisper" or _model_asset_id == &"rocket":
+	if _model_asset_id == &"whisper" or _model_asset_id == &"rocket" or (data != null and data.is_melee()):
 		return
 	var spec := _iron_sight_spec()
 	var base_y: float = spec["base_y"]
@@ -470,6 +511,8 @@ func get_slot_transform(slot: StringName) -> Transform3D:
 ## Computes the first-person ADS offset so the optic or iron sights center cleanly
 ## on the camera while guaranteeing the rear receiver/stock stays safely ahead of camera.near.
 func get_ads_offset() -> Vector3:
+	if data != null and data.is_melee():
+		return Vector3(0.0, -0.26, -0.46)
 	var sight_pos := Vector3.ZERO
 	var desired_eye_z := -0.26
 
@@ -657,6 +700,100 @@ func _build_rifle() -> void:
 	_tube(0.032, 0.24, Vector3(0.0, 0.095, -0.05), DARK)
 	_tube(0.038, 0.03, Vector3(0.0, 0.095, -0.18), accent)
 	muzzle.position = Vector3(0.0, 0.01, -0.88)
+
+
+## Chunky stylized EVA-foam baseball slugger bat! Ready-angled for crisp first-person & third-person swings.
+func _build_bat() -> void:
+	var body := data.body_color if data != null else ORANGE_TIP
+	var accent := data.accent_color if data != null else Color(0.15, 0.62, 1.0)
+	var bat_pivot := Node3D.new()
+	bat_pivot.name = "FoamBat"
+	# Ready batting angle: tilted slightly forward and inward so the colourful foam barrel is super readable
+	bat_pivot.rotation_degrees = Vector3(-16.0, 0.0, 14.0) if first_person else Vector3(-20.0, 0.0, 0.0)
+	model_root.add_child(bat_pivot)
+
+	# Bottom safety pommel knob + taped black rubber handle
+	var pommel_mesh := SphereMesh.new()
+	pommel_mesh.radius = 0.034
+	pommel_mesh.height = 0.044
+	_part(pommel_mesh, Vector3(0.0, -0.14, 0.0), DARK, Vector3.ZERO, bat_pivot, 0.0)
+
+	var handle_mesh := CylinderMesh.new()
+	handle_mesh.top_radius = 0.022
+	handle_mesh.bottom_radius = 0.021
+	handle_mesh.height = 0.22
+	handle_mesh.radial_segments = 20
+	_part(handle_mesh, Vector3(0.0, -0.02, 0.0), DARK, Vector3.ZERO, bat_pivot, 0.0)
+
+	# Subtle grip tape accent rings
+	for ry: float in [-0.09, -0.04, 0.01, 0.06]:
+		var ring := TorusMesh.new()
+		ring.inner_radius = 0.020
+		ring.outer_radius = 0.025
+		ring.rings = 16
+		ring.ring_segments = 8
+		_part(ring, Vector3(0.0, ry, 0.0), accent, Vector3.ZERO, bat_pivot, 0.0)
+
+	# Collar ring separating grip from EVA foam core
+	var collar := CylinderMesh.new()
+	collar.top_radius = 0.032
+	collar.bottom_radius = 0.024
+	collar.height = 0.035
+	collar.radial_segments = 20
+	_part(collar, Vector3(0.0, 0.105, 0.0), Color(0.95, 0.96, 1.0), Vector3.ZERO, bat_pivot, 0.0)
+
+	# Tapered neck expanding into the oversized foam slugger barrel
+	var neck := CylinderMesh.new()
+	neck.top_radius = 0.046
+	neck.bottom_radius = 0.029
+	neck.height = 0.18
+	neck.radial_segments = 24
+	_part(neck, Vector3(0.0, 0.21, 0.0), body, Vector3.ZERO, bat_pivot, 0.0)
+
+	# Oversized thick EVA-foam slugger barrel (uses skin shader when a custom skin is equipped!)
+	var barrel := CylinderMesh.new()
+	barrel.top_radius = 0.058
+	barrel.bottom_radius = 0.046
+	barrel.height = 0.36
+	barrel.radial_segments = 24
+	_part(barrel, Vector3(0.0, 0.48, 0.0), body, Vector3.ZERO, bat_pivot, 0.0)
+
+	# Bold twin racing stripes around the sweet spot
+	for sy: float in [0.39, 0.56]:
+		var stripe := CylinderMesh.new()
+		stripe.top_radius = 0.0595 if sy > 0.45 else 0.0525
+		stripe.bottom_radius = 0.0565 if sy > 0.45 else 0.0495
+		stripe.height = 0.048
+		stripe.radial_segments = 24
+		_part(stripe, Vector3(0.0, sy, 0.0), accent, Vector3.ZERO, bat_pivot, 0.0)
+
+	# Rounded safety-foam dome cap on top of bat
+	var dome := SphereMesh.new()
+	dome.radius = 0.058
+	dome.height = 0.10
+	dome.radial_segments = 24
+	dome.rings = 10
+	_part(dome, Vector3(0.0, 0.66, 0.0), accent, Vector3.ZERO, bat_pivot, 0.0)
+
+	# Fun cartoon "BONK!" decal along barrel
+	var decal := Label3D.new()
+	decal.text = "BONK!"
+	decal.font = UiKit.font()
+	decal.font_size = 44
+	decal.pixel_size = 0.0012
+	decal.outline_size = 10
+	decal.outline_modulate = UiKit.NAVY_DARK
+	decal.modulate = Color(1.0, 0.96, 0.82)
+	decal.position = Vector3(-0.060, 0.475, 0.0)
+	decal.rotation_degrees = Vector3(0.0, -90.0, -90.0)
+	bat_pivot.add_child(decal)
+
+	grip_marker = Marker3D.new()
+	grip_marker.name = "GripMarker"
+	grip_marker.position = Vector3(0.0, -0.02, 0.0)
+	model_root.add_child(grip_marker)
+
+	muzzle.position = Vector3(0.0, 0.50, -0.15)
 
 
 ## FLAX'S CHAINSTORM: six spinning barrels, a chunky housing and a dart belt.

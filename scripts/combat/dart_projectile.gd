@@ -157,6 +157,36 @@ func retire() -> void:
 		pool.release(self)
 
 
+func is_flying() -> bool:
+	return active and not _spent and not _resting
+
+
+## Reverses a live dart mid-air when batted by a melee weapon, transferring
+## shooter credit, team ownership, and hitbox exclusions so it can tag the original shooter.
+func deflect(new_shooter: Actor, new_direction: Vector3, min_speed: float = 30.0) -> void:
+	if not is_flying() or new_shooter == null or new_direction.length_squared() < 0.0001:
+		return
+	var aim := new_direction.normalized()
+	var speed := maxf(velocity.length() * 1.25, min_speed)
+	velocity = aim * speed
+	shooter = new_shooter
+	team_id = new_shooter.team_id
+	color = new_shooter.color
+	ricochet_count += 1
+	age = 0.0
+	_exclude.clear()
+	if new_shooter.hitbox != null:
+		_exclude.append(new_shooter.hitbox.get_rid())
+	_exclude.append(new_shooter.get_rid())
+	_ricochet_ignore.clear()
+	if _foam != null:
+		_foam.material_override = _foam_material(color)
+	if _trail != null:
+		_trail.material_override = _trail_material(color)
+	_face_velocity()
+	_stretch_trail()
+
+
 func _physics_process(delta: float) -> void:
 	age += delta
 	if _resting:

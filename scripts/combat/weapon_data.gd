@@ -7,9 +7,10 @@ enum FireMode {
 	SEMI,     ## One shot per trigger pull.
 	AUTO,     ## Fires for as long as the trigger is held.
 	SPIN_UP,  ## Must spin its barrels up to speed first, then fires like AUTO.
+	MELEE,    ## Close-range foam bat swing (no ammo needed).
 }
 
-enum ModelStyle { PISTOL, SPRAYER, ROTARY, DOUBLE, HAMMER, RIFLE }
+enum ModelStyle { PISTOL, SPRAYER, ROTARY, DOUBLE, HAMMER, RIFLE, BAT }
 
 @export var id: StringName = &"blaster"
 @export var display_name: String = "Blaster"
@@ -26,6 +27,15 @@ enum ModelStyle { PISTOL, SPRAYER, ROTARY, DOUBLE, HAMMER, RIFLE }
 @export var spin_down_time: float = 0.6
 ## Movement speed multiplier while this weapon is firing or spun up.
 @export var firing_move_multiplier: float = 1.0
+## Passive movement speed multiplier while holding this weapon (e.g. light Foam Bat).
+@export var hold_move_multiplier: float = 1.0
+
+@export_group("Melee")
+@export var melee_range: float = 3.0
+@export var melee_arc_degrees: float = 70.0
+@export var melee_damage: float = 100.0
+@export var melee_knockback: float = 13.5
+@export var melee_lift: float = 4.6
 
 @export_group("Ammo")
 ## Darts per magazine. 0 means belt-fed: it fires straight from the reserve.
@@ -61,4 +71,8 @@ func shot_interval() -> float:
 
 
 func is_belt_fed() -> bool:
-	return magazine_size <= 0
+	return magazine_size <= 0 and not is_melee()
+
+
+func is_melee() -> bool:
+	return fire_mode == FireMode.MELEE

@@ -478,6 +478,16 @@ func _build_bank() -> void:
 	_register(&"dry", _tone(0.03, 300.0, 250.0, Wave.SQUARE, 0.25, 0.6))
 	_register(&"ammo", _tone(0.05, 700.0, 1100.0, Wave.TRIANGLE, 0.35))
 	_register(&"swap", _tone(0.05, 300.0, 500.0, Wave.TRIANGLE, 0.3))
+	# Foam Bat melee swing & cartoon hollow foam BONK!
+	_register(&"bat_swing", _mix([
+		_noise(0.18, 2400.0, 460.0, 0.52, 1.35, 0.014),
+		_tone(0.16, 480.0, 165.0, Wave.TRIANGLE, 0.24, 0.05, 0.01, 1.5),
+	]))
+	_register(&"bat_bonk", _mix([
+		_tone(0.15, 540.0, 210.0, Wave.TRIANGLE, 0.68, 0.04, 0.002, 1.5),
+		_tone(0.12, 880.0, 620.0, Wave.SINE, 0.42, 0.0, 0.002, 1.8),
+		_noise(0.06, 2600.0, 550.0, 0.38, 1.6),
+	]))
 	# Match flow, announcer and UI.
 	_register(&"beep", _tone(0.12, 660.0, 660.0, Wave.SQUARE, 0.28, 0.0, 0.004, 1.0))
 	_register(&"go", _tone(0.4, 990.0, 990.0, Wave.SQUARE, 0.28, 0.0, 0.004, 1.0))

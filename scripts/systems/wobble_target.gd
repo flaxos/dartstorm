@@ -36,12 +36,21 @@ func _ready() -> void:
 
 ## Called by a dart when it lands on the target.
 func on_dart_hit(dart: DartProjectile, _point: Vector3) -> void:
+	_trigger_hit(dart.shooter)
+
+
+## Called when bonked by a melee weapon (e.g. Foam Bat).
+func on_melee_hit(attacker: Actor) -> void:
+	_trigger_hit(attacker)
+
+
+func _trigger_hit(attacker: Actor) -> void:
 	if not _ready_to_hit:
 		return
 	_ready_to_hit = false
 	collision_layer = 0
 	Sfx.play_at(&"ding", global_position, 1.0, 0.0, 0.05)
-	hit.emit(dart.shooter)
+	hit.emit(attacker)
 	var tween := create_tween()
 	tween.tween_property(_face, "rotation:y", TAU * 3.0, 0.7).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.tween_property(_face, "scale", Vector3.ONE * 0.35, 0.2)

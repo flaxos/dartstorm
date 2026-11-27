@@ -189,15 +189,15 @@ func _process(delta: float) -> void:
 		if _reload_bar != null:
 			_reload_bar.visible = reloading
 			if reloading:
-				var rel_dur := maxf(state.get_reload_seconds(), 0.05)
-				var prog := clampf(1.0 - (_player.arsenal.reload_left / rel_dur), 0.0, 1.0)
+				var prog := clampf(_player.arsenal.reload_progress(), 0.0, 1.0)
 				_reload_bar.value = prog
 				if _crosshair != null:
 					_crosshair.set_reload_progress(prog)
 			elif _crosshair != null:
 				_crosshair.set_reload_progress(-1.0)
-		var low_mag := not state.data.is_belt_fed() and state.magazine > 0 and state.magazine <= maxi(1, floori(float(state.get_magazine_size()) * 0.25))
-		var empty_mag := not state.data.is_belt_fed() and state.magazine <= 0
+		var is_melee := state.data.is_melee()
+		var low_mag := not is_melee and not state.data.is_belt_fed() and state.magazine > 0 and state.magazine <= maxi(1, floori(float(state.get_magazine_size()) * 0.25))
+		var empty_mag := not is_melee and not state.data.is_belt_fed() and state.magazine <= 0
 		if empty_mag or low_mag:
 			var pulse := 0.55 + 0.45 * sin(_low_ammo_pulse)
 			_ammo_label.add_theme_color_override("font_color", UiKit.CREAM.lerp(Color(1.0, 0.28, 0.18), pulse))
@@ -207,9 +207,9 @@ func _process(delta: float) -> void:
 			_set_hint("REFILLING!", UiKit.LIME)
 		elif reloading:
 			_set_hint("RELOADING...", UiKit.SKY)
-		elif state.total() <= 0:
+		elif not is_melee and state.total() <= 0:
 			_set_hint("OUT OF DARTS - FIND A BUCKET!", UiKit.ORANGE_HOT)
-		elif not state.infinite_reserve and state.total() <= maxi(floori(state.get_reserve_max() / 8.0), 3):
+		elif not is_melee and not state.infinite_reserve and state.total() <= maxi(floori(state.get_reserve_max() / 8.0), 3):
 			_set_hint("LOW AMMO", UiKit.ORANGE_HOT)
 		else:
 			_set_hint("", UiKit.CREAM)
@@ -740,7 +740,7 @@ func _refresh_slot_strip() -> void:
 		var st := _player.arsenal.weapons[i]
 		var active := st == cur
 		var pill := UiKit.panel(UiKit.ORANGE if active else UiKit.NAVY_DARK, 0.92, 6, 2 if active else 1, UiKit.CREAM if active else UiKit.BLUE, 4)
-		var short_n := st.data.display_name.get_slice(" ", 0).to_upper()
+		var short_n := "BAT" if st.data.is_melee() else st.data.display_name.get_slice(" ", 0).to_upper()
 		pill.add_child(UiKit.label("%d %s" % [i + 1, short_n], 11, UiKit.CREAM if active else UiKit.SKY, 2))
 		_slot_strip.add_child(pill)
 
@@ -757,6 +757,9 @@ func _on_weapon_mastery_ranked_up(weapon_id: StringName, new_rank: int, player_i
 
 func _on_ammo_changed(state: WeaponState) -> void:
 	if state == null or state != _player.arsenal.current():
+		return
+	if state.data.is_melee():
+		_ammo_label.text = "MELEE"
 		return
 	var reserve_text := "INF" if state.infinite_reserve else str(state.reserve)
 	if state.data.is_belt_fed():

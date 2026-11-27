@@ -102,14 +102,20 @@ func get_move_multiplier() -> float:
 
 ## Darts ready to fire right now.
 func loaded() -> int:
+	if data != null and data.is_melee():
+		return 1
 	return reserve if data.is_belt_fed() else magazine
 
 
 func can_fire() -> bool:
+	if data != null and data.is_melee():
+		return true
 	return loaded() > 0
 
 
 func consume() -> void:
+	if data != null and data.is_melee():
+		return
 	if data.is_belt_fed():
 		if not infinite_reserve:
 			reserve = maxi(reserve - 1, 0)
@@ -118,6 +124,8 @@ func consume() -> void:
 
 
 func can_reload() -> bool:
+	if data != null and data.is_melee():
+		return false
 	return not data.is_belt_fed() and magazine < get_magazine_size() and reserve > 0
 
 
@@ -130,7 +138,7 @@ func reload() -> void:
 
 
 func missing() -> int:
-	if infinite_reserve:
+	if infinite_reserve or (data != null and data.is_melee()):
 		return 0
 	return maxi(get_reserve_max() - reserve, 0)
 
@@ -143,4 +151,6 @@ func add_ammo(amount: int) -> int:
 
 
 func total() -> int:
+	if data != null and data.is_melee():
+		return 0
 	return reserve if data.is_belt_fed() else magazine + reserve

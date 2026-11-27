@@ -206,7 +206,7 @@ func _test_resources() -> void:
 	check(gun_game != null and gun_game.ladder.size() >= 3, "gun game ladder has at least three rungs")
 	if gun_game != null and not gun_game.ladder.is_empty():
 		check(gun_game.ladder[0].id == &"pocket_popper", "ladder starts with the Pocket Popper")
-		check(gun_game.ladder[-1].id == &"flaxs_chainstorm", "ladder ends with Flax's Chainstorm")
+		check(gun_game.ladder[-1].id == &"foam_bat", "ladder ends with the Foam Bat melee finisher")
 	for action in [&"move_forward", &"jump", &"sprint", &"fire", &"reload", &"pause", &"scoreboard"]:
 		check(InputMap.has_action(action), "input action '%s' exists" % action)
 	await physics_frames(1)
@@ -474,7 +474,7 @@ func _test_scoring() -> void:
 	for i in gun_game.ladder.size() - 2:
 		gun_game.apply_tag(climber, other, false)
 	check(gun_game.get_early_winner(board2) == null, "no winner while still holding the last blaster")
-	check(gun_game.get_loadout(climber)[0].id == &"flaxs_chainstorm", "the last rung is Flax's Chainstorm")
+	check(gun_game.get_loadout(climber)[0].id == &"foam_bat", "the last rung is the Foam Bat")
 	gun_game.apply_tag(climber, other, false)
 	check(gun_game.get_early_winner(board2) == climber, "a tag with the last blaster wins Gun Game")
 	stage.queue_free()
@@ -1613,7 +1613,7 @@ func _test_elemental_gameplay() -> void:
 	check(ice_dart != null and ice_dart.element == DartData.Element.ICE, "ice dart is Element.ICE")
 
 	var gun_game := load(GUN_GAME) as GunGameMode
-	check(gun_game != null and gun_game.ladder.size() == 10, "Gun Game ladder now has the full 10 rungs (10/10)")
+	check(gun_game != null and gun_game.ladder.size() == 11, "Gun Game ladder has all 11 rungs ending with the Foam Bat (11/11)")
 	var ladder_ids: Array[StringName] = []
 	if gun_game != null:
 		for weapon in gun_game.ladder:
@@ -5267,6 +5267,90 @@ func _test_v1_0_release_regressions() -> void:
 			"%s iron-sight ADS stays above receiver and ahead of near plane (off=%s, rearZ=%.3f)" % [wdata.id, str(off), rear_world_z])
 		bm.queue_free()
 	await physics_frames(2)
+
+	# 11. Foam Bat Melee Weapon: Gun Game final rung, Zombies loadout, FFA BatPickup, melee bonk & dart deflect
+	var bat_data := load("res://resources/weapons/foam_bat.tres") as WeaponData
+	check(bat_data != null and bat_data.is_melee(), "foam_bat.tres loads as a MELEE weapon")
+	check(Sfx.has_sound(&"bat_swing") and Sfx.has_sound(&"bat_bonk"), "Sfx bank provides bat_swing and bat_bonk sounds")
+	var bat_state := WeaponState.new(bat_data)
+	check(bat_state.can_fire() and not bat_state.can_reload() and bat_state.missing() == 0,
+		"Foam Bat WeaponState needs no ammo and never reloads")
+	var bat_vm := BlasterModel.create(bat_data, true, &"default", {})
+	add_child(bat_vm)
+	check(bat_vm.attachment_nodes.is_empty() and bat_vm._iron_sights_node == null,
+		"Foam Bat first-person model mounts zero floating blaster attachments or iron sights")
+	bat_vm.queue_free()
+
+	var z_mode := load(ZOMBIES_MODE) as GameMode
+	var zs_mode := load(ZOMBIE_SIEGE_MODE) as GameMode
+	var z_has_bat := false
+	for w in z_mode.loadout:
+		if w.id == &"foam_bat":
+			z_has_bat = true
+	var zs_has_bat := false
+	for w in zs_mode.loadout:
+		if w.id == &"foam_bat":
+			zs_has_bat = true
+	check(z_has_bat and zs_has_bat, "Zombies and Zombie Siege survivor loadouts include the Foam Bat")
+
+	# Melee swing bonk + knockback + dart deflect
+	var melee_stage := make_stage()
+	var m_pool := make_pool(melee_stage)
+	var batter := make_actor(melee_stage, Vector3.ZERO, 0)
+	batter.dart_pool = m_pool
+	batter.arsenal.set_loadout([bat_data], false)
+	var dummy_victim := make_actor(melee_stage, Vector3(0.0, 0.0, -2.0), 1)
+	dummy_victim._protect_left = 0.0
+	dummy_victim.grant_shield(50.0)
+	var enemy_dart := m_pool.fire(make_dart_data(25.0, 0.0, 0.0), Vector3(0.0, 1.4, -1.6), Vector3.BACK, dummy_victim, null, Color.ORANGE, [])
+	await physics_frames(1)
+	batter._perform_melee_swing(batter.arsenal.current())
+	check(not dummy_victim.has_shield() and dummy_victim.tag_meter >= 49.0,
+		"Foam Bat swing breaks Foam Shield and spills damage onto rival tag meter")
+	check(dummy_victim.velocity.length() > 5.0, "Foam Bat swing launches rival with cartoon knockback")
+	check(enemy_dart.shooter == batter and enemy_dart.ricochet_count >= 1 and enemy_dart.velocity.z < 0.0,
+		"Foam Bat swing deflects incoming enemy foam dart back with ricochet credit")
+
+	# BatPickup spawns in standard modes (FFA) and grants Foam Bat on touch
+	var bp := BatPickup.new()
+	melee_stage.add_child(bp)
+	bp.global_position = Vector3(6.0, 0.0, 0.0)
+	bp.make_available()
+	var grabber := make_actor(melee_stage, Vector3(6.0, 0.0, 0.0), 0)
+	await physics_frames(1)
+	bp._on_body_entered(grabber)
+	check(grabber.arsenal.has_weapon(&"foam_bat") and not bp.is_available(),
+		"BatPickup hands Foam Bat to touching actor and starts respawn cooldown")
+	melee_stage.queue_free()
+	await physics_frames(2)
+
+	# 12. HUD reload progress regression (fixes nonexistent WeaponState.get_reload_seconds / reload_left)
+	var ffa_game := start_match(GameSettings.MatchMode.FREE_FOR_ALL)
+	await physics_frames(4)
+	var ffa_player: Player = ffa_game.get("player") as Player
+	var ffa_hud: Hud = ffa_game.get("hud") as Hud
+	var ffa_bat: BatPickup = ffa_game.get("bat_pickup") as BatPickup
+	check(ffa_bat != null, "Standard FFA match spawns a Foam Bat arena pickup")
+	if ffa_player != null and ffa_hud != null:
+		ffa_player.arsenal.current().magazine = 1
+		ffa_player.arsenal.request_reload()
+		await physics_frames(3)
+		check(ffa_player.arsenal.is_reloading() and ffa_hud._reload_bar.visible,
+			"HUD updates reload progress bar cleanly without script errors")
+	await end_match(ffa_game, GameSettings.MatchMode.FREE_FOR_ALL)
+
+	# 13. Windows Desktop export preset & build script
+	var win_presets := ConfigFile.new()
+	check(win_presets.load("res://export_presets.cfg") == OK, "export_presets.cfg loads cleanly for Windows check")
+	var found_win := false
+	for sec in win_presets.get_sections():
+		if not sec.ends_with(".options") and win_presets.get_value(sec, "platform", "") == "Windows Desktop":
+			found_win = true
+			check(win_presets.get_value(sec + ".options", "binary_format/embed_pck", false) == true,
+				"Windows Desktop preset embeds PCK into a single DARTSTORM.exe")
+			break
+	check(found_win, "export_presets.cfg defines a Windows Desktop export preset")
+	check(FileAccess.file_exists("res://tools/export_windows.sh"), "tools/export_windows.sh exists")
 
 
 

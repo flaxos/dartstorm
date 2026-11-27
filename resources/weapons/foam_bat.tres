@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/darts/foam_bonk.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"foam_bat"
+display_name = "Foam Bat"
+description = "Oversized cartoon foam slugger! Swing to bonk rivals into the sky, send zombies flying, and bat incoming darts right back!"
+dart = ExtResource("2")
+fire_mode = 3
+shots_per_second = 1.85
+darts_per_shot = 1
+spread_degrees = 0.0
+firing_move_multiplier = 1.05
+hold_move_multiplier = 1.14
+melee_range = 3.0
+melee_arc_degrees = 70.0
+melee_damage = 100.0
+melee_knockback = 13.5
+melee_lift = 4.6
+magazine_size = 0
+reserve_max = 0
+reserve_start = 0
+reload_time = 0.0
+recoil_kick = 1.1
+camera_shake = 0.14
+sound = &"bat_swing"
+sound_pitch = 1.0
+zoom_fov = 0.0
+model_style = 6
+body_color = Color(1, 0.45, 0.08, 1)
+accent_color = Color(0.15, 0.62, 1, 1)
+view_offset = Vector3(0.32, -0.32, -0.5)
+ai_min_range = 0.0
+ai_max_range = 3.2
+ai_preference = 2.6

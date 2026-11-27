@@ -133,6 +133,7 @@ var _my_skin_mat: ShaderMaterial = null
 var _my_sneaker_mat: ShaderMaterial = null
 var _hit_flash_left: float = 0.0
 var _electric_flash_left: float = 0.0
+var _melee_swing_left: float = 0.0
 
 
 var _raw_display_name: String = ""
@@ -340,6 +341,16 @@ func _process(delta: float) -> void:
 	if _electric_flash_left > 0.0:
 		_electric_flash_left = maxf(_electric_flash_left - delta, 0.0)
 		_set_toon_param(&"electric_arc", clampf(_electric_flash_left / 0.45, 0.0, 1.0))
+	if _melee_swing_left > 0.0:
+		_melee_swing_left = maxf(_melee_swing_left - delta, 0.0)
+		_apply_hero_arm_poses()
+
+
+## Triggers a visible third-person arm + bat swing animation.
+func play_melee_swing() -> void:
+	_melee_swing_left = 0.34
+	if _weapon != null:
+		_weapon.swing()
 
 
 func set_weapon(data: WeaponData, skin_id: StringName = &"", attachments: Dictionary = {}) -> void:
@@ -400,7 +411,15 @@ func _apply_hero_arm_poses() -> void:
 	else:
 		if arm_r_idx >= 0:
 			if _weapon != null:
-				_hero_skeleton.set_bone_pose_rotation(arm_r_idx, Quaternion(Vector3.RIGHT, deg_to_rad(72.0) + _aim_pitch * 0.65))
+				var swing_x := 0.0
+				var swing_y := 0.0
+				if _melee_swing_left > 0.0:
+					var p := 1.0 - (_melee_swing_left / 0.34)
+					var arc := sin(p * PI)
+					swing_x = lerpf(deg_to_rad(36.0), deg_to_rad(-65.0), p) * arc
+					swing_y = deg_to_rad(52.0) * arc
+				var arm_rot := Quaternion(Vector3.RIGHT, deg_to_rad(72.0) + _aim_pitch * 0.65 + swing_x) * Quaternion(Vector3.UP, swing_y)
+				_hero_skeleton.set_bone_pose_rotation(arm_r_idx, arm_rot)
 			else:
 				_hero_skeleton.set_bone_pose_rotation(arm_r_idx, Quaternion.IDENTITY)
 		if chest_idx >= 0 and absf(_aim_pitch) > 0.01:

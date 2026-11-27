@@ -169,12 +169,12 @@ func total_missing() -> int:
 	return sum
 
 
-## Heavy weapons slow their owner while firing or spun up.
+## Heavy weapons slow their owner while firing or spun up; light melee weapons boost speed.
 func get_move_multiplier() -> float:
 	var state := current()
 	if state == null:
 		return 1.0
-	var att_mult := state.get_move_multiplier()
+	var att_mult := state.get_move_multiplier() * state.data.hold_move_multiplier
 	if state.data.fire_mode == WeaponData.FireMode.SPIN_UP:
 		return lerpf(1.0, state.data.firing_move_multiplier, clampf(spin * 2.0, 0.0, 1.0)) * att_mult
 	if trigger_held and state.can_fire():
@@ -232,7 +232,7 @@ func _physics_process(delta: float) -> void:
 						_shoot(state)
 						_cooldown = state.get_shot_interval()
 						shot = true
-				WeaponData.FireMode.AUTO:
+				WeaponData.FireMode.AUTO, WeaponData.FireMode.MELEE:
 					shot = _auto_fire(state)
 				WeaponData.FireMode.SPIN_UP:
 					if spin >= 1.0:

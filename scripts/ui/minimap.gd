@@ -234,6 +234,13 @@ func _draw() -> void:
 			_draw_diamond(cp, 7.0, UiKit.SKY)
 			draw_circle(cp, 3.0, UiKit.CREAM)
 
+	# Available Foam Bat pickup marker (bright orange-gold diamond)
+	for bp_node in get_tree().get_nodes_in_group(&"bat_pickups"):
+		var bat_p := bp_node as BatPickup
+		if bat_p != null and is_instance_valid(bat_p) and bat_p.is_available():
+			var mp := _world_to_radar(bat_p.global_position, centre, radius, p_pos, p_yaw)
+			_draw_diamond(mp, 5.5, Color(1.0, 0.72, 0.18))
+
 	# Actors (Teammates always shown; enemies shown on proximity, zombie siege close-range, or gunfire blip)
 	for actor in _controller.actors:
 		if actor == null or not is_instance_valid(actor) or actor == _player or not actor.alive:

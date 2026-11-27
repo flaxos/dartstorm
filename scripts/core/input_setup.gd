@@ -50,6 +50,7 @@ static func ensure_actions() -> void:
 	_add(&"weapon_2", [_key(KEY_2)])
 	_add(&"weapon_3", [_key(KEY_3)])
 	_add(&"weapon_4", [_key(KEY_4)])
+	_add(&"weapon_5", [_key(KEY_5)])
 	_add(&"weapon_next", [_mouse(MOUSE_BUTTON_WHEEL_DOWN), _pad(JOY_BUTTON_RIGHT_SHOULDER), _pad(JOY_BUTTON_Y)])
 	_add(&"weapon_prev", [_mouse(MOUSE_BUTTON_WHEEL_UP), _key(KEY_Q), _pad(JOY_BUTTON_LEFT_SHOULDER)])
 	_add(&"pause", [_key(KEY_ESCAPE), _key(KEY_P), _pad(JOY_BUTTON_START)])
@@ -285,7 +286,7 @@ static func setup_split_screen_actions(p1_is_pad: bool = false, p2_device: int =
 		&"move_forward", &"move_back", &"move_left", &"move_right",
 		&"jump", &"sprint", &"fire", &"aim_down_sights", &"throw_grenade",
 		&"ping", &"reload", &"interact", &"inspect",
-		&"weapon_1", &"weapon_2", &"weapon_3", &"weapon_4",
+		&"weapon_1", &"weapon_2", &"weapon_3", &"weapon_4", &"weapon_5",
 		&"weapon_next", &"weapon_prev", &"scoreboard",
 		&"look_left", &"look_right", &"look_up", &"look_down"
 	]

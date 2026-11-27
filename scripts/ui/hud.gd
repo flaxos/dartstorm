@@ -19,6 +19,7 @@ var _controller: MatchController
 
 var _root: Control
 var _crosshair: Crosshair
+var _minimap: TacticalMinimap
 var _touch_controls: TouchControls
 var _meter_bar: ProgressBar
 var _meter_label: Label
@@ -28,6 +29,8 @@ var _shield_bar: ProgressBar
 var _weapon_label: Label
 var _ammo_label: Label
 var _ammo_hint: Label
+var _slot_strip: HBoxContainer
+var _reload_bar: ProgressBar
 var _grenade_label: Label
 var _infusion_label: Label
 var _infusion_bar: ProgressBar
@@ -71,6 +74,9 @@ var _weather_text_label: Label
 var _objective_box: VBoxContainer
 var _objective_label: Label
 var _objective_bar: ProgressBar
+var _defuse_bar: ProgressBar
+var _interact_prompt: Label
+var _low_ammo_pulse: float = 0.0
 
 
 func setup(player: Player, controller: MatchController) -> void:
@@ -79,6 +85,7 @@ func setup(player: Player, controller: MatchController) -> void:
 	_build()
 
 	player.meter_changed.connect(_on_meter_changed)
+	player.damage_received.connect(_on_damage_received)
 	player.shield_changed.connect(_on_shield_changed)
 	player.shield_broken.connect(_on_shield_broken)
 	player.landed_hit.connect(_on_landed_hit)
@@ -97,8 +104,8 @@ func setup(player: Player, controller: MatchController) -> void:
 	player.infusion_changed.connect(_on_infusion_changed)
 	player.arsenal.weapon_changed.connect(_on_weapon_changed)
 	player.arsenal.ammo_changed.connect(_on_ammo_changed)
-	if is_instance_valid(Progression):
-		Progression.weapon_mastery_updated.connect(_on_weapon_mastery_updated)
+	if is_instance_valid(Progression) and Progression.has_signal(&"weapon_mastery_ranked_up"):
+		Progression.weapon_mastery_ranked_up.connect(_on_weapon_mastery_ranked_up)
 
 	controller.countdown_tick.connect(_on_countdown_tick)
 	controller.clock_tick.connect(_on_clock_tick)
@@ -159,10 +166,18 @@ func _process(delta: float) -> void:
 		_wind_gauge.set_wind(atan2(wind.dot(basis.x), wind.dot(-basis.z)), clampf(strength / 50.0, 0.1, 1.0))
 		_wind_label.text = "WIND %d" % int(round(strength))
 
-	# Ammo hints and the Chainstorm spin bar.
+	# Ammo hints, reload progress, dynamic crosshair spread, and Chainstorm spin bar.
 	var state := _player.arsenal.current()
 	_refill_left = maxf(_refill_left - delta, 0.0)
-	if state != null:
+	_low_ammo_pulse += delta * 7.5
+	if _crosshair != null:
+		var move_speed := Vector2(_player.velocity.x, _player.velocity.z).length()
+		var dyn_gap := (-2.5 if _player.is_aiming_down_sights else clampf(move_speed * 0.75, 0.0, 9.0))
+		if not _player.is_on_floor():
+			dyn_gap += 4.5
+		_crosshair.set_dynamic_gap(dyn_gap)
+
+	if state != null and not _player.is_zombie and not _player.is_tagged_out:
 		var spinner := state.data.fire_mode == WeaponData.FireMode.SPIN_UP
 		_spin_bar.visible = spinner
 		if spinner:
@@ -170,16 +185,41 @@ func _process(delta: float) -> void:
 			if _player.arsenal.spin >= 1.0 and not _player.storm_mode_announced:
 				_player.storm_mode_announced = true
 				_on_popup(_player, "STORM MODE!", UiKit.LIME)
+		var reloading := _player.arsenal.is_reloading()
+		if _reload_bar != null:
+			_reload_bar.visible = reloading
+			if reloading:
+				var prog := clampf(_player.arsenal.reload_progress(), 0.0, 1.0)
+				_reload_bar.value = prog
+				if _crosshair != null:
+					_crosshair.set_reload_progress(prog)
+			elif _crosshair != null:
+				_crosshair.set_reload_progress(-1.0)
+		var is_melee := state.data.is_melee()
+		var low_mag := not is_melee and not state.data.is_belt_fed() and state.magazine > 0 and state.magazine <= maxi(1, floori(float(state.get_magazine_size()) * 0.25))
+		var empty_mag := not is_melee and not state.data.is_belt_fed() and state.magazine <= 0
+		if empty_mag or low_mag:
+			var pulse := 0.55 + 0.45 * sin(_low_ammo_pulse)
+			_ammo_label.add_theme_color_override("font_color", UiKit.CREAM.lerp(Color(1.0, 0.28, 0.18), pulse))
+		else:
+			_ammo_label.add_theme_color_override("font_color", UiKit.CREAM)
 		if _refill_left > 0.0:
 			_set_hint("REFILLING!", UiKit.LIME)
-		elif _player.arsenal.is_reloading():
+		elif reloading:
 			_set_hint("RELOADING...", UiKit.SKY)
-		elif state.total() <= 0:
+		elif not is_melee and state.total() <= 0:
 			_set_hint("OUT OF DARTS - FIND A BUCKET!", UiKit.ORANGE_HOT)
-		elif not state.infinite_reserve and state.total() <= maxi(floori(state.data.reserve_max / 8.0), 3):
+		elif not is_melee and not state.infinite_reserve and state.total() <= maxi(floori(state.get_reserve_max() / 8.0), 3):
 			_set_hint("LOW AMMO", UiKit.ORANGE_HOT)
 		else:
 			_set_hint("", UiKit.CREAM)
+	else:
+		_spin_bar.visible = false
+		if _reload_bar != null:
+			_reload_bar.visible = false
+		if _crosshair != null:
+			_crosshair.set_reload_progress(-1.0)
+		_set_hint("", UiKit.CREAM)
 
 	_tick_announcer(delta)
 
@@ -210,7 +250,7 @@ func _process(delta: float) -> void:
 					_lava_status_label.add_theme_color_override("font_color", UiKit.ORANGE_HOT)
 					_lava_timer_label.text = "SEEK HIGH GROUND!"
 				LavaDirector.Phase.HIGH_TIDE:
-					_lava_status_label.text = "HIGH TIDE — STAY HIGH!"
+					_lava_status_label.text = "HIGH TIDE - STAY HIGH!"
 					_lava_status_label.add_theme_color_override("font_color", UiKit.ORANGE_HOT)
 					_lava_timer_label.text = "%ds REMAINING" % sec
 				LavaDirector.Phase.RECEDING:
@@ -218,7 +258,7 @@ func _process(delta: float) -> void:
 					_lava_status_label.add_theme_color_override("font_color", UiKit.SKY)
 					_lava_timer_label.text = "COOLING DOWN"
 
-	# Weather status
+	# Weather status (pure crisp ASCII — zero missing-glyph emoji boxes)
 	if _weather_panel != null:
 		var wd: WeatherDirector = _controller.arena.weather_director if _controller != null and _controller.arena != null else null
 		if wd != null and wd.is_inside_tree():
@@ -232,13 +272,14 @@ func _process(delta: float) -> void:
 				_weather_text_label.text = "%s %ds" % [wd.get_weather_title(), maxi(0, int(ceilf(wd.time_left)))]
 				_weather_text_label.add_theme_color_override("font_color", UiKit.SKY)
 			else:
-				_weather_icon_label.text = "🌤️"
+				_weather_icon_label.text = "CLEAR"
 				_weather_text_label.text = "CALM"
 				_weather_text_label.add_theme_color_override("font_color", UiKit.CREAM)
 		else:
 			_weather_panel.visible = false
 
-	# Objective mode status bar
+	# Objective mode status bar + contextual [F] interaction prompt
+	var prompt_text := ""
 	if _objective_box != null:
 		if _controller.mode is CaptureTheFlagMode:
 			_objective_box.visible = true
@@ -249,35 +290,56 @@ func _process(delta: float) -> void:
 					var tname := GameMode.team_name(flag.team_id)
 					var st := "BASE"
 					if flag.state == FlagPickup.State.CARRIED:
-						st = "YOU" if flag.carrier == _player else "TAKEN"
+						if flag.carrier == _player:
+							st = "YOU"
+							prompt_text = "CARRYING ENEMY FLAG - RETURN TO YOUR BASE!"
+						else:
+							st = "TAKEN"
 					elif flag.state == FlagPickup.State.DROPPED:
-						st = "DROPPED (%ds)" % maxi(int(flag.drop_timer), 0)
+						st = "DROPPED (%ds)" % maxi(int(ceilf(flag.drop_timer)), 0)
 					flag_statuses.append("[%s FLAG: %s]" % [tname, st])
 			_objective_label.text = "   ".join(flag_statuses)
 			_objective_bar.visible = false
+			if _defuse_bar != null:
+				_defuse_bar.visible = false
 		elif _controller.mode is PlantTheBombMode:
 			_objective_box.visible = true
+			var role_tag := "DEFENDERS" if _player.team_id == 0 else "ATTACKERS"
 			var bomb_target: BombTarget = get_tree().get_first_node_in_group(&"bomb_target") as BombTarget
+			if _defuse_bar != null:
+				_defuse_bar.visible = false
 			if bomb_target != null:
 				match bomb_target.state:
 					BombTarget.BombState.CARRIED:
-						_objective_label.text = "BOMB: %s" % ("CARRIED BY YOU (PLANT AT A/B)" if bomb_target.carrier == _player else "CARRIED BY " + (bomb_target.carrier.display_name.to_upper() if bomb_target.carrier != null else "UNKNOWN"))
+						if bomb_target.carrier == _player:
+							_objective_label.text = "[%s] YOU HAVE THE BOMB - PLANT AT SITE A OR B" % role_tag
+							var site_here: String = bomb_target.get_site_at(_player.global_position)
+							if not site_here.is_empty():
+								prompt_text = "HOLD [F] TO PLANT BOMB AT SITE %s" % site_here
+						else:
+							var cname := bomb_target.carrier.display_name.to_upper() if bomb_target.carrier != null else "UNKNOWN"
+							_objective_label.text = "[%s] BOMB CARRIED BY %s" % [role_tag, cname]
 						_objective_bar.visible = false
 					BombTarget.BombState.DROPPED:
-						_objective_label.text = "BOMB: DROPPED!"
+						_objective_label.text = "[%s] BOMB DROPPED!" % role_tag
 						_objective_bar.visible = false
 					BombTarget.BombState.PLANTING:
-						_objective_label.text = "ARMING BOMB AT SITE %s..." % bomb_target.active_site
+						_objective_label.text = "[%s] ARMING BOMB AT SITE %s..." % [role_tag, bomb_target.active_site]
 						_objective_bar.visible = true
 						_objective_bar.value = clampf(bomb_target.plant_progress_left / BombTarget.PLANT_TIME, 0.0, 1.0)
 					BombTarget.BombState.PLANTED:
-						_objective_label.text = "BOMB PLANTED AT SITE %s! (%.1fs)" % [bomb_target.active_site, maxf(bomb_target.fuse_left, 0.0)]
+						_objective_label.text = "[%s] BOMB PLANTED AT SITE %s! (%.1fs)" % [role_tag, bomb_target.active_site, maxf(bomb_target.fuse_left, 0.0)]
 						_objective_bar.visible = true
 						_objective_bar.value = clampf(bomb_target.fuse_left / BombTarget.FUSE_TIME, 0.0, 1.0)
+						if _player.team_id == 0 and _player.alive and _player.global_position.distance_to(bomb_target.get_bomb_position()) <= BombTarget.DEFUSE_RADIUS:
+							prompt_text = "HOLD [F] TO DEFUSE BOMB"
 					BombTarget.BombState.DEFUSING:
-						_objective_label.text = "DEFUSING BOMB AT SITE %s..." % bomb_target.active_site
+						_objective_label.text = "[%s] DEFUSING SITE %s! (FUSE %.1fs)" % [role_tag, bomb_target.active_site, maxf(bomb_target.fuse_left, 0.0)]
 						_objective_bar.visible = true
-						_objective_bar.value = clampf(bomb_target.defuse_progress_left / BombTarget.DEFUSE_TIME, 0.0, 1.0)
+						_objective_bar.value = clampf(bomb_target.fuse_left / BombTarget.FUSE_TIME, 0.0, 1.0)
+						if _defuse_bar != null:
+							_defuse_bar.visible = true
+							_defuse_bar.value = clampf(bomb_target.defuse_progress_left / BombTarget.DEFUSE_TIME, 0.0, 1.0)
 					BombTarget.BombState.DEFUSED:
 						_objective_label.text = "BOMB DEFUSED!"
 						_objective_bar.visible = false
@@ -286,6 +348,25 @@ func _process(delta: float) -> void:
 						_objective_bar.visible = false
 		else:
 			_objective_box.visible = false
+			if _defuse_bar != null:
+				_defuse_bar.visible = false
+
+	# Zombie Siege contextual [F] repair prompt when near damaged Core or Barricade
+	if _controller.mode is ZombieSiegeMode and _player.alive and not _player.is_zombie:
+		var siege := _controller.mode as ZombieSiegeMode
+		if siege.base_core != null and is_instance_valid(siege.base_core) and siege.base_core.health < siege.base_core.max_health:
+			if _player.global_position.distance_to(siege.base_core.global_position) <= 4.5:
+				prompt_text = "PRESS [F] TO REPAIR BASE CORE (100 SCRAP)"
+		if prompt_text.is_empty():
+			for b in siege.barricades:
+				if b != null and is_instance_valid(b) and b.health < b.max_health:
+					if _player.global_position.distance_to(b.global_position) <= 3.8:
+						prompt_text = "PRESS [F] TO %s BARRICADE (75 SCRAP)" % ("REBUILD" if b.is_destroyed else "REPAIR")
+						break
+
+	if _interact_prompt != null:
+		_interact_prompt.visible = not prompt_text.is_empty() and not _match_over
+		_interact_prompt.text = prompt_text
 
 	# Respawn countdown while tagged out.
 	if not _player.alive and not _match_over:
@@ -315,94 +396,104 @@ func _build() -> void:
 	_root.add_child(_hurt_flash)
 
 	_crosshair = Crosshair.new()
+	_crosshair.set_player(_player)
 	_root.add_child(_crosshair)
+
+	var compact_hud := GameSettings.split_screen
 
 	# Bottom left: the tag meter. When it fills up, you are tagged out.
 	var meter_panel := UiKit.panel()
 	_root.add_child(meter_panel)
-	UiKit.pin(meter_panel, Vector2(0.0, 1.0), Vector2(20, -20), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_BEGIN)
+	UiKit.pin(meter_panel, Vector2(0.0, 1.0), Vector2(14 if compact_hud else 20, -14 if compact_hud else -20), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_BEGIN)
 	var meter_box := VBoxContainer.new()
 	meter_panel.add_child(meter_box)
 	_shield_box = HBoxContainer.new()
-	_shield_label = UiKit.label("SHIELD", 14, Color(0.2, 0.85, 1.0))
+	_shield_label = UiKit.label("SHIELD", 13 if compact_hud else 14, Color(0.2, 0.85, 1.0))
 	_shield_box.add_child(_shield_label)
-	_shield_bar = UiKit.bar(Color(0.2, 0.85, 1.0), Vector2(160, 14))
+	_shield_bar = UiKit.bar(Color(0.2, 0.85, 1.0), Vector2(120 if compact_hud else 160, 14))
 	_shield_box.add_child(_shield_bar)
 	_shield_box.visible = false
 	meter_box.add_child(_shield_box)
-	_meter_label = UiKit.label("TAG METER", 18, UiKit.SKY)
+	_meter_label = UiKit.label("TAG METER", 16 if compact_hud else 18, UiKit.SKY)
 	meter_box.add_child(_meter_label)
-	_meter_bar = UiKit.bar(UiKit.ORANGE, Vector2(260, 26))
+	_meter_bar = UiKit.bar(UiKit.ORANGE, Vector2(200 if compact_hud else 260, 22 if compact_hud else 26))
 	meter_box.add_child(_meter_bar)
 
-	# Bottom right: blaster and ammo.
+	# Bottom right: blaster, slot strip, reload bar, and ammo.
 	var weapon_panel := UiKit.panel()
 	_root.add_child(weapon_panel)
-	UiKit.pin(weapon_panel, Vector2(1.0, 1.0), Vector2(-20, -20), Control.GROW_DIRECTION_BEGIN, Control.GROW_DIRECTION_BEGIN)
+	UiKit.pin(weapon_panel, Vector2(1.0, 1.0), Vector2(-14 if compact_hud else -20, -14 if compact_hud else -20), Control.GROW_DIRECTION_BEGIN, Control.GROW_DIRECTION_BEGIN)
 	var weapon_box := VBoxContainer.new()
 	weapon_box.alignment = BoxContainer.ALIGNMENT_END
 	weapon_panel.add_child(weapon_box)
-	_infusion_label = UiKit.label("", 16, UiKit.ORANGE_HOT)
+	_infusion_label = UiKit.label("", 15 if compact_hud else 16, UiKit.ORANGE_HOT)
 	_infusion_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_infusion_label.visible = false
 	weapon_box.add_child(_infusion_label)
-	_infusion_bar = UiKit.bar(UiKit.ORANGE, Vector2(240, 8))
+	_infusion_bar = UiKit.bar(UiKit.ORANGE, Vector2(190 if compact_hud else 240, 8))
 	_infusion_bar.visible = false
 	weapon_box.add_child(_infusion_bar)
-	_ammo_hint = UiKit.label("", 16, UiKit.ORANGE_HOT)
+	_ammo_hint = UiKit.label("", 14 if compact_hud else 16, UiKit.ORANGE_HOT)
 	_ammo_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	weapon_box.add_child(_ammo_hint)
-	_weapon_label = UiKit.label("BLASTER", 22, UiKit.ORANGE_HOT)
+	_weapon_label = UiKit.label("BLASTER", 18 if compact_hud else 22, UiKit.ORANGE_HOT)
 	_weapon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	weapon_box.add_child(_weapon_label)
-	_ammo_label = UiKit.label("0", 44)
+	_ammo_label = UiKit.label("0", 34 if compact_hud else 44)
 	_ammo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	weapon_box.add_child(_ammo_label)
-	_grenade_label = UiKit.label("💣 0", 18, UiKit.CREAM)
+	_reload_bar = UiKit.bar(UiKit.SKY, Vector2(190 if compact_hud else 240, 8))
+	_reload_bar.visible = false
+	weapon_box.add_child(_reload_bar)
+	_grenade_label = UiKit.label("GRENADES: 0", 15 if compact_hud else 17, UiKit.CREAM)
 	_grenade_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	weapon_box.add_child(_grenade_label)
-	_spin_bar = UiKit.bar(UiKit.LIME, Vector2(240, 14))
+	_slot_strip = HBoxContainer.new()
+	_slot_strip.alignment = BoxContainer.ALIGNMENT_END
+	_slot_strip.add_theme_constant_override("separation", 6)
+	weapon_box.add_child(_slot_strip)
+	_spin_bar = UiKit.bar(UiKit.LIME, Vector2(190 if compact_hud else 240, 12))
 	_spin_bar.visible = false
 	weapon_box.add_child(_spin_bar)
 
 	# Top centre: the clock.
 	var clock_panel := UiKit.panel(UiKit.NAVY, 0.86, 18, 3)
 	_root.add_child(clock_panel)
-	UiKit.pin(clock_panel, Vector2(0.5, 0.0), Vector2(0, 14), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
+	UiKit.pin(clock_panel, Vector2(0.5, 0.0), Vector2(0, 10 if compact_hud else 14), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
 	var clock_box := VBoxContainer.new()
 	clock_panel.add_child(clock_box)
-	_clock_label = UiKit.label("5:00", 40)
+	_clock_label = UiKit.label("5:00", 32 if compact_hud else 40)
 	_clock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_clock_label.custom_minimum_size.x = 150
+	_clock_label.custom_minimum_size.x = 126 if compact_hud else 150
 	clock_box.add_child(_clock_label)
-	_mode_label = UiKit.label("", 14, UiKit.SKY, 4)
+	_mode_label = UiKit.label("", 12 if compact_hud else 14, UiKit.SKY, 4)
 	_mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	clock_box.add_child(_mode_label)
 
-	# Top left: score, then the wind compass.
+	# Top left: score, then the wind compass and weather pill.
 	var left_box := VBoxContainer.new()
-	left_box.add_theme_constant_override("separation", 10)
+	left_box.add_theme_constant_override("separation", 8 if compact_hud else 10)
 	left_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(left_box)
-	UiKit.pin(left_box, Vector2(0.0, 0.0), Vector2(20, 14), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_END)
+	UiKit.pin(left_box, Vector2(0.0, 0.0), Vector2(14 if compact_hud else 20, 10 if compact_hud else 14), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_END)
 	var score_panel := UiKit.panel()
 	left_box.add_child(score_panel)
 	var score_box := VBoxContainer.new()
 	score_panel.add_child(score_box)
-	_score_label = UiKit.label("SCORE 0", 28, UiKit.ORANGE_HOT)
+	_score_label = UiKit.label("SCORE 0", 22 if compact_hud else 28, UiKit.ORANGE_HOT)
 	score_box.add_child(_score_label)
-	_rank_label = UiKit.label("", 16, UiKit.CREAM, 4)
+	_rank_label = UiKit.label("", 14 if compact_hud else 16, UiKit.CREAM, 4)
 	score_box.add_child(_rank_label)
 	var wind_panel := UiKit.panel()
 	wind_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	left_box.add_child(wind_panel)
 	var wind_box := HBoxContainer.new()
-	wind_box.add_theme_constant_override("separation", 10)
+	wind_box.add_theme_constant_override("separation", 8)
 	wind_panel.add_child(wind_box)
 	_wind_gauge = WindGauge.new()
 	wind_box.add_child(_wind_gauge)
-	_wind_label = UiKit.label("CALM", 20, UiKit.SKY)
-	_wind_label.custom_minimum_size.x = 110
+	_wind_label = UiKit.label("CALM", 17 if compact_hud else 20, UiKit.SKY)
+	_wind_label.custom_minimum_size.x = 90 if compact_hud else 110
 	wind_box.add_child(_wind_label)
 
 	_weather_panel = UiKit.panel()
@@ -411,48 +502,63 @@ func _build() -> void:
 	var weather_box := HBoxContainer.new()
 	weather_box.add_theme_constant_override("separation", 8)
 	_weather_panel.add_child(weather_box)
-	_weather_icon_label = UiKit.label("🌤️", 18)
+	_weather_icon_label = UiKit.label("CLEAR", 15 if compact_hud else 16, UiKit.ORANGE_HOT)
 	weather_box.add_child(_weather_icon_label)
-	_weather_text_label = UiKit.label("CALM", 16, UiKit.CREAM)
-	_weather_text_label.custom_minimum_size.x = 120
+	_weather_text_label = UiKit.label("CALM", 15 if compact_hud else 16, UiKit.CREAM)
+	_weather_text_label.custom_minimum_size.x = 95 if compact_hud else 115
 	weather_box.add_child(_weather_text_label)
 
-	# Top right: who tagged whom.
+	# Top right: Tactical Minimap / Radar, with the kill feed neatly below it.
+	var radar_diam := 112.0 if compact_hud else 150.0
+	_minimap = TacticalMinimap.new()
+	_minimap.name = "TacticalMinimap"
+	_minimap.setup(_player, _controller, radar_diam)
+	_root.add_child(_minimap)
+	UiKit.pin(_minimap, Vector2(1.0, 0.0), Vector2(-14 if compact_hud else -20, 10 if compact_hud else 14), Control.GROW_DIRECTION_BEGIN, Control.GROW_DIRECTION_END)
+
 	_feed = VBoxContainer.new()
 	_feed.alignment = BoxContainer.ALIGNMENT_BEGIN
 	_feed.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_feed)
-	UiKit.pin(_feed, Vector2(1.0, 0.0), Vector2(-20, 14), Control.GROW_DIRECTION_BEGIN, Control.GROW_DIRECTION_END)
+	UiKit.pin(_feed, Vector2(1.0, 0.0), Vector2(-14 if compact_hud else -20, int(radar_diam) + 22), Control.GROW_DIRECTION_BEGIN, Control.GROW_DIRECTION_END)
 
 	# Centre: big announcements (countdown, tagged out, match over).
 	var banner_box := VBoxContainer.new()
 	banner_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(banner_box)
-	UiKit.pin(banner_box, Vector2(0.5, 0.26), Vector2.ZERO, Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_BOTH)
-	_banner = UiKit.label("", 96, UiKit.ORANGE_HOT, 16)
+	UiKit.pin(banner_box, Vector2(0.5, 0.28), Vector2.ZERO, Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_BOTH)
+	_banner = UiKit.label("", 74 if compact_hud else 96, UiKit.ORANGE_HOT, 14)
 	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	banner_box.add_child(_banner)
-	_banner_sub = UiKit.label("", 28, UiKit.CREAM, 8)
+	_banner_sub = UiKit.label("", 22 if compact_hud else 28, UiKit.CREAM, 8)
 	_banner_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	banner_box.add_child(_banner_sub)
 
+	# Contextual interact prompt (Plant/Defuse/Repair/Flag return) neatly above bottom-center
+	_interact_prompt = UiKit.label("", 20 if compact_hud else 24, UiKit.LIME, 6)
+	_interact_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_interact_prompt.visible = false
+	_root.add_child(_interact_prompt)
+	UiKit.pin(_interact_prompt, Vector2(0.5, 0.72), Vector2.ZERO, Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_BOTH)
+
 	# Team modes: every team's score in a row of coloured chips under the clock.
 	var teams := _controller.mode.is_team_mode()
+	var has_top_banner_ui := teams or (_controller.mode is ZombieSiegeMode) or (_controller.mode is FloorIsLavaMode)
 	_team_strip = HBoxContainer.new()
 	_team_strip.add_theme_constant_override("separation", 8)
 	_team_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_team_strip.visible = teams
 	_root.add_child(_team_strip)
-	UiKit.pin(_team_strip, Vector2(0.5, 0.0), Vector2(0, 108), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
+	UiKit.pin(_team_strip, Vector2(0.5, 0.0), Vector2(0, 92 if compact_hud else 108), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
 
 	# Objective mode status bar (CTF flag indicators & Bomb site status)
 	_objective_box = VBoxContainer.new()
 	_objective_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_objective_box.visible = false
 	_root.add_child(_objective_box)
-	UiKit.pin(_objective_box, Vector2(0.5, 0.0), Vector2(0, 144 if teams else 114), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
+	UiKit.pin(_objective_box, Vector2(0.5, 0.0), Vector2(0, (128 if compact_hud else 148) if teams else 114), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
 
-	_objective_label = UiKit.label("", 22, UiKit.CREAM, 6)
+	_objective_label = UiKit.label("", 18 if compact_hud else 22, UiKit.CREAM, 6)
 	_objective_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_objective_box.add_child(_objective_label)
 
@@ -461,11 +567,17 @@ func _build() -> void:
 	_objective_bar.visible = false
 	_objective_box.add_child(_objective_bar)
 
-	# Announcer call-outs sit just under the clock (and the team scores).
-	_announce_label = UiKit.label("", 40, UiKit.ORANGE_HOT, 12)
+	_defuse_bar = UiKit.bar(UiKit.SKY, Vector2(240, 10))
+	_defuse_bar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_defuse_bar.visible = false
+	_objective_box.add_child(_defuse_bar)
+
+	# Announcer call-outs sit cleanly below team chips / siege core / lava status / objective bars.
+	_announce_label = UiKit.label("", 32 if compact_hud else 40, UiKit.ORANGE_HOT, 12)
 	_announce_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_root.add_child(_announce_label)
-	UiKit.pin(_announce_label, Vector2(0.5, 0.0), Vector2(0, 185 if teams else 145), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
+	var announce_y := 206 if has_top_banner_ui else 148
+	UiKit.pin(_announce_label, Vector2(0.5, 0.0), Vector2(0, announce_y), Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_END)
 
 	_popups = Control.new()
 	_popups.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -481,15 +593,20 @@ func _build_board() -> void:
 	_root.add_child(_board_panel)
 	UiKit.pin(_board_panel, Vector2(0.5, 0.52), Vector2.ZERO, Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_BOTH)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 14)
+	box.add_theme_constant_override("separation", 12)
 	_board_panel.add_child(box)
-	_board_title = UiKit.label("SCOREBOARD", 40, UiKit.ORANGE_HOT, 10)
+	_board_title = UiKit.label("SCOREBOARD", 38, UiKit.ORANGE_HOT, 10)
 	_board_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_board_title)
+	var board_scroll := ScrollContainer.new()
+	board_scroll.custom_minimum_size = Vector2(540, 260)
+	board_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	board_scroll.follow_focus = true
+	box.add_child(board_scroll)
 	_board_grid = GridContainer.new()
 	_board_grid.add_theme_constant_override("h_separation", 34)
 	_board_grid.add_theme_constant_override("v_separation", 6)
-	box.add_child(_board_grid)
+	board_scroll.add_child(_board_grid)
 	_board_buttons = HBoxContainer.new()
 	_board_buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	_board_buttons.add_theme_constant_override("separation", 16)
@@ -524,7 +641,7 @@ func _rebuild_board(title: String, compact: bool = false) -> void:
 			place += 1
 			var team_id: int = team["team"]
 			var tint := mode.get_team_color(team_id).lightened(0.35)
-			var team_title := mode.get_team_name(team_id) if mode is ZombieMode else "%s TEAM" % mode.get_team_name(team_id)
+			var team_title := mode.get_team_name(team_id) if (mode is ZombieMode or mode is ZombieSiegeMode or mode is PlantTheBombMode) else "%s TEAM" % mode.get_team_name(team_id)
 			var header := [str(place), team_title, str(team["tags"]), "", str(team["score"])]
 			for cell: String in header:
 				_board_grid.add_child(UiKit.label(cell, row_size, tint, 6))
@@ -553,11 +670,17 @@ func _add_board_row(cells: Array, name_tint: Color, font_size: int) -> void:
 
 # --- Reacting -----------------------------------------------------------------
 
+func _on_damage_received(attacker: Actor, _amount: float) -> void:
+	if _crosshair != null and attacker != null and is_instance_valid(attacker) and attacker != _player:
+		var tint := Color(0.25, 0.88, 1.0) if _player.shield_points > 0.0 else UiKit.ORANGE_HOT
+		_crosshair.add_damage_arc(attacker.global_position, tint)
+
+
 func _on_meter_changed(value: float, maximum: float) -> void:
 	var ratio := value / maxf(maximum, 1.0)
 	if ratio > _meter_bar.value + 0.001:
-		# Soft orange flash at the screen edges when hit; never a full-screen strobe.
-		_hurt_flash.color.a = 0.16 * clampf(GameSettings.visual_intensity, 0.0, 1.0)
+		# Reset tint to warm orange every time (fixes cyan tint sticking after shield break)
+		_hurt_flash.color = Color(UiKit.ORANGE, 0.16 * clampf(GameSettings.visual_intensity, 0.0, 1.0))
 		create_tween().tween_property(_hurt_flash, "color:a", 0.0, 0.35)
 	_meter_bar.value = ratio
 	_meter_label.text = "TAG METER" if ratio < 0.7 else "TAG METER - DANGER!"
@@ -583,24 +706,60 @@ func _on_shield_broken(_actor: Actor) -> void:
 func _on_weapon_changed(state: WeaponState) -> void:
 	if _crosshair != null:
 		_crosshair.set_scoped(false)
+		_crosshair.set_reload_progress(-1.0)
 		if state != null:
 			_crosshair.set_reticle_from_string(state.get_reticle())
+	_refresh_slot_strip()
 	if state == null:
+		if _player != null and _player.is_zombie:
+			_weapon_label.text = "ZOMBIE CLAWS"
+			_ammo_label.text = "MELEE"
+		else:
+			_weapon_label.text = "UNARMED"
+			_ammo_label.text = "--"
+		_spin_bar.visible = false
+		if _reload_bar != null:
+			_reload_bar.visible = false
 		return
 	_weapon_label.text = state.data.display_name.to_upper()
 	_on_ammo_changed(state)
 
 
-func _on_weapon_mastery_updated(weapon_id: StringName, new_rank: int, _total_xp: int) -> void:
+func _refresh_slot_strip() -> void:
+	if _slot_strip == null or _player == null or _player.arsenal == null:
+		return
+	for ch in _slot_strip.get_children():
+		ch.queue_free()
+	var count := _player.arsenal.weapons.size()
+	if count <= 1 or _player.is_zombie:
+		_slot_strip.visible = false
+		return
+	_slot_strip.visible = true
+	var cur := _player.arsenal.current()
+	for i in count:
+		var st := _player.arsenal.weapons[i]
+		var active := st == cur
+		var pill := UiKit.panel(UiKit.ORANGE if active else UiKit.NAVY_DARK, 0.92, 6, 2 if active else 1, UiKit.CREAM if active else UiKit.BLUE, 4)
+		var short_n := "BAT" if st.data.is_melee() else st.data.display_name.get_slice(" ", 0).to_upper()
+		pill.add_child(UiKit.label("%d %s" % [i + 1, short_n], 11, UiKit.CREAM if active else UiKit.SKY, 2))
+		_slot_strip.add_child(pill)
+
+
+func _on_weapon_mastery_ranked_up(weapon_id: StringName, new_rank: int, player_idx: int) -> void:
+	if _player == null or player_idx != _player.player_index:
+		return
 	if new_rank > 1:
 		var w_name := str(weapon_id).replace("_", " ").capitalize()
 		var title: String = WeaponModding.MASTERY_TITLES[new_rank - 1] if new_rank <= WeaponModding.MASTERY_TITLES.size() else "Master"
-		_show_banner("⭐ %s RANK UP!" % w_name.to_upper(), "Rank %d: %s unlocked!" % [new_rank, title], 3.0)
-		Sfx.play(&"unlock")
+		_show_banner("%s RANK UP!" % w_name.to_upper(), "Rank %d: %s unlocked!" % [new_rank, title], 3.0)
+		Sfx.play(&"level_up")
 
 
 func _on_ammo_changed(state: WeaponState) -> void:
 	if state == null or state != _player.arsenal.current():
+		return
+	if state.data.is_melee():
+		_ammo_label.text = "MELEE"
 		return
 	var reserve_text := "INF" if state.infinite_reserve else str(state.reserve)
 	if state.data.is_belt_fed():
@@ -611,7 +770,7 @@ func _on_ammo_changed(state: WeaponState) -> void:
 
 func _on_grenade_count_changed(count: int, _max_val: int) -> void:
 	if _grenade_label != null:
-		_grenade_label.text = "💣 %d [G]" % count if count > 0 else "💣 0"
+		_grenade_label.text = "GRENADES: %d [G]" % count if count > 0 else "GRENADES: 0"
 		_grenade_label.add_theme_color_override("font_color", UiKit.LIME if count > 0 else UiKit.CREAM)
 
 
@@ -631,11 +790,11 @@ func _on_infusion_changed(element: DartData.Element, time_left: float) -> void:
 
 func _get_element_name(element: DartData.Element) -> String:
 	match element:
-		DartData.Element.FIRE: return "🔥 PYRO"
-		DartData.Element.WATER: return "💧 HYDRO"
-		DartData.Element.LIGHTNING: return "⚡ VOLT"
-		DartData.Element.ICE: return "❄️ FROST"
-		DartData.Element.WIND: return "💨 GALE"
+		DartData.Element.FIRE: return "PYRO"
+		DartData.Element.WATER: return "HYDRO"
+		DartData.Element.LIGHTNING: return "VOLT"
+		DartData.Element.ICE: return "FROST"
+		DartData.Element.WIND: return "GALE"
 	return "ELEMENT"
 
 
@@ -650,12 +809,13 @@ func _get_element_color(element: DartData.Element) -> Color:
 
 
 func _on_shot_fired(state: WeaponState) -> void:
-	var eff_spread := state.get_spread_degrees() if state != null else state.data.spread_degrees
+	var eff_spread := state.get_spread_degrees() if state != null else 1.5
 	_crosshair.kick(2.0 + eff_spread)
 
 
-func _on_landed_hit(_victim: Actor, was_tag: bool, _was_ricochet: bool) -> void:
-	_crosshair.show_hit(was_tag)
+func _on_landed_hit(victim: Actor, was_tag: bool, was_ricochet: bool) -> void:
+	var hit_shield := victim != null and is_instance_valid(victim) and victim.shield_points > 0.0 and not was_tag
+	_crosshair.show_hit(was_tag, hit_shield, was_ricochet)
 
 
 func _on_player_tagged(_victim: Actor, attacker: Actor, _weapon: WeaponData, _ricochet: bool) -> void:
@@ -757,11 +917,15 @@ func result_title(ranking: Array[ScoreEntry]) -> String:
 	var mode := _controller.mode
 	if not mode.is_team_mode():
 		var winner := ranking[0]
-		return "YOU WIN!" if winner.is_human else "%s WINS!" % winner.display_name.to_upper()
+		return "YOU WIN!" if winner.actor == _player else "%s WINS!" % winner.display_name.to_upper()
 	var team := mode.winning_team(_controller.board)
 	if team < 0:
 		return "IT'S A DRAW!"
-	return "YOUR TEAM WINS!" if team == _player.team_id else "%s TEAM WINS!" % GameMode.team_name(team)
+	if team == _player.team_id:
+		return "YOUR TEAM WINS!"
+	if mode is ZombieMode or mode is ZombieSiegeMode or mode is PlantTheBombMode:
+		return "%s WIN!" % mode.get_team_name(team)
+	return "%s TEAM WINS!" % GameMode.team_name(team)
 
 
 func _build_rewards(ranking: Array[ScoreEntry]) -> void:
@@ -771,7 +935,7 @@ func _build_rewards(ranking: Array[ScoreEntry]) -> void:
 	var won := false
 	if not ranking.is_empty():
 		if not mode.is_team_mode():
-			won = ranking[0].is_human
+			won = ranking[0].actor == _player
 		else:
 			var winning_team := mode.winning_team(_controller.board)
 			won = winning_team == _player.team_id
@@ -797,8 +961,8 @@ func _build_rewards(ranking: Array[ScoreEntry]) -> void:
 	box.add_child(row)
 
 	row.add_child(UiKit.label("REWARDS:", 20, UiKit.CREAM, 5))
-	row.add_child(UiKit.label("⭐ +%d XP" % xp_earned, 20, UiKit.LIME, 5))
-	row.add_child(UiKit.label("🪙 +%d COINS" % coins_earned, 20, UiKit.ORANGE_HOT, 5))
+	row.add_child(UiKit.label("+%d XP" % xp_earned, 20, UiKit.LIME, 5))
+	row.add_child(UiKit.label("+%d COINS" % coins_earned, 20, UiKit.ORANGE_HOT, 5))
 
 
 func _build_awards(awards: Array[Dictionary]) -> void:
@@ -969,7 +1133,7 @@ func _build_siege_ui(siege: ZombieSiegeMode) -> void:
 	_wave_label = UiKit.label("WAVE 1 / 5", 20, UiKit.CREAM, 6)
 	info_row.add_child(_wave_label)
 
-	_scrap_label = UiKit.label("🔧 100 SCRAP", 20, UiKit.LIME, 6)
+	_scrap_label = UiKit.label("SCRAP: 100", 20, UiKit.LIME, 6)
 	info_row.add_child(_scrap_label)
 
 	var core_panel := PanelContainer.new()
@@ -1012,7 +1176,7 @@ func _build_siege_ui(siege: ZombieSiegeMode) -> void:
 	if siege.horde_director != null:
 		var hd := siege.horde_director
 		hd.wave_started.connect(func(wave_num: int, _total: int, wave_name: String) -> void:
-			_wave_label.text = "WAVE %d / 5 • %s" % [wave_num, wave_name]
+			_wave_label.text = "WAVE %d / 5 | %s" % [wave_num, wave_name]
 			_intermission_label.visible = false
 		)
 		hd.intermission_tick.connect(func(seconds_left: int) -> void:
@@ -1020,9 +1184,9 @@ func _build_siege_ui(siege: ZombieSiegeMode) -> void:
 			_intermission_label.text = "FORTIFY & REPAIR! (%ds)" % seconds_left
 		)
 		hd.scrap_changed.connect(func(current_scrap: int) -> void:
-			_scrap_label.text = "🔧 %d SCRAP" % current_scrap
+			_scrap_label.text = "SCRAP: %d" % current_scrap
 		)
-		_scrap_label.text = "🔧 %d SCRAP" % hd.scrap
+		_scrap_label.text = "SCRAP: %d" % hd.scrap
 
 
 func _build_lava_ui(_lava_mode: FloorIsLavaMode) -> void:

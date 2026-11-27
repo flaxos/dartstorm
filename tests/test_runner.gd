@@ -126,6 +126,8 @@ func _ready() -> void:
 	await _test_weapon_modding_garage_workbench_and_mastery()
 	# Objective AI: Bots in Plant the Bomb & Capture the Flag (v2.4.0)
 	await _test_objective_bot_ai()
+	# Production 1.0 Release Regressions (v1.0.0)
+	await _test_v1_0_release_regressions()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -204,7 +206,7 @@ func _test_resources() -> void:
 	check(gun_game != null and gun_game.ladder.size() >= 3, "gun game ladder has at least three rungs")
 	if gun_game != null and not gun_game.ladder.is_empty():
 		check(gun_game.ladder[0].id == &"pocket_popper", "ladder starts with the Pocket Popper")
-		check(gun_game.ladder[-1].id == &"flaxs_chainstorm", "ladder ends with Flax's Chainstorm")
+		check(gun_game.ladder[-1].id == &"foam_bat", "ladder ends with the Foam Bat melee finisher")
 	for action in [&"move_forward", &"jump", &"sprint", &"fire", &"reload", &"pause", &"scoreboard"]:
 		check(InputMap.has_action(action), "input action '%s' exists" % action)
 	await physics_frames(1)
@@ -472,7 +474,7 @@ func _test_scoring() -> void:
 	for i in gun_game.ladder.size() - 2:
 		gun_game.apply_tag(climber, other, false)
 	check(gun_game.get_early_winner(board2) == null, "no winner while still holding the last blaster")
-	check(gun_game.get_loadout(climber)[0].id == &"flaxs_chainstorm", "the last rung is Flax's Chainstorm")
+	check(gun_game.get_loadout(climber)[0].id == &"foam_bat", "the last rung is the Foam Bat")
 	gun_game.apply_tag(climber, other, false)
 	check(gun_game.get_early_winner(board2) == climber, "a tag with the last blaster wins Gun Game")
 	stage.queue_free()
@@ -1611,7 +1613,7 @@ func _test_elemental_gameplay() -> void:
 	check(ice_dart != null and ice_dart.element == DartData.Element.ICE, "ice dart is Element.ICE")
 
 	var gun_game := load(GUN_GAME) as GunGameMode
-	check(gun_game != null and gun_game.ladder.size() == 10, "Gun Game ladder now has the full 10 rungs (10/10)")
+	check(gun_game != null and gun_game.ladder.size() == 11, "Gun Game ladder has all 11 rungs ending with the Foam Bat (11/11)")
 	var ladder_ids: Array[StringName] = []
 	if gun_game != null:
 		for weapon in gun_game.ladder:
@@ -2742,10 +2744,10 @@ func _test_duos_buddy_spawning_and_pings() -> void:
 	var beacon := PingBeacon.spawn(arena, Vector3(4.0, 0.0, 4.0), PingBeacon.Type.REGROUP, actor_a)
 	check(beacon != null and beacon.is_inside_tree(), "PingBeacon spawned into scene tree")
 	check(beacon.type == PingBeacon.Type.REGROUP, "PingBeacon type initialized to REGROUP")
-	check(beacon._text_for_type(PingBeacon.Type.AMMO) == "📦 AMMO", "PingBeacon formats AMMO label correctly")
-	check(beacon._text_for_type(PingBeacon.Type.POWERUP) == "✨ POWER-UP", "PingBeacon formats POWERUP label correctly")
-	check(beacon._text_for_type(PingBeacon.Type.RIVAL) == "⚠️ RIVAL", "PingBeacon formats RIVAL label correctly")
-	check(beacon._text_for_type(PingBeacon.Type.DANGER) == "💥 DANGER", "PingBeacon formats DANGER label correctly")
+	check(beacon._text_for_type(PingBeacon.Type.AMMO) == "AMMO", "PingBeacon formats AMMO label without missing glyphs")
+	check(beacon._text_for_type(PingBeacon.Type.POWERUP) == "POWER-UP", "PingBeacon formats POWERUP label without missing glyphs")
+	check(beacon._text_for_type(PingBeacon.Type.RIVAL) == "RIVAL", "PingBeacon formats RIVAL label without missing glyphs")
+	check(beacon._text_for_type(PingBeacon.Type.DANGER) == "DANGER", "PingBeacon formats DANGER label without missing glyphs")
 
 	# 4. Bot Squad Ping Reaction
 	var bot := Bot.new()
@@ -3248,7 +3250,7 @@ func _test_environment_and_splat_decals() -> void:
 	if world_env != null and world_env.environment != null:
 		var env := world_env.environment
 		check(env.background_mode == Environment.BG_SKY, "Sky background mode is active")
-		check(env.tonemap_mode == Environment.TONE_MAPPER_FILMIC, "Filmic tonemapping is enabled")
+		check(env.tonemap_mode == Environment.TONE_MAPPER_AGX, "AgX tonemapping is enabled")
 		check(env.adjustment_enabled, "Color adjustments enabled")
 		check(env.adjustment_saturation >= 1.15, "Filmic saturation boost active (1.16)")
 		check(env.glow_enabled, "Glow bloom is enabled for energy and shield effects")
@@ -4571,10 +4573,12 @@ func _test_lan_server_browser_and_dedicated_server() -> void:
 	check(DedicatedServer.parse_arena("dust") == 7, "parse_arena('dust') -> 7 (Dusty Courtyard)")
 	check(DedicatedServer.parse_arena("dust2") == 8, "parse_arena('dust2') -> 8 (Duststorm II)")
 	check(DedicatedServer.parse_arena("tempest") == 2, "parse_arena('tempest') -> 2 (Treehouse)")
-	check(DedicatedServer.parse_mode("ctf") == 8, "parse_mode('ctf') -> 8 (Capture The Flag)")
-	check(DedicatedServer.parse_mode("bomb") == 9, "parse_mode('bomb') -> 9 (Plant The Bomb)")
-	check(DedicatedServer.parse_mode("tdm") == 2, "parse_mode('tdm') -> 2 (Team Deathmatch)")
-	check(DedicatedServer.parse_mode("realistic") == 7, "parse_mode('realistic') -> 7 (Realistic)")
+	check(DedicatedServer.parse_mode("ctf") == GameSettings.MatchMode.CAPTURE_THE_FLAG, "parse_mode('ctf') -> CAPTURE_THE_FLAG (8)")
+	check(DedicatedServer.parse_mode("bomb") == GameSettings.MatchMode.PLANT_THE_BOMB, "parse_mode('bomb') -> PLANT_THE_BOMB (9)")
+	check(DedicatedServer.parse_mode("tdm") == GameSettings.MatchMode.TEAMS, "parse_mode('tdm') -> TEAMS (3)")
+	check(DedicatedServer.parse_mode("duos") == GameSettings.MatchMode.DUOS, "parse_mode('duos') -> DUOS (2)")
+	check(DedicatedServer.parse_mode("gun_game") == GameSettings.MatchMode.GUN_GAME, "parse_mode('gun_game') -> GUN_GAME (1)")
+	check(DedicatedServer.parse_mode("realistic") == GameSettings.MatchMode.REALISTIC, "parse_mode('realistic') -> REALISTIC (7)")
 
 	# Map rotation parser
 	var rot := DedicatedServer.parse_map_rotation("2fort, dust2, backyard")
@@ -5074,6 +5078,280 @@ func _test_objective_bot_ai() -> void:
 	arena.queue_free()
 	stage.queue_free()
 	await physics_frames(3)
+
+
+func _test_v1_0_release_regressions() -> void:
+	section("v1.0.0 Production Polish, Gameplay Hardening & Arena Integrity")
+
+	# 1. Version metadata check
+	check(str(ProjectSettings.get_setting("application/config/version", "")) == "1.0.0",
+		"project.godot application/config/version is 1.0.0")
+
+	# 2. All 9 arenas have explicit objectives, spawns, roam points, and AgX atmosphere
+	check(MatchScene.ARENAS.size() == 9, "MatchScene registers all 9 arenas")
+	for i in MatchScene.ARENAS.size():
+		var info: Dictionary = MatchScene.ARENAS[i]
+		var arena_path: String = str(info["path"])
+		var arena_name: String = str(info["name"])
+		var arena_inst := (load(arena_path) as PackedScene).instantiate() as Arena
+		add_child(arena_inst)
+		await physics_frames(2)
+		check(arena_inst.spawn_points.size() >= 6, "%s has >= 6 spawn points (%d)" % [arena_name, arena_inst.spawn_points.size()])
+		check(arena_inst.roam_points.size() >= 6, "%s has >= 6 roam points (%d)" % [arena_name, arena_inst.roam_points.size()])
+		check(arena_inst.bomb_sites.has("A") and arena_inst.bomb_sites.has("B"), "%s defines explicit Bomb Sites A and B" % arena_name)
+		check(arena_inst.flag_pedestals.size() >= 2, "%s defines >= 2 explicit CTF flag pedestals" % arena_name)
+		check(not arena_inst.bomb_spawns.is_empty(), "%s defines explicit bomb_spawns" % arena_name)
+		check(arena_inst.world_environment != null and arena_inst.sun_light != null, "%s exposes world_environment and sun_light" % arena_name)
+		arena_inst.queue_free()
+		await physics_frames(2)
+
+	# 3. Workbench ricochet_ranger ID & six_shot alias
+	var has_ricochet := false
+	var has_dead_six_shot := false
+	for b: Dictionary in WeaponModding.WORKBENCH_BLASTERS:
+		if b["id"] == &"ricochet_ranger":
+			has_ricochet = true
+		if b["id"] == &"six_shot":
+			has_dead_six_shot = true
+	check(has_ricochet and not has_dead_six_shot, "WeaponModding uses ricochet_ranger instead of dead six_shot ID")
+	Progression.equip_attachment(&"six_shot", &"optic", &"red_dot")
+	check(Progression.get_equipped_attachments(&"ricochet_ranger").get("optic") == &"red_dot",
+		"Progression aliases legacy six_shot attachments onto ricochet_ranger")
+
+	# 4. Bot weapon attachment isolation from local player's Progression
+	var popper := load(POPPER) as WeaponData
+	Progression.equip_attachment(&"pocket_popper", &"magazine", &"extended_drum")
+	var player_arsenal := Arsenal.new()
+	player_arsenal.apply_profile_attachments = true
+	player_arsenal.profile_index = 0
+	add_child(player_arsenal)
+	player_arsenal.set_loadout([popper], false)
+	var bot_arsenal := Arsenal.new()
+	add_child(bot_arsenal)
+	bot_arsenal.set_loadout([popper], false)
+	check(player_arsenal.current().get_magazine_size() > popper.magazine_size,
+		"Human Arsenal applies extended_drum from Progression")
+	check(bot_arsenal.current().get_magazine_size() == popper.magazine_size,
+		"Bot Arsenal stays isolated from local player's Progression attachments")
+	player_arsenal.queue_free()
+	bot_arsenal.queue_free()
+	Progression.equip_attachment(&"pocket_popper", &"magazine", &"stock_mag")
+	await physics_frames(2)
+
+	# 5. InputSetup LT ADS separation & secondary-binding preservation on rebind
+	InputSetup.reset_to_defaults()
+	var lt_on_sprint := false
+	for ev: InputEvent in InputMap.action_get_events(&"sprint"):
+		if ev is InputEventJoypadMotion and (ev as InputEventJoypadMotion).axis == JOY_AXIS_TRIGGER_LEFT:
+			lt_on_sprint = true
+	check(not lt_on_sprint, "Gamepad LT is no longer bound to sprint (reserved for ADS)")
+	var custom_fwd := InputEventKey.new()
+	custom_fwd.physical_keycode = KEY_I
+	InputSetup.rebind_action_event(&"move_forward", custom_fwd, false)
+	var has_up_arrow := false
+	for ev: InputEvent in InputMap.action_get_events(&"move_forward"):
+		if ev is InputEventKey and (ev as InputEventKey).physical_keycode == KEY_UP:
+			has_up_arrow = true
+	check(has_up_arrow, "Rebinding primary move_forward key preserves secondary UP arrow binding")
+	InputSetup.reset_to_defaults()
+
+	# 6. Progression.weapon_mastery_ranked_up emits only on actual rank-up
+	var rank_events := [0]
+	var on_rank := func(_wid: StringName, _rank: int, _pidx: int) -> void: rank_events[0] += 1
+	Progression.weapon_mastery_ranked_up.connect(on_rank)
+	var fresh_wid := &"dart_sprayer"
+	Progression.weapon_mastery.erase(fresh_wid)
+	Progression.record_weapon_tag(fresh_wid, false)  # 50 XP -> still Rank 1
+	check(rank_events[0] == 0, "weapon_mastery_ranked_up does not fire when staying Rank 1")
+	Progression.record_weapon_tag(fresh_wid, false)  # 100 XP -> Rank 2!
+	check(rank_events[0] == 1, "weapon_mastery_ranked_up fires exactly once upon reaching Rank 2")
+	Progression.weapon_mastery_ranked_up.disconnect(on_rank)
+
+	# 7. Podium does NOT turn Orange Team (team 1) into zombies outside Zombies mode
+	var podium_stage := make_stage()
+	var orange_entry := ScoreEntry.new()
+	orange_entry.display_name = "OrangeHero"
+	orange_entry.color = GameMode.team_color(1)
+	orange_entry.team = 1
+	orange_entry.score = 500
+	var podium := Podium.new()
+	podium_stage.add_child(podium)
+	podium.show_places([[orange_entry]], "ORANGE WINS!", Color.ORANGE, false)
+	await physics_frames(2)
+	check(podium.dancers.size() == 1 and not podium.dancers[0].is_zombie(),
+		"Podium preserves non-zombie appearance for Team 1 in normal team modes")
+	podium.queue_free()
+	var z_podium := Podium.new()
+	podium_stage.add_child(z_podium)
+	z_podium.show_places([[orange_entry]], "ZOMBIES WIN!", Color.GREEN, true)
+	await physics_frames(2)
+	check(z_podium.dancers.size() == 1 and z_podium.dancers[0].is_zombie(),
+		"Podium displays Team 1 as zombies when is_zombie_mode is true")
+	podium_stage.queue_free()
+	await physics_frames(2)
+
+	# 8. FlagPickup keeps pedestal anchored when carried away
+	var ctf_stage := make_stage()
+	var flag := FlagPickup.new()
+	flag.team_id = 0
+	ctf_stage.add_child(flag)
+	var home_pos := Vector3(-12.0, 0.0, 0.0)
+	flag.global_position = home_pos
+	flag.base_position = home_pos
+	flag.reset_to_base()
+	var runner := make_actor(ctf_stage, home_pos, 1)
+	await physics_frames(2)
+	flag._on_body_entered(runner)
+	runner.global_position = Vector3(15.0, 0.0, 10.0)
+	await physics_frames(3)
+	check(flag._pedestal != null and flag._pedestal.global_position.distance_to(home_pos) < 0.25,
+		"FlagPickup pedestal stays anchored at home base while flag is carried away")
+	ctf_stage.queue_free()
+	await physics_frames(2)
+
+	# 9. Split-screen Zombie Siege co-op teams & end-of-match HUD reparenting + TacticalMinimap
+	var saved_split := GameSettings.split_screen
+	var saved_mode := GameSettings.match_mode
+	var saved_bots := GameSettings.bot_count
+	GameSettings.split_screen = true
+	GameSettings.bot_count = 2
+	var ss_game := start_match(GameSettings.MatchMode.ZOMBIE_SIEGE)
+	await physics_frames(6)
+	var p1: Player = ss_game.get("player") as Player
+	var p2: Player = ss_game.get("player2") as Player
+	var hud1: Hud = ss_game.get("hud") as Hud
+	check(p1 != null and p2 != null, "Split-screen Zombie Siege spawns both Player 1 and Player 2")
+	if p1 != null and p2 != null:
+		check(p1.team_id == 0 and p2.team_id == 0, "Split-screen Zombie Siege assigns both human players to Defenders (team 0)")
+	check(hud1 != null and hud1._minimap != null, "Hud mounts TacticalMinimap radar cleanly")
+	# Force match finish and verify HUD reparents out of hidden split container so results stay visible
+	var ctrl: MatchController = ss_game.get("controller") as MatchController
+	if ctrl != null:
+		ctrl._finish()
+	await physics_frames(4)
+	if hud1 != null:
+		check(hud1.get_parent() == ss_game and hud1.visible,
+			"Split-screen match end reparents Hud onto MatchScene so results screen stays visible")
+	GameSettings.split_screen = saved_split
+	GameSettings.bot_count = saved_bots
+	await end_match(ss_game, saved_mode)
+
+	# 10. Iron sight & optic ADS alignment never clips camera across all blasters (especially Dart Sprayer)
+	var sprayer_data := load(SPRAYER) as WeaponData
+	var sprayer_iron := BlasterModel.create(sprayer_data, true, &"default", {"optic": &"iron_sights"})
+	add_child(sprayer_iron)
+	await physics_frames(1)
+	var sprayer_ads := sprayer_iron.get_ads_offset()
+	check(is_zero_approx(sprayer_ads.x), "Dart Sprayer iron-sight ADS centers X at 0.0")
+	check(-sprayer_ads.y >= 0.145, "Dart Sprayer iron-sight ADS eye sits cleanly above top rail Y=0.13 (got %.3f)" % (-sprayer_ads.y))
+	check(sprayer_ads.z + 0.245 <= -0.10, "Dart Sprayer iron-sight ADS keeps buttpad safely ahead of camera.near (rear Z=%.3f)" % (sprayer_ads.z + 0.245))
+	check(sprayer_iron._iron_sights_node != null, "Dart Sprayer mounts 3D iron sights when no optic is equipped")
+	# Equipping aftermarket optic (String key like WeaponState) raises eye line and hides iron sights
+	sprayer_iron.update_attachments({"optic": &"red_dot"})
+	var sprayer_rd_ads := sprayer_iron.get_ads_offset()
+	check(sprayer_iron._iron_sights_node == null, "Dart Sprayer hides iron sights when red_dot optic is equipped")
+	check(-sprayer_rd_ads.y > -sprayer_ads.y, "Dart Sprayer red_dot ADS aligns above iron sights (%.3f > %.3f)" % [-sprayer_rd_ads.y, -sprayer_ads.y])
+	sprayer_iron.queue_free()
+
+	for file_name in DirAccess.get_files_at(WEAPON_DIR):
+		if not file_name.ends_with(".tres"):
+			continue
+		var wdata := load(WEAPON_DIR + "/" + file_name) as WeaponData
+		if wdata == null:
+			continue
+		var bm := BlasterModel.create(wdata, true, &"default", {"optic": &"iron_sights"})
+		add_child(bm)
+		var off := bm.get_ads_offset()
+		var rear_world_z := off.z + bm._get_max_rear_z()
+		check(is_zero_approx(off.x) and off.y < -0.07 and rear_world_z <= -0.10,
+			"%s iron-sight ADS stays above receiver and ahead of near plane (off=%s, rearZ=%.3f)" % [wdata.id, str(off), rear_world_z])
+		bm.queue_free()
+	await physics_frames(2)
+
+	# 11. Foam Bat Melee Weapon: Gun Game final rung, Zombies loadout, FFA BatPickup, melee bonk & dart deflect
+	var bat_data := load("res://resources/weapons/foam_bat.tres") as WeaponData
+	check(bat_data != null and bat_data.is_melee(), "foam_bat.tres loads as a MELEE weapon")
+	check(Sfx.has_sound(&"bat_swing") and Sfx.has_sound(&"bat_bonk"), "Sfx bank provides bat_swing and bat_bonk sounds")
+	var bat_state := WeaponState.new(bat_data)
+	check(bat_state.can_fire() and not bat_state.can_reload() and bat_state.missing() == 0,
+		"Foam Bat WeaponState needs no ammo and never reloads")
+	var bat_vm := BlasterModel.create(bat_data, true, &"default", {})
+	add_child(bat_vm)
+	check(bat_vm.attachment_nodes.is_empty() and bat_vm._iron_sights_node == null,
+		"Foam Bat first-person model mounts zero floating blaster attachments or iron sights")
+	bat_vm.queue_free()
+
+	var z_mode := load(ZOMBIES_MODE) as GameMode
+	var zs_mode := load(ZOMBIE_SIEGE_MODE) as GameMode
+	var z_has_bat := false
+	for w in z_mode.loadout:
+		if w.id == &"foam_bat":
+			z_has_bat = true
+	var zs_has_bat := false
+	for w in zs_mode.loadout:
+		if w.id == &"foam_bat":
+			zs_has_bat = true
+	check(z_has_bat and zs_has_bat, "Zombies and Zombie Siege survivor loadouts include the Foam Bat")
+
+	# Melee swing bonk + knockback + dart deflect
+	var melee_stage := make_stage()
+	var m_pool := make_pool(melee_stage)
+	var batter := make_actor(melee_stage, Vector3.ZERO, 0)
+	batter.dart_pool = m_pool
+	batter.arsenal.set_loadout([bat_data], false)
+	var dummy_victim := make_actor(melee_stage, Vector3(0.0, 0.0, -2.0), 1)
+	dummy_victim._protect_left = 0.0
+	dummy_victim.grant_shield(50.0)
+	var enemy_dart := m_pool.fire(make_dart_data(25.0, 0.0, 0.0), Vector3(0.0, 1.4, -1.6), Vector3.BACK, dummy_victim, null, Color.ORANGE, [])
+	await physics_frames(1)
+	batter._perform_melee_swing(batter.arsenal.current())
+	check(not dummy_victim.has_shield() and dummy_victim.tag_meter >= 49.0,
+		"Foam Bat swing breaks Foam Shield and spills damage onto rival tag meter")
+	check(dummy_victim.velocity.length() > 5.0, "Foam Bat swing launches rival with cartoon knockback")
+	check(enemy_dart.shooter == batter and enemy_dart.ricochet_count >= 1 and enemy_dart.velocity.z < 0.0,
+		"Foam Bat swing deflects incoming enemy foam dart back with ricochet credit")
+
+	# BatPickup spawns in standard modes (FFA) and grants Foam Bat on touch
+	var bp := BatPickup.new()
+	melee_stage.add_child(bp)
+	bp.global_position = Vector3(6.0, 0.0, 0.0)
+	bp.make_available()
+	var grabber := make_actor(melee_stage, Vector3(6.0, 0.0, 0.0), 0)
+	await physics_frames(1)
+	bp._on_body_entered(grabber)
+	check(grabber.arsenal.has_weapon(&"foam_bat") and not bp.is_available(),
+		"BatPickup hands Foam Bat to touching actor and starts respawn cooldown")
+	melee_stage.queue_free()
+	await physics_frames(2)
+
+	# 12. HUD reload progress regression (fixes nonexistent WeaponState.get_reload_seconds / reload_left)
+	var ffa_game := start_match(GameSettings.MatchMode.FREE_FOR_ALL)
+	await physics_frames(4)
+	var ffa_player: Player = ffa_game.get("player") as Player
+	var ffa_hud: Hud = ffa_game.get("hud") as Hud
+	var ffa_bat: BatPickup = ffa_game.get("bat_pickup") as BatPickup
+	check(ffa_bat != null, "Standard FFA match spawns a Foam Bat arena pickup")
+	if ffa_player != null and ffa_hud != null:
+		ffa_player.arsenal.current().magazine = 1
+		ffa_player.arsenal.request_reload()
+		await physics_frames(3)
+		check(ffa_player.arsenal.is_reloading() and ffa_hud._reload_bar.visible,
+			"HUD updates reload progress bar cleanly without script errors")
+	await end_match(ffa_game, GameSettings.MatchMode.FREE_FOR_ALL)
+
+	# 13. Windows Desktop export preset & build script
+	var win_presets := ConfigFile.new()
+	check(win_presets.load("res://export_presets.cfg") == OK, "export_presets.cfg loads cleanly for Windows check")
+	var found_win := false
+	for sec in win_presets.get_sections():
+		if not sec.ends_with(".options") and win_presets.get_value(sec, "platform", "") == "Windows Desktop":
+			found_win = true
+			check(win_presets.get_value(sec + ".options", "binary_format/embed_pck", false) == true,
+				"Windows Desktop preset embeds PCK into a single DARTSTORM.exe")
+			break
+	check(found_win, "export_presets.cfg defines a Windows Desktop export preset")
+	check(FileAccess.file_exists("res://tools/export_windows.sh"), "tools/export_windows.sh exists")
+
 
 
 

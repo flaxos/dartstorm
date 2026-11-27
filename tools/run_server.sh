@@ -6,9 +6,9 @@
 #
 # Examples:
 #   ./tools/run_server.sh
-#   ./tools/run_server.sh --port=8910 --name="Public CTF Server"
-#   ./tools/run_server.sh --arena=fortress_2 --mode=ctf --bot-fill=6
-#   ./tools/run_server.sh --map-rotation="fortress_2:ctf,dust_2:bomb,backyard:deathmatch"
+#   ./tools/run_server.sh --port=8920 --name="Public CTF Server"
+#   ./tools/run_server.sh --arena=two_forts --mode=ctf --bot-fill=6
+#   ./tools/run_server.sh --map-rotation="two_forts,dust2,backyard"
 #
 set -euo pipefail
 

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="ZombieSiegeMode" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="ZombieSiegeMode" load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/zombie_siege_mode.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2"]
@@ -6,6 +6,7 @@
 [ext_resource type="Resource" path="res://resources/weapons/dart_sprayer.tres" id="4"]
 [ext_resource type="Resource" path="res://resources/weapons/hydro_soaker.tres" id="5"]
 [ext_resource type="Resource" path="res://resources/weapons/frost_ranger.tres" id="6"]
+[ext_resource type="Resource" path="res://resources/weapons/foam_bat.tres" id="7"]
 
 [resource]
 script = ExtResource("1")
@@ -19,5 +20,5 @@ respawn_delay = 3.0
 points_per_tag = 100
 ricochet_bonus = 50
 points_per_target = 10
-loadout = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")])
+loadout = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")])
 infinite_reserve = false

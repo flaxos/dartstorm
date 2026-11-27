@@ -26,9 +26,23 @@ func _ready() -> void:
 	_model.setup(display_name, color, hat_id)
 	_model.show_overhead(true)
 
+	arsenal.weapon_changed.connect(_on_weapon_changed)
 	var current_w := arsenal.current()
 	if current_w != null:
 		_model.set_weapon(current_w.data, skin_id)
+	damage_received.connect(func(_att: Actor, _amt: float) -> void:
+		if _model != null:
+			_model.trigger_hit_flash())
+	respawned.connect(func(_a: Actor) -> void:
+		if _model != null:
+			_model.clear_elemental_visuals())
+	if elemental != null:
+		elemental.status_started.connect(func(el: DartData.Element, _dur: float) -> void:
+			if _model != null:
+				_model.set_elemental_visual(el, true))
+		elemental.status_ended.connect(func(el: DartData.Element) -> void:
+			if _model != null:
+				_model.set_elemental_visual(el, false))
 
 	_target_position = position
 	_target_rotation_y = rotation.y
@@ -63,6 +77,7 @@ func apply_network_state(pos: Vector3, rot_y: float, pitch: float, vel: Vector3,
 
 
 func _physics_process(delta: float) -> void:
+	tick_status(delta)
 	if not alive:
 		return
 
@@ -73,9 +88,10 @@ func _physics_process(delta: float) -> void:
 
 	# Animate third person model
 	var speed_h := Vector2(velocity.x, velocity.z).length()
-	var walking := speed_h > 0.4
-	_model.set_walking(walking, _is_sprinting)
+	_model.animate(speed_h, delta)
+	_model.set_aim_pitch(_target_pitch)
 	_model.set_meter(tag_meter / maxf(tag_meter_max, 1.0))
+	_model.set_shield_visible(shield_points > 0.0)
 
 
 func fire_network_dart(weapon_idx: int, origin: Vector3, dir: Vector3, charge: float, element: int) -> void:
@@ -100,14 +116,24 @@ func fire_network_dart(weapon_idx: int, origin: Vector3, dir: Vector3, charge: f
 	Sfx.play_at(weapon_data.sound, origin, weapon_data.sound_pitch, -4.0, 0.08)
 
 	# Launch dart projectile via dart_pool.fire()
-	var spd: float = weapon_data.speed * lerpf(1.0, 1.25, charge)
-	var elem_enum := element as DartData.Element
+	var elem_enum := clampi(element, 0, 5) as DartData.Element
 	var dart_data := weapon_data.dart
 	if elem_enum != DartData.Element.NONE:
-		dart_data = dart_data.duplicate() as DartData
-		dart_data.element = elem_enum
+		dart_data = _get_infused_dart_data(dart_data, elem_enum)
 	var exclude: Array[RID] = [hitbox.get_rid(), get_rid()]
-	dart_pool.fire(dart_data, origin, dir.normalized() * spd, self, weapon_data, color, exclude)
+	var dart := dart_pool.fire(dart_data, origin, dir.normalized(), self, weapon_data, color, exclude)
+	if dart != null and charge != 1.0:
+		dart.velocity *= lerpf(0.85, 1.15, clampf(charge, 0.0, 1.0))
+
+
+func _set_body_visible(shown: bool) -> void:
+	if _model != null:
+		_model.visible = shown
+
+
+func _on_zombie_state_changed(enabled: bool) -> void:
+	if _model != null:
+		_model.set_zombie(enabled)
 
 
 func _on_weapon_changed(state: WeaponState) -> void:

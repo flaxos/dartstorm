@@ -66,8 +66,10 @@ func _notification(what: int) -> void:
 
 
 ## Starts hosting a WebSocket server.
-func host_game(port: int = DEFAULT_PORT, p_max_players: int = MAX_CLIENTS, p_server_name: String = "") -> Error:
+func host_game(port: int = DEFAULT_PORT, p_max_players: int = MAX_CLIENTS, p_server_name: String = "", p_dedicated: bool = false) -> Error:
+	var keep_dedicated := p_dedicated or is_dedicated_server
 	disconnect_game()
+	is_dedicated_server = keep_dedicated
 	_peer = WebSocketMultiplayerPeer.new()
 	var err := _peer.create_server(port)
 	if err != OK:
@@ -213,13 +215,13 @@ func _on_peer_connected(id: int) -> void:
 
 
 func _on_peer_disconnected(id: int) -> void:
-	peer_disconnected.emit(id)
 	if is_host:
 		for i in range(roster.size() - 1, -1, -1):
 			if int(roster[i].get("peer_id", 0)) == id:
 				roster.remove_at(i)
 				break
 		_sync_lobby_to_all()
+	peer_disconnected.emit(id)
 
 
 func _on_connected_to_server() -> void:
@@ -269,6 +271,9 @@ func rpc_register_player(info: Dictionary) -> void:
 	var safe_skin: StringName = raw_skin if Cosmetics.has_skin(raw_skin) else &"default"
 	var safe_level: int = clampi(int(info.get("level", 1)), 1, 100)
 
+	var slot_idx := existing_idx if existing_idx >= 0 else roster.size()
+	var mode_obj := MatchScene.resolve_mode(selected_mode)
+	var assigned_team := mode_obj.team_for(slot_idx) if mode_obj != null else (slot_idx % 2)
 	var clean_entry := {
 		"peer_id": sender_id,
 		"name": safe_name,
@@ -276,7 +281,7 @@ func rpc_register_player(info: Dictionary) -> void:
 		"hat": safe_hat,
 		"skin": safe_skin,
 		"level": safe_level,
-		"team_id": (existing_idx if existing_idx >= 0 else roster.size()) % 2,
+		"team_id": assigned_team,
 	}
 
 	if existing_idx >= 0:
@@ -367,7 +372,7 @@ func rpc_fire_dart(shooter_id: int, weapon_index: int, origin: Vector3, dir: Vec
 		return
 	var safe_dir := dir.normalized()
 	var safe_charge := clampf(charge, 0.0, 1.0)
-	var safe_element := clampi(element, 0, 4)
+	var safe_element := clampi(element, 0, 5)
 
 	var match_scene := get_tree().current_scene as MatchScene
 	if match_scene != null and match_scene.has_method("on_network_fire_dart"):

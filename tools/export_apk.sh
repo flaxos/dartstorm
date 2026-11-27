@@ -16,7 +16,7 @@ SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
 cd "$ROOT"
 
-export ANDROID_HOME="${ANDROID_HOME:-/home/flax/Android/Sdk}"
+export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
 
 GODOT="${GODOT_BIN:-$(command -v godot || command -v godot4 || echo "$HOME/bin/godot")}"

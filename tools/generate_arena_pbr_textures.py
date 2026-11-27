@@ -7,37 +7,38 @@ Generates seamless PBR texture sets (Albedo, Normal, ORM) for DARTSTORM arenas:
 - Fortress Stone Brick (2Fort fortresses, castle masonry)
 """
 
+import argparse
 import os
 import math
 from PIL import Image, ImageFilter, ImageOps
 
-BASE_DIR = "/home/flax/games/dartstorm"
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 OUT_DIR = os.path.join(BASE_DIR, "assets/textures/arenas")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 SOURCES = {
     "sandstone": {
-        "src": "/home/flax/.gemini/antigravity/brain/d63e5a52-fa6e-4ddd-b284-e80cf7779b79/stylized_sandstone_texture_1795346722949.jpg",
+        "src": "stylized_sandstone.jpg",
         "roughness": 0.84,
         "bump_strength": 3.0,
     },
     "cobble": {
-        "src": "/home/flax/.gemini/antigravity/brain/d63e5a52-fa6e-4ddd-b284-e80cf7779b79/stylized_desert_pavers_1795434650725.jpg",
+        "src": "stylized_desert_pavers.jpg",
         "roughness": 0.85,
         "bump_strength": 3.2,
     },
     "sand": {
-        "src": "/home/flax/.gemini/antigravity/brain/d63e5a52-fa6e-4ddd-b284-e80cf7779b79/stylized_desert_sand_1795434616405.jpg",
+        "src": "stylized_desert_sand.jpg",
         "roughness": 0.94,
         "bump_strength": 2.0,
     },
     "wood": {
-        "src": "/home/flax/.gemini/antigravity/brain/d63e5a52-fa6e-4ddd-b284-e80cf7779b79/stylized_wood_planks_1795346772374.jpg",
+        "src": "stylized_wood_planks.jpg",
         "roughness": 0.76,
         "bump_strength": 2.5,
     },
     "brick": {
-        "src": "/home/flax/.gemini/antigravity/brain/d63e5a52-fa6e-4ddd-b284-e80cf7779b79/stylized_fortress_brick_1795346801122.jpg",
+        "src": "stylized_fortress_brick.jpg",
         "roughness": 0.86,
         "bump_strength": 3.8,
     },
@@ -128,9 +129,17 @@ def make_perfectly_seamless(img, blend_size=80):
     return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
 
 def main():
+    parser = argparse.ArgumentParser(description="Generate seamless stylized PBR arena textures.")
+    parser.add_argument(
+        "--src-dir",
+        default=os.path.join(BASE_DIR, "build", "texture_sources"),
+        help="Directory containing source albedo images (stylized_*.jpg).",
+    )
+    args = parser.parse_args()
+
     print("Processing Stylized Arena PBR Textures...")
     for name, cfg in SOURCES.items():
-        src_path = cfg["src"]
+        src_path = os.path.join(args.src_dir, cfg["src"])
         if not os.path.exists(src_path):
             print(f"ERROR: {src_path} not found!")
             continue

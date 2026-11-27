@@ -141,13 +141,13 @@ func _color_for_type(p_type: Type) -> Color:
 func _text_for_type(p_type: Type) -> String:
 	match p_type:
 		Type.REGROUP:
-			return "📍 REGROUP"
+			return "REGROUP"
 		Type.AMMO:
-			return "📦 AMMO"
+			return "AMMO"
 		Type.POWERUP:
-			return "✨ POWER-UP"
+			return "POWER-UP"
 		Type.RIVAL:
-			return "⚠️ RIVAL"
+			return "RIVAL"
 		Type.DANGER:
-			return "💥 DANGER"
-	return "📍 PING"
+			return "DANGER"
+	return "PING"

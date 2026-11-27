@@ -54,16 +54,27 @@ func _build_ground_and_fences() -> void:
 	# Center blue court inlay
 	ArenaKit.box(geometry, Vector3(18.0, 0.05, 16.0), Vector3(0.0, 0.02, 0.0), MULCH_ACCENT, Vector3.ZERO, ArenaKit.SurfaceType.DEFAULT)
 
-	# Surrounding schoolyard perimeter fences
+	# Surrounding schoolyard perimeter fences + invisible sky blockers
 	var wall_h := 3.8
 	var thick := 0.4
 	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, wall_h, thick), Vector3(0.0, wall_h * 0.5, -HALF_Z - thick * 0.5), FENCE, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
 	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, wall_h, thick), Vector3(0.0, wall_h * 0.5, HALF_Z + thick * 0.5), FENCE, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
 	ArenaKit.box(geometry, Vector3(thick, wall_h, HALF_Z * 2.0), Vector3(-HALF_X - thick * 0.5, wall_h * 0.5, 0.0), FENCE, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
 	ArenaKit.box(geometry, Vector3(thick, wall_h, HALF_Z * 2.0), Vector3(HALF_X + thick * 0.5, wall_h * 0.5, 0.0), FENCE, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
+	var sky_h := 16.0
+	ArenaKit.blocker(geometry, Vector3(HALF_X * 2.0 + 2.0, sky_h, thick), Vector3(0.0, wall_h + sky_h * 0.5, -HALF_Z - thick * 0.5))
+	ArenaKit.blocker(geometry, Vector3(HALF_X * 2.0 + 2.0, sky_h, thick), Vector3(0.0, wall_h + sky_h * 0.5, HALF_Z + thick * 0.5))
+	ArenaKit.blocker(geometry, Vector3(thick, sky_h, HALF_Z * 2.0), Vector3(-HALF_X - thick * 0.5, wall_h + sky_h * 0.5, 0.0))
+	ArenaKit.blocker(geometry, Vector3(thick, sky_h, HALF_Z * 2.0), Vector3(HALF_X + thick * 0.5, wall_h + sky_h * 0.5, 0.0))
 
-	# Schoolyard backdrop lawn
+	# Schoolyard backdrop lawn + scenic perimeter trees & houses
 	ArenaKit.deco_box(decor, Vector3(300.0, 0.2, 300.0), Vector3(0.0, -0.6, 0.0), Color(0.32, 0.65, 0.28))
+	for i in 14:
+		var ang := float(i) * TAU / 14.0
+		var spot := Vector3(cos(ang) * 44.0, 0.0, sin(ang) * 38.0)
+		ArenaKit.tree(decor, spot, 1.1 + float(i % 3) * 0.2)
+	ArenaKit.house(decor, Vector3(-48.0, 0.0, -34.0), Vector3(16.0, 7.5, 13.0), Color(0.98, 0.9, 0.75), Color(0.78, 0.28, 0.22))
+	ArenaKit.house(decor, Vector3(48.0, 0.0, -34.0), Vector3(15.0, 7.0, 12.0), Color(0.84, 0.92, 0.98), Color(0.28, 0.42, 0.62))
 
 
 func _build_jungle_gym() -> void:
@@ -77,12 +88,13 @@ func _build_jungle_gym() -> void:
 			ArenaKit.cylinder(geometry, 0.16, deck_a_h, pos_a + Vector3(ox, deck_a_h * 0.5, oz), WOOD, ArenaKit.SurfaceType.WOOD)
 	# Platform slab
 	ArenaKit.box(geometry, size_a, pos_a + Vector3(0.0, deck_a_h, 0.0), RED, Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
-	# Safety railings
+	# Safety railings (South railing split cleanly to leave ramp entrance wide open!)
 	ArenaKit.box(geometry, Vector3(4.2, 0.9, 0.15), pos_a + Vector3(0.0, deck_a_h + 0.45, -2.0), YELLOW, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
-	ArenaKit.box(geometry, Vector3(4.2, 0.9, 0.15), pos_a + Vector3(0.0, deck_a_h + 0.45, 2.0), YELLOW, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
+	ArenaKit.box(geometry, Vector3(1.0, 0.9, 0.15), pos_a + Vector3(-1.6, deck_a_h + 0.45, 2.0), YELLOW, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
+	ArenaKit.box(geometry, Vector3(1.0, 0.9, 0.15), pos_a + Vector3(1.6, deck_a_h + 0.45, 2.0), YELLOW, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
 
 	# Climbing Ramp onto Tower A from South
-	ArenaKit.ramp(geometry, pos_a + Vector3(0.0, 0.0, 5.5), pos_a + Vector3(0.0, deck_a_h, 2.1), 2.2, BLUE, 0.25, ArenaKit.SurfaceType.PLASTIC)
+	ArenaKit.ramp(geometry, pos_a + Vector3(0.0, 0.0, 5.5), pos_a + Vector3(0.0, deck_a_h + 0.15, 2.1), 2.1, BLUE, 0.25, ArenaKit.SurfaceType.PLASTIC)
 
 	# Tower B (East, height 3.5m)
 	var pos_b := Vector3(4.5, 0.0, 0.0)
@@ -91,28 +103,22 @@ func _build_jungle_gym() -> void:
 	for ox in [-2.0, 2.0]:
 		for oz in [-2.0, 2.0]:
 			ArenaKit.cylinder(geometry, 0.18, deck_b_h, pos_b + Vector3(ox, deck_b_h * 0.5, oz), WOOD, ArenaKit.SurfaceType.WOOD)
+			# Upper canopy posts supporting high pyramid roof above head clearance
+			ArenaKit.cylinder(geometry, 0.12, 2.6, pos_b + Vector3(ox, deck_b_h + 1.4, oz), WOOD, ArenaKit.SurfaceType.WOOD)
 	ArenaKit.box(geometry, size_b, pos_b + Vector3(0.0, deck_b_h, 0.0), BLUE, Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
-	# Pyramid canopy roof over Tower B
-	ArenaKit.deco_cone(decor, 3.4, 2.2, pos_b + Vector3(0.0, deck_b_h + 2.0, 0.0), YELLOW)
+	# Pyramid canopy roof raised clear of player heads
+	ArenaKit.deco_cone(decor, 3.6, 2.2, pos_b + Vector3(0.0, deck_b_h + 3.7, 0.0), YELLOW)
 
-	# Suspension bridge between Tower A and Tower B
+	# Suspension bridge between Tower A and Tower B with sloped safety railings
 	var bridge_w := 1.8
-	ArenaKit.ramp(geometry, pos_a + Vector3(2.1, deck_a_h, 0.0), pos_b + Vector3(-2.2, deck_b_h, 0.0), bridge_w, WOOD, 0.2, ArenaKit.SurfaceType.WOOD)
-	# Bridge side safety ropes
-	ArenaKit.box(geometry, Vector3(5.0, 0.8, 0.12), (pos_a + pos_b) * 0.5 + Vector3(0.0, (deck_a_h + deck_b_h) * 0.5 + 0.4, -bridge_w * 0.5), RED, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
-	ArenaKit.box(geometry, Vector3(5.0, 0.8, 0.12), (pos_a + pos_b) * 0.5 + Vector3(0.0, (deck_a_h + deck_b_h) * 0.5 + 0.4, bridge_w * 0.5), RED, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
+	ArenaKit.ramp(geometry, pos_a + Vector3(2.1, deck_a_h + 0.15, 0.0), pos_b + Vector3(-2.2, deck_b_h + 0.15, 0.0), bridge_w, WOOD, 0.2, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.ramp(geometry, pos_a + Vector3(2.1, deck_a_h + 0.65, -bridge_w * 0.5), pos_b + Vector3(-2.2, deck_b_h + 0.65, -bridge_w * 0.5), 0.12, RED, 0.75, ArenaKit.SurfaceType.METAL)
+	ArenaKit.ramp(geometry, pos_a + Vector3(2.1, deck_a_h + 0.65, bridge_w * 0.5), pos_b + Vector3(-2.2, deck_b_h + 0.65, bridge_w * 0.5), 0.12, RED, 0.75, ArenaKit.SurfaceType.METAL)
 
-	# Yellow plastic slide from Tower B to East
-	if ModelLoader.has_prop_model(&"playground_slide"):
-		var slide_prop := ArenaKit.prop(geometry, &"playground_slide", pos_b + Vector3(1.2, 0.0, 0.0))
-		if slide_prop == null:
-			ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h, 0.0), pos_b + Vector3(7.5, 0.0, 0.0), 1.6, YELLOW, 0.25, ArenaKit.SurfaceType.PLASTIC)
-			ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h + 0.35, -0.8), pos_b + Vector3(7.5, 0.35, -0.8), 0.15, RED, 0.25, ArenaKit.SurfaceType.PLASTIC)
-			ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h + 0.35, 0.8), pos_b + Vector3(7.5, 0.35, 0.8), 0.15, RED, 0.25, ArenaKit.SurfaceType.PLASTIC)
-	else:
-		ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h, 0.0), pos_b + Vector3(7.5, 0.0, 0.0), 1.6, YELLOW, 0.25, ArenaKit.SurfaceType.PLASTIC)
-		ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h + 0.35, -0.8), pos_b + Vector3(7.5, 0.35, -0.8), 0.15, RED, 0.25, ArenaKit.SurfaceType.PLASTIC)
-		ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h + 0.35, 0.8), pos_b + Vector3(7.5, 0.35, 0.8), 0.15, RED, 0.25, ArenaKit.SurfaceType.PLASTIC)
+	# Flush Yellow plastic slide descending cleanly from Tower B to East
+	ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h + 0.15, 0.0), pos_b + Vector3(8.2, 0.0, 0.0), 1.6, YELLOW, 0.25, ArenaKit.SurfaceType.PLASTIC)
+	ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h + 0.5, -0.85), pos_b + Vector3(8.2, 0.35, -0.85), 0.15, RED, 0.3, ArenaKit.SurfaceType.PLASTIC)
+	ArenaKit.ramp(geometry, pos_b + Vector3(2.2, deck_b_h + 0.5, 0.85), pos_b + Vector3(8.2, 0.35, 0.85), 0.15, RED, 0.3, ArenaKit.SurfaceType.PLASTIC)
 
 	# Jump Pad on North side bouncing onto Tower B
 	add_jump_pad(pos_b + Vector3(0.0, 0.0, -4.5), 11.5)
@@ -125,32 +131,32 @@ func _build_monkey_bars() -> void:
 	ArenaKit.box(geometry, Vector3(1.4, h, 1.4), Vector3(-6.0, h * 0.5, base_z), GREEN, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
 	# Right post and platform
 	ArenaKit.box(geometry, Vector3(1.4, h, 1.4), Vector3(6.0, h * 0.5, base_z), GREEN, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
-	# Horizontal ladder spine
-	ArenaKit.box(geometry, Vector3(12.0, 0.2, 0.8), Vector3(0.0, h, base_z), STEEL, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
-	# 9 rungs
+	# Two horizontal ladder side rails
+	ArenaKit.box(geometry, Vector3(12.0, 0.14, 0.14), Vector3(0.0, h, base_z - 0.5), STEEL, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
+	ArenaKit.box(geometry, Vector3(12.0, 0.14, 0.14), Vector3(0.0, h, base_z + 0.5), STEEL, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
+	# Horizontal cross rungs rotated along Z
 	for i in range(-5, 6):
-		ArenaKit.cylinder(geometry, 0.06, 1.1, Vector3(float(i), h, base_z), STEEL, ArenaKit.SurfaceType.METAL)
+		ArenaKit.deco_cylinder(decor, 0.055, 1.05, Vector3(float(i), h, base_z), STEEL, Vector3(90.0, 0.0, 0.0), -1.0, ArenaKit.SurfaceType.METAL)
 
 
 func _build_swing_sets() -> void:
 	var at := Vector3(14.0, 0.0, 10.0)
 	var h := 3.2
-	# Top beam
-	ArenaKit.cylinder(geometry, 0.12, 11.0, at + Vector3(0.0, h, 0.0), RED, ArenaKit.SurfaceType.METAL)
+	# Horizontal top crossbar spanning X between A-frames
+	var bar := ArenaKit.cylinder(geometry, 0.12, 11.0, at + Vector3(0.0, h, 0.0), RED, ArenaKit.SurfaceType.METAL)
+	bar.rotation_degrees.z = 90.0
 	# A-frame legs
 	for ox in [-5.2, 5.2]:
 		ArenaKit.box(geometry, Vector3(0.18, h * 1.1, 0.18), at + Vector3(ox, h * 0.5, -1.1), BLUE, Vector3(18.0, 0.0, 0.0), ArenaKit.SurfaceType.METAL)
 		ArenaKit.box(geometry, Vector3(0.18, h * 1.1, 0.18), at + Vector3(ox, h * 0.5, 1.1), BLUE, Vector3(-18.0, 0.0, 0.0), ArenaKit.SurfaceType.METAL)
-	# 3 hanging swings
+	# 3 hanging swings (chains & seat move together under swing_root!)
 	for i in [-1, 0, 1]:
 		var swing_root := Node3D.new()
 		swing_root.position = at + Vector3(float(i) * 2.8, h, 0.0)
 		decor.add_child(swing_root)
-		# Chains
 		ArenaKit.deco_box(swing_root, Vector3(0.05, 2.2, 0.05), Vector3(-0.4, -1.1, 0.0), STEEL)
 		ArenaKit.deco_box(swing_root, Vector3(0.05, 2.2, 0.05), Vector3(0.4, -1.1, 0.0), STEEL)
-		# Seat (collidable in geometry so it blocks darts!)
-		var _seat := ArenaKit.box(geometry, Vector3(1.1, 0.12, 0.45), at + Vector3(float(i) * 2.8, 0.8, 0.0), PURPLE, Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
+		ArenaKit.deco_box(swing_root, Vector3(1.1, 0.12, 0.45), Vector3(0.0, -2.2, 0.0), PURPLE, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.PLASTIC)
 		_swings.append(swing_root)
 
 
@@ -177,8 +183,12 @@ func _build_tire_pile(at: Vector3, count: int) -> void:
 
 
 func _build_crawl_tube(at: Vector3, radius: float, length: float, color: Color) -> void:
-	# Large hollow-style cover tube with collision
-	ArenaKit.box(geometry, Vector3(radius * 2.0, radius * 1.8, length), at + Vector3(0.0, radius * 0.9, 0.0), color, Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
+	# Walk-through open-ended play tunnel (left wall, right wall, roof)
+	var wall_t := 0.24
+	var h := radius * 1.9
+	ArenaKit.box(geometry, Vector3(wall_t, h, length), at + Vector3(-radius, h * 0.5, 0.0), color, Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
+	ArenaKit.box(geometry, Vector3(wall_t, h, length), at + Vector3(radius, h * 0.5, 0.0), color, Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
+	ArenaKit.box(geometry, Vector3(radius * 2.0 + wall_t, wall_t, length), at + Vector3(0.0, h + wall_t * 0.5, 0.0), color.lightened(0.08), Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
 
 
 func _build_seesaw_and_rockers() -> void:
@@ -196,13 +206,13 @@ func _build_seesaw_and_rockers() -> void:
 
 
 func _build_rocker(at: Vector3, color: Color, _kind: String) -> void:
-	var root := Node3D.new()
-	root.position = at
-	decor.add_child(root)
-	# Spring base
+	# Solid spring base in geometry
 	ArenaKit.cylinder(geometry, 0.2, 0.5, at + Vector3(0.0, 0.25, 0.0), STEEL, ArenaKit.SurfaceType.METAL)
-	# Body
-	ArenaKit.box(geometry, Vector3(1.2, 0.6, 0.45), at + Vector3(0.0, 0.8, 0.0), color, Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
+	# Animated rocking saddle parented to root
+	var root := Node3D.new()
+	root.position = at + Vector3(0.0, 0.5, 0.0)
+	decor.add_child(root)
+	ArenaKit.deco_box(root, Vector3(1.2, 0.55, 0.45), Vector3(0.0, 0.3, 0.0), color, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.PLASTIC)
 	_rockers.append(root)
 
 
@@ -220,10 +230,14 @@ func _build_sandpit() -> void:
 
 
 func _build_spawns_and_points() -> void:
-	# Team bases
-	team_bases.clear()
-	team_bases.append(Vector3(-20.0, 0.0, 0.0))  # Blue Base (West schoolyard)
-	team_bases.append(Vector3(20.0, 0.0, 0.0))   # Orange Base (East sandbox)
+	# Team bases, Flag pedestals & Bomb sites
+	team_bases = [Vector3(-20.0, 0.0, 0.0), Vector3(20.0, 0.0, 0.0)]
+	flag_pedestals = [Vector3(-20.0, 0.0, 0.0), Vector3(20.0, 0.0, 0.0)]
+	bomb_sites = {
+		"A": Vector3(-14.0, 0.0, -3.5),
+		"B": Vector3(14.0, 0.0, -3.5),
+	}
+	bomb_spawns = [Vector3(20.0, 0.0, 2.5)]
 
 	# 12 Spawn points spread evenly
 	var spawn_coords: Array[Vector3] = [
@@ -231,42 +245,39 @@ func _build_spawns_and_points() -> void:
 		Vector3(-22.0, 0.0, 6.0),
 		Vector3(-18.0, 0.0, -14.0),
 		Vector3(-18.0, 0.0, 14.0),
-		Vector3(-4.5, 2.5, 0.0),   # On Tower A deck
-		Vector3(4.5, 3.8, 0.0),    # On Tower B deck
+		Vector3(-4.5, 2.35, 0.0),   # On Tower A deck
+		Vector3(4.5, 3.65, 0.0),    # On Tower B deck
 		Vector3(0.0, 0.0, -16.0),
 		Vector3(0.0, 0.0, 16.0),
-		Vector3(18.0, 0.0, -14.0),
-		Vector3(18.0, 0.0, 14.0),
+		Vector3(18.0, 0.0, -18.0),
+		Vector3(18.0, 0.0, 15.0),
 		Vector3(22.0, 0.0, -6.0),
 		Vector3(22.0, 0.0, 6.0),
 	]
 	for p in spawn_coords:
 		add_spawn(p, Vector3.ZERO.direction_to(Vector3(-p.x, 0.0, -p.z)))
 
-	# Roam points for bot navigation
+	# Clear unobstructed roam points for bot navigation
 	roam_points.clear()
-	roam_points.append(Vector3(-4.5, 2.5, 0.0))
-	roam_points.append(Vector3(4.5, 3.8, 0.0))
+	roam_points.append(Vector3(-4.5, 2.35, 0.0))
+	roam_points.append(Vector3(4.5, 3.65, 0.0))
 	roam_points.append(Vector3(0.0, 0.0, 0.0))
-	roam_points.append(Vector3(0.0, 0.0, -12.0))
+	roam_points.append(Vector3(0.0, 0.0, -8.5))
 	roam_points.append(Vector3(0.0, 0.0, 12.0))
-	roam_points.append(Vector3(-14.0, 0.0, 8.0))
-	roam_points.append(Vector3(14.0, 0.0, 10.0))
-	roam_points.append(Vector3(15.0, 0.0, -14.0))
-	roam_points.append(Vector3(-14.0, 0.0, -12.0))
+	roam_points.append(Vector3(-10.5, 0.0, 8.0))
+	roam_points.append(Vector3(10.0, 0.0, 14.0))
+	roam_points.append(Vector3(10.0, 0.0, -14.0))
+	roam_points.append(Vector3(-10.0, 0.0, -16.0))
 
 	# Power-up spot (Top of Tower B lookout)
 	power_up_spots.clear()
-	power_up_spots.append(Vector3(4.5, 3.8, 0.0))
+	power_up_spots.append(Vector3(4.5, 3.65, 0.0))
 
 	# Ammo buckets
 	add_bucket(Vector3(-12.0, 0.0, 0.0), Color(0.95, 0.45, 0.2))
 	add_bucket(Vector3(12.0, 0.0, 0.0), Color(0.2, 0.65, 0.95))
-	add_bucket(Vector3(0.0, 0.0, -8.0), Color(0.95, 0.85, 0.2))
+	add_bucket(Vector3(0.0, 0.0, -7.0), Color(0.95, 0.85, 0.2))
 	add_bucket(Vector3(0.0, 0.0, 8.0), Color(0.3, 0.85, 0.4))
 
-	# Foam shield pickup
-	var shield := ShieldPickup.new()
-	shield.position = Vector3(0.0, 0.6, 0.0)
-	geometry.add_child(shield)
-	shield_pickups.append(shield)
+	# Foam shield pickup grounded cleanly in court center
+	add_shield_pickup(Vector3(0.0, 0.0, 0.0))

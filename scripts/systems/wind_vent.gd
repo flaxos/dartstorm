@@ -21,6 +21,7 @@ var _volume: MeshInstance3D
 var _volume_mat: StandardMaterial3D
 var _grate: MeshInstance3D
 var _time: float = 0.0
+var _infuser: Actor = null
 
 
 func _ready() -> void:
@@ -75,11 +76,17 @@ func _ready() -> void:
 	add_child(_area)
 
 
-func amplify(elem: DartData.Element, duration: float = 5.0) -> void:
+func amplify(elem: DartData.Element, duration: float = 5.0, by_actor: Actor = null) -> void:
 	active_element = elem
 	amplified_left = maxf(amplified_left, duration)
+	if by_actor != null and is_instance_valid(by_actor):
+		_infuser = by_actor
 	_refresh_visuals()
 	element_amplified.emit(self, elem)
+
+
+func should_consume_dart(dart: DartProjectile) -> bool:
+	return dart != null and dart.data != null and dart.data.element != DartData.Element.NONE
 
 
 func on_dart_hit(dart: DartProjectile, _hit_point: Vector3) -> void:
@@ -87,7 +94,7 @@ func on_dart_hit(dart: DartProjectile, _hit_point: Vector3) -> void:
 		return
 	var elem := dart.data.element
 	if elem != DartData.Element.NONE:
-		amplify(elem, 5.0)
+		amplify(elem, 5.0, dart.shooter if is_instance_valid(dart.shooter) else null)
 
 
 func _physics_process(delta: float) -> void:
@@ -98,6 +105,7 @@ func _physics_process(delta: float) -> void:
 		amplified_left -= delta
 		if amplified_left <= 0.0:
 			active_element = DartData.Element.NONE
+			_infuser = null
 			_refresh_visuals()
 			element_expired.emit(self)
 
@@ -107,13 +115,13 @@ func _physics_process(delta: float) -> void:
 			_apply_vent_to_actor(actor, delta)
 
 
-func _apply_vent_to_actor(actor: Actor, _delta: float) -> void:
-	# Buoyant updraft lift
-	if actor.velocity.y < lift_velocity * 0.8:
-		actor.velocity.y = maxf(actor.velocity.y + 25.0 * _delta, lift_velocity)
+func _apply_vent_to_actor(actor: Actor, delta: float) -> void:
+	# Smooth buoyant updraft lift
+	if actor.velocity.y < lift_velocity:
+		actor.velocity.y = move_toward(actor.velocity.y, lift_velocity, 30.0 * delta)
 
 	# Elemental effect if active
-	if active_element == DartData.Element.NONE or actor.elemental == null:
+	if active_element == DartData.Element.NONE or actor.elemental == null or actor.is_tagged_out:
 		return
 
 	match active_element:
@@ -127,12 +135,8 @@ func _apply_vent_to_actor(actor: Actor, _delta: float) -> void:
 			actor.elemental.frost_left = maxf(actor.elemental.frost_left, 2.5)
 			actor.elemental.status_started.emit(DartData.Element.ICE, 2.5)
 		DartData.Element.LIGHTNING:
-			if actor.shield_points > 0.0:
-				actor.shield_points = maxf(actor.shield_points - 8.0, 0.0)
-				actor.shield_changed.emit(actor.shield_points, Actor.SHIELD_MAX)
-			else:
-				actor.tag_meter = minf(actor.tag_meter + 8.0, actor.tag_meter_max)
-				actor.meter_changed.emit(actor.tag_meter, actor.tag_meter_max)
+			var attacker: Actor = _infuser if is_instance_valid(_infuser) else null
+			actor.apply_hazard_tag(24.0 * delta, self, attacker)
 			actor.elemental.status_started.emit(DartData.Element.LIGHTNING, 0.3)
 
 

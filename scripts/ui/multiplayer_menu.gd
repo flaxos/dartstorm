@@ -44,6 +44,30 @@ func _exit_tree() -> void:
 		NetworkManager.stop_lan_discovery()
 
 
+func focus_default() -> void:
+	if _lobby_panel != null and _lobby_panel.visible:
+		if _launch_btn != null and _launch_btn.visible:
+			_launch_btn.grab_focus()
+		elif _leave_btn != null:
+			_leave_btn.grab_focus()
+	elif _host_tab_btn != null:
+		_host_tab_btn.grab_focus()
+
+
+func close() -> void:
+	if NetworkManager != null:
+		NetworkManager.stop_lan_discovery()
+		if NetworkManager.is_online:
+			NetworkManager.disconnect_game()
+	closed.emit()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if is_visible_in_tree() and event.is_action_pressed(&"ui_cancel"):
+		close()
+		get_viewport().set_input_as_handled()
+
+
 func _connect_network_signals() -> void:
 	if NetworkManager != null:
 		NetworkManager.connection_succeeded.connect(_on_connection_succeeded)
@@ -71,10 +95,7 @@ func _build() -> void:
 	title_row.add_child(title)
 
 	var close_btn := UiKit.small_button("BACK", Vector2(100, 42))
-	close_btn.pressed.connect(func() -> void:
-		if NetworkManager != null and NetworkManager.is_online:
-			NetworkManager.disconnect_game()
-		closed.emit())
+	close_btn.pressed.connect(close)
 	title_row.add_child(close_btn)
 
 	# Local IP & Profile Bar
@@ -337,6 +358,8 @@ func _on_lan_servers_updated(servers: Array[Dictionary]) -> void:
 func _update_server_list_ui(servers: Array[Dictionary]) -> void:
 	if _server_list_container == null:
 		return
+	var focus_owner := get_viewport().gui_get_focus_owner() if get_viewport() != null else null
+	var focus_in_list := focus_owner != null and _server_list_container.is_ancestor_of(focus_owner)
 	for child in _server_list_container.get_children():
 		child.queue_free()
 
@@ -344,15 +367,20 @@ func _update_server_list_ui(servers: Array[Dictionary]) -> void:
 		var web_notice := UiKit.label("LAN Auto-Discovery is available on Desktop & Mobile apps.\nUse Direct Connect below on Web.", 14, UiKit.CREAM, 2)
 		_server_list_container.add_child(web_notice)
 		_lan_scan_label.text = "WEB BROWSER MODE"
+		if focus_in_list and _join_tab_btn != null:
+			_join_tab_btn.grab_focus()
 		return
 
 	if servers.is_empty():
 		var empty_lbl := UiKit.label("No active LAN servers detected yet.\nHost a match or launch a Dedicated Server to play!", 14, UiKit.CREAM, 2)
 		_server_list_container.add_child(empty_lbl)
 		_lan_scan_label.text = "LISTENING (PORT 8925)..."
+		if focus_in_list and _join_tab_btn != null:
+			_join_tab_btn.grab_focus()
 		return
 
 	_lan_scan_label.text = "%d SERVER%s FOUND" % [servers.size(), "S" if servers.size() != 1 else ""]
+	var first_join_btn: Button = null
 	for s in servers:
 		var card := PanelContainer.new()
 		card.add_theme_stylebox_override("panel", UiKit.panel_style(UiKit.NAVY_DARK, 0.92, 10, 2, UiKit.ORANGE if bool(s.get("dedicated", false)) else UiKit.SKY, 10))
@@ -381,7 +409,7 @@ func _update_server_list_ui(servers: Array[Dictionary]) -> void:
 			var host_badge := UiKit.label("[LAN HOST]", 14, UiKit.SKY, 3)
 			name_row.add_child(host_badge)
 
-		var sub_txt := "%s • %s • %s" % [str(s.get("arena_name", "")), str(s.get("mode_name", "")), str(s.get("state", "LOBBY"))]
+		var sub_txt := "%s | %s | %s" % [str(s.get("arena_name", "")), str(s.get("mode_name", "")), str(s.get("state", "LOBBY"))]
 		var sub_lbl := UiKit.label(sub_txt, 14, UiKit.SKY, 2)
 		info_col.add_child(sub_lbl)
 
@@ -399,6 +427,10 @@ func _update_server_list_ui(servers: Array[Dictionary]) -> void:
 			_status_label.text = "Connecting to %s:%d..." % [target_ip, target_port]
 			NetworkManager.join_game(target_ip, target_port))
 		row.add_child(join_btn)
+		if first_join_btn == null:
+			first_join_btn = join_btn
+	if focus_in_list and first_join_btn != null:
+		first_join_btn.grab_focus()
 
 
 func _cycle_arena(step: int) -> void:
@@ -473,7 +505,7 @@ func _on_lobby_updated(roster: Array) -> void:
 
 			var tag := " [YOU]" if is_me else ""
 			var role := " (HOST)" if is_h else ""
-			var lbl := UiKit.label("• %s%s%s" % [p_name, role, tag], 18, UiKit.ORANGE_HOT if is_me else UiKit.CREAM, 4)
+			var lbl := UiKit.label("- %s%s%s" % [p_name, role, tag], 18, UiKit.ORANGE_HOT if is_me else UiKit.CREAM, 4)
 			p_row.add_child(lbl)
 
 	if _launch_btn != null:

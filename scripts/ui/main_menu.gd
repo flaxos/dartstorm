@@ -60,18 +60,18 @@ const ALL_WEAPONS: Array[String] = [
 	"res://resources/weapons/wind_whisperer.tres",
 ]
 const KEYBOARD_HELP := [
-	"Move: W A S D     Look: Mouse",
-	"Jump: Space     Sprint: Shift",
-	"Fire: Left click     Reload: R",
-	"Blasters: 1 2 3 or mouse wheel",
-	"Scoreboard: Tab     Pause: Esc",
+	"Move: W A S D     Look: Mouse     ADS: Right click",
+	"Jump: Space     Sprint: Shift     Grenade: G",
+	"Fire: Left click     Reload: R     Inspect: V",
+	"Interact / Plant / Defuse / Repair: F or E",
+	"Blasters: 1 2 3 4 or wheel     Score: Tab     Pause: Esc",
 ]
 const CONTROLLER_HELP := [
-	"Move: Left stick     Look: Right stick",
-	"Jump: A     Sprint: LT or click left stick",
-	"Fire: RT     Reload: X",
-	"Blasters: Y, LB or RB",
-	"Scoreboard: Back     Pause: Start",
+	"Move: Left stick     Look: Right stick     ADS: LT",
+	"Jump: A     Sprint: Click left stick     Grenade: LB",
+	"Fire: RT     Reload: X     Inspect: D-Pad Left",
+	"Interact / Plant / Defuse / Repair: D-Pad Right",
+	"Blasters: Y or RB     Score: Back     Pause: Start",
 ]
 const HOW_TO_PLAY := [
 	"",
@@ -88,6 +88,7 @@ var player_model: CharacterModel
 ## Everyone else on the island, in the colours they'll wear in the match.
 var squad: Array[CharacterModel] = []
 
+var _backdrop_arena: Arena
 var _stage: Node3D
 var _squad_root: Node3D
 var _camera: Camera3D
@@ -155,9 +156,7 @@ func _ready() -> void:
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
-	var arena := ARENA_SCENE.instantiate() as Arena
-	arena.bake_navigation = false
-	add_child(arena)
+	_swap_backdrop_arena(GameSettings.arena)
 	_build_island()
 
 	_camera = Camera3D.new()
@@ -314,7 +313,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					if _turntable_auto:
 						_turntable_auto = false
 						if _turntable_btn != null:
-							_turntable_btn.text = "⏸️ PAUSE"
+							_turntable_btn.text = "PAUSE"
 					if mb.double_click:
 						_reset_customise_view()
 					get_viewport().set_input_as_handled()
@@ -329,7 +328,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN and mb.pressed:
 				_zoom_customise(2.5)
 				get_viewport().set_input_as_handled()
-		elif event is InputEventScreenDrag:
+		elif event is InputEventScreenDrag and not _is_dragging_model:
 			var sd := event as InputEventScreenDrag
 			_model_angle = fmod(_model_angle + sd.relative.x * 0.012, TAU)
 			player_model.rotation.y = _model_angle
@@ -341,6 +340,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _workbench_panel != null and _workbench_panel.visible:
 		_show_workbench(false)
+		get_viewport().set_input_as_handled()
+	elif _multiplayer_menu != null and _multiplayer_menu.visible:
+		_multiplayer_menu.close()
 		get_viewport().set_input_as_handled()
 	elif _missions != null and _missions.visible:
 		_show_missions(false)
@@ -359,6 +361,22 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+func _swap_backdrop_arena(arena_idx: int) -> void:
+	if _backdrop_arena != null and is_instance_valid(_backdrop_arena):
+		_backdrop_arena.queue_free()
+		_backdrop_arena = null
+	var idx := clampi(arena_idx, 0, MatchScene.ARENAS.size() - 1)
+	var scene_path: String = MatchScene.ARENAS[idx]["path"]
+	var packed: PackedScene = load(scene_path) as PackedScene if ResourceLoader.exists(scene_path) else ARENA_SCENE
+	if packed == null:
+		packed = ARENA_SCENE
+	_backdrop_arena = packed.instantiate() as Arena
+	if _backdrop_arena != null:
+		_backdrop_arena.bake_navigation = false
+		add_child(_backdrop_arena)
+		move_child(_backdrop_arena, 0)
+
+
 # --- The island (3D) ---------------------------------------------------------------
 
 func _build_island() -> void:
@@ -368,6 +386,9 @@ func _build_island() -> void:
 	_stage.position = STAGE
 	var grass := ArenaKit.deco_cylinder(_stage, 7.6, 0.5, Vector3(0.0, -0.25, -1.6), Color(0.36, 0.72, 0.28))
 	grass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var lawn_mat := ShaderMaterial.new()
+	lawn_mat.shader = load("res://assets/materials/lawn.gdshader") as Shader
+	grass.material_override = lawn_mat
 	ArenaKit.deco_cylinder(_stage, 2.4, 4.2, Vector3(0.0, -2.6, -1.6), Color(0.55, 0.37, 0.22), Vector3.ZERO, 7.4)
 	ArenaKit.deco_cylinder(_stage, 0.9, 1.6, Vector3(0.0, -5.5, -1.6), Color(0.45, 0.3, 0.18), Vector3.ZERO, 2.3)
 	for rock: Vector3 in [Vector3(-8.5, -1.5, 0.5), Vector3(8.8, -0.8, -2.5), Vector3(-6.5, -3.5, -5.0)]:
@@ -577,7 +598,7 @@ func _build_player_card() -> void:
 	_card_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sub_row.add_child(_card_name)
 
-	_level_badge = UiKit.label("⭐ LVL 1", 20, UiKit.ORANGE_HOT, 6)
+	_level_badge = UiKit.label("LVL 1", 20, UiKit.ORANGE_HOT, 6)
 	sub_row.add_child(_level_badge)
 
 	# XP Progress Bar & Counter
@@ -596,7 +617,7 @@ func _build_player_card() -> void:
 	_xp_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	xp_row.add_child(_xp_label)
 
-	_coins_label = UiKit.label("🪙 250", 18, UiKit.ORANGE_HOT, 5)
+	_coins_label = UiKit.label("250 COINS", 16, UiKit.ORANGE_HOT, 5)
 	xp_row.add_child(_coins_label)
 
 	for entry: Array in [
@@ -672,11 +693,19 @@ func _build_mode_picker() -> void:
 	players_row.add_child(_players_button)
 
 	var arena_row := _option_row(box, "ARENA")
-	_arena_button = UiKit.small_button("", Vector2(210, 30))
-	_arena_button.add_theme_font_size_override("font_size", 15)
-	_arena_button.tooltip_text = "BACKYARD: the forts, the treehouse and Windy Way.\nHOME TURF: a whole house, and you're toy-sized!\nTEMPEST TREEHOUSE: high canopy decks, rope bridge, jump-pads and ice slides."
-	_arena_button.pressed.connect(_cycle_arena)
+	var prev_arena := UiKit.small_button("<", Vector2(32, 30))
+	prev_arena.add_theme_font_size_override("font_size", 16)
+	prev_arena.pressed.connect(_cycle_arena.bind(-1))
+	arena_row.add_child(prev_arena)
+	_arena_button = UiKit.small_button("", Vector2(142, 30))
+	_arena_button.add_theme_font_size_override("font_size", 14)
+	_arena_button.tooltip_text = "9 Arenas: Backyard Fortress, Home Turf, Tempest Treehouse, Sunny Park, Playground, Soccer Stadium (Twilight), Two Fortresses, Dusty Courtyard (de_dust), Duststorm II (de_dust2)."
+	_arena_button.pressed.connect(_cycle_arena.bind(1))
 	arena_row.add_child(_arena_button)
+	var next_arena := UiKit.small_button(">", Vector2(32, 30))
+	next_arena.add_theme_font_size_override("font_size", 16)
+	next_arena.pressed.connect(_cycle_arena.bind(1))
+	arena_row.add_child(next_arena)
 
 	var difficulty_row := _option_row(box, "BOT SKILL")
 	_difficulty_button = UiKit.small_button("", Vector2(210, 30))
@@ -719,6 +748,12 @@ func _build_logo() -> void:
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	words.add_child(sub)
 	logo.add_child(Swoosh.new())
+
+	# Clean 1.0 release version badge in bottom-left corner
+	var ver_str := str(ProjectSettings.get_setting("application/config/version", "1.0.0"))
+	var ver_lbl := UiKit.label("v%s" % ver_str, 15, Color(UiKit.SKY, 0.85), 4)
+	_menu.add_child(ver_lbl)
+	UiKit.pin(ver_lbl, Vector2(0.0, 1.0), Vector2(28, -14), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_BEGIN)
 
 
 func _option_row(parent: Control, text: String) -> HBoxContainer:
@@ -783,13 +818,13 @@ func _refresh_card() -> void:
 		coins_val = int(prog.get("coins"))
 
 	if _level_badge != null:
-		_level_badge.text = "⭐ LVL %d" % lvl
+		_level_badge.text = "LVL %d" % lvl
 	if _xp_bar != null:
 		_xp_bar.value = ratio
 	if _xp_label != null:
 		_xp_label.text = "%d / %d XP" % [cur_xp, need_xp]
 	if _coins_label != null:
-		_coins_label.text = "🪙 %d" % coins_val
+		_coins_label.text = "%d COINS" % coins_val
 
 
 func _refresh_options() -> void:
@@ -809,6 +844,8 @@ func _refresh_options() -> void:
 	var info := ""
 	if mode is ZombieMode:
 		info = "1 ALPHA ZOMBIE vs %d SURVIVORS" % (players - 1)
+	elif mode is ZombieSiegeMode:
+		info = "%d DEFENDERS vs ZOMBIE HORDE (5 WAVES)" % players
 	else:
 		match mode.teams:
 			GameMode.Teams.DUOS:
@@ -822,7 +859,7 @@ func _refresh_options() -> void:
 	_teams_info.text = info
 	_arena_button.text = MatchScene.ARENAS[clampi(GameSettings.arena, 0, MatchScene.ARENAS.size() - 1)]["name"]
 	_difficulty_button.text = DIFFICULTY_NAMES[clampi(GameSettings.bot_difficulty, 0, DIFFICULTY_NAMES.size() - 1)]
-	_storm_row.visible = not mode is GunGameMode and not mode is ZombieMode
+	_storm_row.visible = mode.power_weapon != null
 	_storm_button.text = "POWER-UP" if GameSettings.chainstorm_powerup else "EVERYONE"
 
 
@@ -852,9 +889,10 @@ func _change_bots(step: int) -> void:
 	_rebuild_squad()
 
 
-func _cycle_arena() -> void:
-	GameSettings.arena = (clampi(GameSettings.arena, 0, MatchScene.ARENAS.size() - 1) + 1) % MatchScene.ARENAS.size()
+func _cycle_arena(step: int = 1) -> void:
+	GameSettings.arena = posmod(clampi(GameSettings.arena, 0, MatchScene.ARENAS.size() - 1) + step, MatchScene.ARENAS.size())
 	GameSettings.save_settings()
+	_swap_backdrop_arena(GameSettings.arena)
 	_refresh_options()
 
 
@@ -903,7 +941,9 @@ func _show_settings(shown: bool) -> void:
 func _show_multiplayer(shown: bool) -> void:
 	_multiplayer_menu.visible = shown
 	_menu.visible = not shown
-	if not shown:
+	if shown:
+		_multiplayer_menu.focus_default()
+	else:
 		_refresh_card()
 		_play_button.grab_focus()
 
@@ -914,6 +954,9 @@ func _show_workbench(shown: bool) -> void:
 		_show_squad(false)
 		if _stage != null:
 			_stage.visible = false
+		# Mute outdoor arena sun while inside the enclosed garage workshop
+		if _backdrop_arena != null and _backdrop_arena.sun_light != null:
+			_backdrop_arena.sun_light.visible = false
 		if _camera != null:
 			_camera.current = false
 		if _workbench != null:
@@ -924,6 +967,7 @@ func _show_workbench(shown: bool) -> void:
 		if _workbench_panel != null:
 			_workbench_panel.visible = true
 			_workbench_panel._refresh_all()
+			_workbench_panel.focus_default()
 	else:
 		if _workbench != null:
 			_workbench.visible = false
@@ -931,6 +975,8 @@ func _show_workbench(shown: bool) -> void:
 				_workbench.camera.current = false
 		if _workbench_panel != null:
 			_workbench_panel.visible = false
+		if _backdrop_arena != null and _backdrop_arena.sun_light != null:
+			_backdrop_arena.sun_light.visible = true
 		if _camera != null:
 			_camera.make_current()
 		if _stage != null:
@@ -954,15 +1000,26 @@ func _show_help(shown: bool) -> void:
 # --- Character (customise) -------------------------------------------------------
 
 func _build_customise() -> void:
-	_customise = UiKit.panel(UiKit.NAVY, 0.94, 22, 4, UiKit.ORANGE, 24)
+	_customise = UiKit.panel(UiKit.NAVY, 0.94, 22, 4, UiKit.ORANGE, 20)
 	_customise.mouse_filter = Control.MOUSE_FILTER_STOP
 	_customise.visible = false
 	_ui.add_child(_customise)
-	UiKit.pin(_customise, Vector2(0.0, 0.5), Vector2(36, 0), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_BOTH)
+	UiKit.pin(_customise, Vector2(0.0, 0.5), Vector2(28, 0), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_BOTH)
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 8)
+	_customise.add_child(outer)
+	outer.add_child(UiKit.label("CHARACTER", 34, UiKit.ORANGE_HOT, 10))
+
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(526, 510)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
+	outer.add_child(scroll)
+
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 10)
-	_customise.add_child(box)
-	box.add_child(UiKit.label("CHARACTER", 38, UiKit.ORANGE_HOT, 10))
+	box.add_theme_constant_override("separation", 8)
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(box)
 
 	# Profile selection tabs
 	var prof_row := HBoxContainer.new()
@@ -1053,44 +1110,44 @@ func _build_customise() -> void:
 	next_w.pressed.connect(_cycle_preview_weapon.bind(1))
 	inspect_row.add_child(next_w)
 
-	_turntable_btn = UiKit.small_button("🔄 AUTO", Vector2(96, 36))
+	_turntable_btn = UiKit.small_button("AUTO", Vector2(82, 36))
 	_turntable_btn.pressed.connect(func() -> void:
 		_turntable_auto = not _turntable_auto
-		_turntable_btn.text = "🔄 AUTO" if _turntable_auto else "⏸️ PAUSE")
+		_turntable_btn.text = "AUTO" if _turntable_auto else "PAUSE")
 	inspect_row.add_child(_turntable_btn)
 
-	_reset_view_btn = UiKit.small_button("🎯 RESET", Vector2(88, 36))
+	_reset_view_btn = UiKit.small_button("RESET", Vector2(78, 36))
 	_reset_view_btn.pressed.connect(func() -> void:
 		_reset_customise_view()
 	)
 	inspect_row.add_child(_reset_view_btn)
 
-	var tip_label := UiKit.label("🖱️ Drag: Rotate 360° & Tilt  •  Scroll: Zoom  •  Right-Click / Double-Click: Reset", 13, UiKit.SKY, 2)
+	var tip_label := UiKit.label("Drag: Rotate & Tilt  |  Scroll: Zoom  |  Right-Click: Reset", 13, UiKit.SKY, 2)
 	box.add_child(tip_label)
 
 	var btn_row := HBoxContainer.new()
 	btn_row.add_theme_constant_override("separation", 10)
 	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_child(btn_row)
+	outer.add_child(btn_row)
 
-	var shop_btn := UiKit.small_button("SHOP 🪙", Vector2(130, 48))
+	var shop_btn := UiKit.small_button("SHOP", Vector2(120, 46))
 	shop_btn.pressed.connect(func() -> void:
 		_show_customise(false)
 		_show_shop(true))
 	btn_row.add_child(shop_btn)
 
-	var boss_btn := UiKit.button("👑 BOSS MODE", 18, Vector2(170, 48))
+	var boss_btn := UiKit.button("BOSS MODE", 18, Vector2(170, 46))
 	boss_btn.name = "CustomiseBossMode"
 	boss_btn.pressed.connect(func() -> void:
 		var prog: Node = get_node_or_null("/root/Progression")
 		if prog != null and prog.has_method("activate_boss_mode"):
 			prog.call("activate_boss_mode")
-			GameSettings.notify("👑 BOSS MODE! 99,999 Coins & All Items Unlocked!")
+			GameSettings.notify("BOSS MODE! 99,999 Coins & All Items Unlocked!")
 			_refresh_customise()
 			_update_preview_weapon())
 	btn_row.add_child(boss_btn)
 
-	var done := UiKit.button("DONE", 22, Vector2(130, 48))
+	var done := UiKit.button("DONE", 22, Vector2(130, 46))
 	done.pressed.connect(_show_customise.bind(false))
 	btn_row.add_child(done)
 	_refresh_customise()
@@ -1144,7 +1201,7 @@ func _show_customise(shown: bool) -> void:
 		_is_dragging_model = false
 		_turntable_auto = true
 		if _turntable_btn != null:
-			_turntable_btn.text = "🔄 AUTO"
+			_turntable_btn.text = "AUTO"
 		GameSettings.save_settings()
 		_refresh_card()
 		_play_button.grab_focus()
@@ -1164,7 +1221,7 @@ func _on_name_changed(text: String) -> void:
 func _pick_color(index: int) -> void:
 	var prog: Node = get_node_or_null("/root/Progression")
 	if prog != null and not bool(prog.call("is_unlocked", &"color", index)):
-		GameSettings.notify("Colour locked! Visit the Coin Shop (🪙 %d)" % Cosmetics.color_cost(index))
+		GameSettings.notify("Colour locked! Visit the Coin Shop (%d COINS)" % Cosmetics.color_cost(index))
 		return
 	if _customise_profile == 0:
 		GameSettings.player_color = index
@@ -1172,13 +1229,12 @@ func _pick_color(index: int) -> void:
 		GameSettings.player2_color = index
 	player_model.set_shirt(Cosmetics.color_at(index))
 	_refresh_customise()
-	_rebuild_squad()
 
 
 func _pick_hat(id: StringName) -> void:
 	var prog: Node = get_node_or_null("/root/Progression")
 	if prog != null and not bool(prog.call("is_unlocked", &"hat", id)):
-		GameSettings.notify("Hat locked! Visit the Coin Shop (🪙 %d)" % Cosmetics.hat_cost(id))
+		GameSettings.notify("Hat locked! Visit the Coin Shop (%d COINS)" % Cosmetics.hat_cost(id))
 		return
 	if _customise_profile == 0:
 		GameSettings.player_hat = id
@@ -1191,7 +1247,7 @@ func _pick_hat(id: StringName) -> void:
 func _pick_skin(id: StringName) -> void:
 	var prog: Node = get_node_or_null("/root/Progression")
 	if prog != null and not bool(prog.call("is_unlocked", &"skin", id)) and not Cosmetics.is_default_skin(id):
-		GameSettings.notify("Skin locked! Visit the Coin Shop (🪙 %d)" % Cosmetics.skin_cost(id))
+		GameSettings.notify("Skin locked! Visit the Coin Shop (%d COINS)" % Cosmetics.skin_cost(id))
 		return
 	if _customise_profile == 0:
 		GameSettings.player_skin = id
@@ -1229,27 +1285,27 @@ func _refresh_customise() -> void:
 		_swatches[i].add_theme_stylebox_override("hover", UiKit.panel_style(display_tint.lightened(0.2), 1.0, 23, 3, UiKit.CREAM, 0))
 		_swatches[i].add_theme_stylebox_override("pressed", UiKit.panel_style(display_tint.darkened(0.2), 1.0, 23, 4, UiKit.CREAM, 0))
 		_swatches[i].add_theme_stylebox_override("focus", UiKit.panel_style(display_tint, 0.0, 23, 4, UiKit.ORANGE_HOT, 0))
-		_swatches[i].tooltip_text = Cosmetics.COLORS[i]["name"] + ("" if unlocked else " (Locked - 🪙 %d)" % Cosmetics.color_cost(i))
+		_swatches[i].tooltip_text = Cosmetics.COLORS[i]["name"] + ("" if unlocked else " (Locked - %d COINS)" % Cosmetics.color_cost(i))
 	for i in _hat_buttons.size():
 		var hat_id: StringName = Cosmetics.HATS[i]["id"]
 		var hat_name: String = Cosmetics.HATS[i]["name"]
 		var chosen: bool = hat_id == cur_hat
 		var unlocked := prog == null or bool(prog.call("is_unlocked", &"hat", hat_id))
-		_hat_buttons[i].text = (hat_name if unlocked else "🔒 " + hat_name).to_upper()
+		_hat_buttons[i].text = (hat_name if unlocked else "[LOCK] " + hat_name).to_upper()
 		var bg_col := (UiKit.ORANGE if chosen else UiKit.BLUE) if unlocked else UiKit.NAVY_DARK
 		var style := UiKit.panel_style(bg_col, 1.0, 12, 3 if chosen else 0, UiKit.CREAM if unlocked else UiKit.GREY, 8)
 		_hat_buttons[i].add_theme_stylebox_override("normal", style)
-		_hat_buttons[i].tooltip_text = hat_name + ("" if unlocked else " (Locked - 🪙 %d)" % Cosmetics.hat_cost(hat_id))
+		_hat_buttons[i].tooltip_text = hat_name + ("" if unlocked else " (Locked - %d COINS)" % Cosmetics.hat_cost(hat_id))
 	for i in _skin_buttons.size():
 		var skin_id: StringName = Cosmetics.SKINS[i]["id"]
 		var skin_name: String = Cosmetics.SKINS[i]["name"]
 		var chosen: bool = skin_id == cur_skin
 		var unlocked := prog == null or bool(prog.call("is_unlocked", &"skin", skin_id)) or Cosmetics.is_default_skin(skin_id)
-		_skin_buttons[i].text = (skin_name if unlocked else "🔒 " + skin_name).to_upper()
+		_skin_buttons[i].text = (skin_name if unlocked else "[LOCK] " + skin_name).to_upper()
 		var bg_col := (UiKit.ORANGE if chosen else UiKit.BLUE) if unlocked else UiKit.NAVY_DARK
 		var style := UiKit.panel_style(bg_col, 1.0, 12, 3 if chosen else 0, UiKit.CREAM if unlocked else UiKit.GREY, 8)
 		_skin_buttons[i].add_theme_stylebox_override("normal", style)
-		_skin_buttons[i].tooltip_text = skin_name + ("" if unlocked else " (Locked - 🪙 %d)" % Cosmetics.skin_cost(skin_id))
+		_skin_buttons[i].tooltip_text = skin_name + ("" if unlocked else " (Locked - %d COINS)" % Cosmetics.skin_cost(skin_id))
 
 
 ## The three blue ")))" swooshes beside the logo in the drawing.

@@ -50,6 +50,7 @@ func on_high_tide_survived(board: Scoreboard) -> void:
 	for entry in board.entries:
 		if entry.actor != null and is_instance_valid(entry.actor) and entry.actor.alive:
 			entry.score += 25
+	board.notify_changed()
 
 
 func describe_progress(_entry: ScoreEntry) -> String:
@@ -57,13 +58,13 @@ func describe_progress(_entry: ScoreEntry) -> String:
 		return "THE FLOOR IS LAVA!"
 	match lava_director.phase:
 		LavaDirector.Phase.CALM:
-			return "FLOOR SAFE • %ds" % int(ceilf(lava_director.time_left))
+			return "FLOOR SAFE | %ds" % int(ceilf(lava_director.time_left))
 		LavaDirector.Phase.WARNING:
 			return "LAVA RISING IN %ds!" % int(ceilf(lava_director.time_left))
 		LavaDirector.Phase.RISING:
 			return "LAVA RISING! GET UP!"
 		LavaDirector.Phase.HIGH_TIDE:
-			return "HIGH TIDE • %ds" % int(ceilf(lava_director.time_left))
+			return "HIGH TIDE | %ds" % int(ceilf(lava_director.time_left))
 		LavaDirector.Phase.RECEDING:
 			return "LAVA RECEDING..."
 	return "FLOOR IS LAVA"

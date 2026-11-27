@@ -22,6 +22,7 @@ var _flash_left: float = 0.0
 
 
 func _ready() -> void:
+	add_to_group(&"base_barricades")
 	collision_layer = Layers.WORLD
 	collision_mask = 0
 	_build_visuals()

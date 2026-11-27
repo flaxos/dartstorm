@@ -84,6 +84,8 @@ func _build_particles() -> void:
 
 class LavaArea extends Area3D:
 	var hazard: LavaHazard = null
+	func should_consume_dart(dart: DartProjectile) -> bool:
+		return hazard != null and hazard.should_consume_dart(dart)
 	func on_dart_hit(dart: DartProjectile, hit_point: Vector3) -> void:
 		if hazard != null:
 			hazard.on_dart_hit(dart, hit_point)
@@ -103,8 +105,8 @@ func _build_area() -> void:
 
 	_collision_shape = CollisionShape3D.new()
 	_collision_shape.shape = box
-	# Area extends slightly below and up to the lava surface
-	_collision_shape.position = Vector3(0.0, -1.6, 0.0)
+	# Top face of the 4m volume sits flush at current_lava_y so dry floors above never trigger it.
+	_collision_shape.position = Vector3(0.0, -2.0, 0.0)
 	_area.add_child(_collision_shape)
 	add_child(_area)
 
@@ -112,6 +114,13 @@ func _build_area() -> void:
 func set_lava_height(new_y: float) -> void:
 	current_lava_y = new_y
 	position.y = new_y
+
+
+func should_consume_dart(dart: DartProjectile) -> bool:
+	if dart == null or dart.data == null:
+		return false
+	var elem := dart.data.element
+	return elem == DartData.Element.WATER or elem == DartData.Element.ICE or elem == DartData.Element.FIRE
 
 
 func on_dart_hit(dart: DartProjectile, hit_point: Vector3) -> void:
@@ -142,17 +151,17 @@ func _physics_process(delta: float) -> void:
 
 	for body in _area.get_overlapping_bodies():
 		var actor := body as Actor
-		if actor == null or not actor.alive:
+		if actor == null or not actor.alive or actor.is_tagged_out:
 			continue
 
 		# Check if actor's feet are touching or submerged in lava
-		if actor.global_position.y > current_lava_y + 0.35:
+		if actor.global_position.y > current_lava_y + 0.15:
 			continue
 
-		# Check if standing on an active obsidian stone platform
+		# Check if standing on an active, unsunk obsidian stone platform
 		var safe_on_stone := false
 		for stone in active_stones:
-			if is_instance_valid(stone):
+			if is_instance_valid(stone) and stone.lifetime > 0.3 and stone.global_position.y >= current_lava_y - 0.15:
 				var h_dist := Vector2(actor.global_position.x - stone.global_position.x,
 						actor.global_position.z - stone.global_position.z).length()
 				if h_dist <= 1.45 and actor.global_position.y >= stone.global_position.y - 0.1:

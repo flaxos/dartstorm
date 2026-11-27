@@ -388,3 +388,21 @@ box in corners for bots, so walkways are at least 1.5 m (the dining chairs moved
 - *Full static `.tscn` level meshes authored exclusively in external DCC tools (Blender):* Sacrifices code reviewability, headless diffing, and dynamic procedural arena variants.
 - *Preserving bare unshaded greybox cuboids:* Leaves the game looking like an unfinished prototype, directly violating the brief's vision of a colourful, immersive backyard fantasy.
 **Why:** Elevates DARTSTORM's visual fidelity from a prototype greybox to a polished, vibrant, and cohesive commercial-grade aesthetic. Seamless triplanar mapping solves texture boundary clashing forever, while stylized geometry respects the kid-safe, playful backyard blaster lore.
+
+### D-048: v1.0.0 Production Polish, Gameplay Hardening & Graphics Overhaul (v1.0.0)
+**Chosen:**
+1. **Unconstrained 1.0 Graphics & Atmosphere:**
+   - Per-arena lighting and atmosphere presets (`Environment.TONE_MAPPER_AGX`, `SSIL`, arena-wide `ReflectionProbe` guarded for Web/Mobile Compatibility fallback, 4096 desktop shadow atlas with lighter mobile/web overrides) including Twilight Floodlit Soccer Stadium, Desert Amber sandstone arenas, Canopy Sunbeams, and Warm Dollhouse.
+   - Repaired all 9 custom `.gdshader` files (Forward+ NDC depth check on `lava_foam`, radial XZ caustics on `stylized_water`, distance-faded wind-shadow `lawn`, smooth power-weighted triplanar `toy_wood`, triplanar hex `foam_shield`, `depth_draw_never` cartoon `foam_splat`, accent+clearcoat `blaster_skin`, live combat/elemental uniforms on `toon_character`, porous EVA foam + Fresnel `foam_dart`).
+   - Upgraded `CharacterModel` (fixed eye sclera/catchlight/cheek materials, aligned hand grip sockets with raised aiming arms, Chainstorm backpack, hit-flash & elemental visuals, continuous aim pitch), `BlasterModel`/`BlasterAttachments` (unified recoil root, 3D starburst muzzle flash + dynamic light, hollow holo-sight torus reticle, FP shadow cull), `WeatherEffects`/`WeatherDirector` (translucent vertex-colored particles, jagged forked lightning + shockwave, dynamic atmosphere morphing), `Podium` (metallic plinths, spotlights, non-zombie Orange Team fix), and `GarageWorkbench` (enclosed room + ReflectionProbe + clean spotlight).
+2. **All 9 Arenas & Objective Integrity:**
+   - Audited and fixed geometry, stairs/ramps, Z-fighting, colliders, navmesh navigation, and explicit `bomb_sites`, `flag_pedestals`, and `bomb_spawns` across all 9 arenas — including full structural fixes to Two Fortresses (open moat, navigable vaults & water tunnels), Dusty Courtyard (sealed canal gap, open courtyard arch, flush sniper bridge & CT compound, grounded horizon), and Duststorm II (open Lower B Tunnel, Pit ramp clearance, sealed CT void, widened B Window).
+3. **Gameplay, Mode, AI & Input Hardening:**
+   - Resolved player/combat/physics edge cases (recoil pitch recovery, ADS/LT sprint decoupling, rebinding secondary-binding preservation, split-screen end-of-match HUD reparenting & co-op Zombie Siege team assignment, bot weapon attachment isolation, `ricochet_ranger` workbench ID aliasing, CTF anchored flag pedestals, Plant the Bomb round scoring, DedicatedServer mode parsing).
+4. **HUD, Tactical Radar & Zero-Emoji UI:**
+   - Added rotating circular `TacticalMinimap` radar (cover silhouettes, FOV wedge, teammates, gunfire/proximity rivals, bomb sites, CTF flags, Base Core, ammo buckets), directional damage arcs, dynamic crosshair spread/hitmarkers, weapon slot strip, reload bar, and contextual `[F]` prompts.
+   - Removed all unsupported Unicode emojis across UI scripts so `LilitaOne-Regular.ttf` renders zero tofu boxes, and verified full gamepad navigation (`follow_focus`, `ui_cancel`, pause music unducking) across every screen.
+5. **1.0 Release Hygiene:**
+   - Unified version `1.0.0` in `project.godot` & `export_presets.cfg`, removed personal paths/IPs (D-019/D-031), deleted orphan `.uid` files, confined `tools/serve_download.py` against path traversal, and aligned server/export scripts.
+**Alternatives Considered:** Shipping v1.0.0 with known arena geometry holes, tofu-box emojis, or Forward+ shader glitches.
+**Why:** Ensures DARTSTORM 1.0 ships as a cohesive, crisp, bug-free commercial-grade release across single-player, local split-screen, LAN/online multiplayer, web, and Android.

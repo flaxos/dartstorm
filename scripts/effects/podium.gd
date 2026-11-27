@@ -36,7 +36,7 @@ var _time: float = 0.0
 
 
 ## `places[i]` is the list of players on step i (best first).
-func show_places(places: Array, banner: String, banner_color: Color) -> void:
+func show_places(places: Array, banner: String, banner_color: Color, is_zombie_mode: bool = false) -> void:
 	top_level = true
 	global_position = ORIGIN
 	var widths: Array[float] = []
@@ -51,7 +51,7 @@ func show_places(places: Array, banner: String, banner_color: Color) -> void:
 		for k in members.size():
 			var entry := members[k] as ScoreEntry
 			var offset := (k - (members.size() - 1) * 0.5) * DANCER_SPACING
-			_add_dancer(place, entry, step_x[place] + offset, k, members.size() > 1)
+			_add_dancer(place, entry, step_x[place] + offset, k, members.size() > 1, is_zombie_mode)
 	var bounds := _stage_bounds(widths)
 	var centre := (bounds.x + bounds.y) * 0.5
 	var shared := false
@@ -59,7 +59,8 @@ func show_places(places: Array, banner: String, banner_color: Color) -> void:
 		shared = shared or (place as Array).size() > 1
 	# Team name tags sit higher (they alternate heights), so the banner goes up too.
 	ArenaKit.sign_text(self, banner, Vector3(centre, 6.5 if shared else 5.7, -2.5), Vector3.ZERO, banner_color, 110, 0.007)
-	_add_confetti()
+	_add_stage_lights(centre)
+	_add_confetti(centre, maxf(5.0, (bounds.y - bounds.x) * 0.65))
 
 	camera = Camera3D.new()
 	camera.fov = 48.0
@@ -90,9 +91,15 @@ func _process(delta: float) -> void:
 		# The winners bounce highest; everyone hops on their own beat.
 		var hop := absf(sin(_time * (5.0 - place * 0.6) + beat)) * (0.45 if place == 0 else 0.25)
 		dancer.position.y = STEP_HEIGHT[place] + hop
-		dancer.rotation.y = PI + sin(_time * 2.2 + beat) * 0.6
+		var sway := sin(_time * 2.2 + beat) * 0.45
+		var spin := 0.0
 		if place == 0:
-			dancer.rotation.y += _time * 1.8 if fmod(_time + beat, 4.0) < 1.0 else 0.0
+			# Smooth continuous 360-degree victory pirouette every 4 seconds (no snap/teleport)
+			var cycle := fposmod(_time + beat, 4.0)
+			if cycle < 1.1:
+				var u := smoothstep(0.0, 1.1, cycle)
+				spin = u * TAU
+		dancer.rotation.y = PI + sway + spin
 
 
 ## Winner in the middle, second on the left, third on the right.
@@ -124,22 +131,52 @@ func _build_ground(widths: Array[float]) -> void:
 	var centre := Vector3((bounds.x + bounds.y) * 0.5, 0.0, 0.0)
 	var grass := ArenaKit.deco_cylinder(self, radius, 0.6, centre + Vector3(0.0, -0.3, 0.0), Color(0.36, 0.72, 0.28))
 	grass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var lawn_mat := ShaderMaterial.new()
+	lawn_mat.shader = load("res://assets/materials/lawn.gdshader") as Shader
+	grass.material_override = lawn_mat
 	ArenaKit.deco_cylinder(self, radius + 0.2, 0.3, centre + Vector3(0.0, -0.7, 0.0), Color(0.55, 0.37, 0.22))
 
 
 func _build_step(place: int, width: float) -> void:
 	var height := STEP_HEIGHT[place]
-	ArenaKit.deco_box(self, Vector3(width, height, STEP_DEPTH), Vector3(step_x[place], height * 0.5, 0.0), STEP_COLOR[place])
-	ArenaKit.sign_text(self, PLACE_TEXT[place], Vector3(step_x[place], height * 0.5, STEP_DEPTH * 0.5 + 0.01),
+	var step_mesh := ArenaKit.deco_box(self, Vector3(width, height, STEP_DEPTH), Vector3(step_x[place], height * 0.5, 0.0), STEP_COLOR[place])
+	step_mesh.material_override = ArenaKit.mat_styled(STEP_COLOR[place], ArenaKit.SurfaceType.METAL, 0.22, 0.78)
+	# Polished stepped crown & base plinth trim
+	var crown := ArenaKit.deco_box(self, Vector3(width + 0.14, 0.12, STEP_DEPTH + 0.14), Vector3(step_x[place], height - 0.04, 0.0), STEP_COLOR[place].lightened(0.22))
+	crown.material_override = ArenaKit.mat_styled(STEP_COLOR[place].lightened(0.22), ArenaKit.SurfaceType.METAL, 0.18, 0.85)
+	var base := ArenaKit.deco_box(self, Vector3(width + 0.18, 0.14, STEP_DEPTH + 0.18), Vector3(step_x[place], 0.07, 0.0), STEP_COLOR[place].darkened(0.25))
+	base.material_override = ArenaKit.mat_styled(STEP_COLOR[place].darkened(0.25), ArenaKit.SurfaceType.METAL, 0.30, 0.72)
+	ArenaKit.sign_text(self, PLACE_TEXT[place], Vector3(step_x[place], height * 0.5, STEP_DEPTH * 0.5 + 0.06),
 			Vector3.ZERO, Color.WHITE, 160, 0.006)
 
 
-func _add_dancer(place: int, entry: ScoreEntry, x: float, slot: int, shared: bool) -> void:
+func _add_stage_lights(centre_x: float) -> void:
+	# Warm gold hero spotlight on 1st place + cool rim back-fill for Pixar-style celebration pop
+	var key := SpotLight3D.new()
+	key.position = Vector3(centre_x + 2.5, 7.5, 5.5)
+	key.light_color = Color(1.0, 0.94, 0.80)
+	key.light_energy = 6.5
+	key.spot_range = 20.0
+	key.spot_angle = 48.0
+	add_child(key)
+	key.look_at(global_position + Vector3(centre_x, 2.2, 0.0), Vector3.UP)
+
+	var rim := OmniLight3D.new()
+	rim.position = Vector3(centre_x - 3.5, 4.5, -3.5)
+	rim.light_color = Color(0.55, 0.82, 1.0)
+	rim.light_energy = 3.2
+	rim.omni_range = 16.0
+	add_child(rim)
+
+
+func _add_dancer(place: int, entry: ScoreEntry, x: float, slot: int, shared: bool, is_zombie_mode: bool) -> void:
 	var dancer := CharacterModel.new()
 	add_child(dancer)
 	dancer.setup(entry.display_name, entry.color, entry.hat)
-	if entry.color == ZombieMode.ZOMBIE_COLOR or entry.team == ZombieMode.ZOMBIE_TEAM:
+	if entry.color == ZombieMode.ZOMBIE_COLOR or (is_zombie_mode and entry.team == ZombieMode.ZOMBIE_TEAM):
 		dancer.set_zombie(true)
+	else:
+		dancer.play_victory()
 	dancer.show_overhead(false)
 	dancer.position = Vector3(x, STEP_HEIGHT[place], 0.0)
 	dancer.rotation.y = PI
@@ -160,14 +197,14 @@ func _add_dancer(place: int, entry: ScoreEntry, x: float, slot: int, shared: boo
 	add_child(tag)
 
 
-func _add_confetti() -> void:
-	var amount := int(clampf(140.0 * GameSettings.visual_intensity, 20.0, 220.0))
+func _add_confetti(centre_x: float = 0.0, half_width: float = 5.0) -> void:
+	var amount := int(clampf(160.0 * GameSettings.visual_intensity, 24.0, 240.0))
 	var confetti := CPUParticles3D.new()
 	confetti.amount = amount
-	confetti.lifetime = 3.0
+	confetti.lifetime = 3.2
 	confetti.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
-	confetti.emission_box_extents = Vector3(5.0, 0.2, 2.5)
-	confetti.position = Vector3(0.0, 6.5, 0.0)
+	confetti.emission_box_extents = Vector3(half_width, 0.25, 2.5)
+	confetti.position = Vector3(centre_x, 6.8, 0.0)
 	confetti.direction = Vector3.DOWN
 	confetti.spread = 25.0
 	confetti.gravity = Vector3(0.0, -2.5, 0.0)

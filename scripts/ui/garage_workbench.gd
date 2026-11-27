@@ -66,8 +66,10 @@ func _build_garage() -> void:
 
 	# Left Wall (West)
 	ArenaKit.box(self, Vector3(0.2, 5.0, 12.0), Vector3(-6.5, 2.5, 0.0), WALL_COLOR.darkened(0.05), Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
-	# Right Wall (East)
+	# Right Wall (East) & South Back Wall + Solid Ceiling enclosing the workshop completely
 	ArenaKit.box(self, Vector3(0.2, 5.0, 12.0), Vector3(6.5, 2.5, 0.0), WALL_COLOR.darkened(0.05), Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
+	ArenaKit.box(self, Vector3(14.0, 5.0, 0.2), Vector3(0.0, 2.5, 5.8), WALL_COLOR.darkened(0.08), Vector3.ZERO, ArenaKit.SurfaceType.PLASTIC)
+	ArenaKit.box(self, Vector3(14.0, 0.25, 12.0), Vector3(0.0, 4.7, 1.5), CONCRETE_COLOR.darkened(0.18), Vector3.ZERO, ArenaKit.SurfaceType.DEFAULT)
 
 	# Ceiling rafters (exposed wooden roof trusses)
 	for z in [-1.5, 0.5, 2.5]:
@@ -75,20 +77,30 @@ func _build_garage() -> void:
 		ArenaKit.deco_box(self, Vector3(0.18, 1.2, 0.18), Vector3(-3.5, 3.8, z), WOOD_TOP.darkened(0.25))
 		ArenaKit.deco_box(self, Vector3(0.18, 1.2, 0.18), Vector3(3.5, 3.8, z), WOOD_TOP.darkened(0.25))
 
+	# Local ReflectionProbe so metallic & glossy blaster skins gleam inside the garage
+	if RenderingServer.get_rendering_device() != null:
+		var probe := ReflectionProbe.new()
+		probe.size = Vector3(13.0, 5.0, 9.0)
+		probe.position = Vector3(0.0, 2.2, 1.2)
+		probe.intensity = 0.85
+		probe.update_mode = ReflectionProbe.UPDATE_ONCE
+		add_child(probe)
+
 	# Garage Ceiling Fluorescent Shop Light
 	var shop_light := OmniLight3D.new()
-	shop_light.position = Vector3(0.0, 3.8, 0.0)
-	shop_light.light_color = Color(0.92, 0.95, 1.0)
-	shop_light.light_energy = 1.4
+	shop_light.position = Vector3(0.0, 3.8, 0.4)
+	shop_light.light_color = Color(0.92, 0.96, 1.0)
+	shop_light.light_energy = 1.6
 	shop_light.omni_range = 12.0
 	shop_light.shadow_enabled = false
 	add_child(shop_light)
 
 	# Studio Key/Fill Light for crisp blaster highlights and specular shine
-	var studio_key := DirectionalLight3D.new()
-	studio_key.rotation_degrees = Vector3(-35.0, 40.0, 0.0)
-	studio_key.light_color = Color(1.0, 0.97, 0.92)
-	studio_key.light_energy = 0.85
+	var studio_key := OmniLight3D.new()
+	studio_key.position = Vector3(-1.8, 2.4, 2.2)
+	studio_key.light_color = Color(0.88, 0.94, 1.0)
+	studio_key.light_energy = 1.5
+	studio_key.omni_range = 8.0
 	studio_key.shadow_enabled = false
 	add_child(studio_key)
 
@@ -128,18 +140,21 @@ func _build_workbench_table() -> void:
 	# Cantilever arm struts
 	ArenaKit.deco_cylinder(self, 0.012, 0.38, lamp_base + Vector3(-0.08, 0.18, 0.05), STEEL_LEG, Vector3(-20.0, 0.0, -15.0))
 	ArenaKit.deco_cylinder(self, 0.012, 0.36, lamp_base + Vector3(-0.24, 0.38, 0.10), STEEL_LEG, Vector3(25.0, 0.0, -40.0))
-	# Conical lamp shade angled down
+	# Conical lamp shade angled down (shadow off so it never occludes its own task lamp)
 	var shade_pos := lamp_base + Vector3(-0.38, 0.45, 0.14)
-	ArenaKit.deco_cylinder(self, 0.07, 0.10, shade_pos, Color(0.95, 0.75, 0.2), Vector3(35.0, 30.0, 0.0))
+	var shade := ArenaKit.deco_cylinder(self, 0.07, 0.10, shade_pos, Color(0.95, 0.75, 0.2), Vector3(35.0, 30.0, 0.0))
+	shade.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
-	# Warm Focused Task Lamp Light illuminating the turntable!
-	var task_light := OmniLight3D.new()
-	task_light.position = shade_pos + Vector3(0.0, -0.05, 0.0)
-	task_light.light_color = Color(1.0, 0.92, 0.78)
-	task_light.light_energy = 2.2
-	task_light.omni_range = 3.6
+	# Warm Focused Task SpotLight aimed cleanly onto the turntable below the shade rim
+	var task_light := SpotLight3D.new()
+	task_light.position = shade_pos + Vector3(-0.08, -0.09, 0.04)
+	task_light.light_color = Color(1.0, 0.93, 0.78)
+	task_light.light_energy = 4.2
+	task_light.spot_range = 4.5
+	task_light.spot_angle = 52.0
 	task_light.shadow_enabled = true
 	add_child(task_light)
+	task_light.look_at(to_global(Vector3(0.0, TABLE_HEIGHT + 0.08, 0.0)), Vector3.UP)
 
 
 func _build_decorations() -> void:
@@ -296,7 +311,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion and _dragging:
 		var mm := event as InputEventMouseMotion
 		rotate_orbit(mm.relative)
-	elif event is InputEventScreenDrag:
+	elif event is InputEventScreenDrag and not _dragging:
 		var sd := event as InputEventScreenDrag
 		rotate_orbit(sd.relative)
 

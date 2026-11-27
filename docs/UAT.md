@@ -160,6 +160,16 @@ UAT proves the *game* works. A release isn't done until both pass.
 | P5 | Face Wave 5: Mega Foam Titan Boss | 3.5m Titan Boss (650 HP) with ground shockwaves; defeat boss to clear mode and unlock exclusive **Toxic Slime** skin |
 | P6 | Lobby → SHOP → **SKINS** tab | Interactive 3D preview of 8 tactile skins with Matte, Gloss, Metallic Flake, and Holographic finishes; equip works in first-person and on lobby squad |
 
+### Q. v1.0.0 Production Polish, Tactical Radar & All 9 Arenas *(v1.0.0)*
+| ID | Do this | Expect |
+|---|---|---|
+| Q1 | Launch Main Menu, cycle all 9 arenas with `<` `>` | Live 3D arena backdrop swaps cleanly; `v1.0.0` badge visible bottom-left; zero tofu-box missing glyphs anywhere in menus, HUD, Shop, Missions, Workbench, or Multiplayer |
+| Q2 | Play **Soccer Stadium**, **Two Fortresses**, **Dusty Courtyard**, and **Duststorm II** | Distinct AgX lighting per arena (floodlit twilight stadium!); open Two Fortresses moat & navigable basement vaults/water tunnels; open Dusty Courtyard arch & flush bridge; open Duststorm II Lower B Tunnel & Pit ramp |
+| Q3 | Check top-right **Tactical Radar**, crosshair, and weapon strip in match | Rotating radar shows arena cover, FOV wedge, teammates, nearby/firing rivals, and objectives (Bomb Sites A/B, CTF flags, Base Core, ammo buckets); directional damage arcs flash toward attackers; hitmarkers distinguish body/shield/ricochet/tag-out |
+| Q4 | Play **Capture the Flag** and **Plant the Bomb** | Explicit Site A/B rings and contextual `[F]` Plant/Defuse prompts work cleanly; dual fuse & defuse bars display during defusal; CTF pedestals stay anchored at home base |
+| Q5 | Open **Garage Workbench** and equip barrel/optic/grip/stock attachments | Enclosed garage room with clean lighting, hollow glowing cyan Holo-Sight reticle, attachments stay locked to blaster during recoil, and Reset to Stock updates the 3D model immediately |
+| Q6 | Play **2-Player Split-Screen** to match end (including Teams & Zombie Siege) | Both players join Defenders in Zombie Siege; Orange Team does NOT turn into zombies on the metallic spotlight podium; results & PLAY AGAIN remain visible at match end |
+
 ### E. Comfort
 | ID | Do this | Expect |
 |---|---|---|
@@ -182,3 +192,4 @@ UAT proves the *game* works. A release isn't done until both pass.
 | 0.5.3 | — | — | ⏳ Pending | Progression, Levels, Missions & Coin Shop: section N |
 | 0.6.0 | — | — | ⏳ Pending | Tempest Treehouse: section O |
 | 0.7.0 | — | — | ⏳ Pending | Zombie Siege (Base Defense) & Blaster Skins: section P |
+| 1.0.0 | — | — | ⏳ Pending | Production 1.0 release: sections Q plus controller/split-screen/online regression check |

@@ -75,6 +75,7 @@ var _grudge: Actor
 var _grudge_left: float = 0.0
 var _weapon_lock_left: float = 0.0
 var _sight_query: PhysicsRayQueryParameters3D
+var _is_planting_or_defusing: bool = false
 
 
 func _ready() -> void:
@@ -106,6 +107,11 @@ func _ready() -> void:
 	meter_changed.connect(func(value: float, maximum: float) -> void: _model.set_meter(value / maximum))
 	shield_changed.connect(func(curr: float, _max: float) -> void: _model.set_shield_visible(curr > 0.0))
 	shield_broken.connect(func(_a: Actor) -> void: _model.set_shield_visible(false))
+	damage_received.connect(func(_att: Actor, _amt: float) -> void: _model.trigger_hit_flash())
+	respawned.connect(func(_a: Actor) -> void: _model.clear_elemental_visuals())
+	if elemental != null:
+		elemental.status_started.connect(func(el: DartData.Element, _dur: float) -> void: _model.set_elemental_visual(el, true))
+		elemental.status_ended.connect(func(el: DartData.Element) -> void: _model.set_elemental_visual(el, false))
 	tagged_out_status_changed.connect(func(_a: Actor, is_out: bool) -> void:
 		_model.set_tagged_out(is_out)
 		if is_out:
@@ -132,14 +138,19 @@ func _physics_process(delta: float) -> void:
 		_update_aim(delta)
 		_update_trigger(delta)
 		wish = _choose_direction(delta)
+		_is_planting_or_defusing = false
 		var bomb_target_node := get_tree().get_first_node_in_group(&"bomb_target") as BombTarget
 		if bomb_target_node != null:
 			if bomb_target_node.carrier == self and not bomb_target_node.get_site_at(global_position).is_empty():
 				bomb_target_node.progress_plant(self, delta)
 				wish = Vector3.ZERO
+				_is_planting_or_defusing = true
 			elif team_id == 0 and is_designated_defuser and (bomb_target_node.state == BombTarget.BombState.PLANTED or bomb_target_node.state == BombTarget.BombState.DEFUSING) and global_position.distance_to(bomb_target_node.get_bomb_position()) <= BombTarget.DEFUSE_RADIUS:
 				bomb_target_node.progress_defuse(self, delta)
 				wish = Vector3.ZERO
+				_is_planting_or_defusing = true
+		if _is_planting_or_defusing:
+			arsenal.set_trigger(false)
 		_melee_cooldown = maxf(_melee_cooldown - delta, 0.0)
 		_lunge_cooldown = maxf(_lunge_cooldown - delta, 0.0)
 		if _lunge_telegraph_left > 0.0:
@@ -149,19 +160,19 @@ func _physics_process(delta: float) -> void:
 			if _lunge_telegraph_left <= 0.0:
 				_model.position.y = 0.0
 				lunge(_lunge_dir, 7.5)
-				Sfx.play(&"whoosh", 0.9, -2.0)
+				Sfx.play_at(&"whoosh", global_position, 0.9, -2.0)
 		else:
 			_model.position.y = 0.0
 			if is_zombie and _target != null and is_instance_valid(_target) and _target.alive:
 				var to_target := _target.global_position - global_position
 				var dist := to_target.length()
-				if dist < 1.4:
+				if dist < 1.4 and _has_line_of_sight(_target):
 					try_zombie_infect(_target)
 				elif dist >= 2.5 and dist <= 4.2 and _lunge_cooldown <= 0.0 and is_on_floor() and _has_line_of_sight(_target):
 					_lunge_cooldown = 3.5 + randf() * 1.5
 					_lunge_telegraph_left = 0.25
 					_lunge_dir = Vector3(to_target.x, 0.0, to_target.z).normalized()
-					Sfx.play(&"zombie_moan", 1.3, -3.0)
+					Sfx.play_at(&"zombie_moan", global_position, 1.3, -3.0)
 		if is_zombie and _melee_cooldown <= 0.0:
 			var attacked := false
 			for b in barricades:
@@ -188,11 +199,11 @@ func _physics_process(delta: float) -> void:
 		else:
 			_stuck_for = 0.0
 
-		# Floor is Lava: panic when submerged or near molten foam
+		# Floor is Lava: seek high ground via navmesh when rising or submerged
 		if arena != null and arena.lava_hazard != null and arena.lava_hazard.current_lava_y > -0.4:
 			var lava_y := arena.lava_hazard.current_lava_y
-			if global_position.y <= lava_y + 0.35:
-				if is_on_floor():
+			if global_position.y <= lava_y + 0.5:
+				if is_on_floor() and global_position.y <= lava_y + 0.25:
 					jump = true
 				var escape_dir := _get_lava_escape_direction(lava_y)
 				if escape_dir.length_squared() > 0.01:
@@ -200,7 +211,11 @@ func _physics_process(delta: float) -> void:
 	else:
 		arsenal.set_trigger(false)
 
-	move_actor(wish * difficulty.move_speed_scale, is_zombie, jump, delta)
+	var melee_sprint := false
+	var held_state := arsenal.current()
+	if not is_zombie and held_state != null and held_state.data.is_melee() and _target != null:
+		melee_sprint = true
+	move_actor(wish * difficulty.move_speed_scale, is_zombie or melee_sprint, jump, delta)
 	_model.animate(Vector2(velocity.x, velocity.z).length(), delta)
 	var held := _model.get_weapon()
 	if held != null:
@@ -212,7 +227,7 @@ func apply_archetype(p_archetype: StringName) -> void:
 	match p_archetype:
 		&"runner":
 			scale = Vector3.ONE
-			hitbox_radius = 0.6
+			update_hitbox_radius(0.6)
 			sprint_speed = 9.2
 			walk_speed = 6.2
 			melee_damage = 15.0
@@ -221,7 +236,7 @@ func apply_archetype(p_archetype: StringName) -> void:
 			meter_changed.emit(tag_meter, tag_meter_max)
 		&"brute":
 			scale = Vector3.ONE * 1.35
-			hitbox_radius = 0.85
+			update_hitbox_radius(0.85)
 			sprint_speed = 6.8
 			walk_speed = 4.8
 			melee_damage = 35.0
@@ -230,7 +245,7 @@ func apply_archetype(p_archetype: StringName) -> void:
 			meter_changed.emit(tag_meter, tag_meter_max)
 		&"titan_boss":
 			scale = Vector3.ONE * 2.2
-			hitbox_radius = 1.4
+			update_hitbox_radius(1.4)
 			sprint_speed = 5.5
 			walk_speed = 3.8
 			melee_damage = 70.0
@@ -295,6 +310,9 @@ func _think() -> void:
 
 	_target = _pick_target()
 	_ensure_loaded_weapon()
+	if _target != null:
+		_choose_weapon()
+		_consider_grenade_throw()
 
 	# 1. CTF Objectives
 	var flags_in_match := get_tree().get_nodes_in_group(&"flags")
@@ -312,6 +330,14 @@ func _think() -> void:
 		var stocked := _nearest_bucket(true)
 		if stocked != null:
 			_bucket = stocked
+		elif realistic_mode:
+			var scavenge := _nearest_resting_dart()
+			if scavenge != Vector3.ZERO:
+				_bucket = null
+				_mood = Mood.RESUPPLY
+				_set_goal(scavenge)
+				return
+			_bucket = null
 		elif arsenal.total_ammo() <= 0:
 			# Completely dry and every bucket is empty: wait at the nearest one
 			# for it to refill instead of chasing people we can't tag.
@@ -350,6 +376,13 @@ func _think() -> void:
 			_set_goal(ep.global_position)
 			return
 
+	if _wants_bat_pickup():
+		var bp := _nearest_bat_pickup()
+		if bp != null:
+			_mood = Mood.ROAM
+			_set_goal(bp.global_position)
+			return
+
 	if _target != null:
 		_mood = Mood.FIGHT
 		_choose_weapon()
@@ -359,7 +392,7 @@ func _think() -> void:
 	_mood = Mood.ROAM
 	var arrived := _has_goal and global_position.distance_to(_goal) < GOAL_REACHED_DISTANCE
 	if not _has_goal or arrived or _goal_age > GOAL_TIMEOUT:
-		if _grudge_left > 0.0 and is_instance_valid(_grudge) and _grudge.alive:
+		if _grudge_left > 0.0 and is_instance_valid(_grudge) and _grudge.alive and not _grudge.is_tagged_out and _grudge.team_id != team_id:
 			_set_goal(_grudge.global_position)  # Go and find whoever hit us.
 		else:
 			_set_goal(_random_roam_point())
@@ -460,11 +493,14 @@ func _think_bomb_objective(bomb: BombTarget) -> bool:
 
 			BombTarget.BombState.PLANTED, BombTarget.BombState.DEFUSING:
 				tactical_role = TacticalRole.BOMB_POST_PLANT
-				# Prioritize stopping the defuser!
+				# Prioritize stopping the defuser (only shoot if LOS is clear)!
 				if bomb.current_defuser != null and is_instance_valid(bomb.current_defuser) and bomb.current_defuser.alive:
-					_target = bomb.current_defuser
-					_mood = Mood.FIGHT
-					_callout_sighting(_target, PingBeacon.Type.DANGER)
+					if _has_line_of_sight(bomb.current_defuser):
+						_target = bomb.current_defuser
+						_mood = Mood.FIGHT
+						_callout_sighting(_target, PingBeacon.Type.DANGER)
+					else:
+						_mood = Mood.ROAM
 					_set_goal(bomb.current_defuser.global_position)
 					return true
 				if _target != null and is_instance_valid(_target) and _target.alive:
@@ -581,27 +617,31 @@ func _think_ctf_objective(flags: Array) -> bool:
 	var home_ped := arena.get_flag_pedestal(team_id)
 	var enemy_ped := arena.get_flag_pedestal(1 - team_id)
 
-	# 1. OUR FLAG IS STOLEN: High priority interception!
-	if our_flag.state == FlagPickup.State.CARRIED:
-		if our_flag.carrier != null and is_instance_valid(our_flag.carrier) and our_flag.carrier.alive:
-			_target = our_flag.carrier
-			_callout_sighting(_target, PingBeacon.Type.DANGER)
-			_mood = Mood.FIGHT
-			_set_goal(our_flag.carrier.global_position)
-			return true
-
-	# 2. OUR FLAG IS DROPPED: Quick recovery
-	if our_flag.state == FlagPickup.State.DROPPED:
-		if global_position.distance_to(our_flag.global_position) < 25.0:
-			_mood = Mood.ROAM
-			_set_goal(our_flag.global_position)
-			return true
-
-	# 3. WE ARE CARRYING THE ENEMY FLAG: Run home to score!
+	# 1. WE ARE CARRYING THE ENEMY FLAG: Run home to score first!
 	if enemy_flag.carrier == self:
 		_mood = Mood.ROAM
 		_set_goal(home_ped)
 		return true
+
+	# 2. OUR FLAG IS STOLEN: High priority interception (shoot only if LOS clear)!
+	if our_flag.state == FlagPickup.State.CARRIED:
+		if our_flag.carrier != null and is_instance_valid(our_flag.carrier) and our_flag.carrier.alive:
+			if _has_line_of_sight(our_flag.carrier):
+				_target = our_flag.carrier
+				_callout_sighting(_target, PingBeacon.Type.DANGER)
+				_mood = Mood.FIGHT
+			else:
+				_mood = Mood.ROAM
+			_set_goal(our_flag.carrier.global_position)
+			return true
+
+	# 3. OUR FLAG IS DROPPED: Quick recovery
+	if our_flag.state == FlagPickup.State.DROPPED:
+		var our_flag_pos := our_flag.get_flag_position()
+		if global_position.distance_to(our_flag_pos) < 25.0:
+			_mood = Mood.ROAM
+			_set_goal(our_flag_pos)
+			return true
 
 	# 4. A TEAMMATE IS CARRYING THE ENEMY FLAG: Escort convoy!
 	if enemy_flag.carrier != null and is_instance_valid(enemy_flag.carrier) and enemy_flag.carrier.alive and enemy_flag.carrier.team_id == team_id:
@@ -620,7 +660,7 @@ func _think_ctf_objective(flags: Array) -> bool:
 	# 5. ENEMY FLAG IS DROPPED: Rush to pick it up
 	if enemy_flag.state == FlagPickup.State.DROPPED:
 		_mood = Mood.ROAM
-		_set_goal(enemy_flag.global_position)
+		_set_goal(enemy_flag.get_flag_position())
 		return true
 
 	# 6. BASELINE CTF ROLES: Runners vs Anchors
@@ -769,11 +809,16 @@ func _choose_weapon() -> void:
 	var best_score := -INF
 	for i in arsenal.weapons.size():
 		var state := arsenal.weapons[i]
-		if state.total() <= 0:
+		if not state.can_fire():
 			continue
 		var data := state.data
 		var score := data.ai_preference + randf() * 0.6
-		if distance < data.ai_min_range or distance > data.ai_max_range:
+		if data.is_melee():
+			if distance <= data.melee_range + 0.6:
+				score += 2.5
+			else:
+				score -= 8.0
+		elif distance < data.ai_min_range or distance > data.ai_max_range:
 			score -= 2.0
 		if data.fire_mode == WeaponData.FireMode.SPIN_UP and state.total() < 40:
 			score -= 3.0
@@ -866,6 +911,28 @@ func _nearest_elemental_pickup() -> ElementalPickup:
 	return best
 
 
+func _wants_bat_pickup() -> bool:
+	if is_zombie or arsenal.has_weapon(&"foam_bat"):
+		return false
+	var nearest := _nearest_bat_pickup()
+	if nearest == null or not nearest.is_available():
+		return false
+	return _target == null or global_position.distance_to(nearest.global_position) < 12.0
+
+
+func _nearest_bat_pickup() -> BatPickup:
+	var best: BatPickup = null
+	var best_dist := INF
+	for node in get_tree().get_nodes_in_group(&"bat_pickups"):
+		var bp := node as BatPickup
+		if bp != null and is_instance_valid(bp) and bp.is_available():
+			var d := global_position.distance_to(bp.global_position)
+			if d < best_dist:
+				best_dist = d
+				best = bp
+	return best
+
+
 func _consider_grenade_throw() -> void:
 	if is_zombie or grenade_count <= 0 or _target == null or not is_instance_valid(_target) or not _target.alive:
 		return
@@ -890,10 +957,10 @@ func _wants_resupply() -> bool:
 ## even if we only just switched to it.
 func _ensure_loaded_weapon() -> void:
 	var held := arsenal.current()
-	if held == null or held.total() > 0 or arsenal.weapons.size() < 2:
+	if held == null or held.can_fire() or arsenal.weapons.size() < 2:
 		return
 	for i in arsenal.weapons.size():
-		if arsenal.weapons[i].total() > 0:
+		if arsenal.weapons[i].can_fire():
 			arsenal.select(i)
 			_weapon_lock_left = WEAPON_LOCK_SECONDS
 			return
@@ -912,6 +979,18 @@ func _nearest_bucket(stocked_only: bool) -> AmmoBucket:
 			best_distance = distance
 			best = bucket
 	return best
+
+
+func _nearest_resting_dart() -> Vector3:
+	var best_pos := Vector3.ZERO
+	var best_dist := INF
+	for d in DartProjectile.resting_pickups:
+		if is_instance_valid(d) and d.visible and d.is_resting_pickup:
+			var dist := global_position.distance_squared_to(d.global_position)
+			if dist < best_dist:
+				best_dist = dist
+				best_pos = d.global_position
+	return best_pos
 
 
 func _random_roam_point() -> Vector3:
@@ -967,15 +1046,11 @@ func _get_lava_escape_direction(lava_y: float) -> Vector3:
 			if d < best_dist:
 				best_dist = d
 				best_point = p
-		var dir := best_point - global_position
-		dir.y = 0.0
-		return dir.normalized()
+		return _path_direction(best_point)
 
 	for base in arena.team_bases:
 		if base.y > lava_y + 0.5:
-			var dir := base - global_position
-			dir.y = 0.0
-			return dir.normalized()
+			return _path_direction(base)
 
 	return Vector3.ZERO
 
@@ -1027,15 +1102,22 @@ func _ballistic_aim(target: Actor) -> Vector3:
 
 
 func _update_trigger(delta: float) -> void:
-	if is_zombie or is_tagged_out:
+	if is_zombie or is_tagged_out or _is_planting_or_defusing:
 		arsenal.set_trigger(false)
 		_trigger_clock = 0.0
 		return
 	var state := arsenal.current()
 	var wants_fire := state != null and _target != null and _on_target and _seen_for >= difficulty.reaction_time
+	if wants_fire and state.data.is_melee():
+		var dist := global_position.distance_to(_target.global_position)
+		if dist > state.data.melee_range + 0.55:
+			wants_fire = false
 	if not wants_fire:
 		arsenal.set_trigger(false)
 		_trigger_clock = 0.0
+		return
+	if state.data.is_melee():
+		arsenal.set_trigger(true)
 		return
 	var hold := 0.07
 	var rest := difficulty.semi_interval
@@ -1091,6 +1173,9 @@ func _fight_direction(delta: float) -> Vector3:
 	to_target.y = 0.0
 	var toward := to_target.normalized()
 	var state := arsenal.current()
+	if state != null and state.data.is_melee():
+		# Melee wielder (e.g. Gun Game final Foam Bat rung) charges straight into bonking range!
+		return _path_direction(_target.global_position)
 	var ideal := 12.0
 	if state != null:
 		ideal = lerpf(state.data.ai_min_range, minf(state.data.ai_max_range, 26.0), 0.4)
@@ -1155,6 +1240,10 @@ func respawn(at: Transform3D) -> void:
 	_has_goal = false
 	_seen_for = 0.0
 	_stuck_for = 0.0
+	_grudge = null
+	_grudge_left = 0.0
+	_lunge_telegraph_left = 0.0
+	_is_planting_or_defusing = false
 	_model.set_meter(0.0)
 	tactical_role = TacticalRole.UNASSIGNED
 	assigned_bomb_site = ""
@@ -1173,6 +1262,9 @@ func _on_weapon_changed(state: WeaponState) -> void:
 
 func _on_shot_feedback(state: WeaponState) -> void:
 	Sfx.play_at(state.data.sound, global_position + Vector3.UP * 1.3, state.data.sound_pitch, -4.0, 0.08)
+	if state != null and state.data.is_melee():
+		_model.play_melee_swing()
+		return
 	var held := _model.get_weapon()
 	if held != null:
 		held.flash()
@@ -1216,12 +1308,13 @@ func on_squad_ping(beacon: PingBeacon) -> void:
 			_set_goal(beacon.global_position + Vector3(randf_range(-2.0, 2.0), 0.0, randf_range(-2.0, 2.0)))
 			_mood = Mood.ROAM
 		PingBeacon.Type.RIVAL:
-			var to_ping := (beacon.global_position - global_position).normalized()
+			var to_ping := beacon.global_position - global_position
 			to_ping.y = 0.0
-			_aim = to_ping
+			if to_ping.length_squared() > 0.01:
+				_aim = to_ping.normalized()
 			if _target == null:
 				_set_goal(beacon.global_position)
-				_mood = Mood.FIGHT
+				_mood = Mood.ROAM
 		PingBeacon.Type.AMMO:
 			if _wants_resupply():
 				_set_goal(beacon.global_position)
@@ -1232,6 +1325,8 @@ func on_squad_ping(beacon: PingBeacon) -> void:
 				_mood = Mood.ROAM
 		PingBeacon.Type.DANGER:
 			if global_position.distance_to(beacon.global_position) < 8.0:
-				var away := (global_position - beacon.global_position).normalized()
+				var away := global_position - beacon.global_position
+				away.y = 0.0
+				away = away.normalized() if away.length_squared() > 0.01 else -global_transform.basis.z
 				_set_goal(global_position + away * 10.0)
 				_mood = Mood.ROAM

@@ -99,9 +99,21 @@ static func _build_optic(root: Node3D, id: StringName, _blaster_id: StringName) 
 			# Glass holographic projection window
 			var glass := ArenaKit.deco_box(root, Vector3(0.04, 0.05, 0.004), Vector3(0.0, 0.045, -0.01), GLASS_TINT)
 			glass.material_override = _get_mat(GLASS_TINT, 0.1, 0.0)
-			# Center holographic ring
-			var reticle := ArenaKit.deco_cylinder(root, 0.015, 0.003, Vector3(0.0, 0.045, 0.0), HOLO_COLOR, Vector3(90.0, 0.0, 0.0), 0.0)
-			reticle.material_override = _get_mat(HOLO_COLOR, 0.2, 0.0, 3.0)
+			# Hollow glowing cyan holographic reticle ring + crisp center pip (clear view in ADS!)
+			var ring_mesh := TorusMesh.new()
+			ring_mesh.inner_radius = 0.0095
+			ring_mesh.outer_radius = 0.0125
+			ring_mesh.rings = 16
+			ring_mesh.ring_segments = 8
+			var reticle := MeshInstance3D.new()
+			reticle.mesh = ring_mesh
+			reticle.position = Vector3(0.0, 0.045, 0.0)
+			reticle.rotation_degrees = Vector3(90.0, 0.0, 0.0)
+			reticle.material_override = _get_mat(HOLO_COLOR, 0.1, 0.0, 3.2)
+			reticle.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			root.add_child(reticle)
+			var pip := ArenaKit.deco_sphere(root, 0.0022, Vector3(0.0, 0.045, 0.0), HOLO_COLOR)
+			pip.material_override = _get_mat(HOLO_COLOR, 0.1, 0.0, 3.6)
 
 		&"marksman_scope":
 			# Dual mounting rings
@@ -248,12 +260,12 @@ static func _build_stock(root: Node3D, id: StringName, _blaster_id: StringName) 
 			ArenaKit.deco_box(root, Vector3(0.038, 0.11, 0.02), Vector3(0.0, -0.015, 0.17), MATTE_BLACK)
 
 		&"tactical_grip":
-			# Front rail mount clamp
-			ArenaKit.deco_box(root, Vector3(0.038, 0.015, 0.06), Vector3(0.0, -0.01, -0.08), DARK_HARDWARE)
-			# 45-degree angled foregrip with finger ridges
-			ArenaKit.deco_box(root, Vector3(0.032, 0.08, 0.035), Vector3(0.0, -0.05, -0.10), MATTE_BLACK, Vector3(25.0, 0.0, 0.0))
-			for y in [-0.035, -0.055, -0.075]:
-				ArenaKit.deco_box(root, Vector3(0.034, 0.008, 0.036), Vector3(0.0, y, -0.10), DARK_HARDWARE, Vector3(25.0, 0.0, 0.0))
+			# Front under-rail mount clamp (mounted directly at the foregrip socket)
+			ArenaKit.deco_box(root, Vector3(0.038, 0.016, 0.065), Vector3(0.0, 0.0, 0.0), DARK_HARDWARE)
+			# Angled foregrip with ergonomic finger ridges
+			ArenaKit.deco_box(root, Vector3(0.032, 0.085, 0.036), Vector3(0.0, -0.046, -0.015), MATTE_BLACK, Vector3(22.0, 0.0, 0.0))
+			for y in [-0.030, -0.050, -0.070]:
+				ArenaKit.deco_box(root, Vector3(0.035, 0.008, 0.038), Vector3(0.0, y, -0.015), DARK_HARDWARE, Vector3(22.0, 0.0, 0.0))
 
 		&"counterweight_stock":
 			# Heavy polymer crane stock body

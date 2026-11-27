@@ -221,8 +221,9 @@ func _wall_piece(along_x: bool, line: float, from: float, to: float, bottom: flo
 	var dims := Vector3(length, height, WALL_THICK) if along_x else Vector3(WALL_THICK, height, length)
 	var centre := Vector3(mid, bottom + height * 0.5, line) if along_x else Vector3(line, bottom + height * 0.5, mid)
 	ArenaKit.box(geometry, dims, centre, WALL)
-	# A darker cap along the top: the cut-away edge of a dollhouse.
-	ArenaKit.deco_box(decor, Vector3(dims.x + 0.04, 0.22, dims.z + 0.04), Vector3(centre.x, WALL_HEIGHT + 0.1, centre.z), WALL_EDGE)
+	# A darker cap along the top: offset slightly by axis to prevent T-junction Z-fighting.
+	var cap_y := WALL_HEIGHT + (0.10 if along_x else 0.115)
+	ArenaKit.deco_box(decor, Vector3(dims.x + 0.04, 0.20, dims.z + 0.04), Vector3(centre.x, cap_y, centre.z), WALL_EDGE)
 
 
 func _window(at: Vector3, width: float, along_x: bool) -> void:
@@ -260,13 +261,13 @@ func _build_patio() -> void:
 	for side: float in [-1.0, 1.0]:
 		ArenaKit.ramp(geometry, Vector3(29.0, 0.35, -22.0 + side * 2.1), Vector3(15.1, PATIO_ROOF_TOP + 0.35, -22.0 + side * 2.1),
 				0.3, Color(1.0, 0.85, 0.2), 0.7, ArenaKit.SurfaceType.PLASTIC)
-	# Shield pickup up on the patio roof fort
+	# Shield pickup up on the patio roof fort (ground pickups clear of X=0 wall)
 	add_shield_pickup(Vector3(6.5, PATIO_ROOF_TOP, -22.5))
 	add_grenade_pickup(Vector3(12.0, PATIO_ROOF_TOP, -22.5))
-	add_grenade_pickup(Vector3(0.0, 0.0, 0.0))
+	add_grenade_pickup(Vector3(-5.0, 0.0, -1.5))
 	add_elemental_pickup(Vector3(-14.0, 0.0, -12.0), DartData.Element.WATER)
 	add_elemental_pickup(Vector3(14.0, 0.0, 12.0), DartData.Element.LIGHTNING)
-	add_elemental_pickup(Vector3(0.0, 0.0, -18.0), DartData.Element.FIRE)
+	add_elemental_pickup(Vector3(-2.5, 0.0, -18.0), DartData.Element.FIRE)
 	add_roam_point(Vector3(7.5, PATIO_ROOF_TOP, -22.5))
 
 	# Barbecue, outdoor table and benches, pot plants.
@@ -487,9 +488,24 @@ func _build_features() -> void:
 
 	add_power_up_spot(Vector3(-5.0, 0.0, -0.6))    # In the lounge, in the middle of everything.
 
+	# Warm interior dollhouse light pools so rooms feel cozy and readable.
+	for light_pos: Vector3 in [Vector3(-6.0, 6.2, -22.0), Vector3(-6.0, 6.2, -6.0), Vector3(9.5, 6.2, 0.0), Vector3(7.5, 5.5, -22.5)]:
+		var room_light := OmniLight3D.new()
+		room_light.position = light_pos
+		room_light.light_color = Color(1.0, 0.92, 0.78)
+		room_light.light_energy = 1.15
+		room_light.omni_range = 16.0
+		decor.add_child(room_light)
+
 
 func _build_spawns() -> void:
 	team_bases = [BLUE_BASE, ORANGE_BASE]
+	flag_pedestals = [BLUE_BASE, ORANGE_BASE]
+	bomb_sites = {
+		"A": Vector3(7.5, 0.0, -14.5),
+		"B": Vector3(-6.0, 0.0, 11.0),
+	}
+	bomb_spawns = [Vector3(0.0, 0.0, -43.0)]
 	var centre := Vector3(-6.0, 0.0, -8.0)
 	# Front (blue's end).
 	add_spawn(Vector3(9.5, 0.0, 16.0), centre)
@@ -530,6 +546,14 @@ func _build_neighbourhood() -> void:
 		ArenaKit.house(decor, house[0], house[1], house[2], house[3])
 	for i in 24:
 		var angle := _rng.randf() * TAU
-		var distance := _rng.randf_range(62.0, 110.0)
+		var distance := _rng.randf_range(64.0, 110.0)
 		var spot := Vector3(cos(angle) * distance, 0.0, sin(angle) * distance)
-		ArenaKit.tree(decor, spot, _rng.randf_range(0.9, 1.5))
+		if spot.x > LOT_WEST - 6.0 and spot.x < LOT_EAST + 6.0 and spot.z > LOT_NORTH - 6.0 and spot.z < LOT_SOUTH + 6.0:
+			continue
+		var overlaps_house := false
+		for h: Array in houses:
+			if spot.distance_to(h[0] as Vector3) < 15.0:
+				overlaps_house = true
+				break
+		if not overlaps_house:
+			ArenaKit.tree(decor, spot, _rng.randf_range(0.9, 1.5))

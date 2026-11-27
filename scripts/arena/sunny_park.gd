@@ -61,75 +61,86 @@ func _build_ground_and_paths() -> void:
 	# Backdrop surrounding park
 	ArenaKit.deco_box(decor, Vector3(400.0, 0.2, 400.0), Vector3(0.0, -0.55, 0.0), Color(0.28, 0.6, 0.24))
 
-	# Boundary park fence / stone wall
+	# Boundary stone wall + invisible sky blockers + perimeter trees
 	var wall_h := 3.2
 	var thick := 0.5
-	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, wall_h, thick), Vector3(0.0, wall_h * 0.5, -HALF_Z - thick * 0.5), STONE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
-	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, wall_h, thick), Vector3(0.0, wall_h * 0.5, HALF_Z + thick * 0.5), STONE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
-	ArenaKit.box(geometry, Vector3(thick, wall_h, HALF_Z * 2.0), Vector3(-HALF_X - thick * 0.5, wall_h * 0.5, 0.0), STONE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
-	ArenaKit.box(geometry, Vector3(thick, wall_h, HALF_Z * 2.0), Vector3(HALF_X + thick * 0.5, wall_h * 0.5, 0.0), STONE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, wall_h, thick), Vector3(0.0, wall_h * 0.5, -HALF_Z - thick * 0.5), STONE, Vector3.ZERO, ArenaKit.SurfaceType.COBBLE)
+	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, wall_h, thick), Vector3(0.0, wall_h * 0.5, HALF_Z + thick * 0.5), STONE, Vector3.ZERO, ArenaKit.SurfaceType.COBBLE)
+	ArenaKit.box(geometry, Vector3(thick, wall_h, HALF_Z * 2.0), Vector3(-HALF_X - thick * 0.5, wall_h * 0.5, 0.0), STONE, Vector3.ZERO, ArenaKit.SurfaceType.COBBLE)
+	ArenaKit.box(geometry, Vector3(thick, wall_h, HALF_Z * 2.0), Vector3(HALF_X + thick * 0.5, wall_h * 0.5, 0.0), STONE, Vector3.ZERO, ArenaKit.SurfaceType.COBBLE)
+	var sky_h := 16.0
+	ArenaKit.blocker(geometry, Vector3(HALF_X * 2.0 + 2.0, sky_h, thick), Vector3(0.0, wall_h + sky_h * 0.5, -HALF_Z - thick * 0.5))
+	ArenaKit.blocker(geometry, Vector3(HALF_X * 2.0 + 2.0, sky_h, thick), Vector3(0.0, wall_h + sky_h * 0.5, HALF_Z + thick * 0.5))
+	ArenaKit.blocker(geometry, Vector3(thick, sky_h, HALF_Z * 2.0), Vector3(-HALF_X - thick * 0.5, wall_h + sky_h * 0.5, 0.0))
+	ArenaKit.blocker(geometry, Vector3(thick, sky_h, HALF_Z * 2.0), Vector3(HALF_X + thick * 0.5, wall_h + sky_h * 0.5, 0.0))
+	for i in 16:
+		var ang := float(i) * TAU / 16.0
+		ArenaKit.tree(decor, Vector3(cos(ang) * 48.0, 0.0, sin(ang) * 40.0), 1.2 + float(i % 3) * 0.25)
 
-	# Cross walking paths (Gravel)
-	ArenaKit.box(geometry, Vector3(HALF_X * 1.8, 0.06, 3.2), Vector3(0.0, 0.03, 0.0), PATH)
-	ArenaKit.box(geometry, Vector3(3.2, 0.06, HALF_Z * 1.8), Vector3(0.0, 0.03, 0.0), PATH)
+	# Cross walking paths (non-Z-fighting decorative gravel)
+	ArenaKit.deco_box(decor, Vector3(HALF_X * 1.8, 0.05, 3.2), Vector3(0.0, 0.025, 0.0), PATH, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.SAND)
+	ArenaKit.deco_box(decor, Vector3(3.2, 0.05, HALF_Z * 1.8), Vector3(0.0, 0.032, 0.0), PATH, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.SAND)
 
 
 func _build_gazebo() -> void:
 	# Central raised wooden gazebo
 	var pos := Vector3(0.0, 0.0, 0.0)
 	var deck_h := 1.8
+	var top_y := deck_h + 0.2
 	var radius := 5.2
 
 	# Octagonal raised base
 	ArenaKit.cylinder(geometry, radius, deck_h, pos + Vector3(0.0, deck_h * 0.5, 0.0), WHITE_WOOD, ArenaKit.SurfaceType.WOOD)
-	# Floor platform
+	# Floor platform (top at Y = 2.0)
 	ArenaKit.cylinder(geometry, radius + 0.3, 0.2, pos + Vector3(0.0, deck_h + 0.1, 0.0), WOOD, ArenaKit.SurfaceType.WOOD)
 
-	# 8 Peripheral support pillars
+	# 8 Peripheral support pillars offset by PI/8 so N/S/E/W entrances stay completely clear!
 	for i in 8:
-		var angle := float(i) * TAU / 8.0
-		var pillar_pos := pos + Vector3(cos(angle) * (radius - 0.4), deck_h + 1.8, sin(angle) * (radius - 0.4))
+		var angle := (float(i) + 0.5) * TAU / 8.0
+		var pillar_pos := pos + Vector3(cos(angle) * (radius - 0.35), top_y + 1.8, sin(angle) * (radius - 0.35))
 		ArenaKit.cylinder(geometry, 0.14, 3.6, pillar_pos, WHITE_WOOD, ArenaKit.SurfaceType.WOOD)
 
 	# Shingle pyramid roof
-	ArenaKit.deco_cone(decor, radius + 0.8, 2.6, pos + Vector3(0.0, deck_h + 4.2, 0.0), ROOF_TILE)
+	ArenaKit.deco_cone(decor, radius + 0.8, 2.6, pos + Vector3(0.0, top_y + 4.2, 0.0), ROOF_TILE)
 
-	# Safety perimeter railings between pillars with 4 openings
+	# Safety perimeter railings on the 4 diagonal faces (leaving N/S/E/W ramps open)
 	for i in [1, 3, 5, 7]:
 		var angle := float(i) * TAU / 8.0
-		var rail_pos := pos + Vector3(cos(angle) * (radius - 0.4), deck_h + 0.5, sin(angle) * (radius - 0.4))
-		ArenaKit.box(geometry, Vector3(2.6, 0.8, 0.12), rail_pos, WHITE_WOOD, Vector3(0.0, -rad_to_deg(angle) + 90.0, 0.0), ArenaKit.SurfaceType.WOOD)
+		var rail_pos := pos + Vector3(cos(angle) * (radius - 0.35), top_y + 0.45, sin(angle) * (radius - 0.35))
+		ArenaKit.box(geometry, Vector3(2.8, 0.85, 0.12), rail_pos, WHITE_WOOD, Vector3(0.0, -rad_to_deg(angle) + 90.0, 0.0), ArenaKit.SurfaceType.WOOD)
 
-	# 4 Access ramps/stairs (North, South, East, West)
-	ArenaKit.ramp(geometry, pos + Vector3(0.0, 0.0, -radius - 2.8), pos + Vector3(0.0, deck_h, -radius), 2.2, WOOD, 0.2, ArenaKit.SurfaceType.WOOD)
-	ArenaKit.ramp(geometry, pos + Vector3(0.0, 0.0, radius + 2.8), pos + Vector3(0.0, deck_h, radius), 2.2, WOOD, 0.2, ArenaKit.SurfaceType.WOOD)
-	ArenaKit.ramp(geometry, pos + Vector3(-radius - 2.8, 0.0, 0.0), pos + Vector3(-radius, deck_h, 0.0), 2.2, WOOD, 0.2, ArenaKit.SurfaceType.WOOD)
-	ArenaKit.ramp(geometry, pos + Vector3(radius + 2.8, 0.0, 0.0), pos + Vector3(radius, deck_h, 0.0), 2.2, WOOD, 0.2, ArenaKit.SurfaceType.WOOD)
+	# 4 Access ramps aligned flush to top_y = 2.0
+	ArenaKit.ramp(geometry, pos + Vector3(0.0, 0.0, -radius - 3.2), pos + Vector3(0.0, top_y, -radius), 2.4, WOOD, 0.2, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.ramp(geometry, pos + Vector3(0.0, 0.0, radius + 3.2), pos + Vector3(0.0, top_y, radius), 2.4, WOOD, 0.2, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.ramp(geometry, pos + Vector3(-radius - 3.2, 0.0, 0.0), pos + Vector3(-radius, top_y, 0.0), 2.4, WOOD, 0.2, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.ramp(geometry, pos + Vector3(radius + 3.2, 0.0, 0.0), pos + Vector3(radius, top_y, 0.0), 2.4, WOOD, 0.2, ArenaKit.SurfaceType.WOOD)
 
 
 func _build_duck_pond_and_bridge() -> void:
 	var pond_pos := Vector3(16.0, 0.0, -10.0)
-	var pond_rx := 8.0
-	var pond_rz := 6.5
+	var pond_rx := 6.5
+	var pond_rz := 6.0
 
-	# Pond basin (submerged blue water)
-	ArenaKit.cylinder(geometry, pond_rx, 0.2, pond_pos + Vector3(0.0, 0.05, 0.0), WATER, ArenaKit.SurfaceType.PLASTIC)
+	# Interactive stylized water pond (splashes & conducts lightning!)
+	add_water_puddle(pond_pos, 6.2)
+	# Lily pads floating on pond
+	for lp: Vector3 in [Vector3(-3.2, 0.06, -2.5), Vector3(3.4, 0.06, -1.8), Vector3(-2.6, 0.06, 2.8)]:
+		ArenaKit.deco_cylinder(decor, 0.55, 0.03, pond_pos + lp, Color(0.22, 0.68, 0.26))
+
 	# Stone shore lip
 	for i in 16:
 		var a := float(i) * TAU / 16.0
-		var sp := pond_pos + Vector3(cos(a) * (pond_rx + 0.4), 0.15, sin(a) * (pond_rz + 0.4))
-		ArenaKit.box(geometry, Vector3(1.8, 0.35, 1.2), sp, STONE, Vector3(0.0, -rad_to_deg(a), 0.0), ArenaKit.SurfaceType.WOOD)
+		var sp := pond_pos + Vector3(cos(a) * (pond_rx + 0.35), 0.15, sin(a) * (pond_rz + 0.35))
+		ArenaKit.box(geometry, Vector3(1.8, 0.35, 1.2), sp, STONE, Vector3(0.0, -rad_to_deg(a), 0.0), ArenaKit.SurfaceType.COBBLE)
 
-	# Arched wooden footbridge spanning North-South across the pond
-	var bridge_w := 2.0
-	var bridge_arch_h := 1.2
-	# South ramp up
+	# Arched wooden footbridge spanning North-South across the pond with matching sloped railings
+	var bridge_w := 2.2
+	var bridge_arch_h := 1.25
 	ArenaKit.ramp(geometry, pond_pos + Vector3(0.0, 0.0, pond_rz + 1.2), pond_pos + Vector3(0.0, bridge_arch_h, 0.0), bridge_w, WOOD, 0.2, ArenaKit.SurfaceType.WOOD)
-	# North ramp down
 	ArenaKit.ramp(geometry, pond_pos + Vector3(0.0, bridge_arch_h, 0.0), pond_pos + Vector3(0.0, 0.0, -pond_rz - 1.2), bridge_w, WOOD, 0.2, ArenaKit.SurfaceType.WOOD)
-	# Bridge railings
-	ArenaKit.box(geometry, Vector3(0.12, 0.8, pond_rz * 2.2), pond_pos + Vector3(-bridge_w * 0.5, bridge_arch_h * 0.5 + 0.4, 0.0), WHITE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
-	ArenaKit.box(geometry, Vector3(0.12, 0.8, pond_rz * 2.2), pond_pos + Vector3(bridge_w * 0.5, bridge_arch_h * 0.5 + 0.4, 0.0), WHITE_WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	for side_x: float in [-bridge_w * 0.5, bridge_w * 0.5]:
+		ArenaKit.ramp(geometry, pond_pos + Vector3(side_x, 0.45, pond_rz + 1.2), pond_pos + Vector3(side_x, bridge_arch_h + 0.45, 0.0), 0.12, WHITE_WOOD, 0.75, ArenaKit.SurfaceType.WOOD)
+		ArenaKit.ramp(geometry, pond_pos + Vector3(side_x, bridge_arch_h + 0.45, 0.0), pond_pos + Vector3(side_x, 0.45, -pond_rz - 1.2), 0.12, WHITE_WOOD, 0.75, ArenaKit.SurfaceType.WOOD)
 
 	# Rubber duck toy floating in pond
 	_duck = Node3D.new()
@@ -148,7 +159,7 @@ func _build_picnic_grove() -> void:
 
 	# Brick BBQ grill station
 	var bbq_pos := grove_origin + Vector3(0.0, 0.0, 7.5)
-	ArenaKit.box(geometry, Vector3(2.2, 1.1, 1.4), bbq_pos + Vector3(0.0, 0.55, 0.0), Color(0.68, 0.28, 0.22), Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.box(geometry, Vector3(2.2, 1.1, 1.4), bbq_pos + Vector3(0.0, 0.55, 0.0), Color(0.68, 0.28, 0.22), Vector3.ZERO, ArenaKit.SurfaceType.BRICK)
 	ArenaKit.box(geometry, Vector3(1.8, 0.1, 1.1), bbq_pos + Vector3(0.0, 1.15, 0.0), CAST_IRON, Vector3.ZERO, ArenaKit.SurfaceType.METAL)
 
 
@@ -216,10 +227,16 @@ func _build_park_benches_and_props() -> void:
 	_build_bench(Vector3(-2.5, 0.0, 7.5), 90.0)
 	_build_bench(Vector3(2.5, 0.0, -7.5), -90.0)
 
-	# Cast iron street lamps
-	for lp in [Vector3(-10.0, 0.0, 0.0), Vector3(10.0, 0.0, 0.0), Vector3(0.0, 0.0, -10.0), Vector3(0.0, 0.0, 10.0)]:
+	# Cast iron street lamps with warm glowing globes
+	for lp: Vector3 in [Vector3(-10.0, 0.0, 2.2), Vector3(10.0, 0.0, -2.2), Vector3(2.2, 0.0, -10.0), Vector3(-2.2, 0.0, 10.0)]:
 		ArenaKit.cylinder(geometry, 0.12, 3.8, lp + Vector3(0.0, 1.9, 0.0), CAST_IRON, ArenaKit.SurfaceType.METAL)
-		ArenaKit.deco_sphere(decor, 0.35, lp + Vector3(0.0, 3.9, 0.0), Color(1.0, 0.95, 0.8), 0.4)
+		ArenaKit.deco_sphere(decor, 0.35, lp + Vector3(0.0, 3.9, 0.0), Color(1.0, 0.94, 0.78), 1.0, 2.2)
+		var lamp_light := OmniLight3D.new()
+		lamp_light.position = lp + Vector3(0.0, 3.9, 0.0)
+		lamp_light.light_color = Color(1.0, 0.9, 0.7)
+		lamp_light.light_energy = 1.1
+		lamp_light.omni_range = 10.0
+		decor.add_child(lamp_light)
 
 
 func _build_bench(at: Vector3, rot_y: float) -> void:
@@ -237,12 +254,16 @@ func _build_bench(at: Vector3, rot_y: float) -> void:
 
 
 func _build_spawns_and_points() -> void:
-	# Team bases
-	team_bases.clear()
-	team_bases.append(Vector3(-24.0, 0.0, 0.0))  # Blue Base (West Picnic Grove)
-	team_bases.append(Vector3(24.0, 0.0, 0.0))   # Orange Base (East Duck Pond)
+	# Team bases, Flag pedestals & Bomb sites
+	team_bases = [Vector3(-24.0, 0.0, 0.0), Vector3(24.0, 0.0, 0.0)]
+	flag_pedestals = [Vector3(-24.0, 0.0, 0.0), Vector3(24.0, 0.0, 0.0)]
+	bomb_sites = {
+		"A": Vector3(0.0, 2.0, 0.0),
+		"B": Vector3(-16.0, 0.0, -5.0),
+	}
+	bomb_spawns = [Vector3(24.0, 0.0, 2.5)]
 
-	# 12 Spawns
+	# 12 Spawns (bridge spawn accurately placed on duck pond bridge at Z=-10!)
 	var spawns: Array[Vector3] = [
 		Vector3(-26.0, 0.0, -8.0),
 		Vector3(-26.0, 0.0, 8.0),
@@ -251,7 +272,7 @@ func _build_spawns_and_points() -> void:
 		Vector3(0.0, 2.0, 0.0),     # Inside Gazebo
 		Vector3(0.0, 0.0, -14.0),
 		Vector3(0.0, 0.0, 14.0),
-		Vector3(16.0, 1.4, 0.0),    # On Bridge
+		Vector3(16.0, 1.3, -10.0),  # On Pond Bridge
 		Vector3(20.0, 0.0, -18.0),
 		Vector3(20.0, 0.0, 18.0),
 		Vector3(26.0, 0.0, -8.0),
@@ -260,17 +281,17 @@ func _build_spawns_and_points() -> void:
 	for p in spawns:
 		add_spawn(p, Vector3.ZERO.direction_to(Vector3(-p.x, 0.0, -p.z)))
 
-	# Roam points for bots
+	# Clear unobstructed roam points for bots
 	roam_points.clear()
 	roam_points.append(Vector3(0.0, 2.0, 0.0))
-	roam_points.append(Vector3(16.0, 1.4, 0.0))
+	roam_points.append(Vector3(16.0, 1.3, -10.0))
 	roam_points.append(Vector3(-16.0, 0.0, 10.0))
-	roam_points.append(Vector3(-16.0, 0.0, -12.0))
-	roam_points.append(Vector3(16.0, 0.0, 12.0))
-	roam_points.append(Vector3(0.0, 0.0, -10.0))
-	roam_points.append(Vector3(0.0, 0.0, 10.0))
-	roam_points.append(Vector3(-10.0, 0.0, 0.0))
-	roam_points.append(Vector3(10.0, 0.0, 0.0))
+	roam_points.append(Vector3(-16.0, 0.0, -6.0))
+	roam_points.append(Vector3(16.0, 0.0, 6.0))
+	roam_points.append(Vector3(0.0, 0.0, -12.0))
+	roam_points.append(Vector3(0.0, 0.0, 12.0))
+	roam_points.append(Vector3(-12.0, 0.0, 0.0))
+	roam_points.append(Vector3(12.0, 0.0, 0.0))
 
 	# Power-up spot (Center of Gazebo)
 	power_up_spots.clear()
@@ -279,11 +300,8 @@ func _build_spawns_and_points() -> void:
 	# Ammo buckets
 	add_bucket(Vector3(-14.0, 0.0, 0.0), Color(0.3, 0.75, 0.95))
 	add_bucket(Vector3(14.0, 0.0, 0.0), Color(0.95, 0.5, 0.2))
-	add_bucket(Vector3(0.0, 0.0, -8.0), Color(0.85, 0.9, 0.3))
-	add_bucket(Vector3(0.0, 0.0, 8.0), Color(0.9, 0.35, 0.7))
+	add_bucket(Vector3(0.0, 0.0, -8.5), Color(0.85, 0.9, 0.3))
+	add_bucket(Vector3(0.0, 0.0, 8.5), Color(0.9, 0.35, 0.7))
 
-	# Foam shield pickup on the footbridge
-	var shield := ShieldPickup.new()
-	shield.position = Vector3(16.0, 1.8, 0.0)
-	geometry.add_child(shield)
-	shield_pickups.append(shield)
+	# Foam shield pickup grounded cleanly on the arched pond footbridge
+	add_shield_pickup(Vector3(16.0, 1.25, -10.0))

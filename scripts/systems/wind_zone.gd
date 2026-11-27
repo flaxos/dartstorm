@@ -12,6 +12,7 @@ extends Node3D
 @export var size: Vector3 = Vector3(20.0, 5.0, 12.0)
 @export var tint: Color = Color(0.75, 0.95, 1.0)
 @export var show_fan: bool = true
+@export var show_windsock: bool = true
 ## The faint tinted box that shows the zone's edges. Indoors (where the zone
 ## fills a whole room) it just tints everything, so it can be turned off.
 @export var show_volume: bool = true
@@ -145,22 +146,23 @@ func _build_visuals() -> void:
 		_arrows.append(arrow)
 
 	# Windsock on a pole at the upwind corner.
-	var pole_height := size.y + 1.0
-	var across := local_dir.cross(Vector3.UP)
-	if across.length_squared() < 0.01:
-		across = Vector3.RIGHT
-	across = across.normalized()
-	var pole_base := -local_dir * (travel - 0.8) + across * (_extent_along(across) - 0.8) + Vector3.DOWN * size.y * 0.5
-	ArenaKit.deco_cylinder(self, 0.07, pole_height, pole_base + Vector3.UP * pole_height * 0.5, Color(0.9, 0.9, 0.95))
-	var sock_pivot := Node3D.new()
-	sock_pivot.position = pole_base + Vector3.UP * (pole_height - 0.3)
-	sock_pivot.basis = facing
-	add_child(sock_pivot)
-	_sock = Node3D.new()
-	sock_pivot.add_child(_sock)
-	ArenaKit.deco_cylinder(_sock, 0.16, 0.7, Vector3(0.0, 0.0, -0.45), Color(1.0, 0.45, 0.1), Vector3(90.0, 0.0, 0.0), 0.34)
-	ArenaKit.deco_cylinder(_sock, 0.1, 0.7, Vector3(0.0, 0.0, -1.15), Color(1.0, 1.0, 1.0), Vector3(90.0, 0.0, 0.0), 0.16)
-	ArenaKit.deco_cylinder(_sock, 0.05, 0.6, Vector3(0.0, 0.0, -1.8), Color(1.0, 0.45, 0.1), Vector3(90.0, 0.0, 0.0), 0.1)
+	if show_windsock:
+		var pole_height := size.y + 1.0
+		var across := local_dir.cross(Vector3.UP)
+		if across.length_squared() < 0.01:
+			across = Vector3.RIGHT
+		across = across.normalized()
+		var pole_base := -local_dir * (travel - 0.8) + across * (_extent_along(across) - 0.8) + Vector3.DOWN * size.y * 0.5
+		ArenaKit.deco_cylinder(self, 0.07, pole_height, pole_base + Vector3.UP * pole_height * 0.5, Color(0.9, 0.9, 0.95))
+		var sock_pivot := Node3D.new()
+		sock_pivot.position = pole_base + Vector3.UP * (pole_height - 0.3)
+		sock_pivot.basis = facing
+		add_child(sock_pivot)
+		_sock = Node3D.new()
+		sock_pivot.add_child(_sock)
+		ArenaKit.deco_cylinder(_sock, 0.16, 0.7, Vector3(0.0, 0.0, -0.45), Color(1.0, 0.45, 0.1), Vector3(90.0, 0.0, 0.0), 0.34)
+		ArenaKit.deco_cylinder(_sock, 0.1, 0.7, Vector3(0.0, 0.0, -1.15), Color(1.0, 1.0, 1.0), Vector3(90.0, 0.0, 0.0), 0.16)
+		ArenaKit.deco_cylinder(_sock, 0.05, 0.6, Vector3(0.0, 0.0, -1.8), Color(1.0, 0.45, 0.1), Vector3(90.0, 0.0, 0.0), 0.1)
 
 	if show_fan:
 		_build_fan(facing, -local_dir * (travel - 0.35))

@@ -44,6 +44,8 @@ var _respawns: Dictionary = {}
 var _leading_team: int = -1
 var flags: Array[FlagPickup] = []
 var bomb_target: BombTarget = null
+var _round_resetting: bool = false
+var _overtime_announced: bool = false
 
 
 func setup(p_mode: GameMode, p_arena: Arena) -> void:
@@ -64,6 +66,15 @@ func register(actor: Actor) -> void:
 	actor.arsenal.fired.connect(_on_fired.bind(actor))
 	actor.landed_hit.connect(_on_landed_hit.bind(actor))
 	actor.ammo_collected.connect(_on_ammo_collected.bind(actor))
+
+
+func unregister(actor: Actor) -> void:
+	actors.erase(actor)
+	_respawns.erase(actor)
+	var entry := board.entry_for(actor)
+	if entry != null and mode is ZombieSiegeMode and actor.is_zombie:
+		board.entries.erase(entry)
+		board.notify_changed()
 
 
 ## Places everyone and starts the countdown.
@@ -140,13 +151,30 @@ func _physics_process(delta: float) -> void:
 			if mode is CaptureTheFlagMode:
 				_tick_ctf_captures()
 			if time_left <= 0.0:
-				_finish()
+				var overtime := false
+				if mode is PlantTheBombMode and bomb_target != null \
+						and (bomb_target.state == BombTarget.BombState.PLANTED or bomb_target.state == BombTarget.BombState.DEFUSING):
+					overtime = true
+					if not _overtime_announced:
+						_overtime_announced = true
+						announce(null, "OVERTIME! DEFUSE THE BOMB!", UiKit.ORANGE_HOT, &"announce")
+				elif mode is CaptureTheFlagMode:
+					for fl in flags:
+						if fl != null and fl.state == FlagPickup.State.CARRIED:
+							overtime = true
+							break
+					if overtime and not _overtime_announced:
+						_overtime_announced = true
+						announce(null, "OVERTIME! FLAG IN PLAY!", UiKit.ORANGE_HOT, &"announce")
+				if not overtime:
+					_finish()
 
 
 func _start_play() -> void:
 	_last_whole_second = -1
 	for actor in actors:
-		actor.controls_enabled = true
+		if is_instance_valid(actor):
+			actor.controls_enabled = true
 	countdown_tick.emit(0)
 	_set_state(State.PLAYING)
 
@@ -159,8 +187,9 @@ func _finish() -> void:
 	if state == State.ENDED:
 		return
 	for actor in actors:
-		actor.controls_enabled = false
-		actor.arsenal.set_trigger(false)
+		if is_instance_valid(actor):
+			actor.controls_enabled = false
+			actor.arsenal.set_trigger(false)
 	_set_state(State.ENDED)
 	match_ended.emit(mode.rank(board))
 
@@ -201,6 +230,8 @@ func _on_tagged_out(victim: Actor, attacker: Actor, weapon: WeaponData, ricochet
 		attacker_entry = board.entry_for(attacker)
 	if attacker_entry == null or attacker == victim:
 		board.notify_changed()
+		if mode is PlantTheBombMode and state == State.PLAYING:
+			_check_bomb_elimination()
 		return
 
 	var tier_before := attacker_entry.tier
@@ -216,20 +247,22 @@ func _on_tagged_out(victim: Actor, attacker: Actor, weapon: WeaponData, ricochet
 		else:
 			popup.emit(attacker, "+%d TAGGED ZOMBIE!" % points, UiKit.ORANGE_HOT)
 	else:
-		popup.emit(attacker, "+%d TAG!" % mode.points_per_tag, UiKit.ORANGE_HOT)
+		var base_pts := points - (mode.ricochet_bonus if ricochet else 0)
+		popup.emit(attacker, "+%d TAG!" % base_pts, UiKit.ORANGE_HOT)
 		if ricochet:
 			popup.emit(attacker, "+%d RICOCHET BONUS!" % mode.ricochet_bonus, UiKit.SKY)
 	tag_scored.emit(attacker_entry, victim_entry, weapon, ricochet)
-	if attacker.is_human:
+	if attacker.is_local_human():
 		var prog: Node = get_node_or_null("/root/Progression")
 		if prog != null:
+			var p_idx: int = (attacker as Player).player_index if attacker is Player else 0
 			if weapon != null:
-				prog.call("record_weapon_tag", weapon.id, ricochet)
+				prog.call("record_weapon_tag", weapon.id, ricochet, p_idx)
 			if ricochet:
 				prog.call("notify_event", &"ricochet_tag", 1)
 			if weapon != null and weapon.display_name.to_lower().contains("popper"):
 				prog.call("notify_event", &"popper_tag", 1)
-			if mode is ZombieMode and not attacker.is_zombie and victim != null and victim.is_zombie:
+			if (mode is ZombieMode or mode is ZombieSiegeMode) and not attacker.is_zombie and victim != null and victim.is_zombie:
 				prog.call("notify_event", &"zombie_tag", 1)
 	board.notify_changed()
 	_announce_tag(attacker_entry, victim_entry, ended_streak)
@@ -356,7 +389,7 @@ func _choose_spawn(actor: Actor) -> Transform3D:
 		var nearest_rival := 999.0
 		var taken := false
 		for other in actors:
-			if other == actor or not other.alive:
+			if not is_instance_valid(other) or other == actor or not other.alive:
 				continue
 			var distance := marker.global_position.distance_to(other.global_position)
 			# Never on top of anyone, team-mates included: overlapping bodies get
@@ -369,12 +402,23 @@ func _choose_spawn(actor: Actor) -> Transform3D:
 		else:
 			free += 1
 			var score := nearest_rival
+			if mode is FloorIsLavaMode:
+				var lm := mode as FloorIsLavaMode
+				if lm.lava_hazard != null and lm.lava_director != null \
+						and (lm.lava_director.phase == LavaDirector.Phase.WARNING \
+						or lm.lava_director.phase == LavaDirector.Phase.RISING \
+						or lm.lava_director.phase == LavaDirector.Phase.HIGH_TIDE):
+					if marker.global_position.y > lm.lava_hazard.current_lava_y + 0.8:
+						score += 50.0
+					else:
+						score -= 30.0
 			if buddy != null:
 				var dist_to_buddy := marker.global_position.distance_to(buddy.global_position)
 				score += maxf(0.0, 32.0 - dist_to_buddy) * 2.0
 			scored.append([score, marker])
 	scored.sort_custom(func(a: Array, b: Array) -> bool: return a[0] > b[0])
-	var pick: Marker3D = scored[randi() % clampi(free, 1, min(free, 2))][1]
+	var pool_size := clampi(free, 1, mini(maxi(free, 1), 2))
+	var pick: Marker3D = scored[randi() % pool_size][1]
 	return pick.global_transform
 
 
@@ -411,7 +455,7 @@ func _build_realistic_base_zones() -> void:
 
 func get_home_base_pos(actor: Actor) -> Vector3:
 	if arena == null or arena.team_bases.is_empty():
-		return Vector3.ZERO
+		return Vector3(-15.0, 0.0, 0.0) if actor.team_id % 2 == 0 else Vector3(15.0, 0.0, 0.0)
 	var team := actor.team_id
 	if team >= 0 and team < arena.team_bases.size():
 		return arena.team_bases[team]
@@ -456,6 +500,11 @@ func setup_ctf(ctf_mode: CaptureTheFlagMode, p_flags: Array[FlagPickup]) -> void
 			ctf_mode.record_capture(carrier.team_id)
 			announce(entry, "%s SCORED A CAPTURE FOR %s TEAM!" % [carrier.display_name.to_upper(), GameMode.team_name(carrier.team_id)], UiKit.LIME, &"win")
 			popup.emit(carrier, "+%d FLAG CAPTURE!" % CaptureTheFlagMode.CAPTURE_SCORE, UiKit.LIME)
+			if carrier.is_local_human():
+				var prog: Node = get_node_or_null("/root/Progression")
+				if prog != null:
+					prog.call("add_xp", 75)
+					prog.call("add_coins", 20)
 			if ctf_mode.is_won():
 				announce(entry, "%s TEAM WINS CTF!" % GameMode.team_name(carrier.team_id), UiKit.LIME, &"win")
 				_finish()
@@ -488,16 +537,36 @@ func setup_bomb(bomb_mode: PlantTheBombMode, p_bomb_target: BombTarget) -> void:
 		popup.emit(carrier, "ARMING BOMB AT SITE %s..." % site, UiKit.ORANGE_HOT)
 	)
 	bomb_target.bomb_planted.connect(func(site: String, _pos: Vector3) -> void:
+		if bomb_target.has_meta(&"last_planter"):
+			var planter := bomb_target.get_meta(&"last_planter") as Actor
+			if planter != null and is_instance_valid(planter):
+				var p_entry := board.entry_for(planter)
+				if p_entry != null:
+					p_entry.score += PlantTheBombMode.PLANT_SCORE
+					board.notify_changed()
+				popup.emit(planter, "+%d BOMB PLANTED!" % PlantTheBombMode.PLANT_SCORE, UiKit.ORANGE_HOT)
+				if planter.is_local_human():
+					var prog: Node = get_node_or_null("/root/Progression")
+					if prog != null:
+						prog.call("add_xp", 50)
+						prog.call("add_coins", 15)
 		announce(null, "THE BOMB HAS BEEN PLANTED AT SITE %s!" % site, UiKit.ORANGE_HOT, &"bomb_plant")
 	)
 	bomb_target.bomb_defuse_started.connect(func(defuser: Actor) -> void:
 		popup.emit(defuser, "DEFUSING BOMB...", UiKit.SKY)
 	)
 	bomb_target.bomb_defused.connect(func(defuser: Actor) -> void:
+		if _round_resetting or state == State.ENDED:
+			return
 		var entry := board.entry_for(defuser)
 		if entry != null:
 			entry.score += PlantTheBombMode.DEFUSE_SCORE
 			board.notify_changed()
+		if defuser != null and defuser.is_local_human():
+			var prog: Node = get_node_or_null("/root/Progression")
+			if prog != null:
+				prog.call("add_xp", 75)
+				prog.call("add_coins", 20)
 		announce(entry, "BOMB DEFUSED! GUARDIANS WIN THE ROUND!", UiKit.SKY, &"bomb_defuse")
 		popup.emit(defuser, "+%d BOMB DEFUSED!" % PlantTheBombMode.DEFUSE_SCORE, UiKit.SKY)
 		bomb_mode.record_round_win(0)
@@ -508,6 +577,15 @@ func setup_bomb(bomb_mode: PlantTheBombMode, p_bomb_target: BombTarget) -> void:
 			_reset_bomb_round()
 	)
 	bomb_target.bomb_detonated.connect(func(site: String, _pos: Vector3) -> void:
+		if _round_resetting or state == State.ENDED:
+			return
+		if bomb_target.has_meta(&"last_planter"):
+			var planter := bomb_target.get_meta(&"last_planter") as Actor
+			if planter != null and is_instance_valid(planter):
+				var p_entry := board.entry_for(planter)
+				if p_entry != null:
+					p_entry.score += PlantTheBombMode.DETONATION_SCORE
+					board.notify_changed()
 		announce(null, "TARGET AT SITE %s DESTROYED! INFILTRATORS WIN THE ROUND!" % site, UiKit.ORANGE_HOT, &"bomb_detonate")
 		bomb_mode.record_round_win(1)
 		if bomb_mode.is_won():
@@ -519,7 +597,7 @@ func setup_bomb(bomb_mode: PlantTheBombMode, p_bomb_target: BombTarget) -> void:
 
 
 func _check_bomb_elimination() -> void:
-	if not mode is PlantTheBombMode:
+	if not mode is PlantTheBombMode or _round_resetting or state != State.PLAYING:
 		return
 	var bomb_mode := mode as PlantTheBombMode
 	var living_defenders := 0
@@ -562,7 +640,17 @@ func _check_bomb_elimination() -> void:
 
 
 func _reset_bomb_round() -> void:
+	if _round_resetting:
+		return
+	_round_resetting = true
+	if bomb_target != null:
+		bomb_target.fuse_paused = true
+	for actor in actors:
+		if is_instance_valid(actor):
+			actor.controls_enabled = false
+			actor.arsenal.set_trigger(false)
 	await get_tree().create_timer(2.0).timeout
+	_round_resetting = false
 	if state == State.ENDED:
 		return
 	for actor in actors:
@@ -572,16 +660,17 @@ func _reset_bomb_round() -> void:
 			actor.tag_meter = 0.0
 			actor.meter_changed.emit(0.0, actor.tag_meter_max)
 			_spawn(actor)
+			actor.controls_enabled = (state == State.PLAYING)
 	if bomb_target != null:
 		var b_spawn := arena.bomb_spawns[0] if (arena != null and not arena.bomb_spawns.is_empty()) else arena.team_bases[1] if (arena != null and arena.team_bases.size() > 1) else Vector3(0.0, 0.0, 15.0)
 		var carrier: Actor = null
 		for act in actors:
-			if act.team_id == 1 and act.is_human:
+			if is_instance_valid(act) and act.team_id == 1 and act.is_human:
 				carrier = act
 				break
 		if carrier == null:
 			for act in actors:
-				if act.team_id == 1:
+				if is_instance_valid(act) and act.team_id == 1:
 					carrier = act
 					break
 		bomb_target.spawn_bomb(b_spawn, carrier)

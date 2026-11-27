@@ -1,4 +1,16 @@
-[gd_scene load_steps=51 format=3]
+[gd_scene load_steps=53 format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sclera"]
+resource_name = "sclera"
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.99, 0.99, 1, 1)
+roughness = 0.14
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_catchlight"]
+resource_name = "catchlight"
+shading_mode = 0
+albedo_color = Color(1, 1, 1, 1)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_i7oa1"]
 resource_name = "skin"
@@ -82,11 +94,11 @@ radial_segments = 24
 rings = 14
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_y24re"]
-resource_name = "skin"
+resource_name = "cheek"
 diffuse_mode = 3
 specular_mode = 1
 albedo_color = Color(1, 0.62, 0.62, 1)
-roughness = 0.5
+roughness = 0.72
 
 [sub_resource type="SphereMesh" id="SphereMesh_23jse"]
 radius = 0.035
@@ -129,11 +141,11 @@ radial_segments = 24
 rings = 14
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_m35uu"]
-resource_name = "skin"
+resource_name = "cheek"
 diffuse_mode = 3
 specular_mode = 1
 albedo_color = Color(1, 0.62, 0.62, 1)
-roughness = 0.5
+roughness = 0.72
 
 [sub_resource type="SphereMesh" id="SphereMesh_fnduh"]
 radius = 0.035
@@ -458,16 +470,16 @@ bones/7/rotation = Quaternion(0, 0, 0, 1)
 bones/7/scale = Vector3(1, 1, 1)
 bones/8/name = "LowerArm_L"
 bones/8/parent = 7
-bones/8/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.02, -0.26, -0.12)
+bones/8/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.01, -0.22, 0)
 bones/8/enabled = true
-bones/8/position = Vector3(-0.02, -0.26, -0.12)
+bones/8/position = Vector3(-0.01, -0.22, 0)
 bones/8/rotation = Quaternion(0, 0, 0, 1)
 bones/8/scale = Vector3(1, 1, 1)
 bones/9/name = "Hand_L"
 bones/9/parent = 8
-bones/9/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.06, -0.18, -0.14)
+bones/9/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.01, -0.21, 0)
 bones/9/enabled = true
-bones/9/position = Vector3(0.06, -0.18, -0.14)
+bones/9/position = Vector3(0.01, -0.21, 0)
 bones/9/rotation = Quaternion(0, 0, 0, 1)
 bones/9/scale = Vector3(1, 1, 1)
 bones/10/name = "Shoulder_R"
@@ -486,16 +498,16 @@ bones/11/rotation = Quaternion(0, 0, 0, 1)
 bones/11/scale = Vector3(1, 1, 1)
 bones/12/name = "LowerArm_R"
 bones/12/parent = 11
-bones/12/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.02, -0.26, -0.12)
+bones/12/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.01, -0.22, 0)
 bones/12/enabled = true
-bones/12/position = Vector3(0.02, -0.26, -0.12)
+bones/12/position = Vector3(0.01, -0.22, 0)
 bones/12/rotation = Quaternion(0, 0, 0, 1)
 bones/12/scale = Vector3(1, 1, 1)
 bones/13/name = "Hand_R"
 bones/13/parent = 12
-bones/13/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.06, -0.18, -0.14)
+bones/13/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.01, -0.21, 0)
 bones/13/enabled = true
-bones/13/position = Vector3(-0.06, -0.18, -0.14)
+bones/13/position = Vector3(-0.01, -0.21, 0)
 bones/13/rotation = Quaternion(0, 0, 0, 1)
 bones/13/scale = Vector3(1, 1, 1)
 bones/14/name = "UpperLeg_L"
@@ -542,12 +554,12 @@ bones/19/rotation = Quaternion(0, 0, 0, 1)
 bones/19/scale = Vector3(1, 1, 1)
 
 [node name="Socket_Hand_R" type="BoneAttachment3D" parent="GeneralSkeleton"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.26, 0.86, -0.26)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.87, 0)
 bone_name = "Hand_R"
 bone_idx = 13
 
 [node name="Socket_Hand_L" type="BoneAttachment3D" parent="GeneralSkeleton"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.26, 0.86, -0.26)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.87, 0)
 bone_name = "Hand_L"
 bone_idx = 9
 
@@ -587,7 +599,7 @@ mesh = SubResource("BoxMesh_sdglj")
 
 [node name="Mesh_Sclera_L" type="MeshInstance3D" parent="GeneralSkeleton/Attach_Head"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.095, 0.04, -0.215)
-material_override = SubResource("StandardMaterial3D_xpspg")
+material_override = SubResource("StandardMaterial3D_sclera")
 mesh = SubResource("SphereMesh_tvnnr")
 
 [node name="Mesh_Iris_L" type="MeshInstance3D" parent="GeneralSkeleton/Attach_Head"]
@@ -602,7 +614,7 @@ mesh = SubResource("SphereMesh_7pxre")
 
 [node name="Mesh_Catchlight_L" type="MeshInstance3D" parent="GeneralSkeleton/Attach_Head"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.079, 0.058, -0.285)
-material_override = SubResource("StandardMaterial3D_xpspg")
+material_override = SubResource("StandardMaterial3D_catchlight")
 mesh = SubResource("SphereMesh_i4b1q")
 
 [node name="Mesh_Cheek_L" type="MeshInstance3D" parent="GeneralSkeleton/Attach_Head"]
@@ -617,7 +629,7 @@ mesh = SubResource("BoxMesh_46p3k")
 
 [node name="Mesh_Sclera_R" type="MeshInstance3D" parent="GeneralSkeleton/Attach_Head"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.095, 0.04, -0.215)
-material_override = SubResource("StandardMaterial3D_xpspg")
+material_override = SubResource("StandardMaterial3D_sclera")
 mesh = SubResource("SphereMesh_qkv2m")
 
 [node name="Mesh_Iris_R" type="MeshInstance3D" parent="GeneralSkeleton/Attach_Head"]
@@ -632,7 +644,7 @@ mesh = SubResource("SphereMesh_i5eji")
 
 [node name="Mesh_Catchlight_R" type="MeshInstance3D" parent="GeneralSkeleton/Attach_Head"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.111, 0.058, -0.285)
-material_override = SubResource("StandardMaterial3D_xpspg")
+material_override = SubResource("StandardMaterial3D_catchlight")
 mesh = SubResource("SphereMesh_5vues")
 
 [node name="Mesh_Cheek_R" type="MeshInstance3D" parent="GeneralSkeleton/Attach_Head"]

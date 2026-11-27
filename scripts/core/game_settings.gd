@@ -183,22 +183,30 @@ func apply() -> void:
 func _apply_graphics_quality() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
+	var targets: Array[Viewport] = []
 	var vp := get_viewport()
-	if vp == null:
-		return
-	match graphics_quality:
-		GraphicsQuality.LOW:
-			vp.scaling_3d_scale = 0.85
-			vp.msaa_3d = Viewport.MSAA_DISABLED
-		GraphicsQuality.MEDIUM:
-			vp.scaling_3d_scale = 1.0
-			vp.msaa_3d = Viewport.MSAA_DISABLED
-		GraphicsQuality.HIGH:
-			vp.scaling_3d_scale = 1.0
-			vp.msaa_3d = Viewport.MSAA_2X
-		GraphicsQuality.ULTRA:
-			vp.scaling_3d_scale = 1.0
-			vp.msaa_3d = Viewport.MSAA_4X
+	if vp != null:
+		targets.append(vp)
+	if get_tree() != null and get_tree().current_scene is MatchScene:
+		var ms := get_tree().current_scene as MatchScene
+		if ms.viewport1 != null:
+			targets.append(ms.viewport1)
+		if ms.viewport2 != null:
+			targets.append(ms.viewport2)
+	for target_vp in targets:
+		match graphics_quality:
+			GraphicsQuality.LOW:
+				target_vp.scaling_3d_scale = 0.85
+				target_vp.msaa_3d = Viewport.MSAA_DISABLED
+			GraphicsQuality.MEDIUM:
+				target_vp.scaling_3d_scale = 1.0
+				target_vp.msaa_3d = Viewport.MSAA_DISABLED
+			GraphicsQuality.HIGH:
+				target_vp.scaling_3d_scale = 1.0
+				target_vp.msaa_3d = Viewport.MSAA_2X
+			GraphicsQuality.ULTRA:
+				target_vp.scaling_3d_scale = 1.0
+				target_vp.msaa_3d = Viewport.MSAA_4X
 
 
 ## The name shown in the tag feed and scoreboard.
@@ -267,11 +275,21 @@ func is_default() -> bool:
 	return true
 
 
-## Rumbles every connected controller, if rumble is on and a pad is in use.
-func vibrate(weak: float, strong: float, seconds: float) -> void:
-	if not vibration or not using_controller:
+## Rumbles the active player's controller (or all connected controllers if solo),
+## if rumble is on and a pad is in use.
+func vibrate(weak: float, strong: float, seconds: float, player_idx: int = -1) -> void:
+	if not vibration:
 		return
-	for device in Input.get_connected_joypads():
+	var pads := Input.get_connected_joypads()
+	if pads.is_empty():
+		return
+	if split_screen and player_idx >= 0:
+		if player_idx < pads.size():
+			Input.start_joy_vibration(pads[player_idx], clampf(weak, 0.0, 1.0), clampf(strong, 0.0, 1.0), seconds)
+		return
+	if not using_controller:
+		return
+	for device in pads:
 		Input.start_joy_vibration(device, clampf(weak, 0.0, 1.0), clampf(strong, 0.0, 1.0), seconds)
 
 

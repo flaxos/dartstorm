@@ -59,7 +59,7 @@ func _build_visuals() -> void:
 
 func _setup_area() -> void:
 	_area = Area3D.new()
-	_area.collision_layer = Layers.TARGETS
+	_area.collision_layer = 0
 	_area.collision_mask = Layers.ACTORS
 	var col := CollisionShape3D.new()
 	var shape := CylinderShape3D.new()
@@ -78,6 +78,7 @@ func _setup_wind_zone() -> void:
 	_wind_zone.strength = 18.0
 	_wind_zone.size = Vector3(RADIUS * 2.0, HEIGHT, RADIUS * 2.0)
 	_wind_zone.show_fan = false
+	_wind_zone.show_windsock = false
 	_wind_zone.show_volume = false
 	add_child(_wind_zone)
 
@@ -130,6 +131,8 @@ func _on_body_entered(body: Node3D) -> void:
 
 
 func _launch_actor(actor: Actor) -> void:
+	if actor == null or not actor.alive or actor.is_tagged_out:
+		return
 	if _actor_cooldowns.has(actor):
 		return
 	_actor_cooldowns[actor] = COOLDOWN_TIME

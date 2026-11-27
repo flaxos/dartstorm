@@ -31,6 +31,13 @@ func is_ctf() -> bool:
 	return true
 
 
+func winning_team(board: Scoreboard) -> int:
+	var by_caps := winning_team_by_caps()
+	if by_caps >= 0:
+		return by_caps
+	return super.winning_team(board)
+
+
 func reset_captures() -> void:
 	team_captures[0] = 0
 	team_captures[1] = 0

@@ -23,6 +23,7 @@ var state: State = State.AT_BASE
 var carrier: Actor = null
 var base_position: Vector3 = Vector3.ZERO
 var drop_timer: float = 0.0
+var active: bool = true
 
 var _time: float = 0.0
 var _area: Area3D
@@ -113,6 +114,12 @@ func _ready() -> void:
 	reset_to_base()
 
 
+func get_flag_position() -> Vector3:
+	if _flag_model != null:
+		return _flag_model.global_position
+	return global_position
+
+
 func reset_to_base() -> void:
 	if carrier != null and is_instance_valid(carrier):
 		if carrier.tagged_out.is_connected(_on_carrier_tagged_out):
@@ -121,17 +128,20 @@ func reset_to_base() -> void:
 	state = State.AT_BASE
 	drop_timer = 0.0
 	global_position = base_position
+	_pedestal.position = Vector3.ZERO
+	_pedestal.visible = true
 	_flag_model.position = Vector3.ZERO
 	_flag_model.rotation = Vector3.ZERO
 	_flag_model.visible = true
-	_pedestal.visible = true
+	if _area != null:
+		_area.position = Vector3.ZERO
 	_update_label()
 
 
 func drop() -> void:
 	if state != State.CARRIED:
 		return
-	var drop_pos := global_position
+	var drop_pos := get_flag_position()
 	if carrier != null and is_instance_valid(carrier):
 		drop_pos = carrier.global_position
 		if carrier.tagged_out.is_connected(_on_carrier_tagged_out):
@@ -139,12 +149,28 @@ func drop() -> void:
 	carrier = null
 	state = State.DROPPED
 	drop_timer = AUTO_RETURN_SECONDS
-	global_position = drop_pos
-	_flag_model.position = Vector3.ZERO
+	drop_pos = _snap_to_ground(drop_pos)
+	_flag_model.global_position = drop_pos
 	_flag_model.rotation = Vector3(0.0, 0.0, deg_to_rad(25.0))  # Leaning on floor
+	if _area != null:
+		_area.global_position = drop_pos
 	_update_label()
-	Sfx.play_at(&"powerup", global_position, 0.8, -2.0)
+	Sfx.play_at(&"powerup", drop_pos, 0.8, -2.0)
 	dropped.emit(self, drop_pos)
+
+
+func _snap_to_ground(pos: Vector3) -> Vector3:
+	if not is_inside_tree() or get_world_3d() == null:
+		return pos
+	var q := PhysicsRayQueryParameters3D.new()
+	q.from = pos + Vector3.UP * 0.8
+	q.to = pos + Vector3.DOWN * 30.0
+	q.collision_mask = Layers.WORLD
+	q.collide_with_areas = false
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	if not hit.is_empty():
+		return hit["position"] as Vector3
+	return base_position
 
 
 func return_to_base() -> void:
@@ -175,14 +201,15 @@ func _physics_process(delta: float) -> void:
 		State.AT_BASE:
 			_flag_model.position = Vector3(0.0, sin(_time * 2.0) * 0.04, 0.0)
 			_flag_model.rotation.y = _time * 0.5
+			_check_area_overlaps()
 		State.CARRIED:
 			if carrier == null or not is_instance_valid(carrier) or not carrier.alive or carrier.is_tagged_out:
 				drop()
 				return
-			# Stick closely behind carrier's torso
+			# Stick closely behind carrier's torso while pedestal stays anchored at home base!
 			var fwd := -carrier.global_transform.basis.z
 			var up := carrier.global_transform.basis.y
-			global_position = carrier.global_position - fwd * 0.35 + up * 0.6
+			_flag_model.global_position = carrier.global_position - fwd * 0.35 + up * 0.6
 			_flag_model.rotation = carrier.rotation
 			_flag_model.rotation.x = deg_to_rad(15.0)  # Tilted proudly back
 			_area.global_position = carrier.global_position
@@ -191,9 +218,26 @@ func _physics_process(delta: float) -> void:
 			_update_label()
 			if drop_timer <= 0.0:
 				return_to_base()
+			else:
+				_check_area_overlaps()
+
+
+func _check_area_overlaps() -> void:
+	if not active or _area == null:
+		return
+	for body in _area.get_overlapping_bodies():
+		_try_interact_body(body)
+		if state == State.CARRIED:
+			return
 
 
 func _on_body_entered(body: Node3D) -> void:
+	_try_interact_body(body)
+
+
+func _try_interact_body(body: Node3D) -> void:
+	if not active:
+		return
 	var actor := body as Actor
 	if actor == null or not actor.alive or actor.is_tagged_out:
 		return
@@ -233,4 +277,4 @@ func _update_label() -> void:
 		State.CARRIED:
 			_label.text = "TAKEN!"
 		State.DROPPED:
-			_label.text = "DROPPED (%ds)" % maxi(int(drop_timer), 0)
+			_label.text = "DROPPED (%ds)" % maxi(int(ceilf(drop_timer)), 0)

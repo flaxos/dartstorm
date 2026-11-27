@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="GunGameMode" load_steps=13 format=3]
+[gd_resource type="Resource" script_class="GunGameMode" load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/gun_game_mode.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2"]
@@ -12,13 +12,14 @@
 [ext_resource type="Resource" path="res://resources/weapons/thunder_cannon.tres" id="10"]
 [ext_resource type="Resource" path="res://resources/weapons/longshot.tres" id="11"]
 [ext_resource type="Resource" path="res://resources/weapons/flaxs_chainstorm.tres" id="12"]
+[ext_resource type="Resource" path="res://resources/weapons/foam_bat.tres" id="13"]
 
 [resource]
 script = ExtResource("1")
 id = &"gun_game"
 display_name = "Gun Game"
 short_name = "GUN GAME"
-description = "Every tag swaps your blaster for the next one on the ladder. Score a tag with the Chainstorm to win!"
+description = "Every tag swaps your blaster up the ladder. Land the final bonk with the Foam Bat to win!"
 duration_seconds = 300.0
 countdown_seconds = 3
 respawn_delay = 2.0
@@ -26,5 +27,5 @@ points_per_tag = 100
 ricochet_bonus = 50
 points_per_target = 10
 infinite_reserve = true
-ladder = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12")])
+ladder = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13")])
 tags_per_tier = 1

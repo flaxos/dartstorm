@@ -67,6 +67,12 @@ func melt(duration: float = 3.5) -> void:
 	melted.emit(self)
 
 
+func should_consume_dart(dart: DartProjectile) -> bool:
+	if dart == null or dart.data == null:
+		return false
+	return dart.data.element == DartData.Element.FIRE or (dart.data.element == DartData.Element.ICE and is_melted())
+
+
 func on_dart_hit(dart: DartProjectile, _hit_point: Vector3) -> void:
 	if dart == null or dart.data == null:
 		return
@@ -110,6 +116,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _boost_actor(actor: Actor) -> void:
+	if actor == null or not actor.alive or actor.is_tagged_out:
+		return
 	if is_melted():
 		if actor.elemental != null:
 			actor.elemental.wet_left = maxf(actor.elemental.wet_left, 3.0)
@@ -123,14 +131,18 @@ func _boost_actor(actor: Actor) -> void:
 	if actor.elemental != null:
 		actor.elemental.start_slide(1.8)
 
-	var dir := (global_transform.basis * slide_direction.normalized()).normalized()
+	var dir := global_transform.basis * slide_direction
+	dir.y = 0.0
+	if dir.length_squared() < 0.0001:
+		dir = Vector3.FORWARD
+	dir = dir.normalized()
 	var horizontal_vel := Vector3(actor.velocity.x, 0.0, actor.velocity.z)
 	var current_proj := horizontal_vel.dot(dir)
 	if current_proj < boost_speed:
 		actor.velocity += dir * (boost_speed - current_proj)
 
 	Sfx.play_at(&"ice_slide", actor.global_position, 1.05, -3.0, 0.08)
-	if actor.is_human:
+	if actor.is_local_human():
 		var prog: Node = get_node_or_null("/root/Progression")
 		if prog != null:
 			prog.call("notify_event", &"ice_slide", 1)

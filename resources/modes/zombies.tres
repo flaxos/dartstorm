@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="ZombieMode" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="ZombieMode" load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/zombie_mode.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2"]
@@ -6,18 +6,19 @@
 [ext_resource type="Resource" path="res://resources/weapons/dart_sprayer.tres" id="4"]
 [ext_resource type="Resource" path="res://resources/weapons/hydro_soaker.tres" id="5"]
 [ext_resource type="Resource" path="res://resources/weapons/frost_ranger.tres" id="6"]
+[ext_resource type="Resource" path="res://resources/weapons/foam_bat.tres" id="7"]
 
 [resource]
 script = ExtResource("1")
 id = &"zombies"
 display_name = "Zombies"
 short_name = "ZOMBIES"
-description = "Survive the green foam zombie outbreak! Darts knock them back, but one touch turns you."
+description = "Survive the green foam zombie outbreak! Knock them back with blasters or your Foam Bat — one touch turns you."
 duration_seconds = 180.0
 countdown_seconds = 3
 respawn_delay = 2.0
 points_per_tag = 100
 ricochet_bonus = 50
 points_per_target = 10
-loadout = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")])
+loadout = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")])
 infinite_reserve = false

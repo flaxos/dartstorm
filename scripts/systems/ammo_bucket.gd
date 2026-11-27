@@ -24,6 +24,8 @@ var _pile: Node3D
 var _label: Label3D
 var _ring: MeshInstance3D
 var _time: float = 0.0
+var _last_reported_stock: int = -1
+var _last_regen_sec: int = -1
 
 
 func _ready() -> void:
@@ -42,22 +44,28 @@ func _physics_process(delta: float) -> void:
 	_label.position.y = 1.55 + sin(_time * 2.5) * 0.06
 	if stock <= 0:
 		if not can_regenerate:
-			_refresh()
+			if _last_reported_stock != 0 or _label.text != "DEPLETED":
+				_refresh()
 			return
 		_regen_left -= delta
 		if _regen_left <= 0.0:
 			stock = capacity
 			Sfx.play_at(&"ammo", global_position, 0.7)
-		_refresh()
+			_refresh()
+		else:
+			var sec := int(ceilf(maxf(_regen_left, 0.0)))
+			if sec != _last_regen_sec or _last_reported_stock != 0:
+				_refresh()
 		return
 
 	_carry = minf(_carry + transfer_per_second * delta, 30.0)
 	var budget := int(_carry)
 	if budget <= 0:
 		return
+	var changed := false
 	for body in _area.get_overlapping_bodies():
 		var actor := body as Actor
-		if actor == null or not actor.alive or actor.is_tagged_out:
+		if actor == null or not actor.alive or actor.is_tagged_out or actor.is_zombie:
 			continue
 		var taken := actor.collect_ammo(mini(budget, stock))
 		if taken <= 0:
@@ -65,12 +73,14 @@ func _physics_process(delta: float) -> void:
 		stock -= taken
 		budget -= taken
 		_carry -= float(taken)
+		changed = true
 		if stock <= 0:
 			_regen_left = regen_delay
 			break
 		if budget <= 0:
 			break
-	_refresh()
+	if changed:
+		_refresh()
 
 
 func _refresh() -> void:
@@ -80,11 +90,20 @@ func _refresh() -> void:
 	if stock > 0:
 		_label.text = "AMMO\n%d" % stock
 		_label.modulate = UiKit.CREAM
+		_last_regen_sec = -1
+	elif not can_regenerate:
+		_label.text = "DEPLETED"
+		_label.modulate = UiKit.GREY
+		_last_regen_sec = -1
 	else:
-		_label.text = "EMPTY\n%d" % int(ceilf(maxf(_regen_left, 0.0)))
+		var sec := int(ceilf(maxf(_regen_left, 0.0)))
+		_last_regen_sec = sec
+		_label.text = "EMPTY\n%d" % sec
 		_label.modulate = UiKit.GREY
 	_ring.visible = stock > 0
-	stock_changed.emit(stock, capacity)
+	if stock != _last_reported_stock:
+		_last_reported_stock = stock
+		stock_changed.emit(stock, capacity)
 
 
 func _build() -> void:

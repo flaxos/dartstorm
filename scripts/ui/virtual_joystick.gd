@@ -15,6 +15,7 @@ var output: Vector2 = Vector2.ZERO
 var _touch_id: int = -1
 var _knob_offset: Vector2 = Vector2.ZERO
 var _center: Vector2 = Vector2.ZERO
+var _auto_sprinting: bool = false
 
 
 func _ready() -> void:
@@ -44,6 +45,8 @@ func _draw() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if not is_visible_in_tree():
+		return
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
 		if touch.pressed and _touch_id == -1:
@@ -58,6 +61,8 @@ func _gui_input(event: InputEvent) -> void:
 		if drag.index == _touch_id:
 			_update_from_pos(drag.position)
 			accept_event()
+	elif _touch_id >= 0 and (event is InputEventMouseButton or event is InputEventMouseMotion):
+		accept_event()
 	elif event is InputEventMouseButton and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT:
@@ -76,6 +81,10 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if not is_visible_in_tree():
+		if _touch_id != -1:
+			_release()
+		return
 	if _touch_id == -1:
 		return
 	if event is InputEventScreenDrag:
@@ -89,6 +98,8 @@ func _input(event: InputEvent) -> void:
 		if touch.index == _touch_id and (not touch.pressed or touch.canceled):
 			_release()
 			get_viewport().set_input_as_handled()
+	elif _touch_id >= 0 and (event is InputEventMouseButton or event is InputEventMouseMotion):
+		get_viewport().set_input_as_handled()
 	elif _touch_id == -2:
 		if event is InputEventMouseMotion:
 			var mm := event as InputEventMouseMotion
@@ -148,6 +159,13 @@ func _apply_input_actions() -> void:
 	_set_action(right_act, maxf(x, 0.0))
 	_set_action(fwd_act, maxf(-y, 0.0))
 	_set_action(back_act, maxf(y, 0.0))
+	var wants_auto_sprint := y < -0.92 and absf(x) < 0.55
+	if wants_auto_sprint:
+		_auto_sprinting = true
+		_set_action(_act(&"sprint"), 1.0)
+	elif _auto_sprinting:
+		_auto_sprinting = false
+		_set_action(_act(&"sprint"), 0.0)
 
 
 func _set_action(action: StringName, strength: float) -> void:

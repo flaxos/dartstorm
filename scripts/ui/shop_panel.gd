@@ -80,6 +80,7 @@ func _build() -> void:
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(640, 320)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
 	_box.add_child(scroll)
 
 	_grid_container = GridContainer.new()
@@ -94,13 +95,13 @@ func _build() -> void:
 	btm_row.add_theme_constant_override("separation", 16)
 	_box.add_child(btm_row)
 
-	var boss_btn := UiKit.button("👑 BOSS MODE: UNLOCK ALL", 22, Vector2(320, 52))
+	var boss_btn := UiKit.button("BOSS MODE: UNLOCK ALL", 22, Vector2(320, 52))
 	boss_btn.name = "ShopBossMode"
 	boss_btn.pressed.connect(func() -> void:
 		var prog: Node = get_node_or_null("/root/Progression")
 		if prog != null and prog.has_method("activate_boss_mode"):
 			prog.call("activate_boss_mode")
-			GameSettings.notify("👑 BOSS MODE! 99,999 Coins & All Items Unlocked!")
+			GameSettings.notify("BOSS MODE! 99,999 Coins & All Items Unlocked!")
 			_refresh_header()
 			_refresh_catalog())
 	btm_row.add_child(boss_btn)
@@ -119,7 +120,7 @@ func _refresh_header() -> void:
 	if prog != null:
 		coin_val = int(prog.get("coins"))
 	if _coin_label != null:
-		_coin_label.text = "🪙 %d COINS" % coin_val
+		_coin_label.text = "%d COINS" % coin_val
 
 
 func _switch_tab(tab: Tab) -> void:
@@ -152,8 +153,13 @@ func _refresh_catalog() -> void:
 			_build_skins_catalog()
 
 
+func _active_profile() -> int:
+	return Progression.active_profile_index if is_instance_valid(Progression) else 0
+
+
 func _build_hats_catalog() -> void:
 	var prog: Node = get_node_or_null("/root/Progression")
+	var cur_hat: StringName = GameSettings.player2_hat if _active_profile() == 1 else GameSettings.player_hat
 	for hat in Cosmetics.HATS:
 		var id: StringName = hat["id"]
 		var hat_name: String = hat["name"]
@@ -166,7 +172,7 @@ func _build_hats_catalog() -> void:
 		else:
 			is_unlocked = Cosmetics.is_default_hat(id)
 
-		var is_equipped: bool = GameSettings.player_hat == id
+		var is_equipped: bool = cur_hat == id
 		_grid_container.add_child(_create_hat_card(id, hat_name, tier, cost, is_unlocked, is_equipped))
 
 
@@ -197,17 +203,23 @@ func _create_hat_card(id: StringName, hat_name: String, tier: String, cost: int,
 	elif unlocked:
 		btn = UiKit.small_button("EQUIP", Vector2(160, 36))
 		btn.pressed.connect(func() -> void:
-			GameSettings.player_hat = id
+			if _active_profile() == 1:
+				GameSettings.player2_hat = id
+			else:
+				GameSettings.player_hat = id
 			GameSettings.save_settings()
 			item_equipped.emit(&"hat", id)
 			_refresh_catalog())
 	elif can_afford:
-		btn = UiKit.small_button("BUY 🪙 %d" % cost, Vector2(160, 36))
+		btn = UiKit.small_button("BUY %d" % cost, Vector2(160, 36))
 		btn.add_theme_stylebox_override("normal", UiKit.panel_style(UiKit.ORANGE, 1.0, 10, 0, UiKit.ORANGE, 6))
 		btn.pressed.connect(func() -> void:
 			if prog != null and bool(prog.call("spend_coins", cost)):
 				prog.call("unlock_item", &"hat", id)
-				GameSettings.player_hat = id
+				if _active_profile() == 1:
+					GameSettings.player2_hat = id
+				else:
+					GameSettings.player_hat = id
 				GameSettings.save_settings()
 				if has_node("/root/Sfx"):
 					(get_node("/root/Sfx") as Node).call("play", &"pickup")
@@ -215,7 +227,7 @@ func _create_hat_card(id: StringName, hat_name: String, tier: String, cost: int,
 				_refresh_header()
 				_refresh_catalog())
 	else:
-		btn = UiKit.small_button("NEED 🪙 %d" % cost, Vector2(160, 36))
+		btn = UiKit.small_button("NEED %d" % cost, Vector2(160, 36))
 		btn.disabled = true
 		btn.add_theme_stylebox_override("disabled", UiKit.panel_style(UiKit.GREY.darkened(0.4), 0.8, 10, 0, UiKit.GREY, 6))
 
@@ -225,6 +237,7 @@ func _create_hat_card(id: StringName, hat_name: String, tier: String, cost: int,
 
 func _build_colors_catalog() -> void:
 	var prog: Node = get_node_or_null("/root/Progression")
+	var cur_col: int = GameSettings.player2_color if _active_profile() == 1 else GameSettings.player_color
 	for i in Cosmetics.COLORS.size():
 		var col_info: Dictionary = Cosmetics.COLORS[i]
 		var col_name: String = col_info["name"]
@@ -238,7 +251,7 @@ func _build_colors_catalog() -> void:
 		else:
 			is_unlocked = Cosmetics.is_default_color(i)
 
-		var is_equipped: bool = GameSettings.player_color == i
+		var is_equipped: bool = cur_col == i
 		_grid_container.add_child(_create_color_card(i, col_name, tint, tier, cost, is_unlocked, is_equipped))
 
 
@@ -276,17 +289,23 @@ func _create_color_card(index: int, col_name: String, tint: Color, tier: String,
 	elif unlocked:
 		btn = UiKit.small_button("EQUIP", Vector2(160, 36))
 		btn.pressed.connect(func() -> void:
-			GameSettings.player_color = index
+			if _active_profile() == 1:
+				GameSettings.player2_color = index
+			else:
+				GameSettings.player_color = index
 			GameSettings.save_settings()
 			item_equipped.emit(&"color", index)
 			_refresh_catalog())
 	elif can_afford:
-		btn = UiKit.small_button("BUY 🪙 %d" % cost, Vector2(160, 36))
+		btn = UiKit.small_button("BUY %d" % cost, Vector2(160, 36))
 		btn.add_theme_stylebox_override("normal", UiKit.panel_style(UiKit.ORANGE, 1.0, 10, 0, UiKit.ORANGE, 6))
 		btn.pressed.connect(func() -> void:
 			if prog != null and bool(prog.call("spend_coins", cost)):
 				prog.call("unlock_item", &"color", index)
-				GameSettings.player_color = index
+				if _active_profile() == 1:
+					GameSettings.player2_color = index
+				else:
+					GameSettings.player_color = index
 				GameSettings.save_settings()
 				if has_node("/root/Sfx"):
 					(get_node("/root/Sfx") as Node).call("play", &"pickup")
@@ -294,7 +313,7 @@ func _create_color_card(index: int, col_name: String, tint: Color, tier: String,
 				_refresh_header()
 				_refresh_catalog())
 	else:
-		btn = UiKit.small_button("NEED 🪙 %d" % cost, Vector2(160, 36))
+		btn = UiKit.small_button("NEED %d" % cost, Vector2(160, 36))
 		btn.disabled = true
 		btn.add_theme_stylebox_override("disabled", UiKit.panel_style(UiKit.GREY.darkened(0.4), 0.8, 10, 0, UiKit.GREY, 6))
 
@@ -304,6 +323,7 @@ func _create_color_card(index: int, col_name: String, tint: Color, tier: String,
 
 func _build_skins_catalog() -> void:
 	var prog: Node = get_node_or_null("/root/Progression")
+	var cur_skin: StringName = GameSettings.player2_skin if _active_profile() == 1 else GameSettings.player_skin
 	for skin in Cosmetics.SKINS:
 		var id: StringName = skin["id"]
 		var skin_name: String = skin["name"]
@@ -317,7 +337,7 @@ func _build_skins_catalog() -> void:
 		else:
 			is_unlocked = Cosmetics.is_default_skin(id)
 
-		var is_equipped: bool = GameSettings.player_skin == id
+		var is_equipped: bool = cur_skin == id
 		_grid_container.add_child(_create_skin_card(id, skin_name, tier, cost, finish, is_unlocked, is_equipped))
 
 
@@ -329,14 +349,14 @@ func _create_skin_card(id: StringName, skin_name: String, tier: String, cost: in
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	card.add_child(vbox)
 
-	var finish_names := ["MATTE", "GLOSS", "METALLIC", "HOLOGRAPHIC"]
+	var finish_names := ["MATTE", "GLOSS", "METALLIC", "HOLOGRAPHIC", "EMISSIVE"]
 	var finish_name: String = finish_names[clampi(finish, 0, finish_names.size() - 1)]
 
 	var name_lbl := UiKit.label(skin_name.to_upper(), 18, UiKit.CREAM, 5)
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(name_lbl)
 
-	var info_lbl := UiKit.label("%s • %s" % [tier, finish_name], 14, UiKit.SKY, 3)
+	var info_lbl := UiKit.label("%s | %s" % [tier, finish_name], 14, UiKit.SKY, 3)
 	info_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(info_lbl)
 
@@ -351,17 +371,23 @@ func _create_skin_card(id: StringName, skin_name: String, tier: String, cost: in
 	elif unlocked:
 		btn = UiKit.small_button("EQUIP", Vector2(160, 36))
 		btn.pressed.connect(func() -> void:
-			GameSettings.player_skin = id
+			if _active_profile() == 1:
+				GameSettings.player2_skin = id
+			else:
+				GameSettings.player_skin = id
 			GameSettings.save_settings()
 			item_equipped.emit(&"skin", id)
 			_refresh_catalog())
 	elif can_afford:
-		btn = UiKit.small_button("BUY 🪙 %d" % cost, Vector2(160, 36))
+		btn = UiKit.small_button("BUY %d" % cost, Vector2(160, 36))
 		btn.add_theme_stylebox_override("normal", UiKit.panel_style(UiKit.ORANGE, 1.0, 10, 0, UiKit.ORANGE, 6))
 		btn.pressed.connect(func() -> void:
 			if prog != null and bool(prog.call("spend_coins", cost)):
 				prog.call("unlock_item", &"skin", id)
-				GameSettings.player_skin = id
+				if _active_profile() == 1:
+					GameSettings.player2_skin = id
+				else:
+					GameSettings.player_skin = id
 				GameSettings.save_settings()
 				if has_node("/root/Sfx"):
 					(get_node("/root/Sfx") as Node).call("play", &"pickup")
@@ -369,7 +395,7 @@ func _create_skin_card(id: StringName, skin_name: String, tier: String, cost: in
 				_refresh_header()
 				_refresh_catalog())
 	else:
-		btn = UiKit.small_button("NEED 🪙 %d" % cost, Vector2(160, 36))
+		btn = UiKit.small_button("NEED %d" % cost, Vector2(160, 36))
 		btn.disabled = true
 		btn.add_theme_stylebox_override("disabled", UiKit.panel_style(UiKit.GREY.darkened(0.4), 0.8, 10, 0, UiKit.GREY, 6))
 

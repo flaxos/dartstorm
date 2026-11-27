@@ -127,7 +127,7 @@ func launch(origin: Vector3, impulse_dir: Vector3, impulse_strength: float = 16.
 	angular_velocity = Vector3(randf_range(-10.0, 10.0), randf_range(-10.0, 10.0), randf_range(-10.0, 10.0))
 
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if _exploded:
 		return
 
@@ -150,6 +150,10 @@ func _process(delta: float) -> void:
 		explode()
 
 
+func on_dart_hit(_dart: DartProjectile, _hit_point: Vector3) -> void:
+	explode()
+
+
 func _on_body_entered(_body: Node) -> void:
 	if linear_velocity.length_squared() > 1.5:
 		Sfx.play_at(&"grenade_bounce", global_position, randf_range(0.9, 1.15), -4.0, 0.1)
@@ -161,12 +165,14 @@ func explode() -> void:
 	_exploded = true
 
 	var blast_pos := global_position
+	var valid_thrower: Actor = thrower if is_instance_valid(thrower) else null
 	Sfx.play_at(&"grenade_blast", blast_pos, 1.0, 2.0)
 
-	# Confetti celebration cloud
+	# Confetti celebration cloud + radial blast shockwave
 	var parent_node := get_parent()
 	if parent_node != null:
 		FoamBurst.spawn(parent_node, blast_pos, Color(1.0, 0.52, 0.12), 24, 6.0, Vector3.UP, true)
+		CombatFx.spawn_blast_wave(parent_node, blast_pos, Color(1.0, 0.55, 0.15), BLAST_RADIUS)
 
 	# 1. Radial Dart Barrage (16 darts fired in 3D sphere)
 	if dart_pool != null and is_instance_valid(dart_pool):
@@ -175,29 +181,58 @@ func explode() -> void:
 			var theta := PI * (1.0 + sqrt(5.0)) * float(i)
 			var dir := Vector3(sin(phi) * cos(theta), absf(cos(phi)) * 0.7 + 0.15, sin(phi) * sin(theta)).normalized()
 			var dart_origin := blast_pos + Vector3.UP * 0.1 + dir * 0.25
-			dart_pool.fire(_dart_data, dart_origin, dir, thrower, null, Color(1.0, 0.6, 0.15), [get_rid()])
+			var fired_dart := dart_pool.fire(_dart_data, dart_origin, dir, valid_thrower, null, Color(1.0, 0.6, 0.15), [get_rid()])
+			if fired_dart != null:
+				fired_dart.team_id = team_id
 
-	# 2. Direct Area Blast & Physics Knockback
+	# 2. Direct Area Blast & Physics Knockback (respects solid walls & team affiliation)
+	var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state if get_world_3d() != null else null
+	var los_query := PhysicsRayQueryParameters3D.new()
+	los_query.collision_mask = Layers.WORLD
+	los_query.collide_with_areas = false
 	var actors := get_tree().get_nodes_in_group(&"actors")
 	for node in actors:
 		var actor := node as Actor
-		if actor == null or not is_instance_valid(actor) or not actor.alive:
+		if actor == null or not is_instance_valid(actor) or not actor.alive or actor.is_tagged_out:
 			continue
 		var dist := blast_pos.distance_to(actor.global_position)
-		if dist <= BLAST_RADIUS:
-			var falloff := 1.0 - (dist / BLAST_RADIUS)
-			var tag_damage := lerpf(MIN_BLAST_DAMAGE, MAX_BLAST_DAMAGE, falloff)
-			actor.apply_blast_tag(tag_damage, thrower)
+		if dist > BLAST_RADIUS:
+			continue
+		# Skip friendly teammates (allow unit test when thrower == null, or self-blast).
+		if valid_thrower != null and actor != valid_thrower and not actor.accepts_dart_from(team_id):
+			continue
+		if actor.is_protected():
+			continue
+		# Line-of-sight wall check so grenades do not blast through solid walls.
+		if space_state != null and dist > 0.6:
+			los_query.from = blast_pos + Vector3.UP * 0.25
+			los_query.to = actor.global_position + Vector3.UP * 1.0
+			if not space_state.intersect_ray(los_query).is_empty():
+				continue
+		var falloff := 1.0 - (dist / BLAST_RADIUS)
+		var tag_damage := lerpf(MIN_BLAST_DAMAGE, MAX_BLAST_DAMAGE, falloff)
+		actor.apply_blast_tag(tag_damage, valid_thrower, team_id)
 
-			var push_dir := (actor.global_position - blast_pos).normalized()
-			push_dir.y = maxf(push_dir.y, 0.4)
-			actor.velocity += push_dir * (IMPULSE_FORCE * falloff)
+		var push_dir := (actor.global_position - blast_pos)
+		if push_dir.length_squared() < 0.001:
+			push_dir = Vector3.UP
+		else:
+			push_dir = push_dir.normalized()
+		push_dir.y = maxf(push_dir.y, 0.4)
+		push_dir = push_dir.normalized()
+		actor.velocity += push_dir * (IMPULSE_FORCE * falloff)
+		var horiz := Vector3(actor.velocity.x, 0.0, actor.velocity.z)
+		if horiz.length_squared() > Actor.MAX_HORIZONTAL_SPEED * Actor.MAX_HORIZONTAL_SPEED:
+			horiz = horiz.normalized() * Actor.MAX_HORIZONTAL_SPEED
+			actor.velocity.x = horiz.x
+			actor.velocity.z = horiz.z
 
-	# 3. Barricade and Core damage in Zombie Siege
-	var barricades := get_tree().get_nodes_in_group(&"base_barricades")
-	for node in barricades:
-		var b := node as BaseBarricade
-		if b != null and not b.is_broken and blast_pos.distance_to(b.global_position) <= BLAST_RADIUS:
-			b.damage(MAX_BLAST_DAMAGE * 0.8)
+	# 3. Barricade damage in Zombie Siege (only enemy grenades damage defender barricades)
+	if team_id != 0:
+		var barricades := get_tree().get_nodes_in_group(&"base_barricades")
+		for node in barricades:
+			var b := node as BaseBarricade
+			if b != null and not b.is_broken and blast_pos.distance_to(b.global_position) <= BLAST_RADIUS:
+				b.damage(MAX_BLAST_DAMAGE * 0.8)
 
 	queue_free()

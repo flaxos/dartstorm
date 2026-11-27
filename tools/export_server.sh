@@ -68,17 +68,18 @@ Run the helper script or executable directly:
 
 Command-Line Options:
 ---------------------
-  --port=<port>             Server listen port (default: 8910)
+  --port=<port>             Server listen port (default: 8920)
   --name=<server_name>      Name announced on LAN & lobby (default: "DARTSTORM Dedicated Server")
-  --arena=<arena_id>        Starting arena (default: fortress_2)
-  --mode=<mode_id>          Starting mode: deathmatch, team_deathmatch, ctf, plant_the_bomb,
-                            realistic, floor_is_lava, zombie, zombie_siege, gun_game
+  --arena=<arena_id>        Starting arena: backyard, house, treehouse, playground, park,
+                            soccer, two_forts, dust, dust2 (default: backyard)
+  --mode=<mode_id>          Starting mode: ffa, gun_game, duos, teams, zombies,
+                            zombie_siege, lava, realistic, ctf, bomb
   --max-players=<num>       Maximum human players (default: 8)
   --bot-fill=<num>          Total target combatant count (bots fill remaining slots, default: 0)
-  --bot-diff=<0..3>         Bot AI difficulty: 0=EASY, 1=NORMAL, 2=HARD, 3=EXPERT (default: 1)
-  --map-rotation=<list>     Comma-separated arena[:mode] playlist.
-                            Example: fortress_2:ctf,dust_2:plant_the_bomb,backyard:deathmatch
-  --auto-start=<sec>        Lobby countdown seconds before match auto-launches (default: 30)
+  --bot-diff=<0..2>         Bot AI difficulty: 0=EASY, 1=NORMAL, 2=HARD (default: 1)
+  --map-rotation=<list>     Comma-separated arena playlist.
+                            Example: two_forts,dust2,backyard,soccer
+  --auto-start=<sec>        Lobby countdown seconds before match auto-launches (default: 10)
   --intermission=<sec>      Post-match podium/intermission seconds before next map (default: 10)
 
 LAN Discovery:

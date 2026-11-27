@@ -34,9 +34,15 @@ func _build() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_box.add_child(title)
 
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(980, 470)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
+	_box.add_child(scroll)
+
 	var columns := HBoxContainer.new()
-	columns.add_theme_constant_override("separation", 40)
-	_box.add_child(columns)
+	columns.add_theme_constant_override("separation", 36)
+	scroll.add_child(columns)
 	var controls := _column(columns, "CONTROLS")
 	_slider(controls, "Mouse sensitivity", 0.2, 3.0, 0.05, GameSettings.mouse_sensitivity,
 			func(value: float) -> void: GameSettings.mouse_sensitivity = value)
@@ -128,7 +134,7 @@ func _palette_picker(parent: Control) -> void:
 		s0.color = GameMode.team_color(0)
 		s1.color = GameMode.team_color(1)
 		GameSettings.apply()
-		Sfx.play(&"click"))
+		Sfx.play(&"ui_click"))
 
 
 func _graphics_quality_picker(parent: Control) -> void:
@@ -149,7 +155,7 @@ func _graphics_quality_picker(parent: Control) -> void:
 		GameSettings.graphics_quality = q_idx[0]
 		button.text = GameSettings.GRAPHICS_QUALITY_NAMES[q_idx[0]]
 		GameSettings.apply()
-		Sfx.play(&"click"))
+		Sfx.play(&"ui_click"))
 
 
 func _touch_picker(parent: Control) -> void:
@@ -171,7 +177,7 @@ func _touch_picker(parent: Control) -> void:
 		GameSettings.touch_controls_mode = t_idx[0]
 		button.text = modes[t_idx[0]]
 		GameSettings.apply()
-		Sfx.play(&"click"))
+		Sfx.play(&"ui_click"))
 
 
 func _touch_fire_mode_picker(parent: Control) -> void:
@@ -193,7 +199,7 @@ func _touch_fire_mode_picker(parent: Control) -> void:
 		GameSettings.touch_fire_mode = f_idx[0]
 		button.text = modes[f_idx[0]]
 		GameSettings.apply()
-		Sfx.play(&"click"))
+		Sfx.play(&"ui_click"))
 
 
 func _touch_btn_size_picker(parent: Control) -> void:
@@ -220,7 +226,7 @@ func _touch_btn_size_picker(parent: Control) -> void:
 		GameSettings.touch_fire_btn_size = scales[s_idx[0]]
 		button.text = labels[s_idx[0]]
 		GameSettings.apply()
-		Sfx.play(&"click"))
+		Sfx.play(&"ui_click"))
 
 
 func _open_bindings() -> void:
@@ -289,6 +295,9 @@ func _slider(parent: Control, text: String, low: float, high: float, step: float
 	slider.value = value
 	slider.custom_minimum_size = Vector2(190, 28)
 	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	slider.add_theme_stylebox_override("slider", UiKit.panel_style(UiKit.NAVY_DARK, 1.0, 6, 1, UiKit.BLUE, 4))
+	slider.add_theme_stylebox_override("grabber_area", UiKit.panel_style(UiKit.ORANGE, 1.0, 6, 0, UiKit.ORANGE, 4))
+	slider.add_theme_stylebox_override("grabber_area_highlight", UiKit.panel_style(UiKit.ORANGE_HOT, 1.0, 6, 2, UiKit.CREAM, 4))
 	row.add_child(slider)
 	var value_label := UiKit.label(_format(value, step), 20, UiKit.SKY, 4)
 	value_label.custom_minimum_size.x = 64

@@ -19,8 +19,8 @@ Goal: Polish DARTSTORM from prototype/beta into a ship-ready 1.0 release with ze
 - [x] **All 9 Arenas Audited & Repaired:** Added explicit `bomb_sites`, `flag_pedestals`, and `bomb_spawns` to all 9 arenas; rebuilt Two Fortresses moat/vaults/water tunnels/stairs; sealed Dusty Courtyard canal gap, opened courtyard arch, aligned sniper bridge & CT compound, and fixed horizon emission; opened Duststorm II Lower B Tunnel, cleared Pit ramp, sealed CT void, and widened B Window; regenerated fixed `dog_house` & `inflatable_barrier` props.
 - [x] **Unconstrained Graphics & Game-Feel Overhaul:** Curated per-arena AgX + SSIL + ReflectionProbe lighting (including Floodlit Twilight Soccer Stadium) and 4096 desktop shadows; repaired all 9 `.gdshader` files (Forward+ lava depth, radial water caustics, smooth triplanar wood/shield, live toon combat/elemental uniforms, EVA foam darts); fixed CharacterModel eyes/cheeks/hand-grip pose + Chainstorm pack; unified BlasterModel recoil & 3D starburst flash + hollow holo-sight; upgraded WeatherEffects/WeatherDirector atmosphere morphing, metallic spotlight Podium, and enclosed GarageWorkbench.
 - [x] **HUD, Tactical Radar & Zero-Emoji UI:** Added circular `TacticalMinimap` radar, directional damage arcs, dynamic crosshair/hitmarkers, weapon slot strip, reload bar, and contextual `[F]` objective prompts; stripped all emoji glyphs unsupported by Lilita One; added live 3D arena switcher & `v1.0.0` badge in Main Menu; fixed pause audio unducking, mastery rank-up spam, permanent hurt flash, and controller focus across every screen.
-- [x] **Foam Bat Melee Weapon & Windows Desktop `.exe`:** Added the stylized EVA-foam **Foam Bat** melee weapon (`foam_bat.tres`, `BatPickup`, diagonal swing + cartoon knockback + incoming dart/grenade deflect) as the **Gun Game** final win rung (11/11), in **Zombies / Zombie Siege** survivor loadouts, and as an arena pickup in all standard modes; added `Windows Desktop` single-file `DARTSTORM.exe` export preset and `./tools/export_windows.sh`.
-- [x] **Release Hygiene & Regression Suite:** Unified `1.0.0` version in `project.godot` & `export_presets.cfg`; stripped all personal paths/IPs; deleted orphan `.uid` files; hardened `tools/serve_download.py` against path traversal; aligned export/server scripts; expanded automated regression tests in `tests/test_runner.gd`.
+- [x] **Foam Bat Melee Weapon & Multi-Platform Release Suite:** Added the stylized EVA-foam **Foam Bat** melee weapon (`foam_bat.tres`, `BatPickup`, diagonal swing + cartoon knockback + incoming dart/grenade deflect) as the **Gun Game** final win rung (11/11), in **Zombies / Zombie Siege** survivor loadouts (Slot 5), and as an arena pickup in all standard modes; fixed `Hud._process` reload progress bug; created official v1.0.0 cover art, boot splash, and app icons (`docs/media/`, `assets/branding/`); added `Windows Desktop` single-file `DARTSTORM.exe` export, unified `./tools/export_all.sh` (Windows, Linux, Android, Web, Dedicated Server + `SHA256SUMS.txt`), `CHANGELOG.md`, and `.github/workflows/release.yml`.
+- [x] **Release Hygiene & Regression Suite:** Unified `1.0.0` version in `project.godot` & `export_presets.cfg`; stripped all personal paths/IPs; deleted orphan `.uid` files; hardened `tools/serve_download.py` against path traversal; fixed `tools/dart_table.gd` on melee placeholder darts; aligned export/server scripts; expanded automated validation to **106 scripts (0 warnings) and 1,544+ passing tests**.
 
 ---
 
@@ -57,7 +57,7 @@ Goal: Polish DARTSTORM from prototype/beta into a ship-ready 1.0 release with ze
 | **v1.2.0 Environment & Lighting Uplift & Splat Decals** | ✅ Built and validated (776 tests). ⏳ UAT |
 | Phase 7 Expansion | ⏳ Not started (on purpose) |
 
-## v1.2.0: Environment & Lighting Uplift (Tactile PBR Shaders, Splat Decals, Golden-Hour Sun & Atmospheric Glow) (this release)
+## v1.2.0 (Pre-1.0 Visual Milestone): Environment & Lighting Uplift (Tactile PBR Shaders, Splat Decals, Golden-Hour Sun & Atmospheric Glow)
 
 Goal: Elevate arena visuals to tactile, vibrant cartoon quality with procedural backyard timber and lawn shaders, Splatoon-style popping foam dart splat decals, golden-hour sunlight with soft contact shadows, filmic color grading, and bloom.
 
@@ -171,6 +171,7 @@ Goal: Comprehensive in-game key and gamepad button remapping with full cancellat
 
 **Acceptance:** `./tools/validate.sh` passes (**669/669 tests**) ✅.
 
+## v0.8.0: Floor is Lava Mode
 
 Goal: Pure high-energy parkour combat where dynamic molten foam lava tides flood the arena floor, cooled into temporary obsidian stepping stones by water and ice darts.
 
@@ -209,6 +210,8 @@ Goal: the high-canopy elemental treehouse arena from GDD §5.4.
 - [x] Automated unit and whole-match tests in `tests/test_runner.gd` (423 tests passed, 0 leaks, 0 warnings)
 
 **Acceptance:** `./tools/validate.sh` passes (**423/423 tests**) ✅.
+
+## v0.4.0: Home Turf Arena
 
 Goal: the house arena, built now at the owner's request (it was item 5 below).
 
@@ -367,17 +370,19 @@ UAT re-check of A4, B13, B14, D2 and D3 ⏳.
    - **Resolved Known Issue**: Fixed DUOS spawn distribution bug where buddies spawned apart across the yard.
    - **Validation**: 638 automated tests passing with zero errors, zero warnings, and zero leaks.
 
-## Later (Phase 7 / Wishlist from Young Players)
-- Weapon customisation and mastery (cosmetic or sidegrades only, D-028)
-- ✅ Local split-screen (2 Players) (v1.0.0)
-- ✅ Accessibility: key remapping, a colour-blind team palette option (v0.9.2)
-- Online / LAN multiplayer (DECISIONS D-008)
+## Completed Phase 7 Wishlist (All Core Wishlist Items Shipped in v1.0.0)
+- ✅ Weapon customisation and mastery (Garage Workbench, 19+ attachments, 10 mastery ranks, sidegrades & cosmetics only, D-028)
+- ✅ Local split-screen (2 Players across all 10 modes)
+- ✅ Accessibility: in-game key/controller remapping and 4 colour-blind-safe team palettes
+- ✅ Online / LAN multiplayer with UDP discovery and headless Linux Dedicated Server (D-008)
+- ✅ Foam Bat melee weapon with Baseball Deflect across Gun Game, Zombies, Zombie Siege, and arena pickups
+- ✅ Multi-platform release pipeline (Windows `.exe`, Linux, Android `.apk`, Web HTML5/WASM, Linux Server)
 
 ## Known issues
-- Controller support is tested with simulated input only. A real pad (Xbox/PlayStation/generic) needs the UAT check.
-- Windows is deferred (the target machine runs Linux).
-- The music is simple chiptune made in code; real recordings could replace it later.
-- Bots ignore wind (deliberate, see GDD §3.9) and can briefly snag on geometry before the unstick hop kicks in.
+- Controller support is verified with simulated joypad input; a hands-on playtest with physical Xbox/PlayStation/generic pads is tracked in `docs/UAT.md`.
+- The music loops are procedural chiptune synthesised in code; recorded tracks can drop into `Sfx` anytime without changing callers.
+- Bots ignore wind (deliberate, see GDD §3.9) and can briefly snag on tight corners before their unstick hop triggers.
+- Windows release `.exe` ships `dartstorm.ico` alongside the executable when cross-compiled on Linux without `rcedit`.
 
 *Resolved in v0.1.1:* the navmesh load hitch, the "ObjectDB instances leaked at exit" warning, and the integer-division
 warnings in the HUD.

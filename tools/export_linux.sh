@@ -48,6 +48,9 @@ if ! "$GODOT" --headless --path . --export-release "Linux" "$OUT/DARTSTORM.x86_6
 fi
 chmod +x "$OUT/DARTSTORM.x86_64"
 cp icon.svg "$OUT/dartstorm.svg"
+if [ -f assets/branding/icon_512.png ]; then
+	cp assets/branding/icon_512.png "$OUT/dartstorm.png"
+fi
 cp tools/linux/install-shortcut.sh "$OUT/"
 chmod +x "$OUT/install-shortcut.sh"
 sed "s/@VERSION@/$GAME_VERSION/" tools/linux/README.txt >"$OUT/README.txt"

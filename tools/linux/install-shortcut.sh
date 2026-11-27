@@ -22,6 +22,11 @@ if [ ! -x "$HERE/DARTSTORM.x86_64" ]; then
 	chmod +x "$HERE/DARTSTORM.x86_64"
 fi
 
+ICON_PATH="$HERE/dartstorm.svg"
+if [ -f "$HERE/dartstorm.png" ]; then
+	ICON_PATH="$HERE/dartstorm.png"
+fi
+
 mkdir -p "$APPS"
 cat >"$APPS/$ENTRY_NAME" <<EOF
 [Desktop Entry]
@@ -31,7 +36,7 @@ GenericName=Foam-dart arena game
 Comment=Colourful backyard foam-dart battles
 Exec="$HERE/DARTSTORM.x86_64"
 Path=$HERE
-Icon=$HERE/dartstorm.svg
+Icon=$ICON_PATH
 Terminal=false
 Categories=Game;ActionGame;
 EOF

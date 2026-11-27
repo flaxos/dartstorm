@@ -17,26 +17,35 @@ This directory contains 3D models (`.glb` / glTF 2.0 binary format) for characte
 
 ```
 assets/models/
-├── characters/        # Hero base meshes and rigs
-│   ├── hero_base.glb  # Base stylized character mesh & Skeleton3D
-│   └── animations/    # Standalone animation libraries (.glb / .res)
-├── blasters/          # 6 weapon classes
-│   ├── popper.glb     # Pistol
-│   ├── sprayer.glb    # SMG
-│   ├── six_shot.glb   # Heavy Revolver
-│   ├── hammer.glb     # Pump-Action Shotgun
-│   ├── chainstorm.glb # Rotary Minigun
-│   └── outrider.glb   # Precision Sniper
-├── props/             # Arena environment assets
-│   ├── slide.glb      # Playground spiral slide
-│   ├── gym.glb        # Jungle gym / climbing dome
-│   ├── tree_clump.glb # Stylized cartoon foliage tree
-│   └── ...
-└── hats/              # Head cosmetics
-    ├── cap.glb
-    ├── beanie.glb
-    ├── cowboy.glb
-    └── ...
+├── characters/            # Hero base mesh & rig (generated via tools/generate_hero_asset.gd)
+│   ├── hero_base.glb      # Base stylized character mesh & Skeleton3D
+│   ├── hero_base.tscn     # Godot scene wrapper with stylized materials
+│   └── animations/        # Reserved for standalone animation libraries
+├── blasters/              # 7 modular 3D blaster classes (tools/generate_blaster_assets.gd)
+│   ├── popper.glb         # Pocket Popper / Double Trouble pistol chassis
+│   ├── storm.glb          # Dart Sprayer rapid-fire SMG chassis
+│   ├── six_shot.glb       # Ricochet Ranger heavy revolver chassis
+│   ├── sweeper.glb        # Foam Hammer pump-action shotgun chassis
+│   ├── chainstorm.glb     # Flax's Chainstorm six-barrel rotary minigun
+│   ├── whisper.glb        # Longshot / Wind Whisperer precision rifle
+│   └── rocket.glb         # Heavy elemental launcher (Hydro Soaker / Thunder Cannon / Frost Ranger)
+│   # Note: Foam Bat melee weapon is built procedurally in scripts/effects/blaster_model.gd (_build_bat).
+├── props/                 # 13 stylized arena dressing props (tools/generate_prop_assets.gd)
+│   ├── archway_curved.glb     # Desert / temple rounded sandstone arch
+│   ├── cartoon_tree.glb       # Chunky stylized backyard / park foliage tree
+│   ├── desert_urn.glb         # Terracotta desert pottery prop
+│   ├── dog_house.glb          # Backyard dog house with arched doorway
+│   ├── inflatable_barrier.glb # High-vis curved foam barricade
+│   ├── inflatable_bunker.glb  # Chunky inflatable arena bunker
+│   ├── market_awning.glb      # Striped fabric market canopy
+│   ├── picnic_table.glb       # Wooden backyard picnic table
+│   ├── playground_slide.glb   # Curved playground slide
+│   ├── soccer_goal.glb        # Stadium soccer goal frame
+│   ├── tactical_barrel.glb    # Cartoon safety-banded foam barrel
+│   ├── tactical_crate.glb     # Beveled wooden supply crate
+│   ├── watchtower.glb         # Elevated wooden fort watchtower
+│   └── wooden_pallet.glb      # Stacked timber pallet cover
+└── hats/                  # Procedural hats built in scripts/effects/character_model.gd
 ```
 
 ---

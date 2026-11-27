@@ -54,6 +54,9 @@ fi
 
 sed "s/@VERSION@/$GAME_VERSION/" tools/windows/README.txt >"$OUT/README.txt"
 cp assets/fonts/OFL.txt "$OUT/FONT-LICENSE.txt"
+if [ -f assets/branding/dartstorm.ico ]; then
+	cp assets/branding/dartstorm.ico "$OUT/dartstorm.ico"
+fi
 
 rm -f "$ROOT/$ARCHIVE"
 (cd "build/windows" && zip -q -r "$ROOT/$ARCHIVE" DARTSTORM)

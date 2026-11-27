@@ -42,6 +42,8 @@ func _run() -> void:
 		if not file_name.ends_with(".tres"):
 			continue
 		var data: Resource = load(DART_DIR.path_join(file_name)).duplicate()
+		if float(data.get("gravity_multiplier")) <= 0.0:
+			continue
 		data.set("max_lifetime", 20.0)
 		var no_exclude: Array[RID] = []
 		var dart: Node3D = pool.call("fire", data, START, Vector3.FORWARD, null, null, Color.WHITE, no_exclude)

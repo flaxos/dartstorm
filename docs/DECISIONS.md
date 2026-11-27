@@ -406,3 +406,17 @@ box in corners for bots, so walkways are at least 1.5 m (the dining chairs moved
    - Unified version `1.0.0` in `project.godot` & `export_presets.cfg`, removed personal paths/IPs (D-019/D-031), deleted orphan `.uid` files, confined `tools/serve_download.py` against path traversal, and aligned server/export scripts.
 **Alternatives Considered:** Shipping v1.0.0 with known arena geometry holes, tofu-box emojis, or Forward+ shader glitches.
 **Why:** Ensures DARTSTORM 1.0 ships as a cohesive, crisp, bug-free commercial-grade release across single-player, local split-screen, LAN/online multiplayer, web, and Android.
+
+### D-049: Foam Bat Melee Weapon, Branding Assets & Multi-Platform v1.0.0 Release Pipeline (v1.0.0)
+**Chosen:**
+1. **Kid-Safe Foam Bat Melee (`WeaponData.FireMode.MELEE`, `ModelStyle.BAT`):**
+   - Added `resources/weapons/foam_bat.tres` (`id = &"foam_bat"`) with a stylized safety-orange and cobalt EVA-foam `"BONK!"` slugger model, diagonal first- and third-person swing animations, +14% hold sprint bonus, 3.0m / 70° melee cone, 100 tag power, cartoon home-run knockback, and procedural `&"bat_swing"` / `&"bat_bonk"` audio.
+   - **Baseball Deflect:** Swinging at incoming live enemy `DartProjectile`s (`dart.deflect()`) or `FoamGrenade`s reverses them along the batter's aim, transferring shooter credit, team ownership, and hitbox exclusions so batted darts can tag their original shooter with ricochet bonus credit.
+   - **Mode Placement:** Final winning rung (11/11, right after Flax's Chainstorm) in Gun Game; starting Slot `5` survivor loadout in Zombies and Zombie Siege; glowing `BatPickup` arena pad (with orange-gold Tactical Minimap diamond pip and Bot AI pickup/charge behavior) in all other modes.
+   - **Zero Floating Attachments:** `BlasterModel` skips aftermarket attachment and iron-sight mounting on melee weapons.
+2. **Official v1.0.0 Cover Art, App Icons & Boot Splash:**
+   - Added 16:9 stylized cartoon key art (`docs/media/cover_art.jpg`), 4 real Forward+ arena screenshots (`docs/media/shot_*.png`), boot splash (`assets/branding/boot_splash.png`), multi-resolution Windows `.ico`, 512px Linux/desktop PNG, and Android adaptive launcher icons (`192px` + `432px` foreground/background). Keeping full-res README art/screenshots under `docs/media/` ensures `exclude_filter="tests/*, tools/*, docs/*, build/*"` adds zero bloat to release exports.
+3. **Unified Multi-Platform Release Pipeline (`Windows`, `Linux`, `Android`, `Web`, `Dedicated Server`):**
+   - Added `Windows Desktop` preset (`embed_pck=true`, single `DARTSTORM.exe`) in `export_presets.cfg`, `./tools/export_windows.sh`, `./tools/export_all.sh` (generates all 5 platform archives + `SHA256SUMS.txt`), and `.github/workflows/release.yml` for reproducible GitHub Releases.
+**Alternatives Considered:** Using trademarked toy-bat branding (violates kid-safe originality rule); shipping Linux/Android only without a Windows `.exe` for testers; leaving default Godot robot icons on Android/Windows.
+**Why:** Gives players a joyful, chaotic close-range & deflect melee toy right where it belongs across every mode, fixes the `Hud._process` reload regression cleanly, and lets Windows, Linux, Android, Web, and LAN server testers download and play v1.0.0 directly from GitHub Releases.

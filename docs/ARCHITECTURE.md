@@ -1,41 +1,64 @@
 # DARTSTORM — Architecture
 
-*How the code fits together. Godot 4.4, GDScript, Forward+ renderer.*
+*How the code fits together. Godot 4.4.1, typed GDScript, Forward+ desktop renderer with Compatibility fallback for Web & Android.*
 
 ## 1. Folder layout
 
 ```
-project.godot           main scene, autoloads, physics layer names
+project.godot           main scene, autoloads, physics layer names, branding icon & boot splash
 default_bus_layout.tres audio buses: Master → Music, SFX
+export_presets.cfg      Linux, Web, Android, Linux Server, Windows Desktop presets
 scenes/                 thin .tscn wrappers (one root node + script)
-  ui/main_menu.tscn     MAIN SCENE
-  game/match.tscn       one round: arena + actors + HUD
+  ui/main_menu.tscn     MAIN SCENE (3D bunker lobby + live 9-arena backdrop)
+  game/match.tscn       one round: arena + actors + HUD (1P or 2P split-screen)
+  server/server.tscn    headless dedicated server scene
   arenas/  player/  enemies/  projectiles/  pickups/  effects/  ui/
 scripts/
-  core/      settings, sfx (+ music), input, match flow and announcer, progression, modes (solo, duos, teams, gun game, zombies, zombie siege), scoring, awards, cosmetics, UI kit, layers
-  combat/    DartData, WeaponData, WeaponState, Arsenal, Actor, Hitbox, DartProjectile, DartPool
+  core/      settings, sfx (+ music), input, match flow & announcer, progression, weapon modding,
+             model loader, 10 modes (solo, duos, teams, gun game, zombies, zombie siege,
+             floor is lava, realistic, ctf, plant the bomb), scoring, awards, cosmetics, UI kit, layers
+  combat/    DartData, WeaponData, WeaponState, Arsenal, Actor, Hitbox, DartProjectile, DartPool,
+             ElementalEffect, FoamGrenade
   ai/        Bot, BotDifficulty
   player/    Player
-  arena/     Arena (base: shared sky, sun and clouds), ArenaKit (primitive builders, houses, trees), BackyardFortress, HomeTurf, TempestTreehouse
-  systems/   WindField, WindZone, ReflectiveSurface, AmmoBucket, JumpPad, WobbleTarget, PowerUpPickup, DogHouse, ShieldPickup, WaterPuddle, IceSlick, WindVent, BaseCore, BaseBarricade, HordeDirector
-  effects/   BlasterModel, CharacterModel (with hats & skins), FoamBurst, CombatFx, Podium
-  ui/        Hud, Crosshair, WindGauge, PauseMenu, SettingsPanel, ShopPanel, MissionsPanel, main_menu (the lobby)
+  arena/     Arena (base: per-arena AgX lighting, sky, clouds, navmesh), ArenaKit (stylized builders
+             & modular props), plus all 9 arenas: BackyardFortress, HomeTurf, TempestTreehouse,
+             Playground, SunnyPark, SoccerField, TwoForts, DustCourtyard, Dust2;
+             hazards: WaterPuddle, IceSlick, LavaHazard, ObsidianStone
+  network/   NetworkManager, NetworkPlayer, LanDiscovery, DedicatedServer
+  systems/   WindField, WindZone, ReflectiveSurface, AmmoBucket, JumpPad, WobbleTarget,
+             PowerUpPickup, BatPickup, DogHouse, ShieldPickup, GrenadePickup, ElementalPickup,
+             WindVent, BaseCore, BaseBarricade, HordeDirector, LavaDirector, WeatherDirector,
+             WeatherEffects, WhirlwindVortex, PingBeacon, FlagPickup, BombTarget
+  effects/   BlasterModel, BlasterAttachments, CharacterModel, FoamBurst, FoamSplat, CombatFx, Podium
+  ui/        Hud, TacticalMinimap, Crosshair, WindGauge, PauseMenu, SettingsPanel, BindingsPanel,
+             ShopPanel, MissionsPanel, GarageWorkbench, WorkbenchPanel, MultiplayerMenu,
+             TouchControls, VirtualJoystick, main_menu
   debug/     DemoDriver (only active with `-- --demo`)
 resources/
-  weapons/*.tres  darts/*.tres  modes/*.tres  bots/*.tres
-assets/materials/lawn.gdshader, blaster_skin.gdshader, foam_shield.gdshader
-assets/textures/skins/*.png (seamless 2D vector patterns)
-assets/fonts/LilitaOne-Regular.ttf (+ OFL.txt)
-tests/test_runner.tscn  headless test suite (tests/test_runner.gd)
+  weapons/*.tres (12)  darts/*.tres (12)  modes/*.tres (10)  bots/*.tres (3)
+assets/
+  branding/  boot_splash.png, icon_512.png, icon_192.png, icon_adaptive_*.png, dartstorm.ico
+  materials/ 9 spatial shaders (blaster_skin, foam_dart, foam_shield, foam_splat, lava_foam,
+             lawn, stylized_water, toon_character, toy_wood)
+  models/    glTF 2.0 (.glb/.tscn) hero rig, 7 modular blasters, 13 arena dressing props
+  textures/  skins/ (8 vector patterns), pbr/ (2K normal/ORM), arenas/ (triplanar PBR sets)
+  fonts/     LilitaOne-Regular.ttf (+ OFL.txt)
+tests/test_runner.tscn  headless test suite (tests/test_runner.gd — 1,544+ assertions)
 tools/
   validate.sh           import → strict compile → boots → tests → leak check
-  export_linux.sh       Linux release build + headless smoke test (linux/: README and shortcut helper)
-  run.sh                play / editor / demo
+  export_windows.sh     Windows 64-bit single-EXE + zip release
+  export_linux.sh       Linux 64-bit release + headless smoke test
+  export_apk.sh         Android ARM64 signed APK release
+  export_web.sh         HTML5 / WebAssembly release
+  export_server.sh      Linux headless dedicated server release
+  export_all.sh         builds all 5 platforms + SHA256SUMS.txt into build/release-v<ver>/
+  run.sh / run_server.sh / serve_web.py / serve_download.py
   check_scripts.gd      strict compile (every warning is an error)
-  generate_skins.py     generates the 8 seamless 2D vector pattern textures
-  dart_table.gd         prints the GDD dart-flight table from the real dart code
-  arena_shots.gd        overview screenshots of an arena (needs a display)
-docs/                   GDD, ARCHITECTURE, ROADMAP, DECISIONS, CONCEPT_BRIEF, UAT, TUNING
+  dart_table.gd         prints the GDD dart-flight table from real DartProjectile physics
+  arena_shots.gd        overview screenshots of any arena
+  generate_*.py / *.gd  procedural skin, PBR texture, hero, blaster & prop asset generators
+docs/                   GDD, ARCHITECTURE, ROADMAP, DECISIONS, CONCEPT_BRIEF, UAT, TUNING, media/
 ```
 
 ## 2. Scene tree during a match
@@ -67,7 +90,14 @@ Match (scripts/core/match.gd)              wires everything, owns restart/quit
 |---|---|---|
 | **GameSettings** (autoload) | Preferences, your look (name/colour/hat/skin), last menu choices, saved to `user://settings.cfg`. **Input-device awareness**: controller hot-plug, which device is in use, rumble, on-screen notices. Applies the default font to the root window's theme | `changed`, `controller_changed`, `input_device_changed` signals; `vibrate()`, `notify()` |
 | **Sfx** (autoload) | Synthesised sound bank on pooled voices (SFX bus), Chainstorm spin loop, **two music loops rendered on worker threads** (Music bus), **clean quitting** | `play(id)`, `play_at(id, pos)`, `set_spin(ratio)`, `play_music(id)`, `stop_music()`, `duck_music()`, `quit_game(code)` |
-| **Progression** (autoload) | Player lifetime XP, Level curve ($100 \times N$), gameplay Coins, 3 active Backyard Missions, cosmetic unlocks, saved to `user://progression.cfg` | `xp_changed`, `leveled_up`, `coins_changed`, `mission_completed`; `add_xp()`, `add_coins()`, `unlock_item()` |
+| **Progression** (autoload) | Player lifetime XP, Level curve ($100 \times N$), gameplay Coins, 3 active Backyard Missions, cosmetic unlocks, Weapon Mastery XP & equipped workbench attachments (dual-profile), saved to `user://progression.cfg` | `xp_changed`, `leveled_up`, `coins_changed`, `mission_completed`, `weapon_mastery_ranked_up`; `add_xp()`, `add_coins()`, `unlock_item()`, `record_weapon_tag()`, `equip_attachment()` |
+| **NetworkManager** (autoload) | WebSocket client/server transport, lobby roster sync, player transform/fire RPCs, LAN browser bridge | `server_started`, `connected_to_server`, `player_list_changed`, `lan_servers_updated` |
+| **ModelLoader** (autoload) | Shared 3D `.glb` / `.tscn` asset cache for hero rig, 7 blasters, and 13 arena props with clean procedural fallback | `load_model(path)`, `instantiate_model(path)` |
+| **LanDiscovery / DedicatedServer** | UDP port 8925 LAN beacon broadcast & discovery; headless CLI dedicated server with map rotation & bot fill | `servers_updated`; CLI flags `--port`, `--arena`, `--mode`, `--map-rotation`, `--bot-fill` |
+| **BatPickup / FlagPickup / BombTarget** | Glowing Foam Bat arena pickup pad; CTF anchored pedestals & carry logic; Plant the Bomb Site A/B arming & defusal | `collected`, `flag_captured`, `bomb_planted`, `bomb_defused`, `bomb_detonated` |
+| **LavaDirector / WeatherDirector** | Cyclic molten-foam Floor is Lava tides & obsidian cooling; dynamic Thunderstorm, Blizzard, Gale Gust & Heatwave events | `phase_changed`, `weather_changed`, `lightning_strike` |
+| **GarageWorkbench / WeaponModding** | Enclosed 3D blaster customization studio, 5 attachment slots (optic, barrel, spring, magazine, stock), 19+ aftermarket mods & 10-rank mastery curve | `compute_attachment_modifiers()`, `get_mastery_rank()`, `update_attachments()` |
+| **TacticalMinimap** | Rotating circular HUD radar rendering arena cover silhouettes, FOV cone, teammates, firing/nearby rivals, objectives & Foam Bat pickups | `configure(arena, controller, player)` |
 | **PauseMenu** | Pause state, the settings panel in a match, **auto-pause on focus loss** | `open()`, `close()`, `pause_for_focus_loss()`, `is_open()` |
 | **MatchController** | Match state, clock, Scoreboard, respawn timers, **announcer** (streaks, multi-tags, time warnings) and **award stats** | Signals: `countdown_tick`, `clock_tick`, `tag_scored`, `popup`, `announcement`, `match_ended`; `announce()` |
 | **Cosmetics** (static data) | Player colours, hats, blaster skins, random names, name cleaning | `sanitize_name()`, `color_at()`, `skin_pattern()`, `skin_finish()` |
@@ -95,19 +125,22 @@ The HUD only listens.
 
 ## 4. Weapons: config, runtime, presentation (kept separate)
 
-- **Configuration:** `WeaponData` (`.tres`): fire mode (SEMI / AUTO / SPIN_UP), rate, darts per shot,
-  spread, spin-up time, move penalty, magazine (0 = belt-fed), reserve, reload, recoil/shake/sound,
-  `model_style` and colours, and bot hints (`ai_min_range`, `ai_max_range`, `ai_preference`).
-  `dart` points at a `DartData`.
-- **Runtime:** `WeaponState` (ammo for one held blaster) and `Arsenal` (timing; emits `fired`).
-  `Actor._on_arsenal_fired` turns each shot into `darts_per_shot` darts with spread.
-- **Presentation:** `BlasterModel.create(data, first_person)` builds the mesh from `model_style`
-  (PISTOL, SPRAYER, ROTARY, DOUBLE, HAMMER, RIFLE) and the colours. The same model is used in first person
-  and in bots' hands.
+- **Configuration:** `WeaponData` (`.tres`): fire mode (`SEMI` / `AUTO` / `SPIN_UP` / `MELEE`), rate, darts per shot,
+  spread, spin-up time, firing & hold move multipliers, melee cone/range/knockback exports, magazine (`0` = belt-fed
+  or melee), reserve, reload, recoil/shake/sound, `model_style` and colours, and bot hints (`ai_min_range`,
+  `ai_max_range`, `ai_preference`). `dart` points at a `DartData`.
+- **Runtime:** `WeaponState` (ammo & active `WeaponModding` attachment modifiers for one held weapon) and `Arsenal`
+  (fire cadence, melee swing timing, spin-up, reloads; emits `fired`). `Actor._on_arsenal_fired` turns ranged shots
+  into `darts_per_shot` physical darts, and melee swings into `_perform_melee_swing()` (cone bonk, shield break,
+  knockback, `WobbleTarget` hit, and `DartProjectile.deflect()` / `FoamGrenade` baseball deflect).
+- **Presentation:** `BlasterModel.create(data, first_person, skin_id, attachments)` loads stylized `.glb` assets via
+  `ModelLoader` (with procedural fallback) or builds custom styles (`PISTOL`, `SPRAYER`, `ROTARY`, `DOUBLE`, `HAMMER`,
+  `RIFLE`, `BAT`), mounts 3D flip-up iron sights or aftermarket attachments from `BlasterAttachments` (skipped cleanly
+  on melee weapons), and drives recoil, starburst muzzle flash, and diagonal bat swings.
 
 **To add a blaster:** copy a `.tres` in `resources/weapons/`, give it a new `id`, tune it, then add it to a
 mode's `loadout` or the Gun Game `ladder`. If it needs a new shape, add a `ModelStyle` and a `_build_*`
-function in BlasterModel. For a new sound, add an entry in `Sfx._build_bank()`. The resource test
+function in `BlasterModel`. For a new sound, add an entry in `Sfx._build_bank()`. The resource test
 checks every weapon's sound exists.
 
 ## 5. Dart physics
@@ -159,19 +192,13 @@ Restart reloads `match.tscn`.
 | 4 | pickups | Reserved |
 | 5 | hitboxes | Generous dart hit volumes (Area3D) on actors |
 
-## 9. Extension points (future work)
+## 9. Extension points
 
-- **New arena:** subclass `Arena`, override `_build()`, add a `.tscn`, and point `match.gd`'s `ARENA_SCENE`
-  at it (an arena selector belongs on the menu when there are two). Elemental hazards should be their own
-  scenes under `scripts/systems/`, and wind changes should go through `WindField.global_wind` or WindZone gusts.
-- **Elemental darts & combos (v0.5.0):** `DartData.element` drives physical traits, projectile tints, and victim afflictions via `ElementalEffect` (Wind lift, Fire sparkle tick, Water knockback/wet, Lightning chain zap, Ice slow & slide boosting, plus steam/shock combos). Visualized in `CombatFx` and sound bank.
-- **Team modes:** `Actor.team_id` already gates friendly fire, so a team mode is a new `GameMode` subclass
-  that assigns teams and sums the score per team.
-- **Multiplayer (later):** the Actor brain is already split from the body (Player input vs Bot AI).
-  A networked actor would be a third subclass fed by replicated input. MatchController and scoring are
-  authoritative-server shaped (one place decides tags). Darts would be spawned by the server and simulated
-  deterministically on clients. See DECISIONS D-008.
-- **Capturable buckets:** add a `team_id` and capture progress to AmmoBucket, and have it refill only its owner's team.
+- **New arena:** subclass `Arena`, override `_build()`, add a `.tscn`, configure a lighting preset, set `team_bases`, `bomb_sites`, `flag_pedestals`, and `bomb_spawns`, and register it in `MatchScene.ARENAS` (currently 9 arenas).
+- **Elemental darts & combos:** `DartData.element` drives physical traits, projectile tints, and victim afflictions via `ElementalEffect` (Wind lift, Fire sparkle tick, Water knockback/wet, Lightning chain zap, Ice slow & slide boosting, plus steam/shock combos).
+- **New game mode:** subclass `GameMode` (10 modes shipped: Solo, Gun Game, Duos, Teams, Zombies, Zombie Siege, Floor is Lava, Realistic, CTF, Plant the Bomb), add a `.tres` under `resources/modes/`, and wire it into `GameSettings.MatchMode` and `MatchScene`.
+- **Multiplayer & Dedicated Servers (shipped):** `NetworkManager`, `NetworkPlayer`, `LanDiscovery` (UDP 8925), and `DedicatedServer` (`scenes/server/server.tscn`) implement WebSocket LAN/online play, auto-discovery, bot backfill, and CLI map rotation.
+- **Local Couch Co-Op (shipped):** Dual `SubViewport`s sharing a single `World3D` with layer-culled 3D character bodies and isolated `p1_*` / `p2_*` input maps.
 
 ## 10. Failure modes and safeguards (v0.1.1)
 
@@ -213,10 +240,11 @@ Measured during the automated 3-bot Hard match: a peak of about 140 darts in the
 1. **Import:** `godot --headless --import`. Fails on any import/parse/resource error.
 2. **Strict compile:** `check_scripts.gd --print-strict-override` lists every warning currently at "Warn" and
    writes it at "Error" into a temporary `override.cfg` (removed by a trap). Then every `.gd` under `scripts/`,
-   `tests/` and `tools/` is recompiled. Zero warnings is the bar.
+   `tests/` and `tools/` (106 scripts) is recompiled. Zero warnings is the bar.
 3. **Boots:** the main menu (120 frames) and a match (300 frames), headless.
-4. **Tests:** `tests/test_runner.tscn`, 518 checks in 45 sections. Includes fast-forwarded bot matches
-   (8× ticks at 8× time scale, so each tick is still 1/60 s).
+4. **Tests:** `tests/test_runner.tscn`, **1,544+ checks across 70 sections**. Includes fast-forwarded bot matches
+   (8× ticks at 8× time scale, so each tick is still 1/60 s), all 9 arenas, all 10 modes, split-screen, LAN/server,
+   workbench modding, Foam Bat melee/deflect, ADS iron sights, and export preset checks.
 5. **Leak check:** the test run must exit without "ObjectDB instances leaked".
 
 ## 13. Input and controllers (v0.2.0)

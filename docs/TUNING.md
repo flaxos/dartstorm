@@ -17,7 +17,7 @@ Chainstorm sillier, or add a new blaster.
 | `resources/weapons/` | One file per blaster | WeaponData |
 | `resources/darts/` | One file per dart type (a blaster points at a dart) | DartData |
 | `resources/bots/` | `easy`, `normal`, `hard` | BotDifficulty |
-| `resources/modes/` | `free_for_all`, `duos`, `teams`, `gun_game`, `zombies`, `zombie_siege` | GameMode / GunGameMode / ZombieMode / ZombieSiegeMode |
+| `resources/modes/` | `free_for_all`, `duos`, `blue_vs_orange`, `gun_game`, `zombies`, `zombie_siege`, `floor_is_lava`, `realistic`, `capture_the_flag`, `plant_the_bomb` | GameMode / GunGameMode / ZombieMode / ZombieSiegeMode / FloorIsLavaMode / CaptureTheFlagMode / PlantTheBombMode |
 
 > Some things are set in code rather than data: player movement (`scripts/combat/actor.gd` exports and
 > `scripts/player/player.gd`), bucket capacity per spot (`scripts/arena/backyard_fortress.gd`), and arena layout.
@@ -27,18 +27,21 @@ Chainstorm sillier, or add a new blaster.
 |---|---|---|
 | `display_name`, `description` | Shown in the HUD, popups and tag feed | — |
 | `dart` | Which DartData it fires (drag a `.tres` from `resources/darts/` onto it) | — |
-| `fire_mode` | SEMI (one per click), AUTO (hold), SPIN_UP (wind up, then auto) | — |
-| `shots_per_second` | Fire rate | 1–30 (above 30 the effects budget limits impact puffs) |
+| `fire_mode` | `SEMI` (one per click), `AUTO` (hold), `SPIN_UP` (wind up, then auto), or `MELEE` (close-range swing, no ammo) | — |
+| `shots_per_second` | Fire / swing rate | 1–30 (above 30 the effects budget limits impact puffs) |
 | `darts_per_shot` | Darts per trigger pull (shotgun-style) | 1–8 |
 | `spread_degrees` | Random cone. 0 is laser-straight | 0–8 |
 | `spin_up_time` / `spin_down_time` | SPIN_UP only: seconds to reach full speed / to stop | 0.3–1.5 |
-| `firing_move_multiplier` | Speed while firing (spin-up: while spun) | 0.3–1.0 |
-| `magazine_size` | Darts per magazine. **0 = belt-fed** (fires from the reserve, never reloads) | 0–60 |
+| `firing_move_multiplier` | Speed while firing (spin-up: while spun) | 0.3–1.1 |
+| `hold_move_multiplier` | Passive speed multiplier while holding the weapon (e.g. `1.14` on Foam Bat) | 0.85–1.25 |
+| `melee_range` / `melee_arc_degrees` | `MELEE` only: reach in metres / half-angle cone width | 2.0–4.0 / 45–90 |
+| `melee_damage` / `melee_knockback` / `melee_lift` | `MELEE` only: tag power, horizontal knockback (m/s), and upward cartoon lift | 50–100 / 8–18 / 2–6 |
+| `magazine_size` | Darts per magazine. **0 = belt-fed** (or melee, never reloads) | 0–60 |
 | `reserve_max` / `reserve_start` | Spare darts carried: most you can hold / what you spawn with | — |
 | `reload_time` | Seconds | 0.5–2.5 |
 | `recoil_kick`, `camera_shake` | View kick and shake per shot (the player's shake setting still applies) | 0–2.5 / 0–0.35 |
-| `sound`, `sound_pitch` | Launch sound ID (`pop`, `spray`, `chain`, `thump`, `zip`) and pitch | pitch 0.6–1.6 |
-| `model_style` | Shape: PISTOL, SPRAYER, ROTARY, DOUBLE, HAMMER, RIFLE | — |
+| `sound`, `sound_pitch` | Launch / swing sound ID (`pop`, `spray`, `chain`, `thump`, `zip`, `bat_swing`) and pitch | pitch 0.6–1.6 |
+| `model_style` | Shape: `PISTOL`, `SPRAYER`, `ROTARY`, `DOUBLE`, `HAMMER`, `RIFLE`, `BAT` | — |
 | `body_color`, `accent_color` | Colours of the procedural model | Bright! |
 | `view_offset` | Where it sits on screen in first person (x right, y up, z forward is negative) | — |
 | `ai_min_range` / `ai_max_range` / `ai_preference` | How bots choose it: preferred range in metres, and how much they like it | pref 0.5–2 |
@@ -123,11 +126,11 @@ The dart pool (400) and effects budget keep it safe.
 2. Change `id` (e.g. `bubble_blaster`), `display_name`, colours, `model_style`, and the numbers.
 3. Optional: duplicate a dart in `resources/darts/` for its own dart and set `dart` to it.
 4. Add it to a mode: open `free_for_all.tres` → `loadout` → **Add Element** → drag the new file in.
-   (Keys 1–3 select the first three; the mouse wheel / Q / E reach the rest.)
-5. Run `./tools/validate.sh`. The resource test checks every blaster has a dart and a real sound.
+   (Keys `1`–`5` select the first five slots; the mouse wheel or `Q` / `E` reach the rest.)
+5. Run `./tools/validate.sh`. The resource test checks every weapon has a dart and a real sound.
 
 **Add a blaster to the Gun Game ladder.** Open `gun_game.tres` → `ladder` → Add Element → drag the blaster in →
-move it to the right rung. Keep the Chainstorm last; it's the winning rung.
+move it to the right rung. Keep **Flax's Chainstorm** second-to-last and the **Foam Bat** last — the Foam Bat bonk is the final winning rung!
 
 **Make a new bot skill (e.g. "Super Easy").** Duplicate `easy.tres` and tune it. To show it on the menu, a
 programmer needs to add its path to `DIFFICULTY_PATHS` in `scripts/core/match.gd` and its name to

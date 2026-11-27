@@ -170,6 +170,14 @@ UAT proves the *game* works. A release isn't done until both pass.
 | Q5 | Open **Garage Workbench** and equip barrel/optic/grip/stock attachments | Enclosed garage room with clean lighting, hollow glowing cyan Holo-Sight reticle, attachments stay locked to blaster during recoil, and Reset to Stock updates the 3D model immediately |
 | Q6 | Play **2-Player Split-Screen** to match end (including Teams & Zombie Siege) | Both players join Defenders in Zombie Siege; Orange Team does NOT turn into zombies on the metallic spotlight podium; results & PLAY AGAIN remain visible at match end |
 
+### R. Foam Bat Melee, ADS Iron Sights & Multi-Platform Release Packages *(v1.0.0)*
+| ID | Do this | Expect |
+|---|---|---|
+| R1 | Play **Gun Game** through to rung 11, or grab the glowing **Foam Bat** pad in FFA/Teams/CTF, or press `5` in **Zombies / Zombie Siege** | Stylized orange-and-cobalt `"BONK!"` Foam Bat equips cleanly with zero floating attachments, +14% sprint speed, diagonal home-run swing animation, and `MELEE` / `BAT` HUD display |
+| R2 | Swing the Foam Bat at a rival, a bullseye target, and an incoming enemy foam dart / grenade | Rival launches with cartoon knockback & breaks Foam Shield cleanly; bullseye spins & scores; incoming darts and grenades bat straight back with ricochet credit |
+| R3 | Aim Down Sights (RMB / LT) with **Dart Sprayer** and other iron-sight blasters | Clean 3D flip-up iron sights align right on crosshair with zero camera clipping into the blaster body; reloading any blaster shows smooth HUD progress with zero console script errors |
+| R4 | Extract and launch the **Windows (`DARTSTORM.exe`)**, **Linux (`DARTSTORM.x86_64`)**, **Android (`DARTSTORM-1.0.0-android.apk`)**, and **Web** release packages | Custom DARTSTORM cover-art boot splash and app icons display cleanly; each package launches into the 3D lobby and plays a full match smoothly |
+
 ### E. Comfort
 | ID | Do this | Expect |
 |---|---|---|
@@ -192,4 +200,4 @@ UAT proves the *game* works. A release isn't done until both pass.
 | 0.5.3 | — | — | ⏳ Pending | Progression, Levels, Missions & Coin Shop: section N |
 | 0.6.0 | — | — | ⏳ Pending | Tempest Treehouse: section O |
 | 0.7.0 | — | — | ⏳ Pending | Zombie Siege (Base Defense) & Blaster Skins: section P |
-| 1.0.0 | — | — | ⏳ Pending | Production 1.0 release: sections Q plus controller/split-screen/online regression check |
+| 1.0.0 | — | — | ⏳ Pending | Production 1.0 release: sections Q & R plus controller/split-screen/Windows/Android/Linux/online check |

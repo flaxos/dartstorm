@@ -4,9 +4,9 @@
 
 | | |
 |---|---|
-| **Game version** | 0.9.1 (DUOS Buddy Spawning, Tactical Pings & Bot Teamplay) |
-| **Status** | v0.1.0 **passed UAT** on 2026-11-15; v0.1.1–v0.9.1 validated and awaiting UAT with young players (see [UAT.md](UAT.md)) |
-| **Platform** | Linux first (the target machine runs Linux). Windows is deferred until needed. |
+| **Game version** | **1.0.0** (Production Release — 9 Arenas, 10 Modes, 12 Weapons incl. Foam Bat, Tactical Radar, Split-Screen & Cross-Platform Releases) |
+| **Status** | v1.0.0 **built and validated** (106 scripts / 0 warnings, 1,544+ automated tests, 0 leaks); awaiting final v1.0.0 hands-on UAT (see [UAT.md](UAT.md)) |
+| **Platform** | **Windows (64-bit `.exe`), Linux (64-bit `.x86_64`), Android (ARM64 `.apk`), Web (`HTML5/WASM`), and Linux Headless Dedicated Server** |
 | **Authority** | This GDD is the authoritative description of the game. Numbers mirror the `.tres` files in `resources/`. If they ever disagree, the `.tres` file is what the game uses, so fix this doc. |
 | **Source vision** | [CONCEPT_BRIEF.md](CONCEPT_BRIEF.md), the original brief, archived verbatim (personal details redacted). §1 summarises it and §2 tracks it. §1.9 records the young players' own design sketch. |
 | **Related** | [ARCHITECTURE.md](ARCHITECTURE.md) (how it's built) · [TUNING.md](TUNING.md) (changing numbers without code) · [ROADMAP.md](ROADMAP.md) · [DECISIONS.md](DECISIONS.md) |
@@ -108,6 +108,11 @@ The photo isn't kept in the repo (it has their names on it). This is what it ask
 | **Foam Grenade Pickup** | ✅ v0.8.1 | Throwable bouncy foam canister, ticking LED fuse, 16-dart radial burst, knockback & confetti (§3.26) |
 | **Elemental Weapon Power-Ups** | ✅ v0.8.1 | 15s elemental infusion pickups (Fire, Ice, Water, Lightning) powering all equipped blasters (§3.26) |
 | **Wishlist: Elemental Weather** | ✅ v0.9.0 | Dynamic map events: thunderstorms, lightning puddle zaps, blizzards with ice slicks, gale gusts with whirlwinds, heatwaves (§3.27) |
+| **2-Player Couch Split-Screen** | ✅ v1.0.0 | Dual-viewport shared `World3D` local co-op / versus across all 10 modes (§3.29) |
+| **Garage Workbench & Weapon Mastery** | ✅ v1.0.0 | Interactive 3D workbench with 19+ aftermarket attachments & 10 mastery ranks across 7 modular blasters (§3.29) |
+| **Tactical Radar, CTF, Plant the Bomb & 9 Arenas** | ✅ v1.0.0 | Rotating circular minimap, Capture the Flag, Plant the Bomb, Realistic mode, and 9 stylized arenas (§3.29, §5.5) |
+| **Foam Bat Melee & Baseball Deflect** | ✅ v1.0.0 | Stylized EVA-foam slugger bat (Gun Game final rung 11/11, Zombies/Siege Slot 5, arena `BatPickup` in all other modes) (§3.29) |
+| **Multi-Platform Releases (Win / Linux / Android / Web)** | ✅ v1.0.0 | Standalone Windows `.exe`, Linux archive, Android APK with mobile touch controls, WebAssembly bundle, and Linux Dedicated Server |
 
 ---
 
@@ -147,12 +152,13 @@ Status key: ✅ done · 🟡 partly done or untested · ⏳ planned, not started
 |---|---|---|
 | Godot 4 (latest local stable), GDScript | ✅ | Godot 4.4.1, typed GDScript |
 | 3D first-person shooter | ✅ | `scripts/player/player.gd` |
-| Windows primary target | ⏳ | Deferred: the target machine runs Linux. Nothing Windows-specific in the code |
-| Linux secondary target | ✅ | Developed and UAT'd on Linux; now the primary platform |
-| Keyboard and mouse | ✅ | `scripts/core/input_setup.gd` |
-| Gamepad (planned) | 🟡 | **Built in v0.2.0**: plug and play for menus and play, hot-plug, aim assist, rumble (§3.17). Tested with simulated input; a real pad still needs trying |
-| Multiplayer architected, bots first | 🟡 | Brain/body split, central tag authority (ARCHITECTURE §9, DECISIONS D-008). No networking yet |
-| Stylised low-poly look | ✅ | Primitives, flat colours, lawn shader |
+| Windows primary target | ✅ | Standalone single-file `DARTSTORM.exe` via `./tools/export_windows.sh` (`export_presets.cfg`) |
+| Linux secondary target | ✅ | Developed, UAT'd, and shipped via `./tools/export_linux.sh` + `./tools/export_server.sh` |
+| Android & Web targets | ✅ | Signed ARM64 APK (`./tools/export_apk.sh`) with touch controls + HTML5/WASM (`./tools/export_web.sh`) |
+| Keyboard and mouse | ✅ | `scripts/core/input_setup.gd` + full in-game key/gamepad remapping (`BindingsPanel`) |
+| Gamepad (planned) | ✅ | Plug and play for menus and play, hot-plug, aim assist, rumble (§3.17, D-044) |
+| Multiplayer architected, bots first | ✅ | Bots + 2-player local split-screen + WebSocket LAN/Online multiplayer + UDP discovery + Dedicated Server |
+| Stylised low-poly look | ✅ | Stylized chunky-toon 3D art direction: `.glb` assets, 2K procedural PBR, seamless triplanar shaders, AgX lighting (D-047, D-048) |
 | Godot 3D physics, Git, vertical slices | ✅ | |
 | Data-driven, no hard-coded weapons | ✅ | `resources/weapons/*.tres` |
 
@@ -267,12 +273,12 @@ earned. Then someone across the yard picks up the Chainstorm, and the whole back
 ### 3.5 Movement and traversal
 | Move | Numbers | Notes |
 |---|---|---|
-| Walk / sprint | 7.0 / 10.5 m/s | Sprint only while moving forward; FOV widens slightly |
+| Walk / sprint | 6.4 / 9.6 m/s (at `game_speed = 0.90` default; configurable `0.70–1.10`) | Sprint only while moving forward; FOV widens slightly; horizontal velocity capped at 24.0 m/s |
 | Acceleration | 60 ground, 18 air | Snappy on the ground, committed in the air |
 | Jump | 7.6 m/s → **≈1.45 m** high | Clears crates (1.1 m), foam barriers (1.3 m) and battlements (1.0 m) |
 | Coyote time / jump buffer | 0.12 s / 0.12 s | Jumps still work a hair late off a ledge, or a hair early before landing |
 | Trampoline | 15.5 m/s → **≈6 m** high | Lands you on the treehouse deck (4.6 m) |
-| Chainstorm penalty | ×0.45 while spun up | 3.2 m/s walking. Commit to a spot or spin down to move |
+| Chainstorm / Foam Bat move | ×0.45 spun up / **×1.14 holding Foam Bat** | Chainstorm commits you to a position; holding the Foam Bat gives a nimble melee dash boost |
 | Fall-out safety | Below −25 m you're tagged out | Fences and invisible walls make this near impossible; it's a safety net |
 
 ### 3.6 Tagging rules
@@ -294,10 +300,15 @@ Hits needed = ⌈100 ÷ (tag power × shooter damage scale)⌉. Bots' darts are 
 | Pocket Popper (34) | **3** | 3 | 5 | 8 | 0.4 s |
 | Double Trouble (34 ×2 per pull) | **2 pulls** | 2 pulls | 3 pulls | 4 pulls | 0.31 s |
 | Dart Sprayer (13) | **8** | 8 | 13 | 20 | 0.7 s |
+| Wind Whisperer (28 + lift) | **4** | 4 | 6 | 9 | 1.0 s |
 | Foam Hammer (15 ×8 slugs) | **1 blast** (7 slugs) | 1 blast | 2 blasts | 3 blasts | instant up close |
+| Hydro Soaker (30 + splash knockback) | **4** | 4 | 6 | 9 | 1.67 s |
 | Ricochet Ranger (34) | **3** | 3 | 5 | 8 | 0.67 s |
-| Longshot (70) | **2** | 2 | 3 | 4 | 0.91 s |
+| Thunder Cannon (35 + chain zap) | **3** | 3 | 5 | 8 | 1.67 s |
+| Frost Ranger (32 + chill) | **4** | 4 | 6 | 8 | 1.36 s |
+| Longshot (85) | **2** | 2 | 2 | 3 | 0.91 s |
 | Flax's Chainstorm (10) | **10** | 10 | 17 | 25 | ≈1.0 s incl. 0.7 s spin-up |
+| **Foam Bat** (100 melee bonk) | **1 bonk** (2 through 50 Shield) | 1 bonk | 2 bonks | 3 bonks | instant within 3.0 m |
 
 \* Every dart hits and you fire at the blaster's maximum rate. Spread, drop and dodging make real tags slower.
 
@@ -374,12 +385,11 @@ gives 4×100 + 50 + 30 = **480**.
 ### 3.13 Gun Game
 - Everyone starts on **rung 1** with **bottomless ammo**. Each tag swaps your blaster for the next rung
   ("NEW BLASTER: …" popup and a level-up jingle).
-- Ladder (7 of the 10 planned): Pocket Popper → Double Trouble → Dart Sprayer → Foam Hammer → Ricochet Ranger →
-  Longshot → **Flax's Chainstorm**.
-- **Tag someone while holding the Chainstorm to win instantly.** If the clock runs out, the highest rung wins
-  (then score). The HUD shows "BLASTER n / 7", and the scoreboard has a BLASTER column.
-- Planned rungs: *Wind Whisperer* (after Ricochet Ranger), *Thunder Cannon* and *Rocket Dart* (before the Chainstorm).
-  To add one, write its `.tres` and drop it into the ladder (TUNING.md).
+- **Full 11-rung ladder:** Pocket Popper → Double Trouble → Dart Sprayer → Wind Whisperer → Foam Hammer →
+  Hydro Soaker → Ricochet Ranger → Thunder Cannon → Longshot → **Flax's Chainstorm** → **Foam Bat**.
+- **Land the final close-range bonk with the Foam Bat (rung 11 / 11) to win instantly!** If the clock runs out,
+  the highest rung wins (then score). The HUD shows `BLASTER n / 11`, and the scoreboard has a `BLASTER` column.
+- To customize or reorder the ladder, edit `resources/modes/gun_game.tres` (see `TUNING.md`).
 
 ### 3.14 Bots, from the player's point of view
 Five named kids: **Blaze** (orange), **Pickle** (green), **Zoom** (purple), **Sprinkles** (pink), **Noodle** (yellow).
@@ -649,23 +659,39 @@ The main menu is the players' own drawing (§1.9), built in 3D:
   - **Squad Ping Reaction:** Bots on the same team evaluate ping types: turning aim toward reported rivals, routing toward ammo/power-up pings when needed, and moving toward regroup markers.
   - **Low-Health Defensive Retreat:** When a bot's tag meter exceeds 70% (danger threshold), it falls back defensively from combat instead of pressing aggressive forward rushes.
 
+### 3.29 v1.0.0 Production Systems: Foam Bat, Objective Modes, Workbench, Tactical Radar & Multiplayer *(v1.0.0)*
+- **Foam Bat Melee & Baseball Deflect (`foam_bat.tres`, `BatPickup`):**
+  - Stylized safety-orange and cobalt EVA-foam `"BONK!"` slugger bat with diagonal first- and third-person swings, +14% hold sprint boost, 3.0 m reach, 70° cone, 100 tag damage, cartoon home-run knockback (+13.5 m/s + 4.6 m/s lift, damped on Brutes/Titan Boss), zero ammo/reload requirement, and procedural `bat_swing` / `bat_bonk` SFX.
+  - **Baseball Deflect:** Swinging at incoming live enemy darts (`DartProjectile.deflect()`) or live `FoamGrenade`s bats them straight back along your aim, transferring shooter credit, team ID, and hitbox exclusions so deflected darts award **+50 RICOCHET BONUS!** when tagging rivals.
+  - **Placement:** Gun Game final win rung (11 / 11); Zombies & Zombie Siege survivor Slot `5`; glowing arena `BatPickup` pad (18 s respawn, orange-gold radar diamond) in FFA, Duos, Teams, CTF, Plant the Bomb, Floor is Lava, and Realistic.
+- **Capture the Flag (`CaptureTheFlagMode`, `FlagPickup`):** Two-team flag capture across explicit anchored team pedestals on all 9 arenas; first team to 3 captures (or highest at buzzer) wins.
+- **Plant the Bomb (`PlantTheBombMode`, `BombTarget`):** Round-based Attackers vs Defenders at explicit Site A & Site B zones with contextual `[F]` arm/defuse prompts, dual fuse/defuse HUD bars, and objective-aware Bot AI.
+- **Realistic Mode (`realistic.tres`):** Lowered tag thresholds and streamlined HUD for high-stakes tactical tagging.
+- **Garage Workbench & Weapon Mastery (`GarageWorkbench`, `WeaponModding`):** Enclosed 3D customization studio for 7 modular blasters with 5 slots (Optic, Barrel, Spring, Magazine, Stock), 19+ aftermarket attachments, and 10 mastery ranks earned purely through gameplay tags.
+- **Tactical Minimap Radar (`TacticalMinimap`):** Rotating circular top-right radar showing arena cover, FOV wedge, teammates, nearby/firing rivals, Bomb Sites A/B, CTF flags, Base Core, Foam Bat pickups, and ammo buckets — paired with directional damage arcs, dynamic spread crosshair/hitmarkers, and crisp 3D flip-up iron sights.
+- **2-Player Split-Screen & LAN/Online Multiplayer (`NetworkManager`, `LanDiscovery`, `DedicatedServer`):** Dual-viewport shared-world couch co-op/versus plus WebSocket LAN/online play with UDP port 8925 discovery and a headless Linux Dedicated Server (`--map-rotation`, `--bot-fill`, `--mode`, `--arena`).
+
 ---
 
 ## 4. Blasters
 
 ### 4.1 Reference
-| Blaster | Mode | Rate | Darts/shot | Spread | Magazine / reserve | Reload | Move while firing | Personality |
+| Blaster | Mode | Rate | Darts/shot | Spread | Magazine / reserve | Reload | Move while firing / held | Personality |
 |---|---|---|---|---|---|---|---|---|
-| **Pocket Popper** | Semi | 5/s | 1 | 0.4° | 8 / 48 (32) | 0.8 s | 100% | Accurate, reliable starter |
-| **Dart Sprayer** | Auto | 10/s | 1 | 2.6° | 30 / 150 (90) | 1.5 s | 100% | Hold and hose |
-| **Flax's Chainstorm** | Spin-up | 30/s | 1 | 4.2° | belt 400 (160) | — | **45%** | The star of the show |
-| Double Trouble | Semi | 3.2/s | 2 | 1.6° | 8 / 48 (32) | 1.0 s | 100% | Two at once |
-| Foam Hammer | Semi | 1.5/s | 8 | 6.5° | 4 / 28 (20) | 1.6 s | 100% | Point-blank blast |
-| Ricochet Ranger | Semi | 3/s | 1 | 0.5° | 6 / 36 (24) | 1.2 s | 100% | Bounces off everything |
-| Longshot | Semi | 1.1/s | 1 | 0.1° | 4 / 24 (16) | 1.8 s | 100% | ADS sniper scope (35° FOV), 85 tag power |
+| **Pocket Popper** | Semi | 5.0/s | 1 | 0.4° | 8 / 48 (32) | 0.8 s | 100% | Accurate, reliable starter |
+| **Double Trouble** | Semi | 3.2/s | 2 | 1.6° | 8 / 48 (32) | 1.0 s | 100% | Two foam darts per pull |
+| **Dart Sprayer** | Auto | 10.0/s | 1 | 2.6° | 30 / 150 (90) | 1.5 s | 100% | Hold and hose |
+| **Wind Whisperer** | Semi | 3.0/s | 1 | 0.15° | 10 / 60 (40) | 0.9 s | 100% | Fast wind-spiral darts with micro-lift |
+| **Foam Hammer** | Semi | 1.5/s | 8 | 6.5° | 4 / 28 (20) | 1.6 s | 100% | Point-blank 8-slug blast |
+| **Hydro Soaker** | Semi | 1.8/s | 1 | 0.3° | 6 / 36 (24) | 1.2 s | 100% | Splash knockback & lava-cooling water darts |
+| **Ricochet Ranger** | Semi | 3.0/s | 1 | 0.5° | 6 / 36 (24) | 1.2 s | 100% | Bounces 4× off any surface |
+| **Thunder Cannon** | Semi | 1.2/s | 1 | 0.2° | 5 / 25 (15) | 1.6 s | 100% | Chain-lightning zapper & puddle electrifier |
+| **Frost Ranger** | Semi | 2.2/s | 1 | 0.25° | 8 / 48 (32) | 1.0 s | 100% | Chilling ice crystals & obsidian cooling |
+| **Longshot** | Semi | 1.1/s | 1 | 0.1° | 4 / 24 (16) | 1.8 s | 100% | ADS sniper scope (35° FOV), 85 tag power |
+| **Flax's Chainstorm** | Spin-up | 30.0/s | 1 | 4.2° | belt 400 (160) | — | **45%** | The star of the show |
+| **Foam Bat** | **Melee** | 1.85/s | — | 70° arc | unlimited | — | **114% held** | Wide cartoon bonk + baseball dart/grenade deflect |
 
-Keys `1 2 3`, the mouse wheel or `Q`/`E` (controller: Y, LB, RB) switch blasters (0.3 s swap). Right mouse button / controller Left Trigger aims down sights (ADS) with sniper scope on Longshot. In free-for-all you carry the
-Popper, the Sprayer and the Chainstorm, unless power-up mode is on (§3.19).
+Keys `1`–`5`, the mouse wheel, or `Q`/`E` (controller: Y, LB, RB) switch weapons (0.3 s swap). Right mouse button / controller Left Trigger aims down sights (ADS) with crisp 3D iron sights, aftermarket optics, or the Longshot sniper scope (ADS disabled while holding the Foam Bat). In free-for-all you carry the Popper, the Sprayer, and the Chainstorm (unless power-up mode is on, §3.19) and can grab the Foam Bat pickup pad in the arena.
 
 ### 4.2 Spotlight: FLAX'S CHAINSTORM
 Brief: *"This weapon should feel hilariously overpowered and be a highlight of the game."*
@@ -739,16 +765,26 @@ the glowing mirror frames, and the neighbourhood houses beyond the fence.
 
 The treehouse deck also hosts the power-up spot (§3.19).
 
-### 5.2 Future elemental arenas (designed, not built)
-| Arena | Signature mechanic | Reuses | Needs |
-|---|---|---|---|
-| **Tempest Treehouse** | Wind tunnels, gusts, vertical climbs, long curved shots | WindZone `gust_amount`, WindField `global_wind`, JumpPad | Gust timing, vertical layout |
-| **Ember Workshop** | Glowing vents, moving platforms, temporary flame barriers (**playful, never burns**) | ArenaKit, wind as heat updraft | AnimatableBody3D platforms, toggling barriers, FIRE dart visuals |
-| **Thunder Playground** | Storms, electrical relays, energy boosts, machinery | JumpPad-style pads | Timed relay triggers, speed boosts, LIGHTNING darts |
-| **Prism Palace** | Mirror walls, glass platforms, creative ricochets | ReflectiveSurface (done), bouncy darts | Many mirrors, transparent floors |
-| **Frost Factory** | Ice slides, slippery floors, frozen darts, moving obstacles | Actor movement | Per-surface friction, ICE darts, conveyor obstacles |
+### 5.2 Elemental & expansion arena roster
+| Arena | Status | Signature mechanic / theme |
+|---|---|---|
+| **Tempest Treehouse** | ✅ Built (§5.4) | Multi-tier ancient canopy, suspension rope bridge, Crow's Nest, ice slide, gale tunnels |
+| **Playground** | ✅ Built (§5.5) | Colourful climbing towers, slides, sandpit, fast vertical sightlines |
+| **Sunny Park** | ✅ Built (§5.5) | Bandstand pavilion, pond bridges, gazebo cover, open flanking trails |
+| **Soccer Stadium** | ✅ Built (§5.5) | Floodlit twilight stadium with pitch cover, giant soccer balls & golden-cyan night lighting |
+| **Two Fortresses** | ✅ Built (§5.5) | Dual-fort valley with covered wooden bridge, open moat, basement vaults, water tunnels & sniper decks |
+| **Dusty Courtyard** | ✅ Built (§5.5) | Sun-baked sandstone courtyard with sunken underpass, sniper bridge, open arch & Sites A/B |
+| **Duststorm II** | ✅ Built (§5.5) | Stylized desert tactical layout with Long A, Pit ramp, Mid/Lower B Tunnel, Catwalk & Sites A/B |
+| *Ember Workshop / Prism Palace / Frost Factory* | ⏳ Future ideas | Post-1.0 elemental expansion concepts (moving platforms, glass labyrinths, conveyor floors) |
 
-Tempest Treehouse is the cheapest next arena because almost all of its systems already exist.
+### 5.5 Additional v1.0.0 Playable Arenas *(indices 3–8)*
+All 9 arenas expose explicit `team_bases`, `flag_pedestals`, `bomb_sites`, `bomb_spawns`, `powerup_spot`, and bespoke per-arena AgX atmospheric lighting + `ReflectionProbe` presets (guarded cleanly for Web/Mobile Compatibility fallback):
+- **Playground (`playground.gd`):** Bright municipal playground with multi-level climbing towers, curved slides, tire/sandpit cover, and rapid close-mid lanes.
+- **Sunny Park (`sunny_park.gd`):** Open golden-hour park anchored by a central bandstand gazebo, twin pond footbridges, picnic cover, and wide flanking trails.
+- **Soccer Stadium (`soccer_field.gd`):** Floodlit twilight stadium with stadium floodlight towers, pitch midfield cover, oversized soccer props, and vibrant cyan/gold dusk ambiance.
+- **Two Fortresses (`two_forts.gd`):** Classic dual-fortress valley linked by a covered timber bridge above an open moat, with navigable basement vaults, water tunnels, ramps, and sniper battlements.
+- **Dusty Courtyard (`dust_courtyard.gd`):** Sun-baked desert sandstone fort featuring a sunken central underpass, overhead sniper bridge, open central arch, elevated CT compound, and explicit Bomb Sites A & B.
+- **Duststorm II (`dust2.gd`):** Faithful stylized sandstone tactical arena with Long A, cleared Pit ramp, Mid doors, open Lower B Tunnel, Catwalk short, B Window, and explicit Bomb Sites A & B.
 
 ### 5.3 Home Turf: a family home, toy-sized *(v0.4.0)*
 A fictional suburban family home and the streets around it: battle through the rooms and out into the street.
@@ -996,6 +1032,15 @@ to that (sections of `tests/test_runner.gd`). Items marked *(v0.1.1)* were added
   boot headless and quit cleanly.
 - **Tests:** *Linux build: export preset*, plus the script's own smoke test.
 
+### 6.27 v1.0.0 Hardened Systems *(Foam Bat, ADS Iron Sights, Tactical Radar & Multi-Platform Releases)*
+- **Rules:** §3.29, §4.1, §5.5, DECISIONS D-048 & D-049.
+- **Guarantees:**
+  - Foam Bat needs zero ammo/reloading, mounts zero floating blaster attachments/iron sights, breaks Foam Shields and spills melee damage with knockback, deflects incoming enemy darts with shooter/team/ricochet transfer, caps Gun Game at rung 11/11, starts in Zombies/Zombie Siege loadouts, and spawns via `BatPickup` in all other modes.
+  - All blasters maintain camera near-plane clearance (`rear_world_z <= -0.10`) in iron-sight and aftermarket optic ADS without clipping into the blaster mesh.
+  - `Hud._process` reads `Arsenal.reload_progress()` cleanly with zero runtime script errors and zero unsupported emoji glyphs in `Lilita One`.
+  - All 5 export presets (`Windows Desktop`, `Linux`, `Android`, `Web`, `Linux Server`) stay synchronized at `1.0.0` with custom branding icons and boot splash.
+- **Tests:** *v1.0.0 Production Polish, Gameplay Hardening & Arena Integrity* (tests #1–#13 in `tests/test_runner.gd`; **1,544+ total checks, 0 warnings, 0 leaks**).
+
 ---
 
 ## 7. Game feel and audio
@@ -1014,10 +1059,12 @@ to that (sections of `tests/test_runner.gd`). Items marked *(v0.1.1)* were added
 | Chainstorm | Rising motor whine, visible barrel spin, spin bar, rattle, belt advance |
 
 **Audio** is all generated in code (`scripts/core/sfx.gd`, DECISIONS D-005), so there are no sound files.
-- **Sound effects** (SFX bus): launches `pop`, `spray`, `chain`, `thump`, `zip` (a tone plus a breathy "fwip" of air);
-  impacts `hit` (a foam "thwap"), `hit_confirm`, `tag`, `tagged`, `ricochet`, `ding`, `boing`; handling `reload`, `dry`,
-  `ammo`, `swap`; flow `beep`, `go`, `ui_click`, `level_up`, `win`, `lose`; announcer `announce`, `streak`, `shutdown`,
-  `powerup`; podium `cheer`; controller `connect`, `disconnect`; backyard `woof`, `chirp`; the `spin` Chainstorm loop.
+- **Sound effects** (SFX bus): launches `pop`, `spray`, `chain`, `thump`, `zip`, `whoosh`, **`bat_swing`**;
+  impacts `hit` (a foam "thwap"), `hit_confirm`, **`bat_bonk`**, `tag`, `tagged`, `ricochet`, `ding`, `boing`,
+  `shield_hit`, `shield_pop`, `fuse_beep`, `lava_sizzle`, `thunder`, `blizzard_wind`, `ping`, `ping_ack`,
+  `zombie_moan`, `infect`; handling `reload`, `dry`, `ammo`, `swap`; flow `beep`, `go`, `ui_click`, `level_up`,
+  `win`, `lose`; announcer `announce`, `streak`, `shutdown`, `powerup`; podium `cheer`; controller `connect`,
+  `disconnect`; backyard `woof`, `chirp`; the `spin` Chainstorm loop.
 - **Music** (Music bus, *v0.2.0*): two chiptune loops rendered on a worker thread at startup. **Menu:** 108 BPM, soft pads,
   a gentle triangle-wave tune, 4 bars (≈8.9 s). **Match:** 140 BPM, C–G–Am–F, a pulse-wave lead, bass, chord stabs and drums,
   8 bars (≈13.7 s). It crossfades between tracks, gets quieter on pause, and stops at the final whistle for the win/lose
@@ -1044,28 +1091,34 @@ License, `assets/fonts/`), with dark outlines everywhere.
 Actor colours: you choose (default blue); the bots are Blaze orange, Pickle green, Zoom purple, Sprinkles pink and Noodle
 yellow, and swap to a spare colour if yours is close to theirs.
 
-**HUD layout:** top left: score, tags, place and Gun Game rung, plus the wind compass · top centre: clock and mode ·
-top right: tag feed · centre: crosshair, hit marker, popups, banners · bottom left: tag meter ("DANGER!" at 70%) ·
-bottom right: blaster name, ammo (`mag | reserve`, `BELT n`, or `INF`), hints (REFILLING!, RELOADING..., LOW AMMO,
-OUT OF DARTS - FIND A BUCKET!), and the Chainstorm spin bar · under the clock: announcer call-outs · hold Tab: scoreboard ·
-bottom centre (any screen): device notices such as "controller connected".
+**HUD layout:** top left: score, tags, place/Gun Game rung, wind compass & weather status · top centre: clock, mode,
+team/objective chips & announcer call-outs · top right: **Tactical Minimap Radar** (`TacticalMinimap`) and tag feed ·
+centre: dynamic spread crosshair, reload arc, multi-color hitmarkers, directional damage arcs, popups, banners &
+contextual `[F]` objective prompt · bottom left: Foam Shield bar & tag meter ("DANGER!" at 70%) · bottom right:
+blaster/melee name, ammo (`mag | reserve`, `BELT n`, `INF`, or `MELEE`), grenade count, elemental infusion bar,
+weapon slot pills (`1`–`5`), reload bar, Chainstorm spin bar & hints · hold Tab: scoreboard · bottom centre: device notices.
+All HUD and UI text uses clean ASCII/typography with zero emoji glyphs unsupported by `Lilita One`.
 
-**Screens:** main menu (live orbiting arena, both modes, bot count 2–5, bot skill, Chainstorm rule, YOUR PLAYER, settings,
-quit, and how to play that switches between keyboard and controller) → match → pause (resume, restart, settings, main menu) →
-podium and results (play again, main menu). Every menu works with keyboard, controller (A/B) or mouse.
+**Screens:** main menu (live 9-arena 3D bunker lobby with squad preview, all 10 modes, 1P/2P split-screen, bot count 2–7,
+bot skill, Chainstorm rule, Online Multiplayer, Garage Workbench, Missions, Coin Shop, Character, How to Play, Settings,
+and `v1.0.0` badge) → match → pause (resume, restart, settings, main menu) → metallic spotlight podium and results
+(rewards breakdown, awards, play again, main menu). Every menu works with keyboard, controller (A/B), mouse, or touch.
 
 ## 9. Accessibility and comfort
 - **Camera shake** 0–1.5; **0 turns it off entirely**.
 - **Visual effects** 0.2–1.5: scales particle counts, the effects budget, muzzle-flash size and the hit tint.
+- **Game speed** 0.70–1.10 (0.90 default) for comfortable pacing for younger players.
+- **Graphics quality presets** (Low / Medium / High / Ultra) for smooth performance across hardware.
 - **No strobing.** The hit tint is soft and short, and there are no full-screen flashes.
 - **Field of view** 60–110 (85 default) for players who feel motion-sick.
-- **Mouse sensitivity**, **controller look speed** and **invert look**.
-- **Controller aim assist** and **rumble**, both switchable; the main menu's help shows controller buttons when a pad is in use.
+- **Mouse sensitivity**, **controller look speed**, **touch sensitivity**, and **invert look**.
+- **In-game key & gamepad remapping** (§10.4.1, `BindingsPanel`) with secondary-binding preservation and one-click reset.
+- **4 Colour-blind-safe team palettes** (§10.4.2): Default, Cobalt & Sunburst, Magenta & Mint, and High Contrast.
+- **Controller aim assist**, **rumble**, and **mobile touch controls** (`AUTO` / `ALWAYS ON` / `OFF`).
 - **Separate music and sound-effect volumes**.
-- **Pause anywhere** in a match. Losing focus pauses automatically.
+- **Pause anywhere** in a match (including on-screen `||` pause button on touchscreens). Losing focus pauses automatically.
 - **Generous design:** bigger bot hitboxes, weaker bot darts, spawn protection, meter regen, auto-reload.
 - **Readable signs:** world signs only show from the front, so nothing reads mirrored.
-- **Planned:** remappable keys and buttons, a colour-blind-safe team palette option, subtitles or icons for important sounds.
 
 ## 10. Progression, Levels, Missions & Coin Shop (v0.5.3)
 Built directly to the young players' wishlist (§1.9, D-028, D-036). A fair, joyous, kid-safe reward system:

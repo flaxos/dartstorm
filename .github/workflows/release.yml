@@ -1,0 +1,67 @@
+name: Build & Publish Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v1.0.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: "4.4.1"
+
+jobs:
+  validate-and-build:
+    name: Validate & Export All Platforms
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Godot ${{ env.GODOT_VERSION }} and export templates
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/bin" "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          curl -fsSL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d "$HOME/bin"
+          mv "$HOME/bin/Godot_v${GODOT_VERSION}-stable_linux.x86_64" "$HOME/bin/godot"
+          chmod +x "$HOME/bin/godot"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+          curl -fsSL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -o /tmp/templates.tpz
+          unzip -q /tmp/templates.tpz -d /tmp/templates
+          mv /tmp/templates/templates/* "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
+          rm -rf /tmp/godot.zip /tmp/templates.tpz /tmp/templates
+
+      - name: Run strict validation and test suite
+        run: ./tools/validate.sh
+
+      - name: Export Windows, Linux, Web & Dedicated Server
+        run: ./tools/export_all.sh --skip-android
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.tag || github.ref_name }}"
+          GAME_VERSION="$(sed -n 's/^config\/version="\(.*\)"$/\1/p' project.godot)"
+          STAGE="build/release-v${GAME_VERSION}"
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ] && gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — skipping duplicate automatic upload."
+            exit 0
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$STAGE"/* --clobber
+          else
+            gh release create "$TAG" "$STAGE"/* \
+              --title "DARTSTORM ${TAG}" \
+              --generate-notes
+          fi

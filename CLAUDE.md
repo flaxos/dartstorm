@@ -13,8 +13,8 @@ tagging only, no gore, no real-firearm branding, no microtransactions.
    It fails on any GDScript **warning** (strict compile step), any test failure, or any "leaked at exit".
 3. Play: `./tools/run.sh`. The main scene is `scenes/ui/main_menu.tscn`, and the match is `scenes/game/match.tscn`.
 
-Godot lives at `~/bin/godot` (4.4.1) on the dev box. **Linux is the platform that matters now**; Windows is deferred.
-Linux release: `./tools/export_linux.sh` (needs the export templates; output in `build/`, which git ignores).
+Godot lives at `~/bin/godot` (4.4.1) on the dev box. DARTSTORM ships across **Windows (`.exe`), Linux (`.x86_64`), Android (`.apk`), Web (`HTML5/WASM`), and Linux Dedicated Server**.
+Releases: `./tools/export_windows.sh`, `./tools/export_linux.sh`, `./tools/export_apk.sh`, `./tools/export_web.sh`, `./tools/export_server.sh`, or `./tools/export_all.sh` (all output to `build/`, which git ignores).
 Controllers must stay plug and play: every binding uses device -1, and every screen works with A/B.
 
 ## Checking the game without a human
@@ -42,8 +42,9 @@ Controllers must stay plug and play: every binding uses device -1, and every scr
 | `docs/TUNING.md` | A data field is added or renamed |
 | `docs/UAT.md` | A release needs a hands-on check (add rows, then log results) |
 | `docs/ARCHITECTURE.md` | Systems, ownership, safeguards (§10) or budgets (§11) change |
-| `docs/DECISIONS.md` | A non-obvious choice is made (latest is D-048) |
+| `docs/DECISIONS.md` | A non-obvious choice is made (latest is D-049) |
 | `docs/ROADMAP.md` | Always, at the end of a piece of work |
+| `CHANGELOG.md` | Whenever shipping a release milestone |
 
 ## Conventions
 - **Every bug fix or hardening change ships with a regression test** in `tests/test_runner.gd`.

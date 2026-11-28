@@ -273,79 +273,94 @@ def _build_head_and_face() -> Tuple[List[MeshPart], List[MeshPart], List[MeshPar
     hy = 1.48  # Head bone world Y
     head_parts: List[MeshPart] = []
 
-    # 1. Softly sculpted cartoon kid head (cute rounded cheeks, soft jaw taper, forehead dome)
+    # 1. Smooth higher-res Pixar kid head (soft sculpted cheeks, defined chin, rounded temples)
     head_rings = [
-        squircle_ring((0.0, hy - 0.155, -0.010), 0.115, 0.118, 24, 0.90), # chin base
-        squircle_ring((0.0, hy - 0.110, -0.018), 0.195, 0.192, 24, 0.88), # soft jaw
-        squircle_ring((0.0, hy - 0.025, -0.012), 0.258, 0.246, 24, 0.88), # full rosy cheeks
-        squircle_ring((0.0, hy + 0.075, -0.004), 0.255, 0.252, 24, 0.90), # eye line
-        squircle_ring((0.0, hy + 0.180,  0.004), 0.242, 0.246, 24, 0.92), # forehead
-        squircle_ring((0.0, hy + 0.265,  0.006), 0.192, 0.198, 24, 0.94), # upper dome
-        squircle_ring((0.0, hy + 0.312,  0.006), 0.095, 0.098, 24, 0.96), # crown
+        squircle_ring((0.0, hy - 0.158, -0.014), 0.108, 0.112, 32, 0.92), # soft chin
+        squircle_ring((0.0, hy - 0.112, -0.020), 0.190, 0.188, 32, 0.88), # smooth jawline
+        squircle_ring((0.0, hy - 0.025, -0.012), 0.256, 0.244, 32, 0.88), # full Pixar cheeks
+        squircle_ring((0.0, hy + 0.078, -0.004), 0.252, 0.250, 32, 0.90), # eye line
+        squircle_ring((0.0, hy + 0.182,  0.004), 0.240, 0.244, 32, 0.92), # forehead
+        squircle_ring((0.0, hy + 0.268,  0.006), 0.192, 0.198, 32, 0.94), # upper dome
+        squircle_ring((0.0, hy + 0.314,  0.006), 0.092, 0.095, 32, 0.96), # crown
     ]
-    head_mesh = loft_rings("Mat_Skin", head_rings, cap_start=True, cap_end=True, grad_top=1.04, grad_bot=0.90)
+    head_mesh = loft_rings("Mat_Skin", head_rings, cap_start=True, cap_end=True, grad_top=1.04, grad_bot=0.92)
     head_mesh = bake_ao_cavity(head_mesh, [
-        ((0.0, hy - 0.15, 0.0), 0.14, 0.16),      # under chin
-        ((-0.095, hy + 0.08, -0.22), 0.07, 0.10), # left eye socket soft depth
-        (( 0.095, hy + 0.08, -0.22), 0.07, 0.10), # right eye socket soft depth
+        ((0.0, hy - 0.15, 0.0), 0.14, 0.14),
+        ((-0.092, hy + 0.08, -0.22), 0.075, 0.10),
+        (( 0.092, hy + 0.08, -0.22), 0.075, 0.10),
     ])
     head_parts.append(head_mesh)
 
-    # Cute rounded ears on ±X
+    # Sculpted rounded ears with inner recess softness
     for side in (-1.0, 1.0):
-        ear = superellipsoid("Mat_Skin", 0.056, 0.076, 0.042, e1=0.88, e2=0.88, segs_u=14, segs_v=10)
-        head_parts.append(transform_part(ear, pos=(side * 0.248, hy + 0.052, 0.012), rot_deg=(0.0, side * -18.0, side * -8.0)))
+        ear = superellipsoid("Mat_Skin", 0.056, 0.078, 0.042, e1=0.88, e2=0.88, segs_u=16, segs_v=12)
+        head_parts.append(transform_part(ear, pos=(side * 0.248, hy + 0.050, 0.012), rot_deg=(0.0, side * -18.0, side * -8.0)))
 
-    # Cute upturned cartoon button nose
-    nose = superellipsoid("Mat_Skin", 0.038, 0.030, 0.036, e1=0.88, e2=0.88, segs_u=14, segs_v=10, grad_top=1.06, grad_bot=0.84)
-    head_parts.append(transform_part(nose, pos=(0.0, hy + 0.025, -0.258), rot_deg=(-12.0, 0.0, 0.0)))
+    # Sculpted Pixar nose bridge + soft rounded tip
+    nose_bridge = superellipsoid("Mat_Skin", 0.022, 0.032, 0.026, e1=0.85, e2=0.85, segs_u=14, segs_v=10)
+    head_parts.append(transform_part(nose_bridge, pos=(0.0, hy + 0.046, -0.242), rot_deg=(-18.0, 0.0, 0.0)))
+    nose = superellipsoid("Mat_Skin", 0.036, 0.028, 0.036, e1=0.88, e2=0.88, segs_u=16, segs_v=10, grad_top=1.06, grad_bot=0.88)
+    head_parts.append(transform_part(nose, pos=(0.0, hy + 0.022, -0.260), rot_deg=(-10.0, 0.0, 0.0)))
 
-    # Rosy soft-coral blush cheeks
+    # Soft rosy cheek highlights (blended gently onto skin, never garish dots)
     for side in (-1.0, 1.0):
-        cheek = superellipsoid("Mat_Cheek", 0.048, 0.028, 0.020, e1=0.9, e2=0.9, segs_u=14, segs_v=8)
-        head_parts.append(transform_part(cheek, pos=(side * 0.156, hy + 0.002, -0.206), rot_deg=(0.0, side * 34.0, 0.0)))
+        cheek = superellipsoid("Mat_Cheek", 0.046, 0.024, 0.014, e1=0.92, e2=0.92, segs_u=14, segs_v=8)
+        head_parts.append(transform_part(cheek, pos=(side * 0.152, hy + 0.002, -0.208), rot_deg=(0.0, side * 34.0, 0.0)))
 
-    # Big Expressive Glossy Pixar Eyes + Arched Expressive Eyebrows
+    # Big Expressive Glossy Pixar Eyes + Soft Upper Eyelid Fold + Arched Sculpted Eyebrows
     for side in (-1.0, 1.0):
-        ex, ey, ez = side * 0.092, hy + 0.082, -0.214
-        # Glossy white almond-oval sclera
-        sclera = superellipsoid("Mat_Sclera", 0.062, 0.072, 0.042, e1=0.88, e2=0.88, segs_u=18, segs_v=12)
+        ex, ey, ez = side * 0.090, hy + 0.082, -0.214
+        sclera = superellipsoid("Mat_Sclera", 0.060, 0.068, 0.042, e1=0.88, e2=0.88, segs_u=20, segs_v=14)
         head_parts.append(transform_part(sclera, pos=(ex, ey, ez), rot_deg=(0.0, side * 14.0, 0.0)))
-        # Vivid cobalt iris
-        iris = superellipsoid("Mat_Iris", 0.042, 0.049, 0.020, e1=0.9, e2=0.9, segs_u=16, segs_v=10)
+        iris = superellipsoid("Mat_Iris", 0.040, 0.046, 0.020, e1=0.9, e2=0.9, segs_u=18, segs_v=12)
         head_parts.append(transform_part(iris, pos=(ex * 0.99, ey, ez - 0.032), rot_deg=(0.0, side * 14.0, 0.0)))
-        # Deep glossy pupil
-        pupil = superellipsoid("Mat_Pupil", 0.025, 0.030, 0.015, e1=0.9, e2=0.9, segs_u=14, segs_v=8)
+        pupil = superellipsoid("Mat_Pupil", 0.024, 0.028, 0.015, e1=0.9, e2=0.9, segs_u=16, segs_v=10)
         head_parts.append(transform_part(pupil, pos=(ex * 0.99, ey, ez - 0.043), rot_deg=(0.0, side * 14.0, 0.0)))
-        # Twin Pixar specular catchlight glints
-        glint1 = superellipsoid("Mat_Catchlight", 0.014, 0.015, 0.009, e1=1.0, e2=1.0, segs_u=10, segs_v=6)
-        head_parts.append(transform_part(glint1, pos=(ex + 0.016, ey + 0.020, ez - 0.052)))
-        glint2 = superellipsoid("Mat_Catchlight", 0.007, 0.007, 0.006, e1=1.0, e2=1.0, segs_u=8, segs_v=6)
+        glint1 = superellipsoid("Mat_Catchlight", 0.013, 0.014, 0.008, e1=1.0, e2=1.0, segs_u=10, segs_v=6)
+        head_parts.append(transform_part(glint1, pos=(ex + 0.016, ey + 0.019, ez - 0.052)))
+        glint2 = superellipsoid("Mat_Catchlight", 0.006, 0.006, 0.005, e1=1.0, e2=1.0, segs_u=8, segs_v=6)
         head_parts.append(transform_part(glint2, pos=(ex - 0.013, ey - 0.014, ez - 0.051)))
 
-        # Thick sculpted arched cartoon eyebrows
-        brow_pts = [
-            (side * 0.042, ey + 0.088, -0.232),
-            (side * 0.095, ey + 0.105, -0.236),
-            (side * 0.148, ey + 0.088, -0.212),
+        # Subtle sculpted upper lash/lid rim for warm Pixar expression
+        lid_rim = [
+            (ex - side * 0.048, ey + 0.038, ez - 0.024),
+            (ex,                ey + 0.062, ez - 0.034),
+            (ex + side * 0.050, ey + 0.036, ez - 0.018),
         ]
-        head_parts.append(curved_tube("Mat_Hair", brow_pts, [0.014, 0.018, 0.013], segs=10))
+        head_parts.append(curved_tube("Mat_Hair", lid_rim, [0.006, 0.009, 0.006], segs=8))
 
-    # Sculpted Stylized Cartoon Hair (full back/top volume + sideburns + 3 swept front bangs)
-    hair_cap = superellipsoid("Mat_Hair", 0.258, 0.228, 0.254, e1=0.86, e2=0.88, segs_u=22, segs_v=14, grad_top=1.08, grad_bot=0.78)
-    head_parts.append(transform_part(hair_cap, pos=(0.0, hy + 0.135, 0.036)))
-    # Sideburns framing ears cleanly
+        # Thick expressive arched Pixar eyebrows
+        brow_pts = [
+            (side * 0.040, ey + 0.088, -0.232),
+            (side * 0.094, ey + 0.106, -0.236),
+            (side * 0.148, ey + 0.086, -0.212),
+        ]
+        head_parts.append(curved_tube("Mat_Hair", brow_pts, [0.013, 0.019, 0.012], segs=12))
+
+    # Voluminous Layered 3D Pixar Hair (rich crown cap + side tufts + 6 sculpted flowing locks!)
+    hair_cap = superellipsoid("Mat_Hair", 0.264, 0.235, 0.260, e1=0.86, e2=0.88, segs_u=26, segs_v=16, grad_top=1.10, grad_bot=0.76)
+    head_parts.append(transform_part(hair_cap, pos=(0.0, hy + 0.140, 0.034)))
+    # Side locks framing temples & ears naturally
     for side in (-1.0, 1.0):
-        sb = superellipsoid("Mat_Hair", 0.042, 0.095, 0.058, e1=0.78, e2=0.80, segs_u=12, segs_v=8)
-        head_parts.append(transform_part(sb, pos=(side * 0.225, hy + 0.072, -0.055), rot_deg=(0.0, side * 12.0, side * 10.0)))
-    # Three lively swept side-parted front cartoon bangs peeking below hats!
+        sb = superellipsoid("Mat_Hair", 0.048, 0.102, 0.066, e1=0.78, e2=0.80, segs_u=14, segs_v=10)
+        head_parts.append(transform_part(sb, pos=(side * 0.228, hy + 0.078, -0.052), rot_deg=(0.0, side * 12.0, side * 10.0)))
+        tuft = curved_tube("Mat_Hair", [
+            (side * 0.215, hy + 0.18, -0.06),
+            (side * 0.235, hy + 0.11, -0.10),
+            (side * 0.220, hy + 0.04, -0.11),
+        ], [0.042, 0.036, 0.016], segs=10)
+        head_parts.append(tuft)
+    # 6 lush sculpted overlapping swept Pixar bangs & quiff curls!
     bang_specs = [
-        ([(-0.11, hy + 0.26, -0.14), (-0.04, hy + 0.23, -0.235), (0.04, hy + 0.185, -0.255)], [0.052, 0.048, 0.022]),
-        ([( 0.02, hy + 0.27, -0.15), ( 0.10, hy + 0.23, -0.228), (0.17, hy + 0.175, -0.210)], [0.048, 0.044, 0.020]),
-        ([(-0.18, hy + 0.23, -0.11), (-0.17, hy + 0.19, -0.185), (-0.14, hy + 0.145, -0.225)], [0.042, 0.038, 0.018]),
+        ([(-0.14, hy + 0.275, -0.10), (-0.05, hy + 0.255, -0.225), (0.06, hy + 0.195, -0.258)], [0.064, 0.056, 0.020]),
+        ([(-0.02, hy + 0.285, -0.11), ( 0.08, hy + 0.250, -0.225), (0.17, hy + 0.185, -0.218)], [0.060, 0.052, 0.020]),
+        ([(-0.19, hy + 0.245, -0.08), (-0.17, hy + 0.205, -0.185), (-0.12, hy + 0.155, -0.232)], [0.052, 0.044, 0.018]),
+        ([( 0.08, hy + 0.275, -0.09), ( 0.17, hy + 0.230, -0.175), (0.21, hy + 0.165, -0.168)], [0.052, 0.042, 0.018]),
+        ([(-0.08, hy + 0.295, -0.04), ( 0.00, hy + 0.305, -0.155), (0.09, hy + 0.268, -0.215)], [0.068, 0.058, 0.026]),
+        ([(-0.10, hy + 0.240, -0.16), (-0.02, hy + 0.205, -0.245), (0.05, hy + 0.172, -0.248)], [0.044, 0.036, 0.014]),
     ]
     for bpts, brads in bang_specs:
-        head_parts.append(curved_tube("Mat_Hair", bpts, brads, segs=10))
+        head_parts.append(curved_tube("Mat_Hair", bpts, brads, segs=12))
 
     head_skinned = [assign_rigid_bone(p, B_HEAD) for p in head_parts]
 

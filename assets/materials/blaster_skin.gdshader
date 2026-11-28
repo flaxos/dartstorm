@@ -133,25 +133,3 @@ void fragment() {
 	RIM = fresnel * rim_strength;
 	RIM_TINT = 0.5;
 }
-
-void light() {
-	float ndl = dot(NORMAL, LIGHT);
-	float lit_val = ndl * 0.5 + 0.5;
-	float att = smoothstep(0.15, 0.65, ATTENUATION);
-
-	// Toy-blaster chromatic cel shading so custom skins stay silky-smooth & vibrant (zero sparkle noise)
-	float band_mid = smoothstep(0.32, 0.48, lit_val);
-	float band_hi = smoothstep(0.60, 0.78, lit_val);
-	float cel = mix(0.46, mix(0.80, 1.04, band_hi), band_mid);
-	cel = mix(0.48, cel, att);
-
-	vec3 shadow_col = ALBEDO * vec3(0.58, 0.64, 0.92);
-	vec3 tinted = mix(shadow_col, ALBEDO, smoothstep(0.46, 0.84, cel));
-	DIFFUSE_LIGHT += tinted * LIGHT_COLOR * (cel / PI);
-
-	vec3 half_vec = normalize(LIGHT + VIEW);
-	float ndh = max(dot(NORMAL, half_vec), 0.0);
-	float spec_pow = mix(28.0, 8.0, ROUGHNESS);
-	float spec_pill = smoothstep(0.35, 0.76, pow(ndh, spec_pow));
-	SPECULAR_LIGHT += LIGHT_COLOR * spec_pill * (0.24 + (1.0 - ROUGHNESS) * 0.42) * att * band_mid * 0.38;
-}

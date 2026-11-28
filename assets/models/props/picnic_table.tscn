@@ -1,37 +1,35 @@
 [gd_scene load_steps=30 format=3]
 
-[ext_resource type="Shader" path="res://assets/materials/toon_outline.gdshader" id="1_f8rqh"]
+[ext_resource type="Texture2D" path="res://assets/textures/arenas/wood_normal.png" id="2_50gae"]
 [ext_resource type="Shader" path="res://assets/materials/dartstorm_toon.gdshader" id="2_nkiw1"]
+[ext_resource type="Texture2D" path="res://assets/textures/pbr/brushed_metal_normal.png" id="3_675aw"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_jdv3a"]
-render_priority = 0
-shader = ExtResource("1_f8rqh")
-shader_parameter/outline_color = Color(0.039, 0.094, 0.239, 1)
-shader_parameter/outline_width = 0.008
-shader_parameter/distance_scale = 0.0018
-shader_parameter/fade_start = 30.0
-shader_parameter/fade_end = 54.0
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_50gae"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_s7mmy"]
 resource_name = "wood"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_nkiw1")
 shader_parameter/albedo_color = Color(0.72, 0.5, 0.3, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 0.65
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.72
+shader_parameter/roughness = 0.66
 shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/specular_strength = 0.34
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_50gae")
+shader_parameter/normal_scale = 0.72
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -44,26 +42,32 @@ size = Vector3(2.5, 0.12, 1.4)
 [sub_resource type="BoxShape3D" id="BoxShape3D_f8rqh"]
 size = Vector3(2.5, 0.12, 1.4)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_675aw"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_iwb0e"]
 resource_name = "wood_dark"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_nkiw1")
 shader_parameter/albedo_color = Color(0.52, 0.34, 0.18, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 0.65
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.78
+shader_parameter/roughness = 0.66
 shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/specular_strength = 0.34
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_50gae")
+shader_parameter/normal_scale = 0.72
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -73,26 +77,32 @@ shader_parameter/electric_arc = null
 [sub_resource type="BoxMesh" id="BoxMesh_nkiw1"]
 size = Vector3(0.12, 0.85, 0.12)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_s7mmy"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_du8t0"]
 resource_name = "wood_dark"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_nkiw1")
 shader_parameter/albedo_color = Color(0.52, 0.34, 0.18, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 0.65
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.78
+shader_parameter/roughness = 0.66
 shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/specular_strength = 0.34
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_50gae")
+shader_parameter/normal_scale = 0.72
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -102,26 +112,32 @@ shader_parameter/electric_arc = null
 [sub_resource type="BoxMesh" id="BoxMesh_50gae"]
 size = Vector3(0.12, 0.85, 0.12)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_iwb0e"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bqykj"]
 resource_name = "wood_dark"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_nkiw1")
 shader_parameter/albedo_color = Color(0.52, 0.34, 0.18, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 0.65
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.78
+shader_parameter/roughness = 0.66
 shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/specular_strength = 0.34
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_50gae")
+shader_parameter/normal_scale = 0.72
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -131,26 +147,32 @@ shader_parameter/electric_arc = null
 [sub_resource type="BoxMesh" id="BoxMesh_675aw"]
 size = Vector3(0.12, 0.14, 2.1)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_du8t0"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_kt1th"]
 resource_name = "wood_dark"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_nkiw1")
 shader_parameter/albedo_color = Color(0.52, 0.34, 0.18, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 0.65
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.78
+shader_parameter/roughness = 0.66
 shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/specular_strength = 0.34
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_50gae")
+shader_parameter/normal_scale = 0.72
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -160,26 +182,32 @@ shader_parameter/electric_arc = null
 [sub_resource type="BoxMesh" id="BoxMesh_s7mmy"]
 size = Vector3(0.12, 0.85, 0.12)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_bqykj"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_jqsll"]
 resource_name = "wood_dark"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_nkiw1")
 shader_parameter/albedo_color = Color(0.52, 0.34, 0.18, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 0.65
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.78
+shader_parameter/roughness = 0.66
 shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/specular_strength = 0.34
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_50gae")
+shader_parameter/normal_scale = 0.72
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -189,26 +217,32 @@ shader_parameter/electric_arc = null
 [sub_resource type="BoxMesh" id="BoxMesh_iwb0e"]
 size = Vector3(0.12, 0.85, 0.12)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_kt1th"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_vk28m"]
 resource_name = "wood_dark"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_nkiw1")
 shader_parameter/albedo_color = Color(0.52, 0.34, 0.18, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 0.65
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.78
+shader_parameter/roughness = 0.66
 shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/specular_strength = 0.34
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_50gae")
+shader_parameter/normal_scale = 0.72
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -218,26 +252,32 @@ shader_parameter/electric_arc = null
 [sub_resource type="BoxMesh" id="BoxMesh_du8t0"]
 size = Vector3(0.12, 0.14, 2.1)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_jqsll"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_icnba"]
 resource_name = "wood"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_nkiw1")
 shader_parameter/albedo_color = Color(0.72, 0.5, 0.3, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 0.65
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.72
+shader_parameter/roughness = 0.66
 shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/specular_strength = 0.34
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_50gae")
+shader_parameter/normal_scale = 0.72
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -247,26 +287,32 @@ shader_parameter/electric_arc = null
 [sub_resource type="BoxMesh" id="BoxMesh_bqykj"]
 size = Vector3(2.5, 0.1, 0.46)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_vk28m"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_k1vy1"]
 resource_name = "wood"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_nkiw1")
 shader_parameter/albedo_color = Color(0.72, 0.5, 0.3, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 0.65
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.72
+shader_parameter/roughness = 0.66
 shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/specular_strength = 0.34
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_50gae")
+shader_parameter/normal_scale = 0.72
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -282,25 +328,30 @@ size = Vector3(2.5, 0.1, 0.46)
 [sub_resource type="BoxShape3D" id="BoxShape3D_vk28m"]
 size = Vector3(2.5, 0.1, 0.46)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_icnba"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_kbsys"]
 resource_name = "plastic_red"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_nkiw1")
 shader_parameter/albedo_color = Color(0.92, 0.22, 0.2, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = null
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.32
+shader_parameter/roughness = 0.26
 shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.72
+shader_parameter/specular_strength = 0.76
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = 0.78
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
 shader_parameter/normal_scale = null
+shader_parameter/normal_uv_scale = null
 shader_parameter/use_normal_map = null
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
@@ -311,26 +362,32 @@ shader_parameter/electric_arc = null
 [sub_resource type="BoxMesh" id="BoxMesh_icnba"]
 size = Vector3(0.65, 0.38, 0.44)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_k1vy1"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_xf5ce"]
 resource_name = "steel"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_nkiw1")
 shader_parameter/albedo_color = Color(0.95, 0.95, 0.98, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 1.1
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.25
-shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/roughness = 0.26
+shader_parameter/metallic = 0.78
+shader_parameter/specular_strength = 0.85
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("3_675aw")
+shader_parameter/normal_scale = 0.4
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -348,7 +405,7 @@ collision_mask = 0
 
 [node name="Tabletop" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
-material_override = SubResource("ShaderMaterial_50gae")
+material_override = SubResource("ShaderMaterial_s7mmy")
 mesh = SubResource("BoxMesh_v1bse")
 
 [node name="@CollisionShape3D@25" type="CollisionShape3D" parent="."]
@@ -357,42 +414,42 @@ shape = SubResource("BoxShape3D_f8rqh")
 
 [node name="Leg" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.990983, 0.133986, 0, -0.133986, 0.990983, -0.92, 0.425, -0.385)
-material_override = SubResource("ShaderMaterial_675aw")
+material_override = SubResource("ShaderMaterial_iwb0e")
 mesh = SubResource("BoxMesh_nkiw1")
 
 [node name="@MeshInstance3D@26" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.990983, -0.133986, 0, 0.133986, 0.990983, -0.92, 0.425, 0.385)
-material_override = SubResource("ShaderMaterial_s7mmy")
+material_override = SubResource("ShaderMaterial_du8t0")
 mesh = SubResource("BoxMesh_50gae")
 
 [node name="BenchSupport" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.92, 0.45, 0)
-material_override = SubResource("ShaderMaterial_iwb0e")
+material_override = SubResource("ShaderMaterial_bqykj")
 mesh = SubResource("BoxMesh_675aw")
 
 [node name="@MeshInstance3D@27" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.990983, 0.133986, 0, -0.133986, 0.990983, 0.92, 0.425, -0.385)
-material_override = SubResource("ShaderMaterial_du8t0")
+material_override = SubResource("ShaderMaterial_kt1th")
 mesh = SubResource("BoxMesh_s7mmy")
 
 [node name="@MeshInstance3D@28" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.990983, -0.133986, 0, 0.133986, 0.990983, 0.92, 0.425, 0.385)
-material_override = SubResource("ShaderMaterial_bqykj")
+material_override = SubResource("ShaderMaterial_jqsll")
 mesh = SubResource("BoxMesh_iwb0e")
 
 [node name="@MeshInstance3D@29" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.92, 0.45, 0)
-material_override = SubResource("ShaderMaterial_kt1th")
+material_override = SubResource("ShaderMaterial_vk28m")
 mesh = SubResource("BoxMesh_du8t0")
 
 [node name="BenchL" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.48, -0.95)
-material_override = SubResource("ShaderMaterial_jqsll")
+material_override = SubResource("ShaderMaterial_icnba")
 mesh = SubResource("BoxMesh_bqykj")
 
 [node name="BenchR" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.48, 0.95)
-material_override = SubResource("ShaderMaterial_vk28m")
+material_override = SubResource("ShaderMaterial_k1vy1")
 mesh = SubResource("BoxMesh_kt1th")
 
 [node name="@CollisionShape3D@30" type="CollisionShape3D" parent="."]
@@ -405,12 +462,12 @@ shape = SubResource("BoxShape3D_vk28m")
 
 [node name="CoolerBody" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 1.04, 0)
-material_override = SubResource("ShaderMaterial_icnba")
+material_override = SubResource("ShaderMaterial_kbsys")
 mesh = SubResource("BoxMesh_icnba")
 
 [node name="CoolerLid" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 1.24, 0)
-material_override = SubResource("ShaderMaterial_k1vy1")
+material_override = SubResource("ShaderMaterial_xf5ce")
 mesh = SubResource("BoxMesh_k1vy1")
 
 [node name="@CollisionShape3D@32" type="CollisionShape3D" parent="."]

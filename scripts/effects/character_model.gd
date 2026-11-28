@@ -12,6 +12,9 @@ const ZOMBIE_GREEN := Color(0.38, 0.78, 0.28)
 const ZOMBIE_SKIN := Color(0.48, 0.82, 0.38)
 
 static var _cloth_normal: Texture2D = preload("res://assets/textures/pbr/cloth_fabric_normal.png")
+static var _fleece_normal: Texture2D = preload("res://assets/textures/stylized/hoodie_fleece_normal.png")
+static var _denim_normal: Texture2D = preload("res://assets/textures/stylized/denim_weave_normal.png")
+static var _hair_normal: Texture2D = preload("res://assets/textures/stylized/hair_strands_normal.png")
 static var _sneaker_normal: Texture2D = preload("res://assets/textures/pbr/sneaker_rubber_normal.png")
 static var _toon_shader: Shader = preload("res://assets/materials/toon_character.gdshader")
 
@@ -25,22 +28,24 @@ static func clear_character_materials() -> void:
 	_cached_skin_mats.clear()
 
 
-static func _make_toon_mat(color: Color, roughness: float, normal_tex: Texture2D = null, normal_scale: float = 0.35, add_outline: bool = true) -> ShaderMaterial:
+static func _make_toon_mat(color: Color, roughness: float, normal_tex: Texture2D = null, normal_scale: float = 0.45,
+		_add_outline: bool = false, subsurface: float = 0.0, clearcoat: float = 0.0, uv_scale: float = 4.5) -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
 	mat.shader = _toon_shader
 	mat.set_shader_parameter(&"albedo_color", Color(color.r, color.g, color.b, 1.0))
 	mat.set_shader_parameter(&"roughness", roughness)
-	mat.set_shader_parameter(&"rim_strength", 0.62)
+	mat.set_shader_parameter(&"rim_strength", 0.36)
 	mat.set_shader_parameter(&"rim_color", Color(1.0, 0.96, 0.86, 1.0))
 	mat.set_shader_parameter(&"use_vertex_color", true)
+	mat.set_shader_parameter(&"subsurface_strength", subsurface)
+	mat.set_shader_parameter(&"clearcoat_strength", clearcoat)
+	mat.set_shader_parameter(&"normal_uv_scale", uv_scale)
 	if normal_tex != null:
 		mat.set_shader_parameter(&"use_normal_map", true)
 		mat.set_shader_parameter(&"texture_normal", normal_tex)
 		mat.set_shader_parameter(&"normal_scale", normal_scale)
 	else:
 		mat.set_shader_parameter(&"use_normal_map", false)
-	if add_outline:
-		mat.next_pass = ArenaKit.outline_mat(0.82, true)
 	return mat
 
 
@@ -191,13 +196,13 @@ func hat_id() -> StringName:
 
 func _ensure_instance_materials() -> void:
 	if _my_shirt_mat == null:
-		_my_shirt_mat = _make_toon_mat(_tint, 0.84, _cloth_normal, 0.35)
+		_my_shirt_mat = _make_toon_mat(_tint, 0.86, _fleece_normal, 0.55, false, 0.08, 0.0, 5.5)
 	if _my_pants_mat == null:
-		_my_pants_mat = _make_toon_mat(NAVY, 0.86, _cloth_normal, 0.35)
+		_my_pants_mat = _make_toon_mat(Color(0.14, 0.24, 0.44), 0.88, _denim_normal, 0.58, false, 0.0, 0.0, 6.0)
 	if _my_skin_mat == null:
-		_my_skin_mat = _make_toon_mat(SKIN, 0.72, null, 0.0)
+		_my_skin_mat = _make_toon_mat(SKIN, 0.56, null, 0.0, false, 0.68, 0.06, 2.0)
 	if _my_sneaker_mat == null:
-		_my_sneaker_mat = _make_toon_mat(Color(0.96, 0.96, 0.98), 0.68, _sneaker_normal, 0.42)
+		_my_sneaker_mat = _make_toon_mat(Color(0.97, 0.97, 0.99), 0.54, _sneaker_normal, 0.48, false, 0.0, 0.22, 4.0)
 
 
 func _set_toon_param(param: StringName, value: float) -> void:
@@ -642,6 +647,7 @@ func _build_from_hero_model() -> bool:
 					_hero_skeleton.force_update_bone_child_transform(b_idx)
 
 	_ensure_instance_materials()
+	var hair_mat := _make_toon_mat(Color(0.48, 0.27, 0.14), 0.44, _hair_normal, 0.62, false, 0.14, 0.18, 4.0)
 	var mat_map := {
 		"clothing": _my_shirt_mat,
 		"shirt": _my_shirt_mat,
@@ -649,17 +655,17 @@ func _build_from_hero_model() -> bool:
 		"skin": _my_skin_mat,
 		"shoes": _my_sneaker_mat,
 		"sneaker": _my_sneaker_mat,
-		"hair": ArenaKit.toon_mat(Color(0.42, 0.23, 0.11), 0.56, 0.32, 0.72, true, Color(0.24, 0.12, 0.16), true),
-		"hardware": ArenaKit.toon_mat(Color(0.10, 0.14, 0.24), 0.36, 0.45, 0.0, true),
-		"whitetrim": ArenaKit.toon_mat(Color(0.98, 0.96, 0.92), 0.52, 0.25, 0.35, true),
-		"sclera": ArenaKit.toon_mat(Color(0.99, 0.99, 1.0), 0.18, 0.65, 0.0, true, Color(0.68, 0.76, 0.92)),
-		"iris": ArenaKit.toon_mat(Color(0.18, 0.44, 0.88), 0.16, 0.70, 0.0, true),
-		"pupil": ArenaKit.toon_mat(Color(0.03, 0.04, 0.08), 0.10, 0.80, 0.0, true),
+		"hair": hair_mat,
+		"hardware": ArenaKit.toon_mat(Color(0.18, 0.22, 0.32), 0.28, 0.72, 0.0, true, Color(0.2, 0.24, 0.4), false, 0.30, 0.0, 0.72),
+		"whitetrim": ArenaKit.toon_mat(Color(0.98, 0.97, 0.93), 0.65, 0.28, 0.0, true),
+		"sclera": ArenaKit.toon_mat(Color(0.99, 0.99, 1.0), 0.08, 0.90, 0.0, true, Color(0.68, 0.76, 0.92), false, 0.95),
+		"iris": ArenaKit.toon_mat(Color(0.24, 0.50, 0.92), 0.08, 0.92, 0.0, true, Color(0.18, 0.26, 0.52), false, 0.95),
+		"pupil": ArenaKit.toon_mat(Color(0.03, 0.04, 0.07), 0.06, 0.95, 0.0, true, Color(0.05, 0.05, 0.1), false, 0.95),
 		"catchlight": ArenaKit.mat(Color.WHITE, 0.0, 0.0, 1.4),
-		"cheek": ArenaKit.toon_mat(Color(1.0, 0.58, 0.56), 0.70, 0.10, 0.0, true, Color(0.85, 0.38, 0.40)),
-		"mouthinner": ArenaKit.toon_mat(Color(0.56, 0.14, 0.20), 0.65, 0.12, 0.0, true, Color(0.32, 0.06, 0.14)),
-		"teeth": ArenaKit.toon_mat(Color(0.99, 0.99, 0.97), 0.22, 0.45, 0.0, true, Color(0.75, 0.78, 0.88)),
-		"tongue": ArenaKit.toon_mat(Color(0.96, 0.42, 0.48), 0.45, 0.28, 0.0, true, Color(0.68, 0.22, 0.30)),
+		"cheek": ArenaKit.toon_mat(Color(0.99, 0.66, 0.58), 0.64, 0.18, 0.0, true, Color(0.85, 0.42, 0.40), false, 0.0, 0.60),
+		"mouthinner": ArenaKit.toon_mat(Color(0.52, 0.14, 0.18), 0.55, 0.22, 0.0, true, Color(0.28, 0.06, 0.12)),
+		"teeth": ArenaKit.toon_mat(Color(0.99, 0.99, 0.97), 0.16, 0.72, 0.0, true, Color(0.75, 0.78, 0.88), false, 0.65),
+		"tongue": ArenaKit.toon_mat(Color(0.95, 0.46, 0.50), 0.35, 0.45, 0.0, true, Color(0.68, 0.22, 0.30), false, 0.45, 0.45),
 	}
 	ModelLoader.apply_materials_recursive(_hero_model_node, mat_map)
 

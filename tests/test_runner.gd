@@ -5090,8 +5090,8 @@ func _test_v1_0_release_regressions() -> void:
 	section("v1.0.0 Production Polish, Gameplay Hardening & Arena Integrity")
 
 	# 1. Version metadata check
-	check(str(ProjectSettings.get_setting("application/config/version", "")) == "1.0.0",
-		"project.godot application/config/version is 1.0.0")
+	check(str(ProjectSettings.get_setting("application/config/version", "")) == "2.0.0",
+		"project.godot application/config/version is 2.0.0")
 
 	# 2. All 9 arenas have explicit objectives, spawns, roam points, and AgX atmosphere
 	check(MatchScene.ARENAS.size() == 9, "MatchScene registers all 9 arenas")
@@ -5378,7 +5378,7 @@ func _test_v2_cover_art_parity() -> void:
 		"ArenaKit.toon_mat returns cached ShaderMaterial bound to dartstorm_toon.gdshader")
 	GameSettings.graphics_quality = prev_q
 
-	# 3. Sculpted smooth-skinned Hero & Expressive Facial Rig
+	# 3. Sculpted smooth-skinned Hero, Facial Rig & Articulated FP Arms
 	var hero := ModelLoader.instantiate_hero()
 	check(hero != null, "Sculpted v2.0.0 hero_base instantiates cleanly")
 	if hero != null:
@@ -5390,6 +5390,16 @@ func _test_v2_cover_art_parity() -> void:
 			and hero.find_child("Mesh_MouthFlinch", true, false) != null,
 			"Sculpted hero_base contains animated blink eyelids, smile, and flinch mouth meshes")
 		hero.free()
+	var fp_arms := ModelLoader.instantiate_model("res://assets/models/characters/fp_arms.tscn")
+	check(fp_arms != null and fp_arms.find_child("RightArm", true, false) != null
+		and fp_arms.find_child("LeftArm", true, false) != null,
+		"Sculpted articulated Pixar FP hands (fp_arms.tscn) load with RightArm & LeftArm")
+	if fp_arms != null:
+		fp_arms.free()
+	check(ResourceLoader.exists("res://assets/textures/stylized/foliage_leaf_albedo.png")
+		and ResourceLoader.exists("res://assets/textures/stylized/hoodie_fleece_normal.png")
+		and ResourceLoader.exists("res://assets/textures/stylized/shingle_roof_albedo.png"),
+		"Pixar/Fortnite stylized PBR texture suite loads cleanly")
 
 	# 4. Sculpted Blasters, Chainstorm Looping Belt & Local Melee Hit-Stop
 	for bname: String in ["popper", "six_shot", "storm", "sweeper", "whisper", "chainstorm", "rocket"]:

@@ -1,7 +1,7 @@
-[gd_scene load_steps=14 format=4]
+[gd_scene load_steps=13 format=4]
 
-[ext_resource type="Shader" path="res://assets/materials/toon_outline.gdshader" id="1_f7hvc"]
-[ext_resource type="Shader" path="res://assets/materials/dartstorm_toon.gdshader" id="2_hdkgc"]
+[ext_resource type="Shader" path="res://assets/materials/dartstorm_toon.gdshader" id="1_f7hvc"]
+[ext_resource type="Texture2D" path="res://assets/textures/stylized/vinyl_grain_normal.png" id="2_hdkgc"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ouy7u"]
 resource_name = "vinyl"
@@ -28,7 +28,7 @@ roughness = 0.28
 resource_name = "Prop_inflatable_bunker_VinylBody"
 _surfaces = [{
 "aabb": AABB(-0.7488, 0.06, -0.741178, 1.4976, 2.336, 1.48236),
-"attribute_data": PackedByteArray("4ODg//9/AADg4OD/oosAAODg4P9FlwAA4ODg/+iiAADg4OD/iq4AAODg4P8tugAA4ODg/9DFAADg4OD/c9EAAODg4P8W3QAA4ODg/7noAADg4OD/XPQAAODg4P///wAA4ODg/6ILAADg4OD/RRcAAODg4P/oIgAA4ODg/4suAADg4OD/LjoAAODg4P/RRQAA4ODg/3RRAADg4OD/Fl0AAODg4P+5aAAA4ODg/1x0AADh4eH//39ABeHh4f+ii0AF4eHh/0WXQAXh4eH/6KJABeHh4f+KrkAF4eHh/y26QAXh4eH/0MVABeHh4f9z0UAF4eHh/xbdQAXh4eH/uehABeHh4f9c9EAF4eHh////QAXh4eH/ogtABeHh4f9FF0AF4eHh/+giQAXh4eH/iy5ABeHh4f8uOkAF4eHh/9FFQAXh4eH/dFFABeHh4f8WXUAF4eHh/7loQAXh4eH/XHRABeLi4v//f4AK4uLi/6KLgAri4uL/RZeACuLi4v/oooAK4uLi/4qugAri4uL/LbqACuLi4v/QxYAK4uLi/3PRgAri4uL/Ft2ACuLi4v+56IAK4uLi/1z0gAri4uL///+ACuLi4v+iC4AK4uLi/0UXgAri4uL/6CKACuLi4v+LLoAK4uLi/y46gAri4uL/0UWACuLi4v90UYAK4uLi/xZdgAri4uL/uWiACuLi4v9cdIAK//////9/fvX/////oot+9f////9Fl371/////+iifvX/////iq5+9f////8tun71/////9DFfvX/////c9F+9f////8W3X71/////7nofvX/////XPR+9f///////371/////6ILfvX/////RRd+9f/////oIn71/////4sufvX/////Ljp+9f/////RRX71/////3RRfvX/////Fl1+9f////+5aH71/////1x0fvX//////3+++v////+ii776/////0WXvvr/////6KK++v////+Krr76/////y26vvr/////0MW++v////9z0b76/////xbdvvr/////uei++v////9c9L76////////vvr/////ogu++v////9FF776/////+givvr/////iy6++v////8uOr76/////9FFvvr/////dFG++v////8WXb76/////7lovvr/////XHS++v//////f////////6KL////////RZf////////oov///////4qu////////Lbr////////Qxf///////3PR////////Ft3///////+56P///////1z0//////////////////+iC////////0UX////////6CL///////+LLv///////y46////////0UX///////90Uf///////xZd////////uWj///////9cdP//4ODg/98LAAD//////x///8zMzP8AAAAAzMzM/zgOAADMzMz/cRwAAMzMzP+qKgAAzMzM/+M4AADMzMz/HEcAAMzMzP9VVQAAzMzM/41jAADMzMz/xnEAAMzMzP//fwAAzMzM/ziOAADMzMz/cZwAAMzMzP+qqgAAzMzM/+K4AADMzMz/G8cAAMzMzP9U1QAAzMzM/43jAADMzMz/xvEAAM7Ozv8AAHEczs7O/zgOcRzOzs7/cRxxHM7Ozv+qKnEczs7O/+M4cRzOzs7/HEdxHM7Ozv9VVXEczs7O/41jcRzOzs7/xnFxHM7Ozv//f3Eczs7O/ziOcRzOzs7/cZxxHM7Ozv+qqnEczs7O/+K4cRzOzs7/G8dxHM7Ozv9U1XEczs7O/43jcRzOzs7/xvFxHNPT0/8AAOM409PT/zgO4zjT09P/cRzjONPT0/+qKuM409PT/+M44zjT09P/HEfjONPT0/9VVeM409PT/41j4zjT09P/xnHjONPT0///f+M409PT/ziO4zjT09P/cZzjONPT0/+qquM409PT/+K44zjT09P/G8fjONPT0/9U1eM409PT/43j4zjT09P/xvHjON3d3f8AAFVV3d3d/zgOVVXd3d3/cRxVVd3d3f+qKlVV3d3d/+M4VVXd3d3/HEdVVd3d3f9VVVVV3d3d/41jVVXd3d3/xnFVVd3d3f//f1VV3d3d/ziOVVXd3d3/cZxVVd3d3f+qqlVV3d3d/+K4VVXd3d3/G8dVVd3d3f9U1VVV3d3d/43jVVXd3d3/xvFVVejo6P8AAMZx6Ojo/zgOxnHo6Oj/cRzGcejo6P+qKsZx6Ojo/+M4xnHo6Oj/HEfGcejo6P9VVcZx6Ojo/41jxnHo6Oj/xnHGcejo6P//f8Zx6Ojo/ziOxnHo6Oj/cZzGcejo6P+qqsZx6Ojo/+K4xnHo6Oj/G8fGcejo6P9U1cZx6Ojo/43jxnHo6Oj/xvHGcfb29v8AADiO9vb2/zgOOI729vb/cRw4jvb29v+qKjiO9vb2/+M4OI729vb/HEc4jvb29v9VVTiO9vb2/41jOI729vb/xnE4jvb29v//fziO9vb2/ziOOI729vb/cZw4jvb29v+qqjiO9vb2/+K4OI729vb/G8c4jvb29v9U1TiO9vb2/43jOI729vb/xvE4jv////8AAKqq/////zgOqqr/////cRyqqv////+qKqqq/////+M4qqr/////HEeqqv////9VVaqq/////41jqqr/////xnGqqv//////f6qq/////ziOqqr/////cZyqqv////+qqqqq/////+K4qqr/////G8eqqv////9U1aqq/////43jqqr/////xvGqqv////8AABvH/////zgOG8f/////cRwbx/////+qKhvH/////+M4G8f/////HEcbx/////9VVRvH/////41jG8f/////xnEbx///////fxvH/////ziOG8f/////cZwbx/////+qqhvH/////+K4G8f/////G8cbx/////9U1RvH/////43jG8f/////xvEbx/////8AAI3j/////zgOjeP/////cRyN4/////+qKo3j/////+M4jeP/////HEeN4/////9VVY3j/////41jjeP/////xnGN4///////f43j/////ziOjeP/////cZyN4/////+qqo3j/////+K4jeP/////G8eN4/////9U1Y3j/////43jjeP/////xvGN4/////8AAP///////zgO////////cRz///////+qKv///////+M4////////HEf///////9VVf///////41j////////xnH/////////f////////ziO////////cZz///////+qqv///////+K4////////G8f///////9U1f///////43j////////xvH//8zMzP//fwAA//////9///8="),
+"attribute_data": PackedByteArray("4ODg//9/AADg4OD/oosAAODg4P9FlwAA4ODg/+iiAADg4OD/iq4AAODg4P8tugAA4ODg/9DFAADg4OD/c9EAAODg4P8W3QAA4ODg/7noAADg4OD/XPQAAODg4P///wAA4ODg/6ILAADg4OD/RRcAAODg4P/oIgAA4ODg/4suAADg4OD/LjoAAODg4P/RRQAA4ODg/3RRAADg4OD/Fl0AAODg4P+5aAAA4ODg/1x0AADh4eH//39ABeHh4f+ii0AF4eHh/0WXQAXh4eH/6KJABeHh4f+KrkAF4eHh/y26QAXh4eH/0MVABeHh4f9z0UAF4eHh/xbdQAXh4eH/uehABeHh4f9c9EAF4eHh////QAXh4eH/ogtABeHh4f9FF0AF4eHh/+giQAXh4eH/iy5ABeHh4f8uOkAF4eHh/9FFQAXh4eH/dFFABeHh4f8WXUAF4eHh/7loQAXh4eH/XHRABeLi4v//f4AK4uLi/6KLgAri4uL/RZeACuLi4v/oooAK4uLi/4qugAri4uL/LbqACuLi4v/QxYAK4uLi/3PRgAri4uL/Ft2ACuLi4v+56IAK4uLi/1z0gAri4uL///+ACuLi4v+iC4AK4uLi/0UXgAri4uL/6CKACuLi4v+LLoAK4uLi/y46gAri4uL/0UWACuLi4v90UYAK4uLi/xZdgAri4uL/uWiACuLi4v9cdIAK//////9/fvX/////oot+9f////9Fl371/////+iifvX/////iq5+9f////8tun71/////9DFfvX/////c9F+9f////8W3X71/////7nofvX/////XPR+9f///////371/////6ILfvX/////RRd+9f/////oIn71/////4sufvX/////Ljp+9f/////RRX71/////3RRfvX/////Fl1+9f////+5aH71/////1x0fvX//////3+++v////+ii776/////0WXvvr/////6KK++v////+Krr76/////y26vvr/////0MW++v////9z0b76/////xbdvvr/////uei++v////9c9L76////////vvr/////ogu++v////9FF776/////+givvr/////iy6++v////8uOr76/////9FFvvr/////dFG++v////8WXb76/////7lovvr/////XHS++v//////f////////6KL////////RZf////////oov///////4qu////////Lbr////////Qxf///////3PR////////Ft3///////+56P///////1z0//////////////////+iC////////0UX////////6CL///////+LLv///////y46////////0UX///////90Uf///////xZd////////uWj///////9cdP//4ODg/98LAAD//////x///8bGxv8AAAAAxsbG/zgOAADGxsb/cRwAAMbGxv+qKgAAxsbG/+M4AADGxsb/HEcAAMbGxv9VVQAAxsbG/41jAADGxsb/xnEAAMbGxv//fwAAxsbG/ziOAADGxsb/cZwAAMbGxv+qqgAAxsbG/+K4AADGxsb/G8cAAMbGxv9U1QAAxsbG/43jAADGxsb/xvEAAMnJyf8AAHEcycnJ/zgOcRzJycn/cRxxHMnJyf+qKnEcycnJ/+M4cRzJycn/HEdxHMnJyf9VVXEcycnJ/41jcRzJycn/xnFxHMnJyf//f3EcycnJ/ziOcRzJycn/cZxxHMnJyf+qqnEcycnJ/+K4cRzJycn/G8dxHMnJyf9U1XEcycnJ/43jcRzJycn/xvFxHM/Pz/8AAOM4z8/P/zgO4zjPz8//cRzjOM/Pz/+qKuM4z8/P/+M44zjPz8//HEfjOM/Pz/9VVeM4z8/P/41j4zjPz8//xnHjOM/Pz///f+M4z8/P/ziO4zjPz8//cZzjOM/Pz/+qquM4z8/P/+K44zjPz8//G8fjOM/Pz/9U1eM4z8/P/43j4zjPz8//xvHjONnZ2f8AAFVV2dnZ/zgOVVXZ2dn/cRxVVdnZ2f+qKlVV2dnZ/+M4VVXZ2dn/HEdVVdnZ2f9VVVVV2dnZ/41jVVXZ2dn/xnFVVdnZ2f//f1VV2dnZ/ziOVVXZ2dn/cZxVVdnZ2f+qqlVV2dnZ/+K4VVXZ2dn/G8dVVdnZ2f9U1VVV2dnZ/43jVVXZ2dn/xvFVVeXl5f8AAMZx5eXl/zgOxnHl5eX/cRzGceXl5f+qKsZx5eXl/+M4xnHl5eX/HEfGceXl5f9VVcZx5eXl/41jxnHl5eX/xnHGceXl5f//f8Zx5eXl/ziOxnHl5eX/cZzGceXl5f+qqsZx5eXl/+K4xnHl5eX/G8fGceXl5f9U1cZx5eXl/43jxnHl5eX/xvHGcfT09P8AADiO9PT0/zgOOI709PT/cRw4jvT09P+qKjiO9PT0/+M4OI709PT/HEc4jvT09P9VVTiO9PT0/41jOI709PT/xnE4jvT09P//fziO9PT0/ziOOI709PT/cZw4jvT09P+qqjiO9PT0/+K4OI709PT/G8c4jvT09P9U1TiO9PT0/43jOI709PT/xvE4jv////8AAKqq/////zgOqqr/////cRyqqv////+qKqqq/////+M4qqr/////HEeqqv////9VVaqq/////41jqqr/////xnGqqv//////f6qq/////ziOqqr/////cZyqqv////+qqqqq/////+K4qqr/////G8eqqv////9U1aqq/////43jqqr/////xvGqqv////8AABvH/////zgOG8f/////cRwbx/////+qKhvH/////+M4G8f/////HEcbx/////9VVRvH/////41jG8f/////xnEbx///////fxvH/////ziOG8f/////cZwbx/////+qqhvH/////+K4G8f/////G8cbx/////9U1RvH/////43jG8f/////xvEbx/////8AAI3j/////zgOjeP/////cRyN4/////+qKo3j/////+M4jeP/////HEeN4/////9VVY3j/////41jjeP/////xnGN4///////f43j/////ziOjeP/////cZyN4/////+qqo3j/////+K4jeP/////G8eN4/////9U1Y3j/////43jjeP/////xvGN4/////8AAP///////zgO////////cRz///////+qKv///////+M4////////HEf///////9VVf///////41j////////xnH/////////f////////ziO////////cZz///////+qqv///////+K4////////G8f///////9U1f///////43j////////xvH//8bGxv//fwAA//////9///8="),
 "format": 34896613407,
 "index_count": 1872,
 "index_data": PackedByteArray("AAABABcAAQACABgAAgADABkAAwAEABoABAAFABsABQAGABwABgAHAB0ABwAIAB4ACAAJAB8ACQAKACAACgALACEACwAMACIADAANACMADQAOACQADgAPACUADwAQACYAEAARACcAEQASACgAEgATACkAEwAUACoAFAAVACsAFQAAABYAFgAXAC0AFwAYAC4AGAAZAC8AGQAaADAAGgAbADEAGwAcADIAHAAdADMAHQAeADQAHgAfADUAHwAgADYAIAAhADcAIQAiADgAIgAjADkAIwAkADoAJAAlADsAJQAmADwAJgAnAD0AJwAoAD4AKAApAD8AKQAqAEAAKgArAEEAKwAWACwALAAtAEMALQAuAEQALgAvAEUALwAwAEYAMAAxAEcAMQAyAEgAMgAzAEkAMwA0AEoANAA1AEsANQA2AEwANgA3AE0ANwA4AE4AOAA5AE8AOQA6AFAAOgA7AFEAOwA8AFIAPAA9AFMAPQA+AFQAPgA/AFUAPwBAAFYAQABBAFcAQQAsAEIAQgBDAFkAQwBEAFoARABFAFsARQBGAFwARgBHAF0ARwBIAF4ASABJAF8ASQBKAGAASgBLAGEASwBMAGIATABNAGMATQBOAGQATgBPAGUATwBQAGYAUABRAGcAUQBSAGgAUgBTAGkAUwBUAGoAVABVAGsAVQBWAGwAVgBXAG0AVwBCAFgAWABZAG8AWQBaAHAAWgBbAHEAWwBcAHIAXABdAHMAXQBeAHQAXgBfAHUAXwBgAHYAYABhAHcAYQBiAHgAYgBjAHkAYwBkAHoAZABlAHsAZQBmAHwAZgBnAH0AZwBoAH4AaABpAH8AaQBqAIAAagBrAIEAawBsAIIAbABtAIMAbQBYAG4AAAAXABYAAQAYABcAAgAZABgAAwAaABkABAAbABoABQAcABsABgAdABwABwAeAB0ACAAfAB4ACQAgAB8ACgAhACAACwAiACEADAAjACIADQAkACMADgAlACQADwAmACUAEAAnACYAEQAoACcAEgApACgAEwAqACkAFAArACoAFQAWACsAFgAtACwAFwAuAC0AGAAvAC4AGQAwAC8AGgAxADAAGwAyADEAHAAzADIAHQA0ADMAHgA1ADQAHwA2ADUAIAA3ADYAIQA4ADcAIgA5ADgAIwA6ADkAJAA7ADoAJQA8ADsAJgA9ADwAJwA+AD0AKAA/AD4AKQBAAD8AKgBBAEAAKwAsAEEALABDAEIALQBEAEMALgBFAEQALwBGAEUAMABHAEYAMQBIAEcAMgBJAEgAMwBKAEkANABLAEoANQBMAEsANgBNAEwANwBOAE0AOABPAE4AOQBQAE8AOgBRAFAAOwBSAFEAPABTAFIAPQBUAFMAPgBVAFQAPwBWAFUAQABXAFYAQQBCAFcAQgBZAFgAQwBaAFkARABbAFoARQBcAFsARgBdAFwARwBeAF0ASABfAF4ASQBgAF8ASgBhAGAASwBiAGEATABjAGIATQBkAGMATgBlAGQATwBmAGUAUABnAGYAUQBoAGcAUgBpAGgAUwBqAGkAVABrAGoAVQBsAGsAVgBtAGwAVwBYAG0AWABvAG4AWQBwAG8AWgBxAHAAWwByAHEAXABzAHIAXQB0AHMAXgB1AHQAXwB2AHUAYAB3AHYAYQB4AHcAYgB5AHgAYwB6AHkAZAB7AHoAZQB8AHsAZgB9AHwAZwB+AH0AaAB/AH4AaQCAAH8AagCBAIAAawCCAIEAbACDAIIAbQBuAIMAhAABAAAAhAACAAEAhAADAAIAhAAEAAMAhAAFAAQAhAAGAAUAhAAHAAYAhAAIAAcAhAAJAAgAhAAKAAkAhAALAAoAhAAMAAsAhAANAAwAhAAOAA0AhAAPAA4AhAAQAA8AhAARABAAhAASABEAhAATABIAhAAUABMAhAAVABQAhAAAABUAhQBuAG8AhQBvAHAAhQBwAHEAhQBxAHIAhQByAHMAhQBzAHQAhQB0AHUAhQB1AHYAhQB2AHcAhQB3AHgAhQB4AHkAhQB5AHoAhQB6AHsAhQB7AHwAhQB8AH0AhQB9AH4AhQB+AH8AhQB/AIAAhQCAAIEAhQCBAIIAhQCCAIMAhQCDAG4AhgCZAJgAhgCHAJkAhwCaAJkAhwCIAJoAiACbAJoAiACJAJsAiQCcAJsAiQCKAJwAigCdAJwAigCLAJ0AiwCeAJ0AiwCMAJ4AjACfAJ4AjACNAJ8AjQCgAJ8AjQCOAKAAjgChAKAAjgCPAKEAjwCiAKEAjwCQAKIAkACjAKIAkACRAKMAkQCkAKMAkQCSAKQAkgClAKQAkgCTAKUAkwCmAKUAkwCUAKYAlACnAKYAlACVAKcAlQCoAKcAlQCWAKgAlgCpAKgAlgCXAKkAlwCYAKkAlwCGAJgAmACrAKoAmACZAKsAmQCsAKsAmQCaAKwAmgCtAKwAmgCbAK0AmwCuAK0AmwCcAK4AnACvAK4AnACdAK8AnQCwAK8AnQCeALAAngCxALAAngCfALEAnwCyALEAnwCgALIAoACzALIAoAChALMAoQC0ALMAoQCiALQAogC1ALQAogCjALUAowC2ALUAowCkALYApAC3ALYApAClALcApQC4ALcApQCmALgApgC5ALgApgCnALkApwC6ALkApwCoALoAqAC7ALoAqACpALsAqQCqALsAqQCYAKoAqgC9ALwAqgCrAL0AqwC+AL0AqwCsAL4ArAC/AL4ArACtAL8ArQDAAL8ArQCuAMAArgDBAMAArgCvAMEArwDCAMEArwCwAMIAsADDAMIAsACxAMMAsQDEAMMAsQCyAMQAsgDFAMQAsgCzAMUAswDGAMUAswC0AMYAtADHAMYAtAC1AMcAtQDIAMcAtQC2AMgAtgDJAMgAtgC3AMkAtwDKAMkAtwC4AMoAuADLAMoAuAC5AMsAuQDMAMsAuQC6AMwAugDNAMwAugC7AM0AuwC8AM0AuwCqALwAvADPAM4AvAC9AM8AvQDQAM8AvQC+ANAAvgDRANAAvgC/ANEAvwDSANEAvwDAANIAwADTANIAwADBANMAwQDUANMAwQDCANQAwgDVANQAwgDDANUAwwDWANUAwwDEANYAxADXANYAxADFANcAxQDYANcAxQDGANgAxgDZANgAxgDHANkAxwDaANkAxwDIANoAyADbANoAyADJANsAyQDcANsAyQDKANwAygDdANwAygDLAN0AywDeAN0AywDMAN4AzADfAN4AzADNAN8AzQDOAN8AzQC8AM4AzgDhAOAAzgDPAOEAzwDiAOEAzwDQAOIA0ADjAOIA0ADRAOMA0QDkAOMA0QDSAOQA0gDlAOQA0gDTAOUA0wDmAOUA0wDUAOYA1ADnAOYA1ADVAOcA1QDoAOcA1QDWAOgA1gDpAOgA1gDXAOkA1wDqAOkA1wDYAOoA2ADrAOoA2ADZAOsA2QDsAOsA2QDaAOwA2gDtAOwA2gDbAO0A2wDuAO0A2wDcAO4A3ADvAO4A3ADdAO8A3QDwAO8A3QDeAPAA3gDxAPAA3gDfAPEA3wDgAPEA3wDOAOAA4ADzAPIA4ADhAPMA4QD0APMA4QDiAPQA4gD1APQA4gDjAPUA4wD2APUA4wDkAPYA5AD3APYA5ADlAPcA5QD4APcA5QDmAPgA5gD5APgA5gDnAPkA5wD6APkA5wDoAPoA6AD7APoA6ADpAPsA6QD8APsA6QDqAPwA6gD9APwA6gDrAP0A6wD+AP0A6wDsAP4A7AD/AP4A7ADtAP8A7QAAAf8A7QDuAAAB7gABAQAB7gDvAAEB7wACAQEB7wDwAAIB8AADAQIB8ADxAAMB8QDyAAMB8QDgAPIA8gAFAQQB8gDzAAUB8wAGAQUB8wD0AAYB9AAHAQYB9AD1AAcB9QAIAQcB9QD2AAgB9gAJAQgB9gD3AAkB9wAKAQkB9wD4AAoB+AALAQoB+AD5AAsB+QAMAQsB+QD6AAwB+gANAQwB+gD7AA0B+wAOAQ0B+wD8AA4B/AAPAQ4B/AD9AA8B/QAQAQ8B/QD+ABAB/gARARAB/gD/ABEB/wASAREB/wAAARIBAAETARIBAAEBARMBAQEUARMBAQECARQBAgEVARQBAgEDARUBAwEEARUBAwHyAAQBBAEXARYBBAEFARcBBQEYARcBBQEGARgBBgEZARgBBgEHARkBBwEaARkBBwEIARoBCAEbARoBCAEJARsBCQEcARsBCQEKARwBCgEdARwBCgELAR0BCwEeAR0BCwEMAR4BDAEfAR4BDAENAR8BDQEgAR8BDQEOASABDgEhASABDgEPASEBDwEiASEBDwEQASIBEAEjASIBEAERASMBEQEkASMBEQESASQBEgElASQBEgETASUBEwEmASUBEwEUASYBFAEnASYBFAEVAScBFQEWAScBFQEEARYBFgEpASgBFgEXASkBFwEqASkBFwEYASoBGAErASoBGAEZASsBGQEsASsBGQEaASwBGgEtASwBGgEbAS0BGwEuAS0BGwEcAS4BHAEvAS4BHAEdAS8BHQEwAS8BHQEeATABHgExATABHgEfATEBHwEyATEBHwEgATIBIAEzATIBIAEhATMBIQE0ATMBIQEiATQBIgE1ATQBIgEjATUBIwE2ATUBIwEkATYBJAE3ATYBJAElATcBJQE4ATcBJQEmATgBJgE5ATgBJgEnATkBJwEoATkBJwEWASgBOgGHAIYAOwEoASkBOgGIAIcAOwEpASoBOgGJAIgAOwEqASsBOgGKAIkAOwErASwBOgGLAIoAOwEsAS0BOgGMAIsAOwEtAS4BOgGNAIwAOwEuAS8BOgGOAI0AOwEvATABOgGPAI4AOwEwATEBOgGQAI8AOwExATIBOgGRAJAAOwEyATMBOgGSAJEAOwEzATQBOgGTAJIAOwE0ATUBOgGUAJMAOwE1ATYBOgGVAJQAOwE2ATcBOgGWAJUAOwE3ATgBOgGXAJYAOwE4ATkBOgGGAJcAOwE5ASgB"),
@@ -65,35 +65,32 @@ _surfaces = [{
 }]
 blend_shape_mode = 0
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_lp0rf"]
-render_priority = 0
-shader = ExtResource("1_f7hvc")
-shader_parameter/outline_color = Color(0.039, 0.094, 0.239, 1)
-shader_parameter/outline_width = 0.008
-shader_parameter/distance_scale = 0.0018
-shader_parameter/fade_start = 30.0
-shader_parameter/fade_end = 54.0
-
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_bp2xn"]
 resource_name = "vinyl"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_lp0rf")
-shader = ExtResource("2_hdkgc")
+shader = ExtResource("1_f7hvc")
 shader_parameter/albedo_color = Color(0.410021, 0.773573, 0.991157, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = true
-shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 1.2
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.24
+shader_parameter/roughness = 0.26
 shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.72
+shader_parameter/specular_strength = 0.78
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = 0.72
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_hdkgc")
+shader_parameter/normal_scale = 0.35
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -103,23 +100,29 @@ shader_parameter/electric_arc = null
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_6prmy"]
 resource_name = "vinyl_accent"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_lp0rf")
-shader = ExtResource("2_hdkgc")
+shader = ExtResource("1_f7hvc")
 shader_parameter/albedo_color = Color(1, 0.70837, 0.2717, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = true
-shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 1.2
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.24
+shader_parameter/roughness = 0.26
 shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.72
+shader_parameter/specular_strength = 0.78
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = 0.72
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_hdkgc")
+shader_parameter/normal_scale = 0.35
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -129,22 +132,27 @@ shader_parameter/electric_arc = null
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_nx4v0"]
 resource_name = "plastic_orange"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_lp0rf")
-shader = ExtResource("2_hdkgc")
+shader = ExtResource("1_f7hvc")
 shader_parameter/albedo_color = Color(1, 0.722027, 0.313304, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = true
-shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = null
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.28
+shader_parameter/roughness = 0.26
 shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.72
+shader_parameter/specular_strength = 0.76
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = 0.78
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
 shader_parameter/normal_scale = null
+shader_parameter/normal_uv_scale = null
 shader_parameter/use_normal_map = null
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
@@ -172,23 +180,29 @@ blend_shape_mode = 0
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_uxy7o"]
 resource_name = "vinyl_accent"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_lp0rf")
-shader = ExtResource("2_hdkgc")
+shader = ExtResource("1_f7hvc")
 shader_parameter/albedo_color = Color(1, 0.70837, 0.2717, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = true
-shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 1.2
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.24
+shader_parameter/roughness = 0.26
 shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.72
+shader_parameter/specular_strength = 0.78
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = 0.72
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_hdkgc")
+shader_parameter/normal_scale = 0.35
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null

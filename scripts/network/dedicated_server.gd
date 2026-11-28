@@ -6,7 +6,7 @@ extends Node
 
 const BANNER := """
 ============================================================
-  DARTSTORM HEADLESS DEDICATED SERVER v1.0.0
+  DARTSTORM HEADLESS DEDICATED SERVER v2.0.0
 ============================================================
 """
 
@@ -81,7 +81,7 @@ func _parse_cmdline_args() -> void:
 
 
 func _start_server() -> void:
-	var ver := str(ProjectSettings.get_setting("application/config/version", "1.0.0"))
+	var ver := str(ProjectSettings.get_setting("application/config/version", "2.0.0"))
 	print("\n============================================================\n  DARTSTORM HEADLESS DEDICATED SERVER v%s\n============================================================\n" % ver)
 	NetworkManager.is_dedicated_server = true
 	NetworkManager.server_name = server_name

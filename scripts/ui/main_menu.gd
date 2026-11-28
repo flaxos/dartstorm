@@ -750,7 +750,7 @@ func _build_logo() -> void:
 	logo.add_child(Swoosh.new())
 
 	# Clean 1.0 release version badge in bottom-left corner
-	var ver_str := str(ProjectSettings.get_setting("application/config/version", "1.0.0"))
+	var ver_str := str(ProjectSettings.get_setting("application/config/version", "2.0.0"))
 	var ver_lbl := UiKit.label("v%s" % ver_str, 15, Color(UiKit.SKY, 0.85), 4)
 	_menu.add_child(ver_lbl)
 	UiKit.pin(ver_lbl, Vector2(0.0, 1.0), Vector2(28, -14), Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_BEGIN)

@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/flaxos/dartstorm/releases/latest"><img src="https://img.shields.io/badge/release-v1.0.0-ff7a1a?style=for-the-badge" alt="Release v1.0.0" /></a>
+  <a href="https://github.com/flaxos/dartstorm/releases/latest"><img src="https://img.shields.io/badge/release-v2.0.0-ff7a1a?style=for-the-badge" alt="Release v2.0.0" /></a>
   <img src="https://img.shields.io/badge/engine-Godot%204.4-1f6bff?style=for-the-badge" alt="Godot 4.4" />
   <img src="https://img.shields.io/badge/platforms-Windows%20%7C%20Linux%20%7C%20Android%20%7C%20Web-2ecc71?style=for-the-badge" alt="Platforms" />
   <img src="https://img.shields.io/badge/tests-1563%20passing-9be22d?style=for-the-badge" alt="1563 tests passing" />
@@ -26,17 +26,17 @@ No gore and no real-world guns. Tagged players pop into a shower of foam confett
 
 ## Downloads (GitHub Releases — No Godot Required)
 
-Grab ready-to-play standalone packages from the **[v1.0.0 GitHub Release](https://github.com/flaxos/dartstorm/releases/tag/v1.0.0)**:
+Grab ready-to-play standalone packages from the **[v2.0.0 GitHub Release](https://github.com/flaxos/dartstorm/releases/tag/v2.0.0)**:
 
 | Platform | Package | How to Play |
 |---|---|---|
-| **Windows (64-bit)** | [`DARTSTORM-1.0.0-windows-x86_64.zip`](https://github.com/flaxos/dartstorm/releases/download/v1.0.0/DARTSTORM-1.0.0-windows-x86_64.zip) | Extract the zip and double-click `DARTSTORM.exe` (single self-contained executable) |
-| **Linux (64-bit)** | [`DARTSTORM-1.0.0-linux-x86_64.tar.gz`](https://github.com/flaxos/dartstorm/releases/download/v1.0.0/DARTSTORM-1.0.0-linux-x86_64.tar.gz) | Extract and double-click `DARTSTORM.x86_64`, or run `./install-shortcut.sh` to add to your app menu |
-| **Android (ARM64)** | [`DARTSTORM-1.0.0-android.apk`](https://github.com/flaxos/dartstorm/releases/download/v1.0.0/DARTSTORM-1.0.0-android.apk) | Sideload `DARTSTORM-1.0.0-android.apk` onto any Android phone/tablet (includes touch controls + gamepad support) |
-| **Web (HTML5 / WASM)** | [`DARTSTORM-1.0.0-web.zip`](https://github.com/flaxos/dartstorm/releases/download/v1.0.0/DARTSTORM-1.0.0-web.zip) | Serve from any static HTTP server (`python3 -m http.server`) and open in Chrome, Firefox, Edge, or Safari |
-| **Dedicated Server (Linux)** | [`DARTSTORM-1.0.0-server-linux-x86_64.tar.gz`](https://github.com/flaxos/dartstorm/releases/download/v1.0.0/DARTSTORM-1.0.0-server-linux-x86_64.tar.gz) | Extract and run `./start_server.sh` to host LAN/online matches with auto-discovery and map rotation |
+| **Windows (64-bit)** | [`DARTSTORM-2.0.0-windows-x86_64.zip`](https://github.com/flaxos/dartstorm/releases/download/v2.0.0/DARTSTORM-2.0.0-windows-x86_64.zip) | Extract the zip and double-click `DARTSTORM.exe` (single self-contained executable) |
+| **Linux (64-bit)** | [`DARTSTORM-2.0.0-linux-x86_64.tar.gz`](https://github.com/flaxos/dartstorm/releases/download/v2.0.0/DARTSTORM-2.0.0-linux-x86_64.tar.gz) | Extract and double-click `DARTSTORM.x86_64`, or run `./install-shortcut.sh` to add to your app menu |
+| **Android (ARM64)** | [`DARTSTORM-2.0.0-android.apk`](https://github.com/flaxos/dartstorm/releases/download/v2.0.0/DARTSTORM-2.0.0-android.apk) | Sideload `DARTSTORM-2.0.0-android.apk` onto any Android phone/tablet (includes touch controls + gamepad support) |
+| **Web (HTML5 / WASM)** | [`DARTSTORM-2.0.0-web.zip`](https://github.com/flaxos/dartstorm/releases/download/v2.0.0/DARTSTORM-2.0.0-web.zip) | Serve from any static HTTP server (`python3 -m http.server`) and open in Chrome, Firefox, Edge, or Safari |
+| **Dedicated Server (Linux)** | [`DARTSTORM-2.0.0-server-linux-x86_64.tar.gz`](https://github.com/flaxos/dartstorm/releases/download/v2.0.0/DARTSTORM-2.0.0-server-linux-x86_64.tar.gz) | Extract and run `./start_server.sh` to host LAN/online matches with auto-discovery and map rotation |
 
-Checksums for every release file are published in [`SHA256SUMS.txt`](https://github.com/flaxos/dartstorm/releases/download/v1.0.0/SHA256SUMS.txt).
+Checksums for every release file are published in [`SHA256SUMS.txt`](https://github.com/flaxos/dartstorm/releases/download/v2.0.0/SHA256SUMS.txt).
 
 ---
 
@@ -68,7 +68,7 @@ Checksums for every release file are published in [`SHA256SUMS.txt`](https://git
 ./tools/export_apk.sh        # Build signed Android ARM64 APK
 ./tools/export_web.sh        # Build HTML5 / WebAssembly browser bundle
 ./tools/export_server.sh     # Build Linux Headless Dedicated Server
-./tools/export_all.sh        # Build ALL platforms + SHA256SUMS.txt into build/release-v1.0.0/
+./tools/export_all.sh        # Build ALL platforms + SHA256SUMS.txt into build/release-v2.0.0/
 ```
 
 > *Exporting requires Godot's matching export templates (`Editor > Manage Export Templates` once in Godot).*
@@ -172,7 +172,7 @@ Start with [`CLAUDE.md`](CLAUDE.md) for codebase conventions, or browse [`docs/`
 
 | Document | Purpose |
 |---|---|
-| [CHANGELOG.md](CHANGELOG.md) | Release history from v0.1.0 through v1.0.0 |
+| [CHANGELOG.md](CHANGELOG.md) | Release history from v0.1.0 through v2.0.0 |
 | [docs/GDD.md](docs/GDD.md) | **Authoritative Game Design Document**: mechanics, weapons, arenas, modes, and feature specs |
 | [docs/CONCEPT_BRIEF.md](docs/CONCEPT_BRIEF.md) | Original concept brief and young players' vision, archived verbatim |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Systems architecture, data ownership, safeguards, and performance budgets |

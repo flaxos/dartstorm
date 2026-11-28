@@ -5090,8 +5090,8 @@ func _test_v1_0_release_regressions() -> void:
 	section("v1.0.0 Production Polish, Gameplay Hardening & Arena Integrity")
 
 	# 1. Version metadata check
-	check(str(ProjectSettings.get_setting("application/config/version", "")) == "1.0.0",
-		"project.godot application/config/version is 1.0.0")
+	check(str(ProjectSettings.get_setting("application/config/version", "")) == "2.0.0",
+		"project.godot application/config/version is 2.0.0")
 
 	# 2. All 9 arenas have explicit objectives, spawns, roam points, and AgX atmosphere
 	check(MatchScene.ARENAS.size() == 9, "MatchScene registers all 9 arenas")

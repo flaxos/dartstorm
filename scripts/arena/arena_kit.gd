@@ -59,6 +59,15 @@ static var _plastic_orm: Texture2D = preload("res://assets/textures/pbr/blaster_
 static var _metal_normal: Texture2D = preload("res://assets/textures/pbr/brushed_metal_normal.png")
 static var _metal_orm: Texture2D = preload("res://assets/textures/pbr/brushed_metal_orm.png")
 
+static var _foliage_albedo: Texture2D = preload("res://assets/textures/stylized/foliage_leaf_albedo.png")
+static var _foliage_normal: Texture2D = preload("res://assets/textures/stylized/foliage_leaf_normal.png")
+static var _bark_albedo: Texture2D = preload("res://assets/textures/stylized/bark_oak_albedo.png")
+static var _bark_normal: Texture2D = preload("res://assets/textures/stylized/bark_oak_normal.png")
+static var _shingle_albedo: Texture2D = preload("res://assets/textures/stylized/shingle_roof_albedo.png")
+static var _shingle_normal: Texture2D = preload("res://assets/textures/stylized/shingle_roof_normal.png")
+const GRASS_ALBEDO: Texture2D = preload("res://assets/textures/stylized/grass_tuft_albedo.png")
+const GRASS_NORMAL: Texture2D = preload("res://assets/textures/stylized/grass_tuft_normal.png")
+
 
 static func clear_materials() -> void:
 	_materials.clear()
@@ -98,16 +107,16 @@ static func outline_mat(scale_mult: float = 1.0, is_hero_or_fp: bool = false) ->
 	return out_mat
 
 
-## Cached v2.0.0 Cover-Art Chromatic Cel ShaderMaterial with glossy toy-plastic specular
-## and optional warm-navy comic outline next_pass.
-static func toon_mat(color: Color, roughness: float = 0.36, specular_strength: float = 0.52,
-		outline_scale: float = 0.0, is_hero_or_fp: bool = false,
-		shadow_tint: Color = Color(0.24, 0.28, 0.56), use_vertex_color: bool = false) -> ShaderMaterial:
-	var use_out := outline_scale > 0.0 and should_use_outlines(is_hero_or_fp)
-	var key := "%s|%.2f|%.2f|%.2f|%s|%s|%s" % [
+## Cached v2.0.0 Pixar / Fortnite Stylized PBR ShaderMaterial (smooth Burley/GGX + SSAO/SSIL,
+## zero jagged dark inverted-hull outlines). Preserves signature for full API compatibility.
+static func toon_mat(color: Color, roughness: float = 0.42, specular_strength: float = 0.52,
+		_outline_scale: float = 0.0, _is_hero_or_fp: bool = false,
+		shadow_tint: Color = Color(0.24, 0.28, 0.56), use_vertex_color: bool = false,
+		clearcoat: float = 0.0, subsurface: float = 0.0, metallic: float = 0.0) -> ShaderMaterial:
+	var key := "%s|%.2f|%.2f|%s|%s|%.2f|%.2f|%.2f" % [
 		color.to_html(false), roughness, specular_strength,
-		outline_scale if use_out else 0.0,
-		"H" if is_hero_or_fp else "W", shadow_tint.to_html(false), "V" if use_vertex_color else "N",
+		shadow_tint.to_html(false), "V" if use_vertex_color else "N",
+		clearcoat, subsurface, metallic,
 	]
 	if _toon_materials.has(key):
 		return _toon_materials[key] as ShaderMaterial
@@ -115,13 +124,61 @@ static func toon_mat(color: Color, roughness: float = 0.36, specular_strength: f
 	sm.shader = TOON_SHADER
 	sm.set_shader_parameter(&"albedo_color", Color(color.r, color.g, color.b, 1.0))
 	sm.set_shader_parameter(&"roughness", roughness)
+	sm.set_shader_parameter(&"metallic", metallic)
 	sm.set_shader_parameter(&"specular_strength", specular_strength)
 	sm.set_shader_parameter(&"shadow_tint", shadow_tint)
 	sm.set_shader_parameter(&"use_vertex_color", use_vertex_color)
-	if use_out:
-		sm.next_pass = outline_mat(outline_scale, is_hero_or_fp)
+	sm.set_shader_parameter(&"clearcoat_strength", clearcoat)
+	sm.set_shader_parameter(&"subsurface_strength", subsurface)
 	_toon_materials[key] = sm
 	return sm
+
+
+## Cached textured Pixar / Fortnite Stylized PBR material (foliage, bark, shingles, vinyl, etc.).
+static func textured_pbr_mat(color: Color, albedo_tex: Texture2D, normal_tex: Texture2D,
+		roughness: float = 0.65, triplanar_scale: float = 0.45, normal_scale: float = 0.70,
+		subsurface: float = 0.0, clearcoat: float = 0.0, use_vertex_color: bool = false) -> ShaderMaterial:
+	var a_id := albedo_tex.resource_path if albedo_tex != null else "none"
+	var n_id := normal_tex.resource_path if normal_tex != null else "none"
+	var key := "TX|%s|%s|%s|%.2f|%.2f|%.2f|%.2f|%.2f|%s" % [
+		color.to_html(false), a_id, n_id, roughness, triplanar_scale, normal_scale,
+		subsurface, clearcoat, "V" if use_vertex_color else "N",
+	]
+	if _toon_materials.has(key):
+		return _toon_materials[key] as ShaderMaterial
+	var sm := ShaderMaterial.new()
+	sm.shader = TOON_SHADER
+	sm.set_shader_parameter(&"albedo_color", Color(color.r, color.g, color.b, 1.0))
+	sm.set_shader_parameter(&"roughness", roughness)
+	sm.set_shader_parameter(&"use_triplanar", true)
+	sm.set_shader_parameter(&"triplanar_scale", triplanar_scale)
+	sm.set_shader_parameter(&"use_vertex_color", use_vertex_color)
+	sm.set_shader_parameter(&"subsurface_strength", subsurface)
+	sm.set_shader_parameter(&"clearcoat_strength", clearcoat)
+	if albedo_tex != null:
+		sm.set_shader_parameter(&"use_albedo_texture", true)
+		sm.set_shader_parameter(&"albedo_texture", albedo_tex)
+	if normal_tex != null:
+		sm.set_shader_parameter(&"use_normal_map", true)
+		sm.set_shader_parameter(&"texture_normal", normal_tex)
+		sm.set_shader_parameter(&"normal_scale", normal_scale)
+	_toon_materials[key] = sm
+	return sm
+
+
+## Lush painterly foliage PBR material with sunlit translucent leaf-edge subsurface bounce.
+static func foliage_mat(tint: Color = Color(0.95, 1.0, 0.92), triplanar_scale: float = 0.28, use_vertex_color: bool = false) -> ShaderMaterial:
+	return textured_pbr_mat(tint, _foliage_albedo, _foliage_normal, 0.82, triplanar_scale, 0.85, 0.55, 0.0, use_vertex_color)
+
+
+## Stylized oak bark PBR material.
+static func bark_mat(tint: Color = Color(0.98, 0.94, 0.90), triplanar_scale: float = 0.35, use_vertex_color: bool = false) -> ShaderMaterial:
+	return textured_pbr_mat(tint, _bark_albedo, _bark_normal, 0.86, triplanar_scale, 0.92, 0.0, 0.0, use_vertex_color)
+
+
+## Stylized scalloped cedar roof shingle PBR material.
+static func shingle_mat(tint: Color, triplanar_scale: float = 0.42) -> ShaderMaterial:
+	return textured_pbr_mat(tint, _shingle_albedo, _shingle_normal, 0.76, triplanar_scale, 0.85, 0.0, 0.0, false)
 
 
 ## Cached tactile material. Supports molded toy plastic, procedural timber, and brushed metal.
@@ -481,27 +538,39 @@ static func sign_text(parent: Node, text: String, pos: Vector3, rot_deg: Vector3
 	return label
 
 
-## A storybook cartoon neighbour's house for the skyline (looks only): walls, pitched roof,
-## chimney, and cozy sunlit windows.
+## A Pixar/Fortnite stylized suburban neighbour house for the skyline (looks only):
+## warm stucco walls, scalloped shingle pitched roof, cornice trim, chimney & multi-pane windows.
 static func house(parent: Node, at: Vector3, size: Vector3, wall: Color, roof: Color) -> void:
 	var wall_m := deco_box(parent, size, at + Vector3(0.0, size.y * 0.5, 0.0), wall)
-	wall_m.material_override = toon_mat(wall, 0.78, 0.14, 0.0, false, Color(0.32, 0.34, 0.56))
+	wall_m.material_override = toon_mat(wall, 0.84, 0.16, 0.0, false, Color(0.32, 0.34, 0.56))
+	# Stone foundation plinth + white roof fascia trim
+	var found := deco_box(parent, Vector3(size.x + 0.35, 0.75, size.z + 0.35), at + Vector3(0.0, 0.375, 0.0), Color(0.64, 0.62, 0.58))
+	found.material_override = toon_mat(Color(0.64, 0.62, 0.58), 0.90, 0.12)
+	var fascia := deco_box(parent, Vector3(size.x + 0.65, 0.42, size.z + 0.65), at + Vector3(0.0, size.y - 0.12, 0.0), Color(0.98, 0.96, 0.90))
+	fascia.material_override = toon_mat(Color(0.98, 0.96, 0.90), 0.65, 0.22)
 	var prism := PrismMesh.new()
-	prism.size = Vector3(size.x + 1.8, size.y * 0.58, size.z + 1.8)
+	prism.size = Vector3(size.x + 2.0, size.y * 0.58, size.z + 2.0)
 	var roof_m := deco(parent, prism, at + Vector3(0.0, size.y + size.y * 0.29, 0.0), roof)
-	roof_m.material_override = toon_mat(roof, 0.66, 0.22, 0.0, false, Color(0.28, 0.22, 0.42))
-	# Cozy chimney + sunlit pastel windows on front/back faces
-	var chim := deco_box(parent, Vector3(1.5, 2.6, 1.5), at + Vector3(size.x * 0.28, size.y + size.y * 0.36, 0.0), Color(0.76, 0.36, 0.28))
-	chim.material_override = toon_mat(Color(0.76, 0.36, 0.28), 0.72, 0.18, 0.0, false)
-	var win_mat := toon_mat(Color(0.74, 0.92, 1.0), 0.22, 0.75, 0.0, false)
-	var frame_mat := toon_mat(Color(0.98, 0.96, 0.90), 0.65, 0.20, 0.0, false)
+	roof_m.material_override = shingle_mat(roof, 0.28)
+	# Brick chimney with crown cap
+	var chim := deco_box(parent, Vector3(1.5, 2.8, 1.5), at + Vector3(size.x * 0.28, size.y + size.y * 0.38, 0.0), Color(0.72, 0.34, 0.26))
+	chim.material_override = mat_styled(Color(0.72, 0.34, 0.26), SurfaceType.BRICK)
+	var chim_cap := deco_box(parent, Vector3(1.85, 0.32, 1.85), at + Vector3(size.x * 0.28, size.y + size.y * 0.38 + 1.48, 0.0), Color(0.60, 0.58, 0.56))
+	chim_cap.material_override = toon_mat(Color(0.60, 0.58, 0.56), 0.85, 0.15)
+	# Glossy sky-reflecting windows with white trim frames & cross mullions
+	var win_mat := toon_mat(Color(0.46, 0.74, 0.96), 0.10, 0.95, 0.0, false, Color(0.24, 0.32, 0.52), false, 0.92, 0.0, 0.25)
+	var frame_mat := toon_mat(Color(0.98, 0.96, 0.91), 0.62, 0.24)
 	for z_face: float in [-1.0, 1.0]:
 		var wz := at.z + z_face * (size.z * 0.5 + 0.06)
 		for wx_off: float in [-size.x * 0.26, size.x * 0.26]:
-			var frame := deco_box(parent, Vector3(2.3, 2.3, 0.12), Vector3(at.x + wx_off, at.y + size.y * 0.54, wz), Color.WHITE)
+			var frame := deco_box(parent, Vector3(2.4, 2.4, 0.14), Vector3(at.x + wx_off, at.y + size.y * 0.54, wz), Color.WHITE)
 			frame.material_override = frame_mat
-			var glass := deco_box(parent, Vector3(1.85, 1.85, 0.16), Vector3(at.x + wx_off, at.y + size.y * 0.54, wz), Color(0.74, 0.92, 1.0))
+			var glass := deco_box(parent, Vector3(1.92, 1.92, 0.18), Vector3(at.x + wx_off, at.y + size.y * 0.54, wz), Color(0.55, 0.82, 1.0))
 			glass.material_override = win_mat
+			var bar_v := deco_box(parent, Vector3(0.14, 2.0, 0.22), Vector3(at.x + wx_off, at.y + size.y * 0.54, wz), Color.WHITE)
+			bar_v.material_override = frame_mat
+			var bar_h := deco_box(parent, Vector3(2.0, 0.14, 0.22), Vector3(at.x + wx_off, at.y + size.y * 0.54, wz), Color.WHITE)
+			bar_h.material_override = frame_mat
 
 
 ## Vertex-animated wind-rippling cloth team flag / banner (pinned along local -X / UV.x == 0).

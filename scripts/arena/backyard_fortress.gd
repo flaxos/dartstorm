@@ -90,10 +90,14 @@ func _process(delta: float) -> void:
 func _build_ground_and_fence() -> void:
 	var lawn_material := ShaderMaterial.new()
 	lawn_material.shader = LAWN_SHADER
+	lawn_material.set_shader_parameter(&"use_grass_textures", true)
+	lawn_material.set_shader_parameter(&"grass_albedo", ArenaKit.GRASS_ALBEDO)
+	lawn_material.set_shader_parameter(&"grass_normal", ArenaKit.GRASS_NORMAL)
 	var ground := ArenaKit.box(geometry, Vector3(HALF_X * 2.0, 1.0, HALF_Z * 2.0), Vector3(0.0, -0.5, 0.0), GRASS)
 	(ground.get_node("Mesh") as MeshInstance3D).material_override = lawn_material
-	# The rest of the neighbourhood's grass (looks only).
-	ArenaKit.deco_box(decor, Vector3(420.0, 0.2, 420.0), Vector3(0.0, -0.16, 0.0), Color(0.33, 0.66, 0.27))
+	# Lush surrounding neighbourhood meadow (looks only).
+	var outer_grass := ArenaKit.deco_box(decor, Vector3(460.0, 0.2, 460.0), Vector3(0.0, -0.16, 0.0), Color(0.30, 0.62, 0.24))
+	outer_grass.material_override = lawn_material
 
 	var height := 4.0
 	var thick := 0.5
@@ -174,8 +178,9 @@ func _build_fort(side: float, main: Color, dark: Color, title: String) -> void:
 
 
 func _build_treehouse() -> void:
-	# Trunk and deck.
-	ArenaKit.cylinder(geometry, 1.5, 10.0, Vector3(0.0, 5.0, 0.0), TRUNK, ArenaKit.SurfaceType.WOOD)
+	# Trunk (warm textured oak bark!) and deck.
+	var trunk_body := ArenaKit.cylinder(geometry, 1.5, 10.6, Vector3(0.0, 5.3, 0.0), TRUNK, ArenaKit.SurfaceType.WOOD)
+	(trunk_body.get_node("Mesh") as MeshInstance3D).material_override = ArenaKit.bark_mat()
 	ArenaKit.box(geometry, Vector3(DECK_HALF * 2.0, 0.4, DECK_HALF * 2.0), Vector3(0.0, DECK_HEIGHT - 0.2, 0.0), WOOD, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	for post_x: float in [-4.1, 4.1]:
 		for post_z: float in [-4.1, 4.1]:
@@ -188,33 +193,67 @@ func _build_treehouse() -> void:
 			ArenaKit.box(geometry, Vector3(0.2, 1.0, 3.1), Vector3(edge * (DECK_HALF - 0.1), rail_y, piece), WOOD_DARK, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 			ArenaKit.box(geometry, Vector3(3.1, 1.0, 0.2), Vector3(piece, rail_y, edge * (DECK_HALF - 0.1)), WOOD_DARK, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 
-	# Lush layered storybook oak canopy (velvety matte chromatic cel + warm-navy outlines + oak boughs, decor-only!)
-	var leaf_dark_m := ArenaKit.toon_mat(LEAF, 0.88, 0.03, 0.75, false, Color(0.10, 0.36, 0.22))
-	var leaf_hi_m := ArenaKit.toon_mat(LEAF_LIGHT, 0.86, 0.03, 0.75, false, Color(0.14, 0.42, 0.22))
-	var leaf_sun_m := ArenaKit.toon_mat(Color(0.50, 0.88, 0.28), 0.84, 0.04, 0.75, false, Color(0.18, 0.48, 0.22))
+	# Crafted Pixar Backyard Treehouse Roof Pavilion (strictly decor above head clearance: Y = 8.1+!)
+	var eave_y := DECK_HEIGHT + 3.45
+	for px: float in [-4.05, 4.05]:
+		for pz: float in [-4.05, 4.05]:
+			ArenaKit.deco_cylinder(decor, 0.18, 3.45, Vector3(px, DECK_HEIGHT + 1.72, pz), WOOD_DARK, Vector3.ZERO, 0.16, ArenaKit.SurfaceType.WOOD)
+	# Perimeter header beams + charming scalloped shingle pitched gable roof
+	ArenaKit.deco_box(decor, Vector3(8.5, 0.28, 0.28), Vector3(0.0, eave_y, -4.05), WOOD_DARK, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.deco_box(decor, Vector3(8.5, 0.28, 0.28), Vector3(0.0, eave_y,  4.05), WOOD_DARK, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.deco_box(decor, Vector3(0.28, 0.28, 8.5), Vector3(-4.05, eave_y, 0.0), WOOD_DARK, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.WOOD)
+	ArenaKit.deco_box(decor, Vector3(0.28, 0.28, 8.5), Vector3( 4.05, eave_y, 0.0), WOOD_DARK, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.WOOD)
+	var shingle_roof_mat := ArenaKit.shingle_mat(Color(0.84, 0.42, 0.22), 0.36)
+	var roof_l := ArenaKit.deco_box(decor, Vector3(5.6, 0.24, 9.6), Vector3(-2.35, eave_y + 1.15, 0.0), Color(0.84, 0.42, 0.22), Vector3(0.0, 0.0, 26.0))
+	roof_l.material_override = shingle_roof_mat
+	var roof_r := ArenaKit.deco_box(decor, Vector3(5.6, 0.24, 9.6), Vector3( 2.35, eave_y + 1.15, 0.0), Color(0.84, 0.42, 0.22), Vector3(0.0, 0.0, -26.0))
+	roof_r.material_override = shingle_roof_mat
+	ArenaKit.deco_cylinder(decor, 0.18, 9.8, Vector3(0.0, eave_y + 2.32, 0.0), WOOD_DARK, Vector3(90.0, 0.0, 0.0), -1.0, ArenaKit.SurfaceType.WOOD)
+	# Warm glowing backyard string-light bulbs under the south & north eaves!
+	var bulb_mat := StandardMaterial3D.new()
+	bulb_mat.albedo_color = Color(1.0, 0.94, 0.72)
+	bulb_mat.emission_enabled = true
+	bulb_mat.emission = Color(1.0, 0.86, 0.48)
+	bulb_mat.emission_energy_multiplier = 2.4
+	for ez: float in [-4.15, 4.15]:
+		for bx: float in [-3.2, -1.6, 0.0, 1.6, 3.2]:
+			var sag := 0.22 * (1.0 - absf(bx) / 3.6)
+			var bulb := ArenaKit.deco_sphere(decor, 0.11, Vector3(bx, eave_y - 0.22 - sag, ez), Color(1.0, 0.94, 0.72))
+			bulb.material_override = bulb_mat
+			bulb.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+	# Lush organically sculpted textured oak canopy (painted foliage leaves + SSS glow, ZERO smooth spheres!)
+	var leaf_dark_m := ArenaKit.foliage_mat(Color(0.84, 0.95, 0.84), 0.26)
+	var leaf_hi_m := ArenaKit.foliage_mat(Color(1.02, 1.06, 0.92), 0.28)
+	var leaf_sun_m := ArenaKit.foliage_mat(Color(1.12, 1.12, 0.90), 0.30)
 	var leaves := [
-		[Vector3(0.0, 11.4, 0.0),    4.4, 0.78, leaf_dark_m],
-		[Vector3(3.4, 10.6, 1.5),    2.8, 0.80, leaf_dark_m],
-		[Vector3(-3.3, 10.7, -1.7),  2.9, 0.80, leaf_dark_m],
-		[Vector3(1.1, 10.4, -3.5),   2.7, 0.78, leaf_dark_m],
-		[Vector3(-1.4, 10.5, 3.5),   2.7, 0.78, leaf_dark_m],
-		[Vector3(-3.2, 10.8, 2.0),   2.4, 0.82, leaf_hi_m],
-		[Vector3(3.1, 10.8, -2.1),   2.4, 0.82, leaf_hi_m],
-		[Vector3(2.2, 12.6, 1.2),    2.5, 0.84, leaf_hi_m],
-		[Vector3(-2.1, 12.7, -1.3),  2.6, 0.84, leaf_hi_m],
-		[Vector3(0.4, 12.4, -2.4),   2.3, 0.84, leaf_hi_m],
-		[Vector3(-0.6, 12.5, 2.3),   2.3, 0.84, leaf_hi_m],
-		[Vector3(0.1, 14.3, -0.2),   2.7, 0.80, leaf_sun_m],
-		[Vector3(1.5, 13.7, -0.9),   1.9, 0.82, leaf_sun_m],
-		[Vector3(-1.4, 13.8, 0.8),   1.9, 0.82, leaf_sun_m],
+		[Vector3(0.0, 12.6, 0.0),    4.5, 0.74, leaf_dark_m, 1.0],
+		[Vector3(3.6, 11.8, 1.6),    2.9, 0.78, leaf_dark_m, 2.0],
+		[Vector3(-3.5, 11.9, -1.8),  3.0, 0.78, leaf_dark_m, 3.0],
+		[Vector3(1.2, 11.6, -3.7),   2.8, 0.76, leaf_dark_m, 4.0],
+		[Vector3(-1.5, 11.7, 3.7),   2.8, 0.76, leaf_dark_m, 5.0],
+		[Vector3(-3.4, 12.0, 2.1),   2.5, 0.80, leaf_hi_m,   6.0],
+		[Vector3(3.3, 12.0, -2.2),   2.5, 0.80, leaf_hi_m,   7.0],
+		[Vector3(2.3, 13.8, 1.3),    2.6, 0.82, leaf_hi_m,   8.0],
+		[Vector3(-2.2, 13.9, -1.4),  2.7, 0.82, leaf_hi_m,   9.0],
+		[Vector3(0.4, 13.6, -2.5),   2.4, 0.82, leaf_hi_m,  10.0],
+		[Vector3(-0.6, 13.7, 2.4),   2.4, 0.82, leaf_hi_m,  11.0],
+		[Vector3(0.1, 15.5, -0.2),   2.8, 0.78, leaf_sun_m, 12.0],
+		[Vector3(1.6, 14.9, -0.9),   2.0, 0.80, leaf_sun_m, 13.0],
+		[Vector3(-1.5, 15.0, 0.8),   2.0, 0.80, leaf_sun_m, 14.0],
 	]
 	for leaf: Array in leaves:
-		var puff := ArenaKit.deco_sphere(decor, float(leaf[1]), leaf[0] as Vector3, LEAF, float(leaf[2]))
+		var puff := MeshInstance3D.new()
+		puff.mesh = _make_organic_foliage_mesh(float(leaf[1]), float(leaf[2]), float(leaf[4]))
+		puff.position = leaf[0] as Vector3
 		puff.material_override = leaf[3] as Material
-	# Chunky oak limbs fanning from trunk into the canopy + cozy treehouse bunting trim (decor-only)
+		decor.add_child(puff)
+	# Chunky bark oak limbs fanning from trunk into the canopy (decor-only)
+	var bark_m := ArenaKit.bark_mat()
 	for limb_ang: float in [25.0, 145.0, 260.0]:
 		var rad := deg_to_rad(limb_ang)
-		ArenaKit.deco_cylinder(decor, 0.34, 3.4, Vector3(cos(rad) * 1.4, 9.6, sin(rad) * 1.4), TRUNK, Vector3(sin(rad) * 42.0, 0.0, -cos(rad) * 42.0), 0.22, ArenaKit.SurfaceType.WOOD)
+		var limb := ArenaKit.deco_cylinder(decor, 0.36, 3.8, Vector3(cos(rad) * 1.6, 10.6, sin(rad) * 1.6), TRUNK, Vector3(sin(rad) * 42.0, 0.0, -cos(rad) * 42.0), 0.22)
+		limb.material_override = bark_m
 	# Decorative rope ladder hanging cleanly off the southwest deck edge (pure decor!)
 	for rx: float in [-3.4, -2.5]:
 		ArenaKit.deco_cylinder(decor, 0.032, DECK_HEIGHT - 0.3, Vector3(rx, (DECK_HEIGHT - 0.3) * 0.5, DECK_HALF + 0.14), Color(0.86, 0.74, 0.50))
@@ -277,18 +316,22 @@ func _build_treehouse() -> void:
 ## North lane: a big hedge with a corridor behind it and two angled mirrors on
 ## the fence, so you can bank shots around the hedge.
 func _build_mirror_alley() -> void:
-	ArenaKit.box(geometry, Vector3(9.0, 2.6, 4.0), Vector3(0.0, 1.3, -18.5), HEDGE)
-	var hedge_m1 := ArenaKit.toon_mat(HEDGE.lightened(0.08), 0.88, 0.03, 0.65, false, Color(0.08, 0.30, 0.20))
-	var hedge_m2 := ArenaKit.toon_mat(HEDGE.lightened(0.16), 0.86, 0.03, 0.65, false, Color(0.10, 0.36, 0.22))
+	var hedge_body := ArenaKit.box(geometry, Vector3(9.0, 2.6, 4.0), Vector3(0.0, 1.3, -18.5), HEDGE)
+	(hedge_body.get_node("Mesh") as MeshInstance3D).material_override = ArenaKit.foliage_mat(Color(0.62, 0.80, 0.68), 0.45)
+	var hedge_m1 := ArenaKit.foliage_mat(Color(0.72, 0.88, 0.72), 0.42)
+	var hedge_m2 := ArenaKit.foliage_mat(Color(0.86, 0.96, 0.78), 0.44)
 	var h_puffs := [
-		[Vector3(-3.3, 2.5, -18.5), 2.2, hedge_m1],
-		[Vector3(-1.1, 2.8, -18.3), 2.3, hedge_m2],
-		[Vector3(1.3, 2.7, -18.7), 2.3, hedge_m1],
-		[Vector3(3.5, 2.5, -18.5), 2.1, hedge_m2],
+		[Vector3(-3.3, 2.5, -18.5), 2.2, hedge_m1, 21.0],
+		[Vector3(-1.1, 2.8, -18.3), 2.3, hedge_m2, 22.0],
+		[Vector3(1.3, 2.7, -18.7), 2.3, hedge_m1, 23.0],
+		[Vector3(3.5, 2.5, -18.5), 2.1, hedge_m2, 24.0],
 	]
 	for hp: Array in h_puffs:
-		var sp := ArenaKit.deco_sphere(decor, float(hp[1]), hp[0] as Vector3, HEDGE, 0.72)
+		var sp := MeshInstance3D.new()
+		sp.mesh = _make_organic_foliage_mesh(float(hp[1]), 0.72, float(hp[3]))
+		sp.position = hp[0] as Vector3
 		sp.material_override = hp[2] as Material
+		decor.add_child(sp)
 	add_mirror(Vector3(-9.0, 2.2, -22.8), 15.0, Vector2(6.0, 3.6), 0.4)
 	add_mirror(Vector3(9.0, 2.2, -22.8), -15.0, Vector2(6.0, 3.6), 0.4)
 	ArenaKit.sign_text(decor, "MIRROR ALLEY", Vector3(0.0, 3.5, -16.0), Vector3.ZERO, Color(0.6, 0.95, 1.0), 72, 0.01)
@@ -481,20 +524,61 @@ func _build_flower_bed(centre: Vector3, length: float) -> void:
 # --- Looks only ---------------------------------------------------------------
 
 func _build_neighbourhood() -> void:
-	_house(Vector3(-30.0, 0.0, -48.0), Vector3(16.0, 7.0, 12.0), Color(1.0, 0.9, 0.7), Color(0.8, 0.3, 0.25))
-	_house(Vector3(8.0, 0.0, -52.0), Vector3(18.0, 8.0, 13.0), Color(0.8, 0.9, 1.0), Color(0.3, 0.4, 0.6))
-	_house(Vector3(44.0, 0.0, -46.0), Vector3(14.0, 6.5, 12.0), Color(1.0, 0.8, 0.85), Color(0.5, 0.35, 0.3))
-	_house(Vector3(-20.0, 0.0, 50.0), Vector3(17.0, 7.5, 13.0), Color(0.9, 1.0, 0.85), Color(0.75, 0.45, 0.2))
-	_house(Vector3(30.0, 0.0, 52.0), Vector3(15.0, 7.0, 12.0), Color(1.0, 0.95, 0.75), Color(0.35, 0.5, 0.45))
+	_house(Vector3(-30.0, 0.0, -48.0), Vector3(16.0, 7.0, 12.0), Color(0.98, 0.90, 0.74), Color(0.82, 0.34, 0.24))
+	_house(Vector3(8.0, 0.0, -52.0), Vector3(18.0, 8.0, 13.0), Color(0.84, 0.91, 0.98), Color(0.32, 0.42, 0.58))
+	_house(Vector3(44.0, 0.0, -46.0), Vector3(14.0, 6.5, 12.0), Color(0.98, 0.84, 0.86), Color(0.56, 0.36, 0.28))
+	_house(Vector3(-20.0, 0.0, 50.0), Vector3(17.0, 7.5, 13.0), Color(0.90, 0.96, 0.84), Color(0.76, 0.46, 0.22))
+	_house(Vector3(30.0, 0.0, 52.0), Vector3(15.0, 7.0, 12.0), Color(0.98, 0.94, 0.78), Color(0.36, 0.50, 0.44))
+	_house(Vector3(-56.0, 0.0, -14.0), Vector3(15.0, 7.2, 13.0), Color(0.95, 0.89, 0.78), Color(0.68, 0.36, 0.26))
+	_house(Vector3(58.0, 0.0, 16.0), Vector3(16.0, 7.0, 12.0), Color(0.88, 0.93, 0.96), Color(0.36, 0.46, 0.60))
+
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 77
-	for i in 22:
+	for i in 30:
 		var angle := rng.randf() * TAU
-		var distance := rng.randf_range(52.0, 95.0)
+		var distance := rng.randf_range(50.0, 102.0)
 		var spot := Vector3(cos(angle) * distance * 1.2, 0.0, sin(angle) * distance)
 		if absf(spot.x) < HALF_X + 6.0 and absf(spot.z) < HALF_Z + 6.0:
 			continue
-		_tree(spot, rng.randf_range(0.8, 1.5))
+		_tree(spot, rng.randf_range(0.85, 1.65))
+
+	# Rolling sunlit Pixar valley treeline hills ringing the horizon (eliminates empty flat void!)
+	var hill_near_m := ArenaKit.toon_mat(Color(0.30, 0.62, 0.28), 0.92, 0.08, 0.0, false, Color(0.18, 0.38, 0.32))
+	var hill_far_m := ArenaKit.toon_mat(Color(0.36, 0.60, 0.42), 0.94, 0.06, 0.0, false, Color(0.24, 0.42, 0.52))
+	for h_i in 18:
+		var ang := TAU * float(h_i) / 18.0 + rng.randf_range(-0.12, 0.12)
+		var dist := rng.randf_range(125.0, 165.0)
+		var rad := rng.randf_range(38.0, 62.0)
+		var h_pos := Vector3(cos(ang) * dist, -rad * 0.22, sin(ang) * dist)
+		var hill := ArenaKit.deco_sphere(decor, rad, h_pos, Color(0.32, 0.62, 0.30), 0.42)
+		hill.material_override = hill_near_m if (h_i % 2 == 0) else hill_far_m
+		hill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+## Builds an organically sculpted multi-octave billowing foliage cluster mesh (no smooth balls!).
+static func _make_organic_foliage_mesh(radius: float, squash: float, seed_val: float) -> ArrayMesh:
+	var sphere := SphereMesh.new()
+	sphere.radius = radius
+	sphere.height = radius * 2.0 * squash
+	sphere.radial_segments = 24
+	sphere.rings = 14
+	var arrays := sphere.get_mesh_arrays()
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var norms: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	for i in verts.size():
+		var v := verts[i]
+		var n := norms[i]
+		var px := v.x / maxf(radius, 0.1) + seed_val * 1.7
+		var py := v.y / maxf(radius * squash, 0.1) + seed_val * 2.3
+		var pz := v.z / maxf(radius, 0.1) + seed_val * 3.1
+		var b1 := sin(px * 3.2 + py * 2.1) * cos(pz * 3.4 - py * 1.9)
+		var b2 := cos(px * 5.6 - pz * 5.0 + py * 4.2) * 0.42
+		verts[i] = v + n * ((b1 + b2) * radius * 0.13)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	var st := SurfaceTool.new()
+	st.create_from_arrays(arrays, Mesh.PRIMITIVE_TRIANGLES)
+	st.generate_normals()
+	return st.commit()
 
 
 func _house(at: Vector3, size: Vector3, wall: Color, roof: Color) -> void:

@@ -24,6 +24,7 @@ from mesh_sculpt import (
     MeshPart,
     NodeSpec,
     beveled_cylinder,
+    compute_smooth_normals,
     curved_tube,
     export_glb,
     loft_rings,
@@ -75,8 +76,21 @@ def _cyl(mat: str, r_bot: float, r_top: float, h: float, pos=(0.0, 0.0, 0.0), ro
 
 
 def _puff(mat: str, rx: float, ry: float, rz: float, pos=(0.0, 0.0, 0.0), exp: float = 0.92,
-          rings: int = 10, segs: int = 16) -> MeshPart:
-    p = superellipsoid(mat, rx, ry, rz, e1=exp, e2=exp, segs_u=segs, segs_v=rings, grad_top=1.08, grad_bot=0.80)
+          rings: int = 10, segs: int = 16, organic_amp: float = 0.0, seed: float = 0.0) -> MeshPart:
+    p = superellipsoid(mat, rx, ry, rz, e1=exp, e2=exp, segs_u=segs, segs_v=rings, grad_top=1.08, grad_bot=0.78)
+    if organic_amp > 0.0:
+        v = p.positions.astype(np.float64)
+        n = p.normals.astype(np.float64)
+        # Organic multi-octave leaf-billow surface sculpting (breaks smooth sphere silhouettes!)
+        px = v[:, 0] / max(rx, 0.1) + seed * 1.7
+        py = v[:, 1] / max(ry, 0.1) + seed * 2.3
+        pz = v[:, 2] / max(rz, 0.1) + seed * 3.1
+        b1 = np.sin(px * 3.2 + py * 2.1) * np.cos(pz * 3.4 - py * 1.9)
+        b2 = np.cos(px * 5.8 - pz * 5.2 + py * 4.4) * 0.45
+        disp = (b1 + b2) * organic_amp * min(rx, ry, rz)
+        v_new = (v + n * disp[:, None]).astype(np.float32)
+        n_new = compute_smooth_normals(v_new, p.indices)
+        p = MeshPart(p.material, v_new, n_new, p.uvs, p.colors, p.indices)
     return _place(p, pos)
 
 
@@ -116,7 +130,7 @@ def build_cartoon_tree() -> List[NodeSpec]:
     trunk_parts.append(curved_tube("wood_dark", [(0.0, 3.8, 0.0), (0.85, 4.7, 0.35), (1.4, 5.4, 0.55)], 0.22, segs=10))
     trunk_parts.append(curved_tube("wood_dark", [(0.0, 3.9, 0.0), (-0.9, 4.8, -0.35), (-1.45, 5.5, -0.5)], 0.22, segs=10))
 
-    # 11-cluster layered stylized cartoon leafy canopy (deep lush base + sunlit lime upper puffs!)
+    # 11-cluster organically sculpted billowy oak leafy canopy (high-density bumpy foliage tufts!)
     canopy_parts: List[MeshPart] = []
     dark_puffs = [
         (0.0, 5.1, 0.0,   2.75, 1.85, 2.75),
@@ -125,8 +139,8 @@ def build_cartoon_tree() -> List[NodeSpec]:
         (0.6, 5.2, 2.0,   1.60, 1.30, 1.60),
         (-0.8, 5.3, -2.0, 1.60, 1.30, 1.60),
     ]
-    for x, y, z, rx, ry, rz in dark_puffs:
-        canopy_parts.append(_puff("leaf", rx, ry, rz, pos=(x, y, z), exp=0.90, rings=9, segs=14))
+    for idx, (x, y, z, rx, ry, rz) in enumerate(dark_puffs):
+        canopy_parts.append(_puff("leaf", rx, ry, rz, pos=(x, y, z), exp=0.90, rings=14, segs=22, organic_amp=0.14, seed=float(idx + 1)))
 
     light_puffs = [
         (0.15, 7.1, -0.15, 2.15, 1.65, 2.15),
@@ -136,8 +150,8 @@ def build_cartoon_tree() -> List[NodeSpec]:
         (-0.65, 6.4, -1.45,1.40, 1.20, 1.40),
         (0.0, 8.2, 0.1,    1.25, 0.98, 1.25),
     ]
-    for x, y, z, rx, ry, rz in light_puffs:
-        canopy_parts.append(_puff("leaf_light", rx, ry, rz, pos=(x, y, z), exp=0.88, rings=9, segs=14))
+    for idx, (x, y, z, rx, ry, rz) in enumerate(light_puffs):
+        canopy_parts.append(_puff("leaf_light", rx, ry, rz, pos=(x, y, z), exp=0.88, rings=14, segs=22, organic_amp=0.15, seed=float(idx + 10)))
 
     return [
         NodeSpec("TrunkBase", parts=_bake_parts(trunk_parts, dark=0.72)),

@@ -915,18 +915,42 @@ func _on_reload_cancelled(_state: WeaponState) -> void:
 func _build_fp_arms() -> void:
 	if _fp_arms != null:
 		return
+	var fleece_nrm := load("res://assets/textures/stylized/hoodie_fleece_normal.png") as Texture2D
+	var sleeve_sm := ArenaKit.toon_mat(color, 0.86, 0.24, 0.0, true, Color(0.22, 0.26, 0.56), true).duplicate() as ShaderMaterial
+	if fleece_nrm != null:
+		sleeve_sm.set_shader_parameter(&"use_normal_map", true)
+		sleeve_sm.set_shader_parameter(&"texture_normal", fleece_nrm)
+		sleeve_sm.set_shader_parameter(&"normal_scale", 0.52)
+		sleeve_sm.set_shader_parameter(&"normal_uv_scale", 5.0)
+	var cuff_sm := ArenaKit.toon_mat(color.darkened(0.18), 0.90, 0.18, 0.0, true, Color(0.18, 0.22, 0.48), true)
+	var skin_sm := ArenaKit.toon_mat(Color(1.0, 0.80, 0.64), 0.56, 0.36, 0.0, true, Color(0.72, 0.38, 0.36), true, 0.06, 0.68)
+	_sleeve_mat = sleeve_sm
+	_skin_mat = skin_sm
+
+	# Prefer sculpted articulated 5-finger Pixar FP hands & folded hoodie sleeves (fp_arms.tscn)
+	if is_instance_valid(ModelLoader) and ModelLoader.has_model("res://assets/models/characters/fp_arms.tscn"):
+		var inst := ModelLoader.instantiate_model("res://assets/models/characters/fp_arms.tscn")
+		if inst != null:
+			_fp_arms = inst
+			_fp_arms.name = "FirstPersonArms"
+			_view_root.add_child(_fp_arms)
+			ModelLoader.apply_materials_recursive(_fp_arms, {
+				"sleeve": sleeve_sm,
+				"cuff": cuff_sm,
+				"skin": skin_sm,
+			})
+			_disable_fp_shadows_recursive(_fp_arms)
+			_fp_right_arm = _fp_arms.find_child("RightArm", true, false) as Node3D
+			_fp_left_arm = _fp_arms.find_child("LeftArm", true, false) as Node3D
+			if view_layer_mask != 1:
+				_set_model_layers(_fp_arms, view_layer_mask)
+			return
+
 	_fp_arms = Node3D.new()
 	_fp_arms.name = "FirstPersonArms"
 	_view_root.add_child(_fp_arms)
 
-	# Cover-Art stylized chromatic cel hoodie sleeves & cartoon hands with fine FP ink outlines
-	var sleeve_sm := ArenaKit.toon_mat(color, 0.62, 0.30, 0.22, true, Color(0.22, 0.26, 0.56)).duplicate() as ShaderMaterial
-	var cuff_sm := ArenaKit.toon_mat(color.darkened(0.16), 0.72, 0.20, 0.22, true, Color(0.18, 0.22, 0.48))
-	var skin_sm := ArenaKit.toon_mat(Color(1.0, 0.80, 0.64), 0.58, 0.35, 0.22, true, Color(0.72, 0.38, 0.36))
-	_sleeve_mat = sleeve_sm
-	_skin_mat = skin_sm
-
-	# Right Arm: chunky hoodie forearm, ribbed cuff & rounded cartoon gripping hand
+	# Procedural fallback arms
 	_fp_right_arm = Node3D.new()
 	_fp_right_arm.name = "RightArm"
 	_fp_arms.add_child(_fp_right_arm)
@@ -939,7 +963,6 @@ func _build_fp_arms() -> void:
 	var r_thumb := _fp_sphere(_fp_right_arm, 0.022, Vector3(-0.024, -0.082, 0.068), skin_sm, Vector3(0.85, 1.32, 0.95))
 	r_thumb.rotation_degrees = Vector3(-18.0, 24.0, 28.0)
 
-	# Left Arm: supporting hoodie forearm, ribbed cuff & rounded palm (seamless cuff-to-sleeve join!)
 	_fp_left_arm = Node3D.new()
 	_fp_left_arm.name = "LeftArm"
 	_fp_arms.add_child(_fp_left_arm)
@@ -954,6 +977,13 @@ func _build_fp_arms() -> void:
 
 	if view_layer_mask != 1:
 		_set_model_layers(_fp_arms, view_layer_mask)
+
+
+func _disable_fp_shadows_recursive(node: Node) -> void:
+	if node is GeometryInstance3D:
+		(node as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for c in node.get_children():
+		_disable_fp_shadows_recursive(c)
 
 
 func _build_zombie_arms() -> void:

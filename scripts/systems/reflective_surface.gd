@@ -28,31 +28,34 @@ func _ready() -> void:
 	collision.shape = shape
 	add_child(collision)
 
-	# Stylized comic sky-cyan glossy mirror face with crisp reflection feel
+	# Stylized crystal-chrome mirror panel with clean sky/yard reflection feel
 	var mirror := MeshInstance3D.new()
 	var mirror_mesh := BoxMesh.new()
 	mirror_mesh.size = Vector3(panel_size.x, panel_size.y, THICKNESS * 0.58)
 	mirror.mesh = mirror_mesh
 	_mirror_mat = StandardMaterial3D.new()
-	_mirror_mat.albedo_color = Color(0.76, 0.94, 1.0)
-	_mirror_mat.metallic = 0.86
-	_mirror_mat.roughness = 0.05
+	_mirror_mat.albedo_color = Color(0.80, 0.95, 1.0)
+	_mirror_mat.metallic = 0.94
+	_mirror_mat.roughness = 0.03
+	_mirror_mat.clearcoat_enabled = true
+	_mirror_mat.clearcoat = 0.9
+	_mirror_mat.clearcoat_roughness = 0.04
 	_mirror_mat.emission_enabled = true
-	_mirror_mat.emission = Color(0.32, 0.80, 1.0)
-	_mirror_mat.emission_energy_multiplier = 0.22
+	_mirror_mat.emission = Color(0.26, 0.78, 1.0)
+	_mirror_mat.emission_energy_multiplier = 0.16
 	mirror.material_override = _mirror_mat
 	add_child(mirror)
 
-	# Animated diagonal cartoon glass sheen streaks on both front & back mirror faces
+	# Subtle animated diagonal glass sheen streaks on both front & back mirror faces
 	var sheen_mat := StandardMaterial3D.new()
 	sheen_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	sheen_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	sheen_mat.albedo_color = Color(1.0, 1.0, 1.0, 0.34)
+	sheen_mat.albedo_color = Color(1.0, 1.0, 1.0, 0.22)
 	sheen_mat.emission_enabled = true
 	sheen_mat.emission = Color(0.92, 0.98, 1.0)
-	sheen_mat.emission_energy_multiplier = 0.8
+	sheen_mat.emission_energy_multiplier = 0.6
 	var strip_offsets := [-0.26, 0.05, 0.22]
-	var strip_widths := [0.28, 0.14, 0.22]
+	var strip_widths := [0.26, 0.12, 0.20]
 	for face_z: float in [1.0, -1.0]:
 		for i in strip_offsets.size():
 			var strip := MeshInstance3D.new()
@@ -66,17 +69,18 @@ func _ready() -> void:
 			add_child(strip)
 			_sheen_strips.append(strip)
 
-	# Beveled glowing cyan neon border tubes + rounded dark-navy corner bumpers
-	var bar := 0.24
+	# Beveled glowing cyan LED border tubes + brushed dark-titanium corner bumpers (zero black ink hull!)
+	var bar := 0.22
 	var frame_mat := StandardMaterial3D.new()
 	frame_mat.albedo_color = frame_color
-	frame_mat.roughness = 0.22
+	frame_mat.roughness = 0.18
+	frame_mat.clearcoat_enabled = true
+	frame_mat.clearcoat = 0.85
 	frame_mat.emission_enabled = true
 	frame_mat.emission = frame_color
-	frame_mat.emission_energy_multiplier = 1.45
-	frame_mat.next_pass = ArenaKit.outline_mat(0.75, false)
+	frame_mat.emission_energy_multiplier = 1.25
 
-	var corner_mat := ArenaKit.toon_mat(Color(0.14, 0.22, 0.38), 0.32, 0.65, 0.75, false)
+	var corner_mat := ArenaKit.toon_mat(Color(0.20, 0.26, 0.38), 0.28, 0.72, 0.0, false, Color(0.16, 0.22, 0.36), false, 0.35, 0.0, 0.78)
 	for side: float in [-1.0, 1.0]:
 		# Top & bottom glowing horizontal tubular bars
 		var h_cyl := CylinderMesh.new()

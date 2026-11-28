@@ -565,13 +565,12 @@ func _build_from_model() -> bool:
 	model_root = model_node
 	add_child(model_node)
 
-	var out_scale := 0.24 if first_person else 0.65
 	var chassis_mat := get_chassis_material()
 	var mat_map := {
 		"chassis": chassis_mat,
-		"hardware": ArenaKit.toon_mat(data.accent_color, 0.28, 0.68, out_scale, true, Color(0.24, 0.28, 0.55), true),
-		"safety": ArenaKit.toon_mat(ORANGE_TIP, 0.30, 0.72, out_scale, true, Color(0.68, 0.20, 0.14), true),
-		"grip": ArenaKit.toon_mat(DARK, 0.78, 0.22, out_scale, true, Color(0.10, 0.14, 0.28), true)
+		"hardware": ArenaKit.toon_mat(data.accent_color, 0.26, 0.72, 0.0, true, Color(0.24, 0.28, 0.55), true, 0.30, 0.0, 0.65),
+		"safety": ArenaKit.toon_mat(ORANGE_TIP, 0.26, 0.78, 0.0, true, Color(0.68, 0.20, 0.14), true, 0.78, 0.08, 0.0),
+		"grip": ArenaKit.toon_mat(DARK, 0.84, 0.22, 0.0, true, Color(0.10, 0.14, 0.28), true, 0.0, 0.0, 0.0)
 	}
 	ModelLoader.apply_materials_recursive(model_node, mat_map)
 
@@ -680,11 +679,9 @@ func get_chassis_material() -> Material:
 			if ResourceLoader.exists(pattern_path):
 				skin_mat.set_shader_parameter("skin_pattern", load(pattern_path))
 			skin_mat.set_shader_parameter("finish_mode", Cosmetics.skin_finish(skin_id))
-			skin_mat.next_pass = ArenaKit.outline_mat(0.24 if first_person else 0.65, true)
 			_skin_materials[mat_key] = skin_mat
 		return skin_mat
-	var out_scale := 0.24 if first_person else 0.65
-	return ArenaKit.toon_mat(b_col, 0.30, 0.68, out_scale, true, Color(0.22, 0.26, 0.58), true)
+	return ArenaKit.toon_mat(b_col, 0.26, 0.74, 0.0, true, Color(0.22, 0.26, 0.58), true, 0.76, 0.0, 0.04)
 
 
 func _build_pistol(double_barrel: bool) -> void:

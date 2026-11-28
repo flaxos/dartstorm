@@ -1,14 +1,25 @@
 @tool
 extends SceneTree
-## Packs all sculpted v2.0.0 arena prop .glb models into companion .tscn scenes
-## with StaticBody3D root on Layers.WORLD, exact v1.0 CollisionShape3D footprints,
-## chromatic cel ShaderMaterials (vertex-AO enabled), and warm-navy comic outlines.
-## Also upgrades the remaining 5 procedural prop .tscn scenes with chromatic cel shaders!
+## Packs all 14 v2.0.0 arena prop .glb/.tscn scenes with Pixar / Fortnite Stylized PBR
+## materials (painted foliage/bark/shingle/sandstone/wood/vinyl textures, clearcoat ABS,
+## brushed alloy, subsurface foliage translucency, baked vertex AO, ZERO dark ink borders)
+## while preserving 100% identical StaticBody3D colliders on Layers.WORLD.
 
 const PROPS_DIR := "res://assets/models/props/"
 const TOON_SHADER := preload("res://assets/materials/dartstorm_toon.gdshader")
-const OUTLINE_SHADER := preload("res://assets/materials/toon_outline.gdshader")
-const WOOD_SHADER := preload("res://assets/materials/toy_wood.gdshader")
+
+const FOLIAGE_ALB := preload("res://assets/textures/stylized/foliage_leaf_albedo.png")
+const FOLIAGE_NRM := preload("res://assets/textures/stylized/foliage_leaf_normal.png")
+const BARK_ALB := preload("res://assets/textures/stylized/bark_oak_albedo.png")
+const BARK_NRM := preload("res://assets/textures/stylized/bark_oak_normal.png")
+const SHINGLE_ALB := preload("res://assets/textures/stylized/shingle_roof_albedo.png")
+const SHINGLE_NRM := preload("res://assets/textures/stylized/shingle_roof_normal.png")
+const VINYL_NRM := preload("res://assets/textures/stylized/vinyl_grain_normal.png")
+const FLEECE_NRM := preload("res://assets/textures/stylized/hoodie_fleece_normal.png")
+const WOOD_NRM := preload("res://assets/textures/arenas/wood_normal.png")
+const SANDSTONE_ALB := preload("res://assets/textures/arenas/sandstone_smooth_albedo.png")
+const SANDSTONE_NRM := preload("res://assets/textures/arenas/sandstone_smooth_normal.png")
+const METAL_NRM := preload("res://assets/textures/pbr/brushed_metal_normal.png")
 
 const SCULPTED_PROPS := [
 	"cartoon_tree",
@@ -30,18 +41,8 @@ const UPGRADE_ONLY_PROPS := [
 	"wooden_pallet",
 ]
 
-var _outline_mat: ShaderMaterial
-
 
 func _init() -> void:
-	_outline_mat = ShaderMaterial.new()
-	_outline_mat.shader = OUTLINE_SHADER
-	_outline_mat.set_shader_parameter(&"outline_color", Color(0.039, 0.094, 0.239, 1.0))
-	_outline_mat.set_shader_parameter(&"outline_width", 0.008)
-	_outline_mat.set_shader_parameter(&"distance_scale", 0.0018)
-	_outline_mat.set_shader_parameter(&"fade_start", 30.0)
-	_outline_mat.set_shader_parameter(&"fade_end", 54.0)
-
 	for pname: String in SCULPTED_PROPS:
 		if not _pack_sculpted(pname):
 			quit(1)
@@ -50,7 +51,7 @@ func _init() -> void:
 		if not _upgrade_existing_tscn(pname):
 			quit(1)
 			return
-	print("All 14 v2.0.0 arena prop scenes packed cleanly!")
+	print("All 14 v2.0.0 Pixar/Fortnite PBR arena prop scenes packed cleanly!")
 	quit(0)
 
 
@@ -80,7 +81,7 @@ func _pack_sculpted(pname: String) -> bool:
 		body.add_child(child)
 	gltf_root.free()
 
-	_apply_cel_materials_recursive(body, true)
+	_apply_pbr_materials_recursive(body, true, pname)
 	_add_prop_colliders(body, pname)
 	_set_owner_recursive(body, body)
 
@@ -93,7 +94,7 @@ func _pack_sculpted(pname: String) -> bool:
 		printerr("Failed to save prop: ", tscn_path)
 		body.free()
 		return false
-	print("Packed sculpted v2 prop: ", tscn_path)
+	print("Packed sculpted v2 PBR prop: ", tscn_path)
 	body.free()
 	return true
 
@@ -107,7 +108,7 @@ func _upgrade_existing_tscn(pname: String) -> bool:
 	var inst := scene.instantiate() as Node3D
 	if inst == null:
 		return false
-	_apply_cel_materials_recursive(inst, false)
+	_apply_pbr_materials_recursive(inst, false, pname)
 	_set_owner_recursive(inst, inst)
 	var packed := PackedScene.new()
 	if packed.pack(inst) != OK:
@@ -116,50 +117,125 @@ func _upgrade_existing_tscn(pname: String) -> bool:
 	if ResourceSaver.save(packed, tscn_path) != OK:
 		inst.free()
 		return false
-	print("Upgraded cel materials on prop: ", tscn_path)
+	print("Upgraded PBR materials on prop: ", tscn_path)
 	inst.free()
 	return true
 
 
-func _apply_cel_materials_recursive(node: Node, use_vcol: bool) -> void:
+func _apply_pbr_materials_recursive(node: Node, use_vcol: bool, pname: String) -> void:
 	if node is MeshInstance3D:
 		var mi := node as MeshInstance3D
 		if mi.material_override is StandardMaterial3D:
 			var std := mi.material_override as StandardMaterial3D
-			mi.material_override = _make_cel_mat(std.albedo_color, std.resource_name, std.roughness, use_vcol)
+			mi.material_override = _make_pbr_mat(std.albedo_color, std.resource_name, std.roughness, use_vcol, pname)
+		elif mi.material_override is ShaderMaterial:
+			var prev_sm := mi.material_override as ShaderMaterial
+			var col: Color = prev_sm.get_shader_parameter(&"albedo_color")
+			var r_val: Variant = prev_sm.get_shader_parameter(&"roughness")
+			var rough: float = float(r_val) if r_val != null else 0.55
+			mi.material_override = _make_pbr_mat(col, prev_sm.resource_name, rough, use_vcol, pname)
 		if mi.mesh != null:
 			for s in mi.mesh.get_surface_count():
 				var sm := mi.mesh.surface_get_material(s)
 				if sm is StandardMaterial3D:
 					var std2 := sm as StandardMaterial3D
-					mi.set_surface_override_material(s, _make_cel_mat(std2.albedo_color, std2.resource_name, std2.roughness, use_vcol))
+					mi.set_surface_override_material(s, _make_pbr_mat(std2.albedo_color, std2.resource_name, std2.roughness, use_vcol, pname))
+				elif mi.get_surface_override_material(s) is ShaderMaterial:
+					var prev_s := mi.get_surface_override_material(s) as ShaderMaterial
+					var col2: Color = prev_s.get_shader_parameter(&"albedo_color")
+					var r_val2: Variant = prev_s.get_shader_parameter(&"roughness")
+					mi.set_surface_override_material(s, _make_pbr_mat(col2, prev_s.resource_name, float(r_val2) if r_val2 != null else 0.55, use_vcol, pname))
 	for child in node.get_children():
-		_apply_cel_materials_recursive(child, use_vcol)
+		_apply_pbr_materials_recursive(child, use_vcol, pname)
 
 
-func _make_cel_mat(col: Color, slot: String, rough: float, use_vcol: bool) -> ShaderMaterial:
+func _make_pbr_mat(col: Color, slot: String, rough: float, use_vcol: bool, pname: String) -> ShaderMaterial:
 	var key := slot.to_lower()
 	var sm := ShaderMaterial.new()
 	sm.resource_name = slot
 	sm.shader = TOON_SHADER
 	sm.set_shader_parameter(&"albedo_color", Color(col.r, col.g, col.b, 1.0))
-	sm.set_shader_parameter(&"roughness", clampf(rough, 0.18, 0.88))
 	sm.set_shader_parameter(&"use_vertex_color", use_vcol)
-	var is_foliage := "leaf" in key
-	var is_glossy := "vinyl" in key or "plastic" in key or "barrel" in key
-	sm.set_shader_parameter(&"roughness", 0.88 if is_foliage else clampf(rough, 0.18, 0.88))
-	sm.set_shader_parameter(&"specular_strength", 0.72 if is_glossy else (0.03 if is_foliage else 0.38))
-	if is_foliage:
-		sm.set_shader_parameter(&"shadow_tint", Color(0.10, 0.36, 0.24, 1.0))
-		sm.set_shader_parameter(&"shadow_strength", 0.46)
-	elif "wood" in key or "sandstone" in key or "terracotta" in key:
-		sm.set_shader_parameter(&"shadow_tint", Color(0.38, 0.22, 0.18, 1.0))
-		sm.set_shader_parameter(&"shadow_strength", 0.42)
+	sm.set_shader_parameter(&"use_triplanar", true)
+
+	if "leaf" in key:
+		var tint := Color(1.06, 1.08, 0.94, 1.0) if "light" in key else Color(0.84, 0.96, 0.86, 1.0)
+		sm.set_shader_parameter(&"albedo_color", tint)
+		sm.set_shader_parameter(&"use_albedo_texture", true)
+		sm.set_shader_parameter(&"albedo_texture", FOLIAGE_ALB)
+		sm.set_shader_parameter(&"use_normal_map", true)
+		sm.set_shader_parameter(&"texture_normal", FOLIAGE_NRM)
+		sm.set_shader_parameter(&"triplanar_scale", 0.34)
+		sm.set_shader_parameter(&"normal_scale", 0.88)
+		sm.set_shader_parameter(&"roughness", 0.80)
+		sm.set_shader_parameter(&"specular_strength", 0.22)
+		sm.set_shader_parameter(&"subsurface_strength", 0.58)
+	elif pname == "cartoon_tree" and "wood" in key:
+		sm.set_shader_parameter(&"albedo_color", Color(0.98, 0.94, 0.90, 1.0))
+		sm.set_shader_parameter(&"use_albedo_texture", true)
+		sm.set_shader_parameter(&"albedo_texture", BARK_ALB)
+		sm.set_shader_parameter(&"use_normal_map", true)
+		sm.set_shader_parameter(&"texture_normal", BARK_NRM)
+		sm.set_shader_parameter(&"triplanar_scale", 0.42)
+		sm.set_shader_parameter(&"normal_scale", 0.95)
+		sm.set_shader_parameter(&"roughness", 0.86)
+		sm.set_shader_parameter(&"specular_strength", 0.20)
+	elif "shingle" in key:
+		sm.set_shader_parameter(&"use_albedo_texture", true)
+		sm.set_shader_parameter(&"albedo_texture", SHINGLE_ALB)
+		sm.set_shader_parameter(&"use_normal_map", true)
+		sm.set_shader_parameter(&"texture_normal", SHINGLE_NRM)
+		sm.set_shader_parameter(&"triplanar_scale", 0.52)
+		sm.set_shader_parameter(&"normal_scale", 0.85)
+		sm.set_shader_parameter(&"roughness", 0.74)
+		sm.set_shader_parameter(&"specular_strength", 0.28)
+	elif "sandstone" in key:
+		sm.set_shader_parameter(&"albedo_color", Color(0.96, 0.92, 0.86, 1.0) if not ("dark" in key) else Color(0.84, 0.78, 0.70, 1.0))
+		sm.set_shader_parameter(&"use_albedo_texture", true)
+		sm.set_shader_parameter(&"albedo_texture", SANDSTONE_ALB)
+		sm.set_shader_parameter(&"use_normal_map", true)
+		sm.set_shader_parameter(&"texture_normal", SANDSTONE_NRM)
+		sm.set_shader_parameter(&"triplanar_scale", 0.24)
+		sm.set_shader_parameter(&"normal_scale", 0.72)
+		sm.set_shader_parameter(&"roughness", 0.82)
+		sm.set_shader_parameter(&"specular_strength", 0.22)
+	elif "wood" in key or "pallet" in key:
+		sm.set_shader_parameter(&"use_normal_map", true)
+		sm.set_shader_parameter(&"texture_normal", WOOD_NRM)
+		sm.set_shader_parameter(&"triplanar_scale", 0.65)
+		sm.set_shader_parameter(&"normal_scale", 0.72)
+		sm.set_shader_parameter(&"roughness", 0.66)
+		sm.set_shader_parameter(&"specular_strength", 0.34)
+	elif "vinyl" in key:
+		sm.set_shader_parameter(&"use_normal_map", true)
+		sm.set_shader_parameter(&"texture_normal", VINYL_NRM)
+		sm.set_shader_parameter(&"triplanar_scale", 1.2)
+		sm.set_shader_parameter(&"normal_scale", 0.35)
+		sm.set_shader_parameter(&"roughness", 0.26)
+		sm.set_shader_parameter(&"specular_strength", 0.78)
+		sm.set_shader_parameter(&"clearcoat_strength", 0.72)
+	elif "plastic" in key or "barrel" in key:
+		sm.set_shader_parameter(&"roughness", 0.26)
+		sm.set_shader_parameter(&"specular_strength", 0.76)
+		sm.set_shader_parameter(&"clearcoat_strength", 0.78)
+	elif "steel" in key:
+		sm.set_shader_parameter(&"use_normal_map", true)
+		sm.set_shader_parameter(&"texture_normal", METAL_NRM)
+		sm.set_shader_parameter(&"triplanar_scale", 1.1)
+		sm.set_shader_parameter(&"normal_scale", 0.40)
+		sm.set_shader_parameter(&"metallic", 0.78)
+		sm.set_shader_parameter(&"roughness", 0.26)
+		sm.set_shader_parameter(&"specular_strength", 0.85)
+	elif "fur" in key:
+		sm.set_shader_parameter(&"use_normal_map", true)
+		sm.set_shader_parameter(&"texture_normal", FLEECE_NRM)
+		sm.set_shader_parameter(&"triplanar_scale", 2.2)
+		sm.set_shader_parameter(&"normal_scale", 0.55)
+		sm.set_shader_parameter(&"roughness", 0.88)
+		sm.set_shader_parameter(&"subsurface_strength", 0.30)
 	else:
-		sm.set_shader_parameter(&"shadow_tint", Color(0.22, 0.26, 0.56, 1.0))
-		sm.set_shader_parameter(&"shadow_strength", 0.42)
-	if not ("net" in key):
-		sm.next_pass = _outline_mat
+		sm.set_shader_parameter(&"roughness", clampf(rough, 0.24, 0.88))
+		sm.set_shader_parameter(&"specular_strength", 0.36)
 	return sm
 
 

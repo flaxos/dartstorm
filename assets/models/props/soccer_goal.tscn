@@ -1,37 +1,34 @@
-[gd_scene load_steps=26 format=3]
+[gd_scene load_steps=25 format=3]
 
-[ext_resource type="Shader" path="res://assets/materials/toon_outline.gdshader" id="1_4i8uh"]
+[ext_resource type="Texture2D" path="res://assets/textures/pbr/brushed_metal_normal.png" id="2_4i8uh"]
 [ext_resource type="Shader" path="res://assets/materials/dartstorm_toon.gdshader" id="2_qh0o6"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_jdv3a"]
-render_priority = 0
-shader = ExtResource("1_4i8uh")
-shader_parameter/outline_color = Color(0.039, 0.094, 0.239, 1)
-shader_parameter/outline_width = 0.008
-shader_parameter/distance_scale = 0.0018
-shader_parameter/fade_start = 30.0
-shader_parameter/fade_end = 54.0
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_8aj3a"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_qh0o6"]
 resource_name = "steel"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_qh0o6")
 shader_parameter/albedo_color = Color(0.95, 0.95, 0.98, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 1.1
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.25
-shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/roughness = 0.26
+shader_parameter/metallic = 0.78
+shader_parameter/specular_strength = 0.85
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_4i8uh")
+shader_parameter/normal_scale = 0.4
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -44,26 +41,32 @@ bottom_radius = 0.1
 height = 2.4
 radial_segments = 16
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_twucs"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_8aj3a"]
 resource_name = "steel"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_qh0o6")
 shader_parameter/albedo_color = Color(0.95, 0.95, 0.98, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 1.1
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.25
-shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/roughness = 0.26
+shader_parameter/metallic = 0.78
+shader_parameter/specular_strength = 0.85
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_4i8uh")
+shader_parameter/normal_scale = 0.4
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -84,26 +87,32 @@ radius = 0.15
 height = 2.4
 radius = 0.15
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_o017g"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_twucs"]
 resource_name = "steel"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_qh0o6")
 shader_parameter/albedo_color = Color(0.95, 0.95, 0.98, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 1.1
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.25
-shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/roughness = 0.26
+shader_parameter/metallic = 0.78
+shader_parameter/specular_strength = 0.85
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_4i8uh")
+shader_parameter/normal_scale = 0.4
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -119,26 +128,32 @@ radial_segments = 16
 [sub_resource type="BoxShape3D" id="BoxShape3D_twucs"]
 size = Vector3(7.4, 0.2, 0.2)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_ss51w"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_o017g"]
 resource_name = "steel_dark"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_qh0o6")
 shader_parameter/albedo_color = Color(0.22, 0.24, 0.28, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 1.1
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.3
-shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/roughness = 0.26
+shader_parameter/metallic = 0.78
+shader_parameter/specular_strength = 0.85
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_4i8uh")
+shader_parameter/normal_scale = 0.4
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -151,26 +166,32 @@ bottom_radius = 0.06
 height = 3.25576
 radial_segments = 16
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_uyygn"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ss51w"]
 resource_name = "steel_dark"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_qh0o6")
 shader_parameter/albedo_color = Color(0.22, 0.24, 0.28, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 1.1
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.3
-shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/roughness = 0.26
+shader_parameter/metallic = 0.78
+shader_parameter/specular_strength = 0.85
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_4i8uh")
+shader_parameter/normal_scale = 0.4
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -183,26 +204,32 @@ bottom_radius = 0.06
 height = 3.25576
 radial_segments = 16
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_glfnc"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_uyygn"]
 resource_name = "steel_dark"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_qh0o6")
 shader_parameter/albedo_color = Color(0.22, 0.24, 0.28, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 1.1
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.3
-shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/roughness = 0.26
+shader_parameter/metallic = 0.78
+shader_parameter/specular_strength = 0.85
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_4i8uh")
+shader_parameter/normal_scale = 0.4
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -215,26 +242,32 @@ bottom_radius = 0.06
 height = 7.4
 radial_segments = 16
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_knmoo"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_glfnc"]
 resource_name = "steel_dark"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_qh0o6")
 shader_parameter/albedo_color = Color(0.22, 0.24, 0.28, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 1.1
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.3
-shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/roughness = 0.26
+shader_parameter/metallic = 0.78
+shader_parameter/specular_strength = 0.85
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_4i8uh")
+shader_parameter/normal_scale = 0.4
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -247,26 +280,32 @@ bottom_radius = 0.06
 height = 2.2
 radial_segments = 16
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_w5sw8"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_knmoo"]
 resource_name = "steel_dark"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_jdv3a")
 shader = ExtResource("2_qh0o6")
 shader_parameter/albedo_color = Color(0.22, 0.24, 0.28, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = 1.1
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
-shader_parameter/roughness = 0.3
-shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/roughness = 0.26
+shader_parameter/metallic = 0.78
+shader_parameter/specular_strength = 0.85
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
-shader_parameter/normal_scale = null
-shader_parameter/use_normal_map = null
+shader_parameter/texture_normal = ExtResource("2_4i8uh")
+shader_parameter/normal_scale = 0.4
+shader_parameter/normal_uv_scale = null
+shader_parameter/use_normal_map = true
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
 shader_parameter/fire_glow = null
@@ -279,24 +318,30 @@ bottom_radius = 0.06
 height = 2.2
 radial_segments = 16
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_rs771"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_w5sw8"]
 resource_name = "net"
 render_priority = 0
 shader = ExtResource("2_qh0o6")
 shader_parameter/albedo_color = Color(0.95, 0.96, 0.98, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = false
-shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = null
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
 shader_parameter/roughness = 0.6
 shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.42
+shader_parameter/specular_strength = 0.36
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
 shader_parameter/normal_scale = null
+shader_parameter/normal_uv_scale = null
 shader_parameter/use_normal_map = null
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
@@ -315,12 +360,12 @@ collision_mask = 0
 
 [node name="PostL" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.7, 1.2, 0)
-material_override = SubResource("ShaderMaterial_8aj3a")
+material_override = SubResource("ShaderMaterial_qh0o6")
 mesh = SubResource("CylinderMesh_yb8bp")
 
 [node name="PostR" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.7, 1.2, 0)
-material_override = SubResource("ShaderMaterial_twucs")
+material_override = SubResource("ShaderMaterial_8aj3a")
 mesh = SubResource("CylinderMesh_7he8o")
 
 [node name="@CollisionShape3D@37" type="CollisionShape3D" parent="."]
@@ -333,7 +378,7 @@ shape = SubResource("CylinderShape3D_qh0o6")
 
 [node name="Crossbar" type="MeshInstance3D" parent="."]
 transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0, 2.4, 0)
-material_override = SubResource("ShaderMaterial_o017g")
+material_override = SubResource("ShaderMaterial_twucs")
 mesh = SubResource("CylinderMesh_8aj3a")
 
 [node name="@CollisionShape3D@39" type="CollisionShape3D" parent="."]
@@ -342,32 +387,32 @@ shape = SubResource("BoxShape3D_twucs")
 
 [node name="Stanchion" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.737154, -0.675725, 0, 0.675725, 0.737154, -3.7, 1.2, -1.1)
-material_override = SubResource("ShaderMaterial_ss51w")
+material_override = SubResource("ShaderMaterial_o017g")
 mesh = SubResource("CylinderMesh_o017g")
 
 [node name="@MeshInstance3D@40" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.737154, -0.675725, 0, 0.675725, 0.737154, 3.7, 1.2, -1.1)
-material_override = SubResource("ShaderMaterial_uyygn")
+material_override = SubResource("ShaderMaterial_ss51w")
 mesh = SubResource("CylinderMesh_ss51w")
 
 [node name="GroundBack" type="MeshInstance3D" parent="."]
 transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0, 0.04, -2.2)
-material_override = SubResource("ShaderMaterial_glfnc")
+material_override = SubResource("ShaderMaterial_uyygn")
 mesh = SubResource("CylinderMesh_uyygn")
 
 [node name="GroundSideL" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, -3.7, 0.04, -1.1)
-material_override = SubResource("ShaderMaterial_knmoo")
+material_override = SubResource("ShaderMaterial_glfnc")
 mesh = SubResource("CylinderMesh_glfnc")
 
 [node name="GroundSideR" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 3.7, 0.04, -1.1)
-material_override = SubResource("ShaderMaterial_w5sw8")
+material_override = SubResource("ShaderMaterial_knmoo")
 mesh = SubResource("CylinderMesh_knmoo")
 
 [node name="NetBack" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, -1.65)
-material_override = SubResource("ShaderMaterial_rs771")
+material_override = SubResource("ShaderMaterial_w5sw8")
 mesh = SubResource("BoxMesh_rs771")
 
 [node name="@CollisionShape3D@41" type="CollisionShape3D" parent="."]

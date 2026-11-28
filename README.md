@@ -13,7 +13,7 @@
   <a href="https://github.com/flaxos/dartstorm/releases/latest"><img src="https://img.shields.io/badge/release-v1.0.0-ff7a1a?style=for-the-badge" alt="Release v1.0.0" /></a>
   <img src="https://img.shields.io/badge/engine-Godot%204.4-1f6bff?style=for-the-badge" alt="Godot 4.4" />
   <img src="https://img.shields.io/badge/platforms-Windows%20%7C%20Linux%20%7C%20Android%20%7C%20Web-2ecc71?style=for-the-badge" alt="Platforms" />
-  <img src="https://img.shields.io/badge/tests-1561%20passing-9be22d?style=for-the-badge" alt="1561 tests passing" />
+  <img src="https://img.shields.io/badge/tests-1563%20passing-9be22d?style=for-the-badge" alt="1563 tests passing" />
 </p>
 
 ---

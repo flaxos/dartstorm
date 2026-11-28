@@ -1,15 +1,14 @@
-[gd_scene load_steps=8 format=4]
+[gd_scene load_steps=6 format=4]
 
-[ext_resource type="Shader" path="res://assets/materials/toon_outline.gdshader" id="1_uqtc2"]
-[ext_resource type="Shader" path="res://assets/materials/dartstorm_toon.gdshader" id="2_2cj3b"]
+[ext_resource type="Shader" path="res://assets/materials/dartstorm_toon.gdshader" id="1_w0p8f"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_15pqv"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uqtc2"]
 resource_name = "terracotta"
 vertex_color_use_as_albedo = true
 albedo_color = Color(0.935741, 0.694361, 0.546854, 1)
 roughness = 0.74
 
-[sub_resource type="ArrayMesh" id="ArrayMesh_6t47r"]
+[sub_resource type="ArrayMesh" id="ArrayMesh_2cj3b"]
 resource_name = "Prop_desert_urn_Mesh_Urn"
 _surfaces = [{
 "aabb": AABB(-0.491778, 0, -0.44, 0.983557, 1.14, 0.88),
@@ -17,7 +16,7 @@ _surfaces = [{
 "format": 34896613407,
 "index_count": 1560,
 "index_data": PackedByteArray("AAABABUAAQACABYAAgADABcAAwAEABgABAAFABkABQAGABoABgAHABsABwAIABwACAAJAB0ACQAKAB4ACgALAB8ACwAMACAADAANACEADQAOACIADgAPACMADwAQACQAEAARACUAEQASACYAEgATACcAEwAAABQAFAAVACkAFQAWACoAFgAXACsAFwAYACwAGAAZAC0AGQAaAC4AGgAbAC8AGwAcADAAHAAdADEAHQAeADIAHgAfADMAHwAgADQAIAAhADUAIQAiADYAIgAjADcAIwAkADgAJAAlADkAJQAmADoAJgAnADsAJwAUACgAKAApAD0AKQAqAD4AKgArAD8AKwAsAEAALAAtAEEALQAuAEIALgAvAEMALwAwAEQAMAAxAEUAMQAyAEYAMgAzAEcAMwA0AEgANAA1AEkANQA2AEoANgA3AEsANwA4AEwAOAA5AE0AOQA6AE4AOgA7AE8AOwAoADwAPAA9AFEAPQA+AFIAPgA/AFMAPwBAAFQAQABBAFUAQQBCAFYAQgBDAFcAQwBEAFgARABFAFkARQBGAFoARgBHAFsARwBIAFwASABJAF0ASQBKAF4ASgBLAF8ASwBMAGAATABNAGEATQBOAGIATgBPAGMATwA8AFAAUABRAGUAUQBSAGYAUgBTAGcAUwBUAGgAVABVAGkAVQBWAGoAVgBXAGsAVwBYAGwAWABZAG0AWQBaAG4AWgBbAG8AWwBcAHAAXABdAHEAXQBeAHIAXgBfAHMAXwBgAHQAYABhAHUAYQBiAHYAYgBjAHcAYwBQAGQAZABlAHkAZQBmAHoAZgBnAHsAZwBoAHwAaABpAH0AaQBqAH4AagBrAH8AawBsAIAAbABtAIEAbQBuAIIAbgBvAIMAbwBwAIQAcABxAIUAcQByAIYAcgBzAIcAcwB0AIgAdAB1AIkAdQB2AIoAdgB3AIsAdwBkAHgAeAB5AI0AeQB6AI4AegB7AI8AewB8AJAAfAB9AJEAfQB+AJIAfgB/AJMAfwCAAJQAgACBAJUAgQCCAJYAggCDAJcAgwCEAJgAhACFAJkAhQCGAJoAhgCHAJsAhwCIAJwAiACJAJ0AiQCKAJ4AigCLAJ8AiwB4AIwAjACNAKEAjQCOAKIAjgCPAKMAjwCQAKQAkACRAKUAkQCSAKYAkgCTAKcAkwCUAKgAlACVAKkAlQCWAKoAlgCXAKsAlwCYAKwAmACZAK0AmQCaAK4AmgCbAK8AmwCcALAAnACdALEAnQCeALIAngCfALMAnwCMAKAAAAAVABQAAQAWABUAAgAXABYAAwAYABcABAAZABgABQAaABkABgAbABoABwAcABsACAAdABwACQAeAB0ACgAfAB4ACwAgAB8ADAAhACAADQAiACEADgAjACIADwAkACMAEAAlACQAEQAmACUAEgAnACYAEwAUACcAFAApACgAFQAqACkAFgArACoAFwAsACsAGAAtACwAGQAuAC0AGgAvAC4AGwAwAC8AHAAxADAAHQAyADEAHgAzADIAHwA0ADMAIAA1ADQAIQA2ADUAIgA3ADYAIwA4ADcAJAA5ADgAJQA6ADkAJgA7ADoAJwAoADsAKAA9ADwAKQA+AD0AKgA/AD4AKwBAAD8ALABBAEAALQBCAEEALgBDAEIALwBEAEMAMABFAEQAMQBGAEUAMgBHAEYAMwBIAEcANABJAEgANQBKAEkANgBLAEoANwBMAEsAOABNAEwAOQBOAE0AOgBPAE4AOwA8AE8APABRAFAAPQBSAFEAPgBTAFIAPwBUAFMAQABVAFQAQQBWAFUAQgBXAFYAQwBYAFcARABZAFgARQBaAFkARgBbAFoARwBcAFsASABdAFwASQBeAF0ASgBfAF4ASwBgAF8ATABhAGAATQBiAGEATgBjAGIATwBQAGMAUABlAGQAUQBmAGUAUgBnAGYAUwBoAGcAVABpAGgAVQBqAGkAVgBrAGoAVwBsAGsAWABtAGwAWQBuAG0AWgBvAG4AWwBwAG8AXABxAHAAXQByAHEAXgBzAHIAXwB0AHMAYAB1AHQAYQB2AHUAYgB3AHYAYwBkAHcAZAB5AHgAZQB6AHkAZgB7AHoAZwB8AHsAaAB9AHwAaQB+AH0AagB/AH4AawCAAH8AbACBAIAAbQCCAIEAbgCDAIIAbwCEAIMAcACFAIQAcQCGAIUAcgCHAIYAcwCIAIcAdACJAIgAdQCKAIkAdgCLAIoAdwB4AIsAeACNAIwAeQCOAI0AegCPAI4AewCQAI8AfACRAJAAfQCSAJEAfgCTAJIAfwCUAJMAgACVAJQAgQCWAJUAggCXAJYAgwCYAJcAhACZAJgAhQCaAJkAhgCbAJoAhwCcAJsAiACdAJwAiQCeAJ0AigCfAJ4AiwCMAJ8AjAChAKAAjQCiAKEAjgCjAKIAjwCkAKMAkAClAKQAkQCmAKUAkgCnAKYAkwCoAKcAlACpAKgAlQCqAKkAlgCrAKoAlwCsAKsAmACtAKwAmQCuAK0AmgCvAK4AmwCwAK8AnACxALAAnQCyALEAngCzALIAnwCgALMAtAABAAAAtAACAAEAtAADAAIAtAAEAAMAtAAFAAQAtAAGAAUAtAAHAAYAtAAIAAcAtAAJAAgAtAAKAAkAtAALAAoAtAAMAAsAtAANAAwAtAAOAA0AtAAPAA4AtAAQAA8AtAARABAAtAASABEAtAATABIAtAAAABMAtQCgAKEAtQChAKIAtQCiAKMAtQCjAKQAtQCkAKUAtQClAKYAtQCmAKcAtQCnAKgAtQCoAKkAtQCpAKoAtQCqAKsAtQCrAKwAtQCsAK0AtQCtAK4AtQCuAK8AtQCvALAAtQCwALEAtQCxALIAtQCyALMAtQCzAKAAtgDBALcAtwDCALgAuADDALkAuQDEALoAugDFALsAuwDGALwAvADHAL0AvQDIAL4AvgDJAL8AvwDAALYAwADLAMEAwQDMAMIAwgDNAMMAwwDOAMQAxADPAMUAxQDQAMYAxgDRAMcAxwDSAMgAyADTAMkAyQDKAMAAygDVAMsAywDWAMwAzADXAM0AzQDYAM4AzgDZAM8AzwDaANAA0ADbANEA0QDcANIA0gDdANMA0wDUAMoAtgDAAMEAtwDBAMIAuADCAMMAuQDDAMQAugDEAMUAuwDFAMYAvADGAMcAvQDHAMgAvgDIAMkAvwDJAMAAwADKAMsAwQDLAMwAwgDMAM0AwwDNAM4AxADOAM8AxQDPANAAxgDQANEAxwDRANIAyADSANMAyQDTAMoAygDUANUAywDVANYAzADWANcAzQDXANgAzgDYANkAzwDZANoA0ADaANsA0QDbANwA0gDcAN0A0wDdANQA3gC2ALcA3gC3ALgA3gC4ALkA3gC5ALoA3gC6ALsA3gC7ALwA3gC8AL0A3gC9AL4A3gC+AL8A3gC/ALYA3wDVANQA3wDWANUA3wDXANYA3wDYANcA3wDZANgA3wDaANkA3wDbANoA3wDcANsA3wDdANwA3wDUAN0A4ADrAOEA4QDsAOIA4gDtAOMA4wDuAOQA5ADvAOUA5QDwAOYA5gDxAOcA5wDyAOgA6ADzAOkA6QDqAOAA6gD1AOsA6wD2AOwA7AD3AO0A7QD4AO4A7gD5AO8A7wD6APAA8AD7APEA8QD8APIA8gD9APMA8wD0AOoA9AD/APUA9QAAAfYA9gABAfcA9wACAfgA+AADAfkA+QAEAfoA+gAFAfsA+wAGAfwA/AAHAf0A/QD+APQA4ADqAOsA4QDrAOwA4gDsAO0A4wDtAO4A5ADuAO8A5QDvAPAA5gDwAPEA5wDxAPIA6ADyAPMA6QDzAOoA6gD0APUA6wD1APYA7AD2APcA7QD3APgA7gD4APkA7wD5APoA8AD6APsA8QD7APwA8gD8AP0A8wD9APQA9AD+AP8A9QD/AAAB9gAAAQEB9wABAQIB+AACAQMB+QADAQQB+gAEAQUB+wAFAQYB/AAGAQcB/QAHAf4ACAHgAOEACAHhAOIACAHiAOMACAHjAOQACAHkAOUACAHlAOYACAHmAOcACAHnAOgACAHoAOkACAHpAOAACQH/AP4ACQEAAf8ACQEBAQABCQECAQEBCQEDAQIBCQEEAQMBCQEFAQQBCQEGAQUBCQEHAQYBCQH+AAcB"),
-"material": SubResource("StandardMaterial3D_15pqv"),
+"material": SubResource("StandardMaterial3D_uqtc2"),
 "name": "terracotta",
 "primitive": 3,
 "uv_scale": Vector4(0, 0, 0, 0),
@@ -26,34 +25,30 @@ _surfaces = [{
 }]
 blend_shape_mode = 0
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_lp0rf"]
-render_priority = 0
-shader = ExtResource("1_uqtc2")
-shader_parameter/outline_color = Color(0.039, 0.094, 0.239, 1)
-shader_parameter/outline_width = 0.008
-shader_parameter/distance_scale = 0.0018
-shader_parameter/fade_start = 30.0
-shader_parameter/fade_end = 54.0
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_re8mb"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_15pqv"]
 resource_name = "terracotta"
 render_priority = 0
-next_pass = SubResource("ShaderMaterial_lp0rf")
-shader = ExtResource("2_2cj3b")
+shader = ExtResource("1_w0p8f")
 shader_parameter/albedo_color = Color(0.935741, 0.694361, 0.546854, 1)
 shader_parameter/use_albedo_texture = null
 shader_parameter/use_vertex_color = true
-shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
-shader_parameter/shadow_strength = 0.42
+shader_parameter/use_triplanar = true
+shader_parameter/triplanar_scale = null
+shader_parameter/shadow_tint = null
+shader_parameter/shadow_strength = null
 shader_parameter/ambient_lift = null
 shader_parameter/roughness = 0.74
 shader_parameter/metallic = null
-shader_parameter/specular_strength = 0.38
+shader_parameter/specular_strength = 0.36
 shader_parameter/specular_size = null
+shader_parameter/clearcoat_strength = null
+shader_parameter/clearcoat_roughness = null
+shader_parameter/subsurface_strength = null
 shader_parameter/rim_color = null
 shader_parameter/rim_width = null
 shader_parameter/rim_strength = null
 shader_parameter/normal_scale = null
+shader_parameter/normal_uv_scale = null
 shader_parameter/use_normal_map = null
 shader_parameter/hit_flash = null
 shader_parameter/frost_amount = null
@@ -61,7 +56,7 @@ shader_parameter/fire_glow = null
 shader_parameter/wet_gloss = null
 shader_parameter/electric_arc = null
 
-[sub_resource type="CylinderShape3D" id="CylinderShape3D_3k8oy"]
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_6t47r"]
 height = 1.14
 radius = 0.44
 
@@ -71,10 +66,10 @@ collision_mask = 0
 [node name="Prop_desert_urn" type="Node3D" parent="."]
 
 [node name="Mesh_Urn" type="MeshInstance3D" parent="Prop_desert_urn"]
-mesh = SubResource("ArrayMesh_6t47r")
+mesh = SubResource("ArrayMesh_2cj3b")
 skeleton = NodePath("")
-surface_material_override/0 = SubResource("ShaderMaterial_re8mb")
+surface_material_override/0 = SubResource("ShaderMaterial_15pqv")
 
 [node name="@CollisionShape3D@15" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.57, 0)
-shape = SubResource("CylinderShape3D_3k8oy")
+shape = SubResource("CylinderShape3D_6t47r")

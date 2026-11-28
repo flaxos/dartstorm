@@ -182,16 +182,18 @@ func _build_sky_and_sun(sun_pitch: float = -52.0, warm_fill: float = 0.0) -> voi
 	_clouds.name = "Clouds"
 	decor.add_child(_clouds)
 	var cloud_tint: Color = preset["cloud_color"]
+	var cloud_mat := ArenaKit.toon_mat(cloud_tint, 0.90, 0.05, 0.0, false, Color(0.52, 0.66, 0.94))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 2026
-	for i in 12:
+	for i in 14:
 		var cloud := Node3D.new()
 		cloud.position = Vector3(rng.randf_range(-150.0, 150.0), rng.randf_range(44.0, 62.0), rng.randf_range(-120.0, 120.0))
 		_clouds.add_child(cloud)
-		for puff in 4:
-			var radius := rng.randf_range(4.0, 7.8)
-			var offset := Vector3(rng.randf_range(-8.0, 8.0), rng.randf_range(-1.0, 1.5), rng.randf_range(-4.0, 4.0))
-			var ball := ArenaKit.deco_sphere(cloud, radius, offset, cloud_tint, 0.58, 0.35)
+		for puff in 5:
+			var radius := rng.randf_range(4.2, 8.2)
+			var offset := Vector3(rng.randf_range(-8.5, 8.5), rng.randf_range(-1.0, 1.8), rng.randf_range(-4.5, 4.5))
+			var ball := ArenaKit.deco_sphere(cloud, radius, offset, cloud_tint, 0.56, 0.0)
+			ball.material_override = cloud_mat
 			ball.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
@@ -322,29 +324,29 @@ func _atmosphere_preset(default_pitch: float, default_warm: float) -> Dictionary
 			"vol_fog_albedo": Color(0.98, 0.92, 0.84),
 			"cloud_color": Color(1.0, 0.98, 0.95),
 		}
-	# Default (Backyard Fortress, Sunny Park, Playground): Golden Afternoon
+	# Default (Backyard Fortress, Sunny Park, Playground): Vibrant Cover-Art Golden Afternoon
 	return {
-		"sky_top": Color(0.18, 0.44, 0.90),
-		"sky_horizon": Color(0.92, 0.78, 0.64),
-		"ground_horizon": Color(0.72, 0.70, 0.56),
-		"ground_bottom": Color(0.28, 0.50, 0.24),
-		"sun_angle_max": 26.0,
+		"sky_top": Color(0.15, 0.50, 0.96),
+		"sky_horizon": Color(0.92, 0.84, 0.72),
+		"ground_horizon": Color(0.72, 0.76, 0.58),
+		"ground_bottom": Color(0.28, 0.54, 0.24),
+		"sun_angle_max": 28.0,
 		"sun_curve": 0.08,
 		"sun_pitch": default_pitch,
 		"sun_yaw": 38.0,
-		"sun_energy": 1.14,
-		"sun_color": Color(1.0, 0.94, 0.84),
-		"ambient_energy": 0.82,
-		"ambient_color": Color(1.0, 0.91, 0.78),
-		"warm_fill": maxf(default_warm, 0.12),
-		"exposure": 1.04,
-		"contrast": 1.05,
-		"saturation": 1.17,
-		"glow_intensity": 0.24,
-		"glow_bloom": 0.03,
-		"vol_fog_density": 0.0030,
-		"vol_fog_albedo": Color(0.96, 0.90, 0.80),
-		"cloud_color": Color(1.0, 0.99, 0.96),
+		"sun_energy": 1.24,
+		"sun_color": Color(1.0, 0.95, 0.84),
+		"ambient_energy": 0.92,
+		"ambient_color": Color(0.98, 0.94, 0.84),
+		"warm_fill": maxf(default_warm, 0.18),
+		"exposure": 1.06,
+		"contrast": 1.06,
+		"saturation": 1.20,
+		"glow_intensity": 0.26,
+		"glow_bloom": 0.04,
+		"vol_fog_density": 0.0024,
+		"vol_fog_albedo": Color(0.96, 0.92, 0.82),
+		"cloud_color": Color(1.0, 0.99, 0.97),
 	}
 
 

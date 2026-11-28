@@ -1,11 +1,42 @@
-[gd_scene load_steps=37 format=3]
+[gd_scene load_steps=61 format=3]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sdtpm"]
+[ext_resource type="Shader" path="res://assets/materials/toon_outline.gdshader" id="1_bcl1u"]
+[ext_resource type="Shader" path="res://assets/materials/dartstorm_toon.gdshader" id="2_k15eo"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_jdv3a"]
+render_priority = 0
+shader = ExtResource("1_bcl1u")
+shader_parameter/outline_color = Color(0.039, 0.094, 0.239, 1)
+shader_parameter/outline_width = 0.008
+shader_parameter/distance_scale = 0.0018
+shader_parameter/fade_start = 30.0
+shader_parameter/fade_end = 54.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_rnri2"]
 resource_name = "wood_dark"
-diffuse_mode = 3
-specular_mode = 1
-albedo_color = Color(0.52, 0.34, 0.18, 1)
-roughness = 0.78
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.52, 0.34, 0.18, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.78
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_3ff8g"]
 top_radius = 0.2
@@ -13,11 +44,63 @@ bottom_radius = 0.2
 height = 3.6
 radial_segments = 16
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_2vybl"]
+resource_name = "wood_dark"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.52, 0.34, 0.18, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.78
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
+
 [sub_resource type="CylinderMesh" id="CylinderMesh_hlww7"]
 top_radius = 0.2
 bottom_radius = 0.2
 height = 3.6
 radial_segments = 16
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_v2ica"]
+resource_name = "wood_dark"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.52, 0.34, 0.18, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.78
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_bcl1u"]
 top_radius = 0.2
@@ -25,30 +108,179 @@ bottom_radius = 0.2
 height = 3.6
 radial_segments = 16
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_2wsw8"]
+resource_name = "wood_dark"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.52, 0.34, 0.18, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.78
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
+
 [sub_resource type="CylinderMesh" id="CylinderMesh_k15eo"]
 top_radius = 0.2
 bottom_radius = 0.2
 height = 3.6
 radial_segments = 16
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_40f4u"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_dcald"]
 resource_name = "wood"
-diffuse_mode = 3
-specular_mode = 1
-albedo_color = Color(0.72, 0.5, 0.3, 1)
-roughness = 0.72
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.72, 0.5, 0.3, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.72
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
 
 [sub_resource type="BoxMesh" id="BoxMesh_rnri2"]
 size = Vector3(0.12, 0.14, 3.8)
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_mql73"]
+resource_name = "wood"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.72, 0.5, 0.3, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.72
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
+
 [sub_resource type="BoxMesh" id="BoxMesh_2vybl"]
 size = Vector3(0.12, 0.14, 3.8)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ab4nu"]
+resource_name = "wood"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.72, 0.5, 0.3, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.72
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
 
 [sub_resource type="BoxMesh" id="BoxMesh_v2ica"]
 size = Vector3(3.8, 0.14, 0.12)
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ensul"]
+resource_name = "wood"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.72, 0.5, 0.3, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.72
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
+
 [sub_resource type="BoxMesh" id="BoxMesh_2wsw8"]
 size = Vector3(3.8, 0.14, 0.12)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_weau1"]
+resource_name = "wood"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.72, 0.5, 0.3, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.72
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
 
 [sub_resource type="BoxMesh" id="BoxMesh_dcald"]
 size = Vector3(4.2, 0.28, 4.2)
@@ -56,19 +288,89 @@ size = Vector3(4.2, 0.28, 4.2)
 [sub_resource type="BoxShape3D" id="BoxShape3D_mql73"]
 size = Vector3(4.2, 0.28, 4.2)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bitf2"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_utahs"]
 resource_name = "plastic_yellow"
-diffuse_mode = 3
-specular_mode = 1
-albedo_color = Color(1, 0.82, 0.1, 1)
-metallic = 0.04
-roughness = 0.32
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(1, 0.82, 0.1, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.32
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.72
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
 
 [sub_resource type="BoxMesh" id="BoxMesh_ab4nu"]
 size = Vector3(4.2, 0.9, 0.15)
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_05u16"]
+resource_name = "plastic_yellow"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(1, 0.82, 0.1, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.32
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.72
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
+
 [sub_resource type="BoxMesh" id="BoxMesh_ensul"]
 size = Vector3(0.15, 0.9, 4.2)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_h4uou"]
+resource_name = "plastic_yellow"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(1, 0.82, 0.1, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.32
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.72
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
 
 [sub_resource type="BoxMesh" id="BoxMesh_weau1"]
 size = Vector3(0.15, 0.9, 4.2)
@@ -82,11 +384,63 @@ size = Vector3(0.15, 0.9, 4.2)
 [sub_resource type="BoxShape3D" id="BoxShape3D_h4uou"]
 size = Vector3(0.15, 0.9, 4.2)
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_61auh"]
+resource_name = "wood_dark"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.52, 0.34, 0.18, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.78
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
+
 [sub_resource type="CylinderMesh" id="CylinderMesh_61auh"]
 top_radius = 0.12
 bottom_radius = 0.12
 height = 1.9
 radial_segments = 16
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_fbvbk"]
+resource_name = "wood_dark"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.52, 0.34, 0.18, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.78
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_fbvbk"]
 top_radius = 0.12
@@ -94,11 +448,63 @@ bottom_radius = 0.12
 height = 1.9
 radial_segments = 16
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_6fs6h"]
+resource_name = "wood_dark"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.52, 0.34, 0.18, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.78
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
+
 [sub_resource type="CylinderMesh" id="CylinderMesh_6fs6h"]
 top_radius = 0.12
 bottom_radius = 0.12
 height = 1.9
 radial_segments = 16
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_asgjx"]
+resource_name = "wood_dark"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.52, 0.34, 0.18, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.38, 0.22, 0.18, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.78
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_asgjx"]
 top_radius = 0.12
@@ -106,12 +512,31 @@ bottom_radius = 0.12
 height = 1.9
 radial_segments = 16
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fxr6j"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_lc00j"]
 resource_name = "shingle"
-diffuse_mode = 3
-specular_mode = 1
-albedo_color = Color(0.85, 0.26, 0.2, 1)
-roughness = 0.65
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.85, 0.26, 0.2, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.65
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
 
 [sub_resource type="PrismMesh" id="PrismMesh_lc00j"]
 size = Vector3(4.8, 1.6, 4.8)
@@ -119,13 +544,31 @@ size = Vector3(4.8, 1.6, 4.8)
 [sub_resource type="BoxShape3D" id="BoxShape3D_yux1n"]
 size = Vector3(4.8, 0.4, 4.8)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_e0lhe"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_yux1n"]
 resource_name = "steel_dark"
-diffuse_mode = 3
-specular_mode = 1
-albedo_color = Color(0.22, 0.24, 0.28, 1)
-metallic = 0.75
-roughness = 0.3
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.22, 0.24, 0.28, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.3
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_q8m2a"]
 top_radius = 0.06
@@ -133,11 +576,63 @@ bottom_radius = 0.06
 height = 1.2
 radial_segments = 16
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_q8m2a"]
+resource_name = "steel_dark"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.22, 0.24, 0.28, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.3
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
+
 [sub_resource type="CylinderMesh" id="CylinderMesh_3q5s0"]
 top_radius = 0.06
 bottom_radius = 0.06
 height = 1.2
 radial_segments = 16
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_3q5s0"]
+resource_name = "steel_dark"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.22, 0.24, 0.28, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.3
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_4nsni"]
 top_radius = 0.06
@@ -145,11 +640,63 @@ bottom_radius = 0.06
 height = 1.2
 radial_segments = 16
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_4nsni"]
+resource_name = "steel_dark"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.22, 0.24, 0.28, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.3
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
+
 [sub_resource type="CylinderMesh" id="CylinderMesh_0gn2m"]
 top_radius = 0.06
 bottom_radius = 0.06
 height = 1.2
 radial_segments = 16
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_0gn2m"]
+resource_name = "steel_dark"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.22, 0.24, 0.28, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.3
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_rvt7l"]
 top_radius = 0.06
@@ -157,11 +704,63 @@ bottom_radius = 0.06
 height = 1.2
 radial_segments = 16
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_rvt7l"]
+resource_name = "steel_dark"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.22, 0.24, 0.28, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.3
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
+
 [sub_resource type="CylinderMesh" id="CylinderMesh_ex4hd"]
 top_radius = 0.06
 bottom_radius = 0.06
 height = 1.2
 radial_segments = 16
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ex4hd"]
+resource_name = "steel_dark"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.22, 0.24, 0.28, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.3
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_0diy6"]
 top_radius = 0.06
@@ -169,11 +768,63 @@ bottom_radius = 0.06
 height = 1.2
 radial_segments = 16
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_0diy6"]
+resource_name = "steel_dark"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.22, 0.24, 0.28, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.3
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
+
 [sub_resource type="CylinderMesh" id="CylinderMesh_36rn8"]
 top_radius = 0.06
 bottom_radius = 0.06
 height = 1.2
 radial_segments = 16
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_36rn8"]
+resource_name = "steel_dark"
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_jdv3a")
+shader = ExtResource("2_k15eo")
+shader_parameter/albedo_color = Color(0.22, 0.24, 0.28, 1)
+shader_parameter/use_albedo_texture = null
+shader_parameter/use_vertex_color = false
+shader_parameter/shadow_tint = Color(0.22, 0.26, 0.56, 1)
+shader_parameter/shadow_strength = 0.42
+shader_parameter/ambient_lift = null
+shader_parameter/roughness = 0.3
+shader_parameter/metallic = null
+shader_parameter/specular_strength = 0.42
+shader_parameter/specular_size = null
+shader_parameter/rim_color = null
+shader_parameter/rim_width = null
+shader_parameter/rim_strength = null
+shader_parameter/normal_scale = null
+shader_parameter/use_normal_map = null
+shader_parameter/hit_flash = null
+shader_parameter/frost_amount = null
+shader_parameter/fire_glow = null
+shader_parameter/wet_gloss = null
+shader_parameter/electric_arc = null
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_08h5u"]
 top_radius = 0.06
@@ -186,47 +837,47 @@ collision_mask = 0
 
 [node name="Stilt" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8, 1.8, -1.8)
-material_override = SubResource("StandardMaterial3D_sdtpm")
+material_override = SubResource("ShaderMaterial_rnri2")
 mesh = SubResource("CylinderMesh_3ff8g")
 
 [node name="@MeshInstance3D@46" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8, 1.8, 1.8)
-material_override = SubResource("StandardMaterial3D_sdtpm")
+material_override = SubResource("ShaderMaterial_2vybl")
 mesh = SubResource("CylinderMesh_hlww7")
 
 [node name="@MeshInstance3D@47" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 1.8, -1.8)
-material_override = SubResource("StandardMaterial3D_sdtpm")
+material_override = SubResource("ShaderMaterial_v2ica")
 mesh = SubResource("CylinderMesh_bcl1u")
 
 [node name="@MeshInstance3D@48" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 1.8, 1.8)
-material_override = SubResource("StandardMaterial3D_sdtpm")
+material_override = SubResource("ShaderMaterial_2wsw8")
 mesh = SubResource("CylinderMesh_k15eo")
 
 [node name="XBrace1" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8, 1.8, 0)
-material_override = SubResource("StandardMaterial3D_40f4u")
+material_override = SubResource("ShaderMaterial_dcald")
 mesh = SubResource("BoxMesh_rnri2")
 
 [node name="@MeshInstance3D@49" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 1.8, 0)
-material_override = SubResource("StandardMaterial3D_40f4u")
+material_override = SubResource("ShaderMaterial_mql73")
 mesh = SubResource("BoxMesh_2vybl")
 
 [node name="XBrace2" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, -1.8)
-material_override = SubResource("StandardMaterial3D_40f4u")
+material_override = SubResource("ShaderMaterial_ab4nu")
 mesh = SubResource("BoxMesh_v2ica")
 
 [node name="@MeshInstance3D@50" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 1.8)
-material_override = SubResource("StandardMaterial3D_40f4u")
+material_override = SubResource("ShaderMaterial_ensul")
 mesh = SubResource("BoxMesh_2wsw8")
 
 [node name="Deck" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.6, 0)
-material_override = SubResource("StandardMaterial3D_40f4u")
+material_override = SubResource("ShaderMaterial_weau1")
 mesh = SubResource("BoxMesh_dcald")
 
 [node name="@CollisionShape3D@51" type="CollisionShape3D" parent="."]
@@ -235,17 +886,17 @@ shape = SubResource("BoxShape3D_mql73")
 
 [node name="RailingBack" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.05, -2)
-material_override = SubResource("StandardMaterial3D_bitf2")
+material_override = SubResource("ShaderMaterial_utahs")
 mesh = SubResource("BoxMesh_ab4nu")
 
 [node name="RailingLeft" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 4.05, 0)
-material_override = SubResource("StandardMaterial3D_bitf2")
+material_override = SubResource("ShaderMaterial_05u16")
 mesh = SubResource("BoxMesh_ensul")
 
 [node name="RailingRight" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 4.05, 0)
-material_override = SubResource("StandardMaterial3D_bitf2")
+material_override = SubResource("ShaderMaterial_h4uou")
 mesh = SubResource("BoxMesh_weau1")
 
 [node name="@CollisionShape3D@52" type="CollisionShape3D" parent="."]
@@ -262,27 +913,27 @@ shape = SubResource("BoxShape3D_h4uou")
 
 [node name="RoofPillar" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.9, 4.55, -1.9)
-material_override = SubResource("StandardMaterial3D_sdtpm")
+material_override = SubResource("ShaderMaterial_61auh")
 mesh = SubResource("CylinderMesh_61auh")
 
 [node name="@MeshInstance3D@55" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.9, 4.55, 1.9)
-material_override = SubResource("StandardMaterial3D_sdtpm")
+material_override = SubResource("ShaderMaterial_fbvbk")
 mesh = SubResource("CylinderMesh_fbvbk")
 
 [node name="@MeshInstance3D@56" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.9, 4.55, -1.9)
-material_override = SubResource("StandardMaterial3D_sdtpm")
+material_override = SubResource("ShaderMaterial_6fs6h")
 mesh = SubResource("CylinderMesh_6fs6h")
 
 [node name="@MeshInstance3D@57" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.9, 4.55, 1.9)
-material_override = SubResource("StandardMaterial3D_sdtpm")
+material_override = SubResource("ShaderMaterial_asgjx")
 mesh = SubResource("CylinderMesh_asgjx")
 
 [node name="RoofCanopy" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.3, 0)
-material_override = SubResource("StandardMaterial3D_fxr6j")
+material_override = SubResource("ShaderMaterial_lc00j")
 mesh = SubResource("PrismMesh_lc00j")
 
 [node name="@CollisionShape3D@58" type="CollisionShape3D" parent="."]
@@ -291,45 +942,45 @@ shape = SubResource("BoxShape3D_yux1n")
 
 [node name="Rung" type="MeshInstance3D" parent="."]
 transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0, 0.2, 2.05)
-material_override = SubResource("StandardMaterial3D_e0lhe")
+material_override = SubResource("ShaderMaterial_yux1n")
 mesh = SubResource("CylinderMesh_q8m2a")
 
 [node name="@MeshInstance3D@59" type="MeshInstance3D" parent="."]
 transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0, 0.6, 2.05)
-material_override = SubResource("StandardMaterial3D_e0lhe")
+material_override = SubResource("ShaderMaterial_q8m2a")
 mesh = SubResource("CylinderMesh_3q5s0")
 
 [node name="@MeshInstance3D@60" type="MeshInstance3D" parent="."]
 transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0, 1, 2.05)
-material_override = SubResource("StandardMaterial3D_e0lhe")
+material_override = SubResource("ShaderMaterial_3q5s0")
 mesh = SubResource("CylinderMesh_4nsni")
 
 [node name="@MeshInstance3D@61" type="MeshInstance3D" parent="."]
 transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0, 1.4, 2.05)
-material_override = SubResource("StandardMaterial3D_e0lhe")
+material_override = SubResource("ShaderMaterial_4nsni")
 mesh = SubResource("CylinderMesh_0gn2m")
 
 [node name="@MeshInstance3D@62" type="MeshInstance3D" parent="."]
 transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0, 1.8, 2.05)
-material_override = SubResource("StandardMaterial3D_e0lhe")
+material_override = SubResource("ShaderMaterial_0gn2m")
 mesh = SubResource("CylinderMesh_rvt7l")
 
 [node name="@MeshInstance3D@63" type="MeshInstance3D" parent="."]
 transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0, 2.2, 2.05)
-material_override = SubResource("StandardMaterial3D_e0lhe")
+material_override = SubResource("ShaderMaterial_rvt7l")
 mesh = SubResource("CylinderMesh_ex4hd")
 
 [node name="@MeshInstance3D@64" type="MeshInstance3D" parent="."]
 transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0, 2.6, 2.05)
-material_override = SubResource("StandardMaterial3D_e0lhe")
+material_override = SubResource("ShaderMaterial_ex4hd")
 mesh = SubResource("CylinderMesh_0diy6")
 
 [node name="@MeshInstance3D@65" type="MeshInstance3D" parent="."]
 transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0, 3, 2.05)
-material_override = SubResource("StandardMaterial3D_e0lhe")
+material_override = SubResource("ShaderMaterial_0diy6")
 mesh = SubResource("CylinderMesh_36rn8")
 
 [node name="@MeshInstance3D@66" type="MeshInstance3D" parent="."]
 transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0, 3.4, 2.05)
-material_override = SubResource("StandardMaterial3D_e0lhe")
+material_override = SubResource("ShaderMaterial_36rn8")
 mesh = SubResource("CylinderMesh_08h5u")

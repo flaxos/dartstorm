@@ -18,10 +18,13 @@ varying vec3 v_world_pos;
 varying vec3 v_normal;
 
 float wood_pattern(vec2 uv) {
-	float plank = sin(uv.y * 3.14159);
-	float seam = smoothstep(0.86, 0.985, abs(plank));
-	float grain = sin(uv.y * 15.0 + sin(uv.x * 3.5 + floor(uv.y) * 1.7) * 1.4) * 0.5 + 0.5;
-	return mix(grain, 0.0, seam * 0.65);
+	float board_id = floor(uv.y);
+	float frac_y = fract(uv.y);
+	// Chamfered sunlit golden-oak plank groove + subtle per-board tone variation
+	float bevel = smoothstep(0.0, 0.08, frac_y) * smoothstep(1.0, 0.92, frac_y);
+	float board_var = fract(sin(board_id * 12.9898) * 43758.5453) * 0.14 - 0.07;
+	float grain = sin(uv.y * 16.0 + sin(uv.x * 2.8 + board_id * 1.9) * 1.3) * 0.5 + 0.5;
+	return clamp(mix(0.18, 0.78 + grain * 0.24 + board_var, bevel), 0.0, 1.15);
 }
 
 void vertex() {
@@ -69,4 +72,15 @@ void fragment() {
 	float fresnel = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
 	RIM = fresnel * rim_strength;
 	RIM_TINT = 0.4;
+}
+
+void light() {
+	float ndl = dot(NORMAL, LIGHT);
+	float lit_val = ndl * 0.5 + 0.5;
+	float att = smoothstep(0.15, 0.65, ATTENUATION);
+	float cel = mix(0.46, mix(0.80, 1.04, smoothstep(0.62, 0.74, lit_val)), smoothstep(0.32, 0.45, lit_val));
+	cel = mix(0.48, cel, att);
+	vec3 warm_shadow = ALBEDO * vec3(0.76, 0.58, 0.50);
+	vec3 tinted = mix(warm_shadow, ALBEDO, smoothstep(0.46, 0.84, cel));
+	DIFFUSE_LIGHT += tinted * LIGHT_COLOR * (cel / PI);
 }

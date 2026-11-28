@@ -91,9 +91,12 @@ Root
 
 ---
 
-## Polycount Budgets (Mobile 60 FPS Target)
+## Polycount Budgets & v2.0.0 Cover-Art Sculpting Standard
 
-- **Hero Character**: 3,500 – 5,500 triangles (LOD0).
-- **Blasters**: 1,500 – 2,500 triangles (LOD0).
-- **Arena Props**: 500 – 2,000 triangles each.
-- **Target Scene Total**: < 50,000 rendered triangles per frame on mobile.
+All v2.0.0 `.glb` models are authored deterministically via pure-Python parametric sculpting (`tools/sculpt/` using `numpy` + `PIL` Catmull-Clark subdivision, beveled extrusion, spline lofting, smooth automatic bone weights, and baked curvature/AO textures) and validated in Godot 4.4:
+
+- **Hero Character (`hero_base.glb`):** Continuous smooth-skinned humanoid mesh weighted to `GeneralSkeleton` (zero disconnected capsule gaps), 4,500–7,500 triangles (LOD0), preserving all 4 `BoneAttachment3D` sockets (`Socket_Hand_R`, `Socket_Hand_L`, `Socket_Head`, `Socket_Back`) and animated facial expression meshes (eyes, blink lids, brows, smiling/flinching/cheering mouth).
+- **First-Person Cartoon Arms (`fp_arms.glb` / `scripts/effects/fp_arms.gd`):** Sculpted hoodie sleeves + chunky cartoon hands tracking blaster `GripMarker` and `ForegripMarker` sockets (~1,200 triangles total, tinted dynamically to player jersey & skin tone).
+- **Blasters & Foam Bat (`blasters/*.glb`):** Chunky blow-molded beveled toy shells with ergonomic grips and flanged safety-orange tips, 2,000–4,000 triangles (LOD0), preserving all moving mechanical sub-nodes (`Slide`, `Cylinder`, `PumpSlide`, `BarrelCluster`) and attachment rails.
+- **Arena Props (`props/*.glb`):** Sculpted multi-cluster canopies, beveled timber structures, rounded inflatable bunkers, and comic props, 600–2,800 triangles each (visual-only children; solid `arena.geometry` colliders stay simple and navmesh-clean).
+- **Target Scene Total:** < 60,000 rendered triangles per frame on mobile/Web (`Low`/`Medium`), unconstrained crisp stylized detail on desktop Forward+ (`High`/`Ultra`).

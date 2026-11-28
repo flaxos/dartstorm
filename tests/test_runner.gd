@@ -128,6 +128,8 @@ func _ready() -> void:
 	await _test_objective_bot_ai()
 	# Production 1.0 Release Regressions (v1.0.0)
 	await _test_v1_0_release_regressions()
+	# Cover-Art Parity Visual & Model Uplift (v2.0.0)
+	await _test_v2_cover_art_parity()
 	print("\n==== %d passed, %d failed ====" % [_passed, _failed])
 	Sfx.quit_game(1 if _failed > 0 else 0)
 
@@ -2047,8 +2049,9 @@ func _test_blaster_skins_and_shader() -> void:
 	for child in model_default.find_children("*", "MeshInstance3D", true, false):
 		var mesh_inst := child as MeshInstance3D
 		if mesh_inst != null and mesh_inst.material_override is ShaderMaterial:
-			default_has_shader = true
-			break
+			if (mesh_inst.material_override as ShaderMaterial).shader == BlasterModel._skin_shader:
+				default_has_shader = true
+				break
 	check(not default_has_shader, "default skin isolates blaster to clean molded plastic (bots/pickups not skinned)")
 	model_default.queue_free()
 
@@ -3634,7 +3637,9 @@ func _test_aaa_graphics_and_pbr_pipeline() -> void:
 	check(GameSettings.graphics_quality == GameSettings.GraphicsQuality.HIGH, "Default graphics quality is HIGH")
 	check(GameSettings.GRAPHICS_QUALITY_NAMES.size() == 4, "Graphics quality has human-readable label names")
 
-	# 3. High-Poly Character Model & Stylized Anatomy
+	# 3. High-Poly Procedural Fallback Character Model & Stylized Anatomy
+	var prev_models_flag := ModelLoader.models_enabled
+	ModelLoader.models_enabled = false
 	var hero := CharacterModel.new()
 	hero.setup("TestHero", Color(0.1, 0.4, 0.9), &"cap")
 	add_child(hero)
@@ -3650,7 +3655,7 @@ func _test_aaa_graphics_and_pbr_pipeline() -> void:
 	hero.queue_free()
 	await physics_frames(2)
 
-	# 4. High-Poly Blaster Mesh & PBR Materials
+	# 4. High-Poly Procedural Fallback Blaster Mesh & PBR Materials
 	var popper_data := load(POPPER) as WeaponData
 	var blaster := BlasterModel.create(popper_data, true, &"default")
 	add_child(blaster)
@@ -3665,6 +3670,7 @@ func _test_aaa_graphics_and_pbr_pipeline() -> void:
 				break
 	check(found_high_poly_tube, "Blaster tubes use high-poly 24 radial segments")
 	blaster.queue_free()
+	ModelLoader.models_enabled = prev_models_flag
 	await physics_frames(2)
 
 	# 5. Stylized Water Puddle & Dynamic Electrification
@@ -5351,6 +5357,112 @@ func _test_v1_0_release_regressions() -> void:
 			break
 	check(found_win, "export_presets.cfg defines a Windows Desktop export preset")
 	check(FileAccess.file_exists("res://tools/export_windows.sh"), "tools/export_windows.sh exists")
+
+
+func _test_v2_cover_art_parity() -> void:
+	section("v2.0.0 Cover-Art Parity (Shaders, Sculpted Hero, Blasters, Trails & Props)")
+
+	# 1. New v2.0.0 stylized shaders load cleanly
+	check(ArenaKit.TOON_SHADER is Shader, "dartstorm_toon.gdshader loads cleanly")
+	check(ArenaKit.OUTLINE_SHADER is Shader, "toon_outline.gdshader loads cleanly")
+	check(ArenaKit.CLOTH_FLAG_SHADER is Shader, "cloth_flag.gdshader loads cleanly")
+
+	# 2. Chromatic cel material caching & outline scalability tier gating
+	var prev_q := GameSettings.graphics_quality
+	GameSettings.graphics_quality = GameSettings.GraphicsQuality.LOW
+	check(not ArenaKit.should_use_outlines(false) and not ArenaKit.should_use_outlines(true),
+		"LOW graphics preset disables warm-navy outlines for both world props and heroes")
+	GameSettings.graphics_quality = GameSettings.GraphicsQuality.HIGH
+	var tm := ArenaKit.toon_mat(Color(0.2, 0.5, 1.0), 0.32, 0.6, 0.5, true)
+	check(tm is ShaderMaterial and tm.shader == ArenaKit.TOON_SHADER,
+		"ArenaKit.toon_mat returns cached ShaderMaterial bound to dartstorm_toon.gdshader")
+	GameSettings.graphics_quality = prev_q
+
+	# 3. Sculpted smooth-skinned Hero & Expressive Facial Rig
+	var hero := ModelLoader.instantiate_hero()
+	check(hero != null, "Sculpted v2.0.0 hero_base instantiates cleanly")
+	if hero != null:
+		var body_mi := hero.find_child("HeroBodyMesh", true, false) as MeshInstance3D
+		check(body_mi != null and body_mi.skin != null,
+			"Sculpted hero_base contains continuous smooth-skinned HeroBodyMesh with valid Skin")
+		check(hero.find_child("Mesh_Eyelids", true, false) != null
+			and hero.find_child("Mesh_MouthSmile", true, false) != null
+			and hero.find_child("Mesh_MouthFlinch", true, false) != null,
+			"Sculpted hero_base contains animated blink eyelids, smile, and flinch mouth meshes")
+		hero.free()
+
+	# 4. Sculpted Blasters, Chainstorm Looping Belt & Local Melee Hit-Stop
+	for bname: String in ["popper", "six_shot", "storm", "sweeper", "whisper", "chainstorm", "rocket"]:
+		var binst := ModelLoader.instantiate_blaster(StringName(bname))
+		check(binst != null and binst.find_child("MuzzleMarker", true, false) != null
+			and binst.find_child("GripMarker", true, false) != null,
+			"Sculpted v2.0.0 blaster '%s' loads with preserved MuzzleMarker & GripMarker" % bname)
+		if binst != null:
+			binst.free()
+	var cs_data := load(CHAINSTORM) as WeaponData
+	var cs_bm := BlasterModel.create(cs_data, true, &"default", {})
+	add_child(cs_bm)
+	check(cs_bm._belt.size() == BlasterModel.BELT_LINKS,
+		"Flax's Chainstorm mounts animated %d-link foam dart belt" % BlasterModel.BELT_LINKS)
+	cs_bm.trigger_hit_stop(0.04)
+	check(cs_bm._hit_stop_left > 0.0, "BlasterModel supports local comfort-safe melee hit-stop")
+	cs_bm.queue_free()
+
+	# 5. Pooled 5-Element Flight Trails, Comic Starbursts & Waving Cloth Flag
+	var fx_stage := make_stage()
+	var fx_pool := make_pool(fx_stage)
+	await physics_frames(1)
+	var elem_paths := [
+		"res://resources/darts/wind_dart.tres",
+		"res://resources/darts/fire_dart.tres",
+		"res://resources/darts/water_dart.tres",
+		"res://resources/darts/lightning_dart.tres",
+		"res://resources/darts/ice_dart.tres",
+	]
+	var fired_darts: Array[DartProjectile] = []
+	for i in elem_paths.size():
+		var edata := load(elem_paths[i]) as DartData
+		var d := fx_pool.fire(edata, Vector3(float(i) * 2.0, 4.0, 0.0), Vector3.FORWARD, null, null, Color.CYAN, [])
+		check(d != null and d._elem_fx != null and d._elem_fx.visible and d._elem_parts.size() == 4,
+			"Elemental dart '%s' activates pooled 4-part 3D flight trail" % edata.id)
+		fired_darts.append(d)
+	await physics_frames(2)
+	for d in fired_darts:
+		d.retire()
+		check(not d._elem_fx.visible, "Retired elemental dart hides pooled elemental trail cleanly")
+
+	var before_children := fx_stage.get_child_count()
+	CombatFx.spawn_comic_starburst(fx_stage, Vector3(0.0, 2.0, 0.0), "BONK!", Color(1.0, 0.85, 0.16), 1.0)
+	check(fx_stage.get_child_count() == before_children + 1,
+		"CombatFx.spawn_comic_starburst spawns spiky comic burst + world-space word pop")
+	var flag_mi := ArenaKit.waving_flag(fx_stage, Vector3(0.0, 5.0, 0.0), Vector2(3.0, 2.0), Color.BLUE)
+	check(flag_mi != null and flag_mi.material_override is ShaderMaterial
+		and (flag_mi.material_override as ShaderMaterial).shader == ArenaKit.CLOTH_FLAG_SHADER,
+		"ArenaKit.waving_flag creates vertex-animated cloth_flag.gdshader mesh")
+	fx_stage.queue_free()
+	await physics_frames(2)
+
+	# 6. Sculpted v2.0.0 Arena Props preserve StaticBody3D colliders & DogHouse animated rig
+	for pname: String in [
+		"cartoon_tree", "inflatable_barrier", "inflatable_bunker",
+		"tactical_crate", "tactical_barrel", "playground_slide",
+		"archway_curved", "desert_urn", "dog_house",
+	]:
+		var pinst := ModelLoader.instantiate_prop(StringName(pname))
+		var has_col := false
+		if pinst != null:
+			for c in pinst.get_children():
+				if c is CollisionShape3D:
+					has_col = true
+					break
+		check(pinst is StaticBody3D and (pinst as StaticBody3D).collision_layer == Layers.WORLD and has_col,
+			"Sculpted v2.0.0 prop '%s' preserves StaticBody3D on Layers.WORLD with CollisionShape3D" % pname)
+		if pname == "dog_house" and pinst != null:
+			check(pinst.find_child("_dog", true, false) != null and pinst.find_child("_tail", true, false) != null,
+				"Sculpted dog_house preserves animated _dog and _tail child nodes")
+		if pinst != null:
+			pinst.free()
+
 
 
 

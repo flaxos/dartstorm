@@ -142,6 +142,30 @@ DARTSTORM officially moves beyond early prototyping greyboxes and flat procedura
 - **Ambient Skylight Fill:** Vibrant sky-bounce fill light that keeps shadowed areas bright, colourful, and playable without murky dark corners.
 - **Environmental Particles:** Floating dust motes, confetti flecks in celebratory zones, drifting autumn leaves, or gentle foam puffs that give arenas living atmospheric depth.
 
+### 1.11 Cover-Art Parity & Visual North Star *(v2.0.0)*
+Starting in **v2.0.0**, DARTSTORM closes the gap between its proven v1.0.0 gameplay foundation and the commercial-grade stylized 3D cartoon fidelity demonstrated in **`docs/media/cover_art.jpg`** and **`docs/CONCEPT_BRIEF.md`** — **with zero loss of existing gameplay functionality**.
+
+#### 1. Zero-Gameplay-Regression Contract
+- Every shipped gameplay system in v1.0.0 (all 10 game modes, 9 arenas, 12 weapons including the Foam Bat, 2-player local split-screen, LAN/online WebSocket multiplayer, Dedicated Server, bots, Garage Workbench, Coin Shop, Progression, key/button remapping, 4 colorblind palettes, mobile touch controls, and all 1,544+ automated tests) remains **100% preserved**.
+- All v2.0.0 visual upgrades live strictly in the **Presentation layer** (`assets/`, `scripts/effects/`, `ArenaKit` visuals, and custom shaders), never altering physics layer masks, hitbox volumes (`0.6m` bot / `0.45m` player), `WeaponData`/`DartData` tuning numbers, `Arena.geometry` collision/navmesh footprints, or mode rules.
+
+#### 2. Six Visual Pillars of Cover-Art Parity
+1. **Chromatic 3-Band Cel Shading & Warm-Navy Ink Outlines (`dartstorm_toon.gdshader` + `toon_outline.gdshader`):**
+   - Replaces muddy grey/black shadow undersides with a 3-band stylized cel ramp whose shadows shift cleanly into warm, saturated hues (cobalt/indigo on blue plastics & clothing, burnt tangerine on safety orange, peach-coral on skin, lush emerald on foliage).
+   - Glossy **jelly-bean specular pills** on blow-molded toy plastics and EVA foam, paired with golden-hour rim light and a distance-scaled warm-navy (`#0a183d`) silhouette ink outline scaled cleanly by `GameSettings.graphics_quality` (disabled on `Low` and WebGL2/Android Compatibility for locked 60 FPS).
+2. **Continuous Smooth-Skinned Cartoon Heroes & Expressive Faces:**
+   - Replaces disconnected primitive spheres/capsules with a single unified Catmull-Clark subdivided, bone-weighted humanoid mesh (`assets/models/characters/hero_base.glb`, generated deterministically via `tools/sculpt/`).
+   - Features a sculpted hoodie cowl, resting hood, drawstrings, kangaroo front pocket, continuous bending sleeves & pants, chunky rounded sneakers with curved collars & bumpers, sculpted layered hair bangs & ears, blinking Pixar catchlight eyes, and an animated cartoon mouth (joyful grin, battle focus, hit-surprise `"O"`, podium victory smile) plus sculpted hats (aviator goggles-on-cap, striped propeller beanie, crown, cowboy, horns, bunny ears, party hat).
+3. **Blow-Molded Sculpted Toy Blasters & First-Person Cartoon Hands:**
+   - Re-sculpts all 7 modular `.glb` blasters plus `foam_bat.glb` with generous beveled shells, ergonomic curved handles, ribbed cooling shrouds, flanged safety-orange muzzle cones, bold royal-blue & blazing-orange toy color blocking, and a catenary-curved animated foam-dart belt looping cleanly into **Flax's Chainstorm**.
+   - Adds **First-Person Hoodie Sleeves & Cartoon Hands** (`scripts/effects/fp_arms.gd`), tinted to the player's active jersey & skin tone, gripping handles/foregrips, pumping the Foam Hammer, reloading, throwing Foam Grenades, and two-hand swinging the Foam Bat (properly layer-culled for 2-player split-screen and tucked away during sniper ADS).
+4. **Five Iconic Cover-Art Elemental Flight Languages:**
+   - Every dart element displays a distinct, instantly readable silhouette in mid-air (`scripts/effects/elemental_trail.gd`): *Wind* sky-blue calligraphic ribbon swirls, *Fire* golden-orange star-sparkle comets, *Water* glossy turquoise splash arcs & droplets, *Lightning* crackling bright-yellow jagged comic zig-zags, and *Ice* glittering cyan snowflakes & frost prisms.
+5. **Comic Impact & Deflect Juice:**
+   - Batting incoming darts/grenades or landing ricochets triggers a spiky golden **comic starburst** burst, flying star particles, bold world-space `"BONK!"` / `"DEFLECT!"` / `"RICOCHET!"` pops, and a comfort-safe **35 ms micro hit-stop** (disabled automatically when `camera_shake == 0` or during online matches).
+6. **Living Stylized Architecture & Foliage Across All 9 Arenas:**
+   - Multi-cluster sculpted leafy tree canopies with gentle vertex wind sway, beveled golden-oak deck planks, shingled treehouse roofs & rope ladders, vertex-animated waving cloth team flags (`cloth_flag.gdshader`), curved glossy yellow slides with tubular side rails, beveled glowing cyan fence mirrors with diagonal glass sheen & bounce ripples, and flowing curved wind-ribbon streams replacing translucent box walls in `WindZone`.
+
 ## 2. Brief traceability
 
 Status key: ✅ done · 🟡 partly done or untested · ⏳ planned, not started. Brief section numbers refer to
@@ -705,6 +729,12 @@ Brief: *"This weapon should feel hilariously overpowered and be a highlight of t
 - **Design intent:** it should be *gloriously* strong. The counterplay is movement (it's slow), range (darts drop past
   30 m), ammo (bucket control) and wind (bots and players can't fight Windy Way's push).
 
+### 4.3 Sculpted Toy Silhouettes & First-Person Cartoon Hands *(v2.0.0)*
+All 12 weapons preserve their exact §4.1 balance numbers while upgrading visual fidelity to cover-art toy-blaster quality:
+- **Blow-Molded Toy Craft:** Every `.glb` chassis (`popper`, `storm`, `six_shot`, `sweeper`, `whisper`, `chainstorm`, `rocket`) and `foam_bat.glb` is sculpted via `tools/sculpt/` with rounded chamfers, ergonomic grips, flanged safety-orange muzzle tips, high-contrast dual-tone color blocking, and recessed barrel vents — keeping exact `MuzzleMarker`, `GripMarker`, `ForegripMarker`, moving-part (`Slide`, `Cylinder`, `PumpSlide`, `BarrelCluster`), and attachment-rail contracts intact.
+- **First-Person Hoodie Sleeves & Hands (`FPArms`):** Displays chunky stylized cartoon sleeves and gloved/bare hands matching the player's jersey color & skin tone. Hands track each weapon's grip & foregrip sockets, animate recoil, pump-action slides, magazine reloads, grenade throws, Chainstorm top-handle bracing, and two-handed diagonal Foam Bat swings. Automatically hides during sniper ADS and respects split-screen camera cull masks (`layer 4` for P1, `layer 5` for P2).
+- **Animated Chainstorm Dart Belt:** A catenary-curved multi-link foam-dart belt visibly feeds chunky blue-and-orange darts from the oversized side feed box / ammo backpack into the spinning 6-barrel rotary housing whenever firing.
+
 ---
 
 ## 5. Arenas
@@ -785,6 +815,14 @@ All 9 arenas expose explicit `team_bases`, `flag_pedestals`, `bomb_sites`, `bomb
 - **Two Fortresses (`two_forts.gd`):** Classic dual-fortress valley linked by a covered timber bridge above an open moat, with navigable basement vaults, water tunnels, ramps, and sniper battlements.
 - **Dusty Courtyard (`dust_courtyard.gd`):** Sun-baked desert sandstone fort featuring a sunken central underpass, overhead sniper bridge, open central arch, elevated CT compound, and explicit Bomb Sites A & B.
 - **Duststorm II (`dust2.gd`):** Faithful stylized sandstone tactical arena with Long A, cleared Pit ramp, Mid doors, open Lower B Tunnel, Catwalk short, B Window, and explicit Bomb Sites A & B.
+
+### 5.6 Living Arena Visual Uplift Standard *(v2.0.0)*
+All 9 playable arenas receive a unified presentation pass through `ArenaKit`, `assets/models/props/*.glb`, `ReflectiveSurface`, `WindZone`, and arena sky presets — **strictly under `decor` or visual child meshes so `arena.geometry` colliders and baked navmeshes stay 100% unchanged**:
+- **Multi-Cluster Swaying Foliage:** `cartoon_tree.glb` replaces single-sphere tree blobs with layered faceted/sculpted leaf clusters, chunky curved bark trunks, and gentle vertex wind sway.
+- **Tactile Backyard & Tactical Architecture:** Beveled golden-oak floor planks with warm seam grooves, chamfered fort posts, shingled treehouse roofs with hanging rope ladders, sculpted fence pickets, glossy yellow curved slides with tubular guard rails, and beveled crates/barrels/urns/inflatable bunkers.
+- **Cloth-Wave Animated Team Flags:** Fort flags, treehouse banners, and CTF flags wave organically in the wind via `assets/materials/cloth_flag.gdshader`, tinting dynamically to active colorblind team palettes.
+- **Beveled Glowing Mirrors & Curved Wind Ribbons:** `ReflectiveSurface` displays a chunky rounded glowing cyan neon frame with animated diagonal glass sheen streaks and expanding bounce shockwaves; `WindZone` renders flowing curved translucent air ribbons and fluttering windsocks with zero boxy boundary walls.
+- **Post-v2.0.0 Arena Pipeline (`v2.1.0`):** Additional original-concept elemental arenas (`Prism Palace`, `Ember Workshop`, `Frost Factory`, `Thunder Playground`) follow this exact v2.0.0 visual standard once all 9 existing arenas reach Cover-Art Parity.
 
 ### 5.3 Home Turf: a family home, toy-sized *(v0.4.0)*
 A fictional suburban family home and the streets around it: battle through the rooms and out into the street.
@@ -1041,6 +1079,15 @@ to that (sections of `tests/test_runner.gd`). Items marked *(v0.1.1)* were added
   - All 5 export presets (`Windows Desktop`, `Linux`, `Android`, `Web`, `Linux Server`) stay synchronized at `1.0.0` with custom branding icons and boot splash.
 - **Tests:** *v1.0.0 Production Polish, Gameplay Hardening & Arena Integrity* (tests #1–#13 in `tests/test_runner.gd`; **1,544+ total checks, 0 warnings, 0 leaks**).
 
+### 6.28 Cover-Art Parity Visual & Zero-Regression Guarantees *(v2.0.0)*
+- **Rules:** §1.11, §4.3, §5.6, §7, §8, DECISIONS D-050.
+- **Guarantees:**
+  - Zero gameplay regressions: all 1,544+ pre-existing gameplay, mode, arena, navmesh, AI, split-screen, LAN/online, and export tests remain green after every sprint.
+  - Sculpted `.glb` heroes, blasters, and props preserve every socket (`Socket_Hand_R`, `Socket_Hand_L`, `Socket_Head`, `Socket_Back`, `MuzzleMarker`, `GripMarker`, `ForegripMarker`) and material slot (`chassis`, `hardware`, `safety`, `grip`, `clothing`, `pants`, `skin`, `shoes`).
+  - `dartstorm_toon.gdshader`, `toon_outline.gdshader`, and `cloth_flag.gdshader` compile cleanly across Forward+ and Compatibility (`WebGL2` / `OpenGL ES3`) renderers with automatic quality-preset outline gating.
+  - Visual convergence is verified sprint-by-sprint via `tools/visual_benchmark.gd` fixed-camera golden captures compared side-by-side against `docs/media/cover_art.jpg`.
+- **Tests:** *v2.0.0 Cover-Art Parity Visual, Rig & VFX Suite* in `tests/test_runner.gd` + `tools/visual_benchmark.gd`.
+
 ---
 
 ## 7. Game feel and audio
@@ -1049,14 +1096,15 @@ to that (sections of `tests/test_runner.gd`). Items marked *(v0.1.1)* were added
 |---|---|
 | Firing | Muzzle puff, view-model kick, a small camera punch, crosshair spread, launch sound per blaster |
 | Moving | View-model bob and sway, sprint FOV boost |
-| Dart in flight | Coloured foam body, orange tip, a trail that stretches with speed |
-| Dart hits scenery | Small foam puff; the dart bounces and rests |
-| Dart hits a person | Bigger puff, a soft "thup", a white hit marker for you and a flinch for bots |
+| Dart in flight | Coloured foam body, orange tip, and iconic **elemental flight trail** (standard ribbon; Wind blue ribbon swirls; Fire golden star-comets; Water turquoise splash arcs & droplets; Lightning bright-yellow comic zig-zags; Ice glittering snowflakes) |
+| Dart hits scenery | Small foam puff + cartoon `FoamSplat` decal; the dart bounces and rests |
+| Dart hits a person | Bigger puff, a soft "thup", white hit marker, chromatic hit-flash, and character flinch/surprised face |
+| Foam Bat bonk / deflect | Diagonal two-handed swing, golden **comic starburst** + flying stars, 3D `"BONK!"` / `"DEFLECT!"` pop, comfort-safe 35 ms hit-stop (off if `camera_shake == 0` or online), home-run knockback |
 | Tag-out | Big orange hit marker, tag jingle, **+100 TAG!** popup, a burst in the victim's colour plus confetti |
-| Ricochet | Ripple ring on the mirror, rising "zing", **+50 RICOCHET BONUS!** |
+| Ricochet | Beveled cyan mirror flash, concentric ripple ring, rising "zing", **+50 RICOCHET BONUS!** |
 | Bullseye | Spin, ding, confetti, **+10 BULLSEYE!** |
-| Being hit | Gentle camera shake and a soft orange screen tint (≤16% opacity, fades in 0.35 s) |
-| Chainstorm | Rising motor whine, visible barrel spin, spin bar, rattle, belt advance |
+| Being hit | Gentle camera shake, directional damage arc on HUD, and a soft orange screen tint (≤16% opacity, fades in 0.35 s) |
+| Chainstorm | Rising motor whine, visible 6-barrel spin, animated curved foam-dart belt feed, spin bar, rattle |
 
 **Audio** is all generated in code (`scripts/core/sfx.gd`, DECISIONS D-005), so there are no sound files.
 - **Sound effects** (SFX bus): launches `pop`, `spray`, `chain`, `thump`, `zip`, `whoosh`, **`bat_swing`**;
@@ -1073,7 +1121,16 @@ to that (sections of `tests/test_runner.gd`). Items marked *(v0.1.1)* were added
 
 ## 8. UI and visual style
 
-**3D Environment & Stylized Art Direction:** See **§1.10 Stylized Visual Direction & Arena Architecture** and **DECISIONS D-047** for specifications on the chunky toon aesthetic, seamless world-aligned triplanar surface mapping, beveled architectural geometry, soft contact AO, and 3D dressing props.
+**3D Environment & Stylized Art Direction:** See **§1.10 Stylized Visual Direction**, **§1.11 Cover-Art Parity & Visual North Star (`v2.0.0`)**, and **DECISIONS D-047 / D-050** for specifications on the chunky toon aesthetic, chromatic 3-band cel shading, distance-scaled warm-navy ink outlines, continuous skinned hero models, blow-molded toy blasters + FP arms, seamless world-aligned triplanar mapping, and living arena props.
+
+**Visual Scalability Tiers (`GameSettings.graphics_quality`):**
+
+| Tier | Target Hardware | Outlines & Shading | Shadows & Post | VFX & Foliage |
+|---|---|---|---|---|
+| **Ultra** | Desktop Forward+ (Vulkan) | Full warm-navy ink outlines on heroes, blasters & key props + 3-band chromatic cel + SSIL | 4096 soft shadows, AgX + volumetric sun haze | Full elemental ribbons, comic starbursts, cloth flags & swaying canopies |
+| **High** | Mid-range Desktop Forward+ | Full warm-navy ink outlines + 3-band chromatic cel + SSAO | 4096 shadows, AgX + bloom | Full elemental ribbons, comic starbursts & cloth flags |
+| **Medium** | Laptop / Integrated GPU | Ink outlines on heroes & FP blasters only + chromatic cel | 2048 shadows, AgX | Medium ribbon detail & particle caps |
+| **Low / Web / Mobile** | Android ARM64 & WebGL2 (`gl_compatibility`) | Outlines off; crisp chromatic cel + baked AO albedo | 1024–2048 shadows, clean depth fog | Compact ribbon/particle budgets for locked 60 FPS |
 
 **Palette** (`scripts/core/ui_kit.gd`):
 

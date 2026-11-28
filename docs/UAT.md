@@ -178,6 +178,15 @@ UAT proves the *game* works. A release isn't done until both pass.
 | R3 | Aim Down Sights (RMB / LT) with **Dart Sprayer** and other iron-sight blasters | Clean 3D flip-up iron sights align right on crosshair with zero camera clipping into the blaster body; reloading any blaster shows smooth HUD progress with zero console script errors |
 | R4 | Extract and launch the **Windows (`DARTSTORM.exe`)**, **Linux (`DARTSTORM.x86_64`)**, **Android (`DARTSTORM-1.0.0-android.apk`)**, and **Web** release packages | Custom DARTSTORM cover-art boot splash and app icons display cleanly; each package launches into the 3D lobby and plays a full match smoothly |
 
+### S. v2.0.0 Cover-Art Parity Visual, Character, Weapon & VFX Verification *(v2.0.0)*
+| ID | Do this | Expect |
+|---|---|---|
+| S1 | Inspect heroes on the 3D Bunker Lobby island & Podium | Continuous smooth-skinned cartoon kids (zero floating leg gaps), folded hoodie cowls, chunky rounded sneakers, sculpted hair & ears, blinking Pixar eyes, expressive smiling/cheering mouths, sculpted hats, and warm-navy comic outlines (on High/Ultra) |
+| S2 | Cycle all 12 weapons in first person (including **Flax's Chainstorm** & **Foam Bat**) | Chunky blow-molded beveled toy blasters held by player-colored hoodie sleeves & cartoon hands; animated curved Chainstorm foam-dart belt; smooth reload, pump, and two-handed bat swing animations; zero ADS iron-sight clipping |
+| S3 | Fire every elemental blaster & deflect a dart/grenade with the Foam Bat | Five iconic mid-air flight trails (Wind blue swirls, Fire star-comets, Water turquoise splash arcs, Lightning yellow comic zig-zags, Ice crystal snowflakes); golden comic starburst + floating `"BONK!"`/`"DEFLECT!"` pop + crisp hit-stop (off when `camera_shake == 0`) |
+| S4 | Tour Backyard Fortress & all 9 arenas (especially Mirror Alley & Windy Way) | Multi-cluster swaying tree canopies, beveled oak planks, shingled treehouse roof & rope ladder, waving cloth team flags, glowing beveled cyan mirrors with sheen streaks, curved flowing wind ribbons (no box edges), and zero navmesh/bot path regressions |
+| S5 | Cycle Graphics Quality (`Ultra` → `High` → `Medium` → `Low`) & test 2P Split-Screen | Outlines and VFX scale cleanly with zero visual glitches or shader errors; split-screen hides the other player's FP hands properly and locks smooth frame rate |
+
 ### E. Comfort
 | ID | Do this | Expect |
 |---|---|---|

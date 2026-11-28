@@ -8,6 +8,18 @@ const CONFETTI := [
 	Color(0.6, 0.9, 0.2), Color(1.0, 0.5, 0.1),
 ]
 
+static var _starburst_outer_mesh: ArrayMesh
+static var _starburst_inner_mesh: ArrayMesh
+static var _mini_star_mesh: ArrayMesh
+
+var _last_ricochet_pop_msec: int = 0
+
+
+static func clear_cached_meshes() -> void:
+	_starburst_outer_mesh = null
+	_starburst_inner_mesh = null
+	_mini_star_mesh = null
+
 
 func watch_pool(pool: DartPool) -> void:
 	pool.impact.connect(_on_impact)
@@ -38,8 +50,12 @@ func _on_impact(kind: int, at: Vector3, normal: Vector3, tint: Color) -> void:
 			FoamBurst.spawn(self, at, tint, 8, 4.0, normal)
 			Sfx.play_at(&"hit", at, 1.0, -2.0, 0.15)
 		DartProjectile.Impact.RICOCHET:
-			FoamBurst.spawn(self, at, Color(0.8, 0.97, 1.0), 6, 3.5, normal)
+			FoamBurst.spawn(self, at, Color(0.8, 0.97, 1.0), 8, 4.0, normal)
 			Sfx.play_at(&"ricochet", at, 1.0, -3.0, 0.12)
+			var now_ms := Time.get_ticks_msec()
+			if now_ms - _last_ricochet_pop_msec >= 180:
+				_last_ricochet_pop_msec = now_ms
+				spawn_comic_starburst(self, at + normal * 0.28, "RICOCHET!", Color(0.28, 0.94, 1.0), 0.72)
 		DartProjectile.Impact.TARGET:
 			FoamBurst.spawn(self, at, CONFETTI[randi() % CONFETTI.size()], 16, 5.0, normal)
 			FoamSplat.spawn(self, at, normal, tint, 1.15)
@@ -104,10 +120,14 @@ func _on_chain_zapped(from_actor: Actor, to_actor: Actor) -> void:
 
 
 ## Tagged players pop into a shower of colourful foam + celebratory shockwave ring.
-func _on_tagged_out(victim: Actor, _attacker: Actor, _weapon: WeaponData, _ricochet: bool) -> void:
+func _on_tagged_out(victim: Actor, _attacker: Actor, weapon: WeaponData, ricochet: bool) -> void:
 	var centre := victim.global_position + Vector3.UP
 	FoamBurst.spawn(self, centre, victim.color, 40, 7.0, Vector3.UP, true)
 	spawn_blast_wave(self, centre, victim.color.lightened(0.25), 3.2)
+	if weapon != null and weapon.is_melee():
+		spawn_comic_starburst(self, centre + Vector3.UP * 0.65, "BONK!", Color(1.0, 0.84, 0.16), 1.28)
+	elif ricochet:
+		spawn_comic_starburst(self, centre + Vector3.UP * 0.65, "TRICK SHOT!", Color(0.25, 0.94, 1.0), 1.15)
 	for i in 3:
 		FoamBurst.spawn(self, centre, CONFETTI[randi() % CONFETTI.size()], 14, 6.0, Vector3.UP, true)
 	Sfx.play_at(&"tag", centre, 1.0, -4.0)
@@ -269,4 +289,153 @@ static func spawn_blast_wave(parent: Node, at: Vector3, tint: Color, max_radius:
 	tween.tween_property(mat, "albedo_color:a", 0.0, 0.32)
 	tween.tween_property(flash, "light_energy", 0.0, 0.22)
 	tween.chain().tween_callback(wave.queue_free)
+
+
+## Cover-art comic impact burst: spiky twin-layer starburst + flying mini-stars + bold word pop
+## ("BONK!", "DEFLECT!", "RICOCHET!", "HOME RUN!", "TRICK SHOT!"). Self-frees cleanly.
+static func spawn_comic_starburst(parent: Node, at: Vector3, label_text: String = "BONK!",
+		tint: Color = Color(1.0, 0.85, 0.16), scale_mult: float = 1.0) -> void:
+	if parent == null or not is_instance_valid(parent):
+		return
+	_ensure_starburst_meshes()
+	var root := Node3D.new()
+	root.position = at
+	parent.add_child(root)
+
+	var star_holder := Node3D.new()
+	star_holder.scale = Vector3.ONE * (0.18 * scale_mult)
+	root.add_child(star_holder)
+
+	var outer_mat := StandardMaterial3D.new()
+	outer_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	outer_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	outer_mat.billboard_keep_scale = true
+	outer_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	outer_mat.no_depth_test = false
+	outer_mat.albedo_color = Color(tint.r, tint.g, tint.b, 0.96)
+	outer_mat.emission_enabled = true
+	outer_mat.emission = tint
+	outer_mat.emission_energy_multiplier = 1.8
+
+	var outer := MeshInstance3D.new()
+	outer.mesh = _starburst_outer_mesh
+	outer.material_override = outer_mat
+	outer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	star_holder.add_child(outer)
+
+	var inner_mat := StandardMaterial3D.new()
+	inner_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	inner_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	inner_mat.billboard_keep_scale = true
+	inner_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	inner_mat.albedo_color = Color(1.0, 0.98, 0.84, 0.98)
+	inner_mat.emission_enabled = true
+	inner_mat.emission = Color(1.0, 0.97, 0.78)
+	inner_mat.emission_energy_multiplier = 2.2
+
+	var inner := MeshInstance3D.new()
+	inner.mesh = _starburst_inner_mesh
+	inner.material_override = inner_mat
+	inner.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	star_holder.add_child(inner)
+
+	var tween := root.create_tween()
+	tween.set_parallel(true)
+	# Snappy comic pop-in then crisp fade-out
+	tween.tween_property(star_holder, "scale", Vector3.ONE * (1.18 * scale_mult), 0.11).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(outer_mat, "albedo_color:a", 0.0, 0.36).set_delay(0.10)
+	tween.tween_property(inner_mat, "albedo_color:a", 0.0, 0.30).set_delay(0.08)
+
+	# 5 flying comic star confetti pieces bursting radially outward
+	var confetti_count := clampi(int(round(5.0 * clampf(GameSettings.visual_intensity, 0.4, 1.4))), 2, 7)
+	for i in confetti_count:
+		var ang := TAU * float(i) / float(confetti_count) + randf_range(-0.22, 0.22)
+		var c_mat := StandardMaterial3D.new()
+		c_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		c_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		var c_col: Color = tint.lightened(0.2) if (i % 2 == 0) else Color(1.0, 0.95, 0.38)
+		c_mat.albedo_color = Color(c_col.r, c_col.g, c_col.b, 0.95)
+		c_mat.emission_enabled = true
+		c_mat.emission = c_col
+		c_mat.emission_energy_multiplier = 1.6
+		var shard := MeshInstance3D.new()
+		shard.mesh = _mini_star_mesh
+		shard.material_override = c_mat
+		shard.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		shard.scale = Vector3.ONE * (0.85 * scale_mult)
+		root.add_child(shard)
+		var out_vec := Vector3(cos(ang) * randf_range(0.8, 1.45), randf_range(0.35, 1.15), sin(ang) * randf_range(0.8, 1.45)) * scale_mult
+		tween.tween_property(shard, "position", out_vec, 0.44).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tween.tween_property(shard, "rotation", Vector3(randf_range(-5.0, 5.0), randf_range(-5.0, 5.0), randf_range(-5.0, 5.0)), 0.44)
+		tween.tween_property(c_mat, "albedo_color:a", 0.0, 0.28).set_delay(0.16)
+
+	if not label_text.is_empty():
+		var word := Label3D.new()
+		word.text = label_text
+		word.font = UiKit.font()
+		word.font_size = 76
+		word.pixel_size = 0.0085 * scale_mult
+		word.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		word.no_depth_test = true
+		word.render_priority = 6
+		word.outline_render_priority = 5
+		word.modulate = Color(1.0, 0.97, 0.85, 1.0)
+		word.outline_size = 20
+		word.outline_modulate = Color(0.039, 0.094, 0.239, 1.0)
+		word.position = Vector3(0.0, 0.16 * scale_mult, 0.0)
+		word.scale = Vector3.ONE * 0.25
+		root.add_child(word)
+		tween.tween_property(word, "scale", Vector3.ONE * 1.12, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tween.tween_property(word, "position:y", 0.72 * scale_mult, 0.46).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tween.tween_property(word, "modulate:a", 0.0, 0.22).set_delay(0.24)
+		tween.tween_property(word, "outline_modulate:a", 0.0, 0.22).set_delay(0.24)
+
+	tween.chain().tween_callback(root.queue_free)
+
+
+static func _ensure_starburst_meshes() -> void:
+	if _starburst_outer_mesh != null:
+		return
+	_starburst_outer_mesh = _build_star_polygon(10, 0.78, 0.34, 0.0)
+	_starburst_inner_mesh = _build_star_polygon(10, 0.50, 0.24, 0.314)
+	_mini_star_mesh = _build_star_3d(5, 0.16, 0.065, 0.03)
+
+
+static func _build_star_polygon(points: int, outer_r: float, inner_r: float, angle_off: float) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var total := points * 2
+	var center := Vector3.ZERO
+	var ring: Array[Vector3] = []
+	for i in total:
+		var ang := angle_off + float(i) * TAU / float(total)
+		var r := outer_r if (i % 2 == 0) else inner_r
+		ring.append(Vector3(cos(ang) * r, sin(ang) * r, 0.0))
+	for i in total:
+		var a := ring[i]
+		var b := ring[(i + 1) % total]
+		st.add_vertex(center); st.add_vertex(a); st.add_vertex(b)
+		st.add_vertex(center); st.add_vertex(b); st.add_vertex(a)
+	st.generate_normals()
+	return st.commit()
+
+
+static func _build_star_3d(points: int, outer_r: float, inner_r: float, half_thick: float) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var total := points * 2
+	var ring: Array[Vector3] = []
+	for i in total:
+		var ang := float(i) * TAU / float(total)
+		var r := outer_r if (i % 2 == 0) else inner_r
+		ring.append(Vector3(cos(ang) * r, sin(ang) * r, 0.0))
+	var f := Vector3(0.0, 0.0, half_thick)
+	var b := Vector3(0.0, 0.0, -half_thick)
+	for i in total:
+		var p0 := ring[i]
+		var p1 := ring[(i + 1) % total]
+		st.add_vertex(f); st.add_vertex(p0); st.add_vertex(p1)
+		st.add_vertex(b); st.add_vertex(p1); st.add_vertex(p0)
+	st.generate_normals()
+	return st.commit()
 

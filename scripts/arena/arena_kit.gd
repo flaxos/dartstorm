@@ -18,12 +18,18 @@ enum SurfaceType {
 }
 
 const WOOD_SHADER := preload("res://assets/materials/toy_wood.gdshader")
+const TOON_SHADER := preload("res://assets/materials/dartstorm_toon.gdshader")
+const OUTLINE_SHADER := preload("res://assets/materials/toon_outline.gdshader")
+const CLOTH_FLAG_SHADER := preload("res://assets/materials/cloth_flag.gdshader")
 
-const TRUNK := Color(0.45, 0.3, 0.18)
-const LEAF := Color(0.25, 0.65, 0.25)
-const LEAF_LIGHT := Color(0.38, 0.78, 0.3)
+const TRUNK := Color(0.48, 0.30, 0.16)
+const LEAF := Color(0.24, 0.70, 0.24)
+const LEAF_LIGHT := Color(0.42, 0.84, 0.28)
+const INK_NAVY := Color(0.039, 0.094, 0.239, 1.0)
 
 static var _materials: Dictionary = {}
+static var _toon_materials: Dictionary = {}
+static var _outline_materials: Dictionary = {}
 
 static var _sandstone_albedo: Texture2D = preload("res://assets/textures/arenas/sandstone_albedo.png")
 static var _sandstone_normal: Texture2D = preload("res://assets/textures/arenas/sandstone_normal.png")
@@ -56,6 +62,66 @@ static var _metal_orm: Texture2D = preload("res://assets/textures/pbr/brushed_me
 
 static func clear_materials() -> void:
 	_materials.clear()
+	_toon_materials.clear()
+	_outline_materials.clear()
+
+
+## True when inverted-hull warm-navy comic outlines should be attached for the active
+## GraphicsQuality tier and rendering backend (disabled on Low & Web/Mobile Compatibility).
+static func should_use_outlines(is_hero_or_fp: bool = false) -> bool:
+	if RenderingServer.get_rendering_device() == null:
+		return false
+	if is_instance_valid(GameSettings):
+		var q: int = GameSettings.graphics_quality
+		if q <= GameSettings.GraphicsQuality.LOW:
+			return false
+		if q == GameSettings.GraphicsQuality.MEDIUM:
+			return is_hero_or_fp
+	return true
+
+
+## Cached warm-navy comic silhouette outline ShaderMaterial (for Material.next_pass).
+static func outline_mat(scale_mult: float = 1.0, is_hero_or_fp: bool = false) -> ShaderMaterial:
+	if scale_mult <= 0.0 or not should_use_outlines(is_hero_or_fp):
+		return null
+	var key := "%.3f|%s" % [scale_mult, "H" if is_hero_or_fp else "W"]
+	if _outline_materials.has(key):
+		return _outline_materials[key] as ShaderMaterial
+	var out_mat := ShaderMaterial.new()
+	out_mat.shader = OUTLINE_SHADER
+	out_mat.set_shader_parameter(&"outline_color", INK_NAVY)
+	out_mat.set_shader_parameter(&"outline_width", 0.009 * scale_mult)
+	out_mat.set_shader_parameter(&"distance_scale", (0.0005 if is_hero_or_fp and scale_mult < 0.4 else 0.0020) * scale_mult)
+	out_mat.set_shader_parameter(&"fade_start", 30.0)
+	out_mat.set_shader_parameter(&"fade_end", 54.0)
+	_outline_materials[key] = out_mat
+	return out_mat
+
+
+## Cached v2.0.0 Cover-Art Chromatic Cel ShaderMaterial with glossy toy-plastic specular
+## and optional warm-navy comic outline next_pass.
+static func toon_mat(color: Color, roughness: float = 0.36, specular_strength: float = 0.52,
+		outline_scale: float = 0.0, is_hero_or_fp: bool = false,
+		shadow_tint: Color = Color(0.24, 0.28, 0.56), use_vertex_color: bool = false) -> ShaderMaterial:
+	var use_out := outline_scale > 0.0 and should_use_outlines(is_hero_or_fp)
+	var key := "%s|%.2f|%.2f|%.2f|%s|%s|%s" % [
+		color.to_html(false), roughness, specular_strength,
+		outline_scale if use_out else 0.0,
+		"H" if is_hero_or_fp else "W", shadow_tint.to_html(false), "V" if use_vertex_color else "N",
+	]
+	if _toon_materials.has(key):
+		return _toon_materials[key] as ShaderMaterial
+	var sm := ShaderMaterial.new()
+	sm.shader = TOON_SHADER
+	sm.set_shader_parameter(&"albedo_color", Color(color.r, color.g, color.b, 1.0))
+	sm.set_shader_parameter(&"roughness", roughness)
+	sm.set_shader_parameter(&"specular_strength", specular_strength)
+	sm.set_shader_parameter(&"shadow_tint", shadow_tint)
+	sm.set_shader_parameter(&"use_vertex_color", use_vertex_color)
+	if use_out:
+		sm.next_pass = outline_mat(outline_scale, is_hero_or_fp)
+	_toon_materials[key] = sm
+	return sm
 
 
 ## Cached tactile material. Supports molded toy plastic, procedural timber, and brushed metal.
@@ -254,21 +320,13 @@ static func mat_styled(color: Color, surface: int = SurfaceType.DEFAULT,
 			material.metallic = 0.0 if metallic < 0.0 else metallic
 			material.metallic_specular = 0.10
 		_:
-			# DEFAULT: Tactile molded toy plastic with micro-relief, contact AO, and rim
-			material.roughness = 0.72 if roughness < 0.0 else roughness
+			# DEFAULT: Clean stylized toy-cartoon satin surface (no UV-pinching plastic normal seams!)
+			material.roughness = 0.68 if roughness < 0.0 else roughness
 			material.metallic = 0.02 if metallic < 0.0 else metallic
-			material.metallic_specular = 0.28
+			material.metallic_specular = 0.26
 			material.rim_enabled = true
-			material.rim = 0.20
-			material.rim_tint = 0.25
-			material.normal_enabled = true
-			material.normal_texture = _plastic_normal
-			material.normal_scale = 0.28
-			material.ao_enabled = true
-			material.ao_texture = _plastic_orm
-			material.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
-			material.roughness_texture = _plastic_orm
-			material.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
+			material.rim = 0.24
+			material.rim_tint = 0.35
 
 	if color.a < 0.999:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -423,12 +481,49 @@ static func sign_text(parent: Node, text: String, pos: Vector3, rot_deg: Vector3
 	return label
 
 
-## A simple neighbour's house for the skyline (looks only): walls and a pitched roof.
+## A storybook cartoon neighbour's house for the skyline (looks only): walls, pitched roof,
+## chimney, and cozy sunlit windows.
 static func house(parent: Node, at: Vector3, size: Vector3, wall: Color, roof: Color) -> void:
-	deco_box(parent, size, at + Vector3(0.0, size.y * 0.5, 0.0), wall)
+	var wall_m := deco_box(parent, size, at + Vector3(0.0, size.y * 0.5, 0.0), wall)
+	wall_m.material_override = toon_mat(wall, 0.78, 0.14, 0.0, false, Color(0.32, 0.34, 0.56))
 	var prism := PrismMesh.new()
-	prism.size = Vector3(size.x + 1.5, size.y * 0.55, size.z + 1.5)
-	deco(parent, prism, at + Vector3(0.0, size.y + size.y * 0.275, 0.0), roof)
+	prism.size = Vector3(size.x + 1.8, size.y * 0.58, size.z + 1.8)
+	var roof_m := deco(parent, prism, at + Vector3(0.0, size.y + size.y * 0.29, 0.0), roof)
+	roof_m.material_override = toon_mat(roof, 0.66, 0.22, 0.0, false, Color(0.28, 0.22, 0.42))
+	# Cozy chimney + sunlit pastel windows on front/back faces
+	var chim := deco_box(parent, Vector3(1.5, 2.6, 1.5), at + Vector3(size.x * 0.28, size.y + size.y * 0.36, 0.0), Color(0.76, 0.36, 0.28))
+	chim.material_override = toon_mat(Color(0.76, 0.36, 0.28), 0.72, 0.18, 0.0, false)
+	var win_mat := toon_mat(Color(0.74, 0.92, 1.0), 0.22, 0.75, 0.0, false)
+	var frame_mat := toon_mat(Color(0.98, 0.96, 0.90), 0.65, 0.20, 0.0, false)
+	for z_face: float in [-1.0, 1.0]:
+		var wz := at.z + z_face * (size.z * 0.5 + 0.06)
+		for wx_off: float in [-size.x * 0.26, size.x * 0.26]:
+			var frame := deco_box(parent, Vector3(2.3, 2.3, 0.12), Vector3(at.x + wx_off, at.y + size.y * 0.54, wz), Color.WHITE)
+			frame.material_override = frame_mat
+			var glass := deco_box(parent, Vector3(1.85, 1.85, 0.16), Vector3(at.x + wx_off, at.y + size.y * 0.54, wz), Color(0.74, 0.92, 1.0))
+			glass.material_override = win_mat
+
+
+## Vertex-animated wind-rippling cloth team flag / banner (pinned along local -X / UV.x == 0).
+static func waving_flag(parent: Node, pos: Vector3, flag_size: Vector2, main_color: Color,
+		stripe_color: Color = Color(1.0, 0.96, 0.88), rot_deg: Vector3 = Vector3.ZERO) -> MeshInstance3D:
+	var plane := PlaneMesh.new()
+	plane.size = flag_size
+	plane.subdivide_width = 12
+	plane.subdivide_depth = 4
+	plane.orientation = PlaneMesh.FACE_X
+	var flag_mat := ShaderMaterial.new()
+	flag_mat.shader = CLOTH_FLAG_SHADER
+	flag_mat.set_shader_parameter(&"flag_color", Color(main_color.r, main_color.g, main_color.b, 1.0))
+	flag_mat.set_shader_parameter(&"stripe_color", Color(stripe_color.r, stripe_color.g, stripe_color.b, 1.0))
+	var inst := MeshInstance3D.new()
+	inst.mesh = plane
+	inst.material_override = flag_mat
+	inst.position = pos
+	inst.rotation_degrees = rot_deg
+	inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(inst)
+	return inst
 
 
 ## Instantiates a 3D arena prop if available, positions it, and adds it to parent.
@@ -446,8 +541,28 @@ static func prop(parent: Node, prop_id: StringName, pos: Vector3,
 		instance.scale = prop_scale
 	if _is_under_decor(parent):
 		_strip_collision_recursive(instance)
+	if not should_use_outlines(false):
+		_strip_outlines_recursive(instance)
 	parent.add_child(instance)
 	return instance
+
+
+static func _strip_outlines_recursive(node: Node) -> void:
+	if node is MeshInstance3D:
+		var mi := node as MeshInstance3D
+		if mi.material_override != null and mi.material_override.next_pass != null:
+			var dup := mi.material_override.duplicate() as Material
+			dup.next_pass = null
+			mi.material_override = dup
+		if mi.mesh != null:
+			for s in mi.mesh.get_surface_count():
+				var sm := mi.get_surface_override_material(s)
+				if sm != null and sm.next_pass != null:
+					var dup2 := sm.duplicate() as Material
+					dup2.next_pass = null
+					mi.set_surface_override_material(s, dup2)
+	for child in node.get_children():
+		_strip_outlines_recursive(child)
 
 
 static func _is_under_decor(node: Node) -> bool:

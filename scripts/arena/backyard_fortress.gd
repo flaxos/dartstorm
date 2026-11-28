@@ -101,16 +101,21 @@ func _build_ground_and_fence() -> void:
 	ArenaKit.box(geometry, Vector3(HALF_X * 2.0 + thick * 2.0, height, thick), Vector3(0.0, height * 0.5, HALF_Z + thick * 0.5), FENCE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	ArenaKit.box(geometry, Vector3(thick, height, HALF_Z * 2.0), Vector3(-HALF_X - thick * 0.5, height * 0.5, 0.0), FENCE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 	ArenaKit.box(geometry, Vector3(thick, height, HALF_Z * 2.0), Vector3(HALF_X + thick * 0.5, height * 0.5, 0.0), FENCE, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
-	# Posts and a top rail so it reads as a garden fence, not a wall.
+	# Posts with cozy pyramid finial caps so it reads as a handcrafted garden picket fence.
+	var cap_mat := ArenaKit.toon_mat(FENCE_POST.lightened(0.06), 0.65, 0.25, 0.0, false)
 	var x := -HALF_X
 	while x <= HALF_X + 0.01:
 		for z_side: float in [-1.0, 1.0]:
 			ArenaKit.deco_box(decor, Vector3(0.45, height + 0.5, 0.75), Vector3(x, (height + 0.5) * 0.5, z_side * (HALF_Z + thick * 0.5)), FENCE_POST, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.WOOD)
+			var cap := ArenaKit.deco_box(decor, Vector3(0.62, 0.16, 0.90), Vector3(x, height + 0.56, z_side * (HALF_Z + thick * 0.5)), FENCE_POST)
+			cap.material_override = cap_mat
 		x += 4.0
 	var z := -HALF_Z
 	while z <= HALF_Z + 0.01:
 		for x_side: float in [-1.0, 1.0]:
 			ArenaKit.deco_box(decor, Vector3(0.75, height + 0.5, 0.45), Vector3(x_side * (HALF_X + thick * 0.5), (height + 0.5) * 0.5, z), FENCE_POST, Vector3.ZERO, 0.0, ArenaKit.SurfaceType.WOOD)
+			var cap2 := ArenaKit.deco_box(decor, Vector3(0.90, 0.16, 0.62), Vector3(x_side * (HALF_X + thick * 0.5), height + 0.56, z), FENCE_POST)
+			cap2.material_override = cap_mat
 		z += 4.0
 	# Invisible walls above the fence so nobody trampolines into next door.
 	var sky_wall := 14.0
@@ -157,9 +162,12 @@ func _build_fort(side: float, main: Color, dark: Color, title: String) -> void:
 		ArenaKit.cylinder(geometry, 0.16, 3.0, Vector3(side * 28.2, top + 1.5, post_z), WOOD_DARK)
 	ArenaKit.box(geometry, Vector3(4.6, 0.25, 12.6), Vector3(side * 29.9, top + 3.1, 0.0), dark.lightened(0.1))
 
-	# Landmark: a huge team flag and a sign you can read from across the yard.
-	ArenaKit.deco_cylinder(decor, 0.12, 8.0, Vector3(side * 30.6, top + 3.2 + 4.0, 0.0), Color(0.92, 0.92, 0.96))
-	ArenaKit.deco_box(decor, Vector3(0.12, 2.0, 3.4), Vector3(side * 30.6, top + 3.2 + 6.8, 1.8), main, Vector3.ZERO, 0.4)
+	# Landmark: a huge wind-rippling cloth team flag and a sign you can read from across the yard.
+	var pole := ArenaKit.deco_cylinder(decor, 0.12, 8.2, Vector3(side * 30.6, top + 3.2 + 4.1, 0.0), Color(0.92, 0.92, 0.96))
+	pole.material_override = ArenaKit.toon_mat(Color(0.94, 0.95, 0.98), 0.28, 0.68, 0.65, false)
+	var finial := ArenaKit.deco_sphere(decor, 0.24, Vector3(side * 30.6, top + 3.2 + 8.3, 0.0), Color(1.0, 0.86, 0.18))
+	finial.material_override = ArenaKit.toon_mat(Color(1.0, 0.86, 0.18), 0.24, 0.78, 0.65, false)
+	ArenaKit.waving_flag(decor, Vector3(side * 30.6, top + 3.2 + 6.9, 1.9), Vector2(3.8, 2.2), main, Color(1.0, 0.97, 0.88), Vector3(0.0, 0.0, 0.0))
 	ArenaKit.sign_text(decor, title, Vector3(back - side * 0.35, top + 1.5, 0.0), Vector3(0.0, -90.0 * side, 0.0), Color(1.0, 0.96, 0.88), 120, 0.012)
 
 	add_bucket(Vector3(side * 21.6, 0.0, 0.0), main)
@@ -180,14 +188,39 @@ func _build_treehouse() -> void:
 			ArenaKit.box(geometry, Vector3(0.2, 1.0, 3.1), Vector3(edge * (DECK_HALF - 0.1), rail_y, piece), WOOD_DARK, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 			ArenaKit.box(geometry, Vector3(3.1, 1.0, 0.2), Vector3(piece, rail_y, edge * (DECK_HALF - 0.1)), WOOD_DARK, Vector3.ZERO, ArenaKit.SurfaceType.WOOD)
 
-	# Leafy canopy: the landmark you can see from anywhere.
+	# Lush layered storybook oak canopy (velvety matte chromatic cel + warm-navy outlines + oak boughs, decor-only!)
+	var leaf_dark_m := ArenaKit.toon_mat(LEAF, 0.88, 0.03, 0.75, false, Color(0.10, 0.36, 0.22))
+	var leaf_hi_m := ArenaKit.toon_mat(LEAF_LIGHT, 0.86, 0.03, 0.75, false, Color(0.14, 0.42, 0.22))
+	var leaf_sun_m := ArenaKit.toon_mat(Color(0.50, 0.88, 0.28), 0.84, 0.04, 0.75, false, Color(0.18, 0.48, 0.22))
 	var leaves := [
-		[Vector3(0.0, 12.0, 0.0), 4.6, LEAF], [Vector3(3.0, 10.9, 1.6), 3.1, LEAF_LIGHT],
-		[Vector3(-2.7, 11.1, -1.9), 3.3, LEAF_LIGHT], [Vector3(0.6, 10.6, -3.2), 2.9, LEAF],
-		[Vector3(-1.2, 10.8, 3.2), 2.9, LEAF],
+		[Vector3(0.0, 11.4, 0.0),    4.4, 0.78, leaf_dark_m],
+		[Vector3(3.4, 10.6, 1.5),    2.8, 0.80, leaf_dark_m],
+		[Vector3(-3.3, 10.7, -1.7),  2.9, 0.80, leaf_dark_m],
+		[Vector3(1.1, 10.4, -3.5),   2.7, 0.78, leaf_dark_m],
+		[Vector3(-1.4, 10.5, 3.5),   2.7, 0.78, leaf_dark_m],
+		[Vector3(-3.2, 10.8, 2.0),   2.4, 0.82, leaf_hi_m],
+		[Vector3(3.1, 10.8, -2.1),   2.4, 0.82, leaf_hi_m],
+		[Vector3(2.2, 12.6, 1.2),    2.5, 0.84, leaf_hi_m],
+		[Vector3(-2.1, 12.7, -1.3),  2.6, 0.84, leaf_hi_m],
+		[Vector3(0.4, 12.4, -2.4),   2.3, 0.84, leaf_hi_m],
+		[Vector3(-0.6, 12.5, 2.3),   2.3, 0.84, leaf_hi_m],
+		[Vector3(0.1, 14.3, -0.2),   2.7, 0.80, leaf_sun_m],
+		[Vector3(1.5, 13.7, -0.9),   1.9, 0.82, leaf_sun_m],
+		[Vector3(-1.4, 13.8, 0.8),   1.9, 0.82, leaf_sun_m],
 	]
-	for leaf in leaves:
-		ArenaKit.deco_sphere(decor, leaf[1], leaf[0], leaf[2], 0.85)
+	for leaf: Array in leaves:
+		var puff := ArenaKit.deco_sphere(decor, float(leaf[1]), leaf[0] as Vector3, LEAF, float(leaf[2]))
+		puff.material_override = leaf[3] as Material
+	# Chunky oak limbs fanning from trunk into the canopy + cozy treehouse bunting trim (decor-only)
+	for limb_ang: float in [25.0, 145.0, 260.0]:
+		var rad := deg_to_rad(limb_ang)
+		ArenaKit.deco_cylinder(decor, 0.34, 3.4, Vector3(cos(rad) * 1.4, 9.6, sin(rad) * 1.4), TRUNK, Vector3(sin(rad) * 42.0, 0.0, -cos(rad) * 42.0), 0.22, ArenaKit.SurfaceType.WOOD)
+	# Decorative rope ladder hanging cleanly off the southwest deck edge (pure decor!)
+	for rx: float in [-3.4, -2.5]:
+		ArenaKit.deco_cylinder(decor, 0.032, DECK_HEIGHT - 0.3, Vector3(rx, (DECK_HEIGHT - 0.3) * 0.5, DECK_HALF + 0.14), Color(0.86, 0.74, 0.50))
+	for rung_i in 9:
+		var ry := 0.38 + float(rung_i) * 0.46
+		ArenaKit.deco_cylinder(decor, 0.042, 0.96, Vector3(-2.95, ry, DECK_HALF + 0.16), WOOD, Vector3(0.0, 0.0, 90.0), -1.0, ArenaKit.SurfaceType.WOOD)
 
 	# Walkways from each fort up to the deck, with side rails for cover.
 	for side: float in [-1.0, 1.0]:
@@ -245,9 +278,17 @@ func _build_treehouse() -> void:
 ## the fence, so you can bank shots around the hedge.
 func _build_mirror_alley() -> void:
 	ArenaKit.box(geometry, Vector3(9.0, 2.6, 4.0), Vector3(0.0, 1.3, -18.5), HEDGE)
-	ArenaKit.deco_sphere(decor, 2.3, Vector3(-3.0, 2.6, -18.5), HEDGE.lightened(0.08), 0.7)
-	ArenaKit.deco_sphere(decor, 2.5, Vector3(0.5, 2.7, -18.5), HEDGE.lightened(0.04), 0.7)
-	ArenaKit.deco_sphere(decor, 2.2, Vector3(3.3, 2.6, -18.5), HEDGE.lightened(0.1), 0.7)
+	var hedge_m1 := ArenaKit.toon_mat(HEDGE.lightened(0.08), 0.88, 0.03, 0.65, false, Color(0.08, 0.30, 0.20))
+	var hedge_m2 := ArenaKit.toon_mat(HEDGE.lightened(0.16), 0.86, 0.03, 0.65, false, Color(0.10, 0.36, 0.22))
+	var h_puffs := [
+		[Vector3(-3.3, 2.5, -18.5), 2.2, hedge_m1],
+		[Vector3(-1.1, 2.8, -18.3), 2.3, hedge_m2],
+		[Vector3(1.3, 2.7, -18.7), 2.3, hedge_m1],
+		[Vector3(3.5, 2.5, -18.5), 2.1, hedge_m2],
+	]
+	for hp: Array in h_puffs:
+		var sp := ArenaKit.deco_sphere(decor, float(hp[1]), hp[0] as Vector3, HEDGE, 0.72)
+		sp.material_override = hp[2] as Material
 	add_mirror(Vector3(-9.0, 2.2, -22.8), 15.0, Vector2(6.0, 3.6), 0.4)
 	add_mirror(Vector3(9.0, 2.2, -22.8), -15.0, Vector2(6.0, 3.6), 0.4)
 	ArenaKit.sign_text(decor, "MIRROR ALLEY", Vector3(0.0, 3.5, -16.0), Vector3.ZERO, Color(0.6, 0.95, 1.0), 72, 0.01)

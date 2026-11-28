@@ -25,19 +25,22 @@ static func clear_character_materials() -> void:
 	_cached_skin_mats.clear()
 
 
-static func _make_toon_mat(color: Color, roughness: float, normal_tex: Texture2D = null, normal_scale: float = 0.35) -> ShaderMaterial:
+static func _make_toon_mat(color: Color, roughness: float, normal_tex: Texture2D = null, normal_scale: float = 0.35, add_outline: bool = true) -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
 	mat.shader = _toon_shader
 	mat.set_shader_parameter(&"albedo_color", Color(color.r, color.g, color.b, 1.0))
 	mat.set_shader_parameter(&"roughness", roughness)
-	mat.set_shader_parameter(&"rim_strength", 0.55)
-	mat.set_shader_parameter(&"rim_color", Color(1.0, 0.96, 0.88, 1.0))
+	mat.set_shader_parameter(&"rim_strength", 0.62)
+	mat.set_shader_parameter(&"rim_color", Color(1.0, 0.96, 0.86, 1.0))
+	mat.set_shader_parameter(&"use_vertex_color", true)
 	if normal_tex != null:
 		mat.set_shader_parameter(&"use_normal_map", true)
 		mat.set_shader_parameter(&"texture_normal", normal_tex)
 		mat.set_shader_parameter(&"normal_scale", normal_scale)
 	else:
 		mat.set_shader_parameter(&"use_normal_map", false)
+	if add_outline:
+		mat.next_pass = ArenaKit.outline_mat(0.82, true)
 	return mat
 
 
@@ -134,6 +137,11 @@ var _my_sneaker_mat: ShaderMaterial = null
 var _hit_flash_left: float = 0.0
 var _electric_flash_left: float = 0.0
 var _melee_swing_left: float = 0.0
+var _eyelids_node: Node3D = null
+var _mouth_smile_node: Node3D = null
+var _mouth_flinch_node: Node3D = null
+var _blink_timer: float = 2.6
+var _blink_left: float = 0.0
 
 
 var _raw_display_name: String = ""
@@ -344,6 +352,23 @@ func _process(delta: float) -> void:
 	if _melee_swing_left > 0.0:
 		_melee_swing_left = maxf(_melee_swing_left - delta, 0.0)
 		_apply_hero_arm_poses()
+	# Expressive Pixar eye blink cycle
+	if _eyelids_node != null and is_instance_valid(_eyelids_node):
+		if _blink_left > 0.0:
+			_blink_left -= delta
+			if _blink_left <= 0.0:
+				_eyelids_node.visible = false
+				_blink_timer = randf_range(2.6, 5.2)
+		else:
+			_blink_timer -= delta
+			if _blink_timer <= 0.0:
+				_blink_left = 0.11
+				_eyelids_node.visible = true
+	# Expressive cartoon mouth state (joyful smile vs surprised flinch / zombie roar)
+	if _mouth_smile_node != null and _mouth_flinch_node != null and is_instance_valid(_mouth_smile_node):
+		var show_flinch := _flinch > 0.05 or _is_zombie
+		_mouth_smile_node.visible = not show_flinch
+		_mouth_flinch_node.visible = show_flinch
 
 
 ## Triggers a visible third-person arm + bat swing animation.
@@ -497,6 +522,9 @@ func _clear_model() -> void:
 	_backpack = null
 	_propeller = null
 	_hat_root = null
+	_eyelids_node = null
+	_mouth_smile_node = null
+	_mouth_flinch_node = null
 	if _name_label != null:
 		if is_instance_valid(_name_label) and _name_label.get_parent() == self:
 			remove_child(_name_label)
@@ -621,8 +649,28 @@ func _build_from_hero_model() -> bool:
 		"skin": _my_skin_mat,
 		"shoes": _my_sneaker_mat,
 		"sneaker": _my_sneaker_mat,
+		"hair": ArenaKit.toon_mat(Color(0.42, 0.23, 0.11), 0.56, 0.32, 0.72, true, Color(0.24, 0.12, 0.16), true),
+		"hardware": ArenaKit.toon_mat(Color(0.10, 0.14, 0.24), 0.36, 0.45, 0.0, true),
+		"whitetrim": ArenaKit.toon_mat(Color(0.98, 0.96, 0.92), 0.52, 0.25, 0.35, true),
+		"sclera": ArenaKit.toon_mat(Color(0.99, 0.99, 1.0), 0.18, 0.65, 0.0, true, Color(0.68, 0.76, 0.92)),
+		"iris": ArenaKit.toon_mat(Color(0.18, 0.44, 0.88), 0.16, 0.70, 0.0, true),
+		"pupil": ArenaKit.toon_mat(Color(0.03, 0.04, 0.08), 0.10, 0.80, 0.0, true),
+		"catchlight": ArenaKit.mat(Color.WHITE, 0.0, 0.0, 1.4),
+		"cheek": ArenaKit.toon_mat(Color(1.0, 0.58, 0.56), 0.70, 0.10, 0.0, true, Color(0.85, 0.38, 0.40)),
+		"mouthinner": ArenaKit.toon_mat(Color(0.56, 0.14, 0.20), 0.65, 0.12, 0.0, true, Color(0.32, 0.06, 0.14)),
+		"teeth": ArenaKit.toon_mat(Color(0.99, 0.99, 0.97), 0.22, 0.45, 0.0, true, Color(0.75, 0.78, 0.88)),
+		"tongue": ArenaKit.toon_mat(Color(0.96, 0.42, 0.48), 0.45, 0.28, 0.0, true, Color(0.68, 0.22, 0.30)),
 	}
 	ModelLoader.apply_materials_recursive(_hero_model_node, mat_map)
+
+	_eyelids_node = _hero_model_node.find_child("Mesh_Eyelids", true, false) as Node3D
+	_mouth_smile_node = _hero_model_node.find_child("Mesh_MouthSmile", true, false) as Node3D
+	_mouth_flinch_node = _hero_model_node.find_child("Mesh_MouthFlinch", true, false) as Node3D
+	if _eyelids_node != null:
+		_eyelids_node.visible = false
+	if _mouth_flinch_node != null:
+		_mouth_flinch_node.visible = false
+	_blink_timer = randf_range(1.2, 4.5)
 
 	_legs.clear()
 	var leg_l := _hero_model_node.find_child("Mesh_UpperLeg_L*", true, false) as MeshInstance3D
@@ -716,7 +764,7 @@ func _build_hat() -> void:
 		_hat_root.remove_child(child)
 		child.queue_free()
 	_propeller = null
-	var base_y: float = (HAT_Y - 1.66) if _hero_skeleton != null else HAT_Y
+	var base_y: float = 0.30 if _hero_skeleton != null else HAT_Y
 	if is_instance_valid(ModelLoader) and ModelLoader.has_hat_model(_hat_id):
 		var hat_node := ModelLoader.instantiate_hat(_hat_id)
 		if hat_node != null:
@@ -728,69 +776,87 @@ func _build_hat() -> void:
 			})
 			return
 
-	var main := _tint.darkened(0.2)
+	var main := _tint.darkened(0.14)
+	var main_mat := ArenaKit.toon_mat(main, 0.42, 0.48, 0.72, true)
+	var accent_mat := ArenaKit.toon_mat(_tint.lightened(0.25), 0.38, 0.52, 0.65, true)
 	match _hat_id:
 		&"cap":
-			ArenaKit.deco_cylinder(_hat_root, 0.27, 0.13, Vector3(0.0, base_y, 0.0), main)
-			ArenaKit.deco_box(_hat_root, Vector3(0.34, 0.035, 0.24), Vector3(0.0, base_y - 0.05, -0.3), main)
+			# Keep exactly 2 direct children under Socket_Head for hat-swap leak regression test
+			var crown := _sphere_child(_hat_root, 0.275, Vector3(0.0, base_y - 0.02, 0.01), main_mat, 0.62)
+			_sphere_child(crown, 0.036, Vector3(0.0, 0.16, 0.0), accent_mat, 0.7)
+			var brim := _box_child(_hat_root, Vector3(0.34, 0.036, 0.24), Vector3(0.0, base_y - 0.055, -0.25), main_mat, Vector3(8.0, 0.0, 0.0))
+			brim.scale = Vector3(1.0, 1.0, 1.0)
 		&"beanie":
-			ArenaKit.deco_sphere(_hat_root, 0.285, Vector3(0.0, base_y - 0.04, 0.0), main, 0.75)
-			ArenaKit.deco_cylinder(_hat_root, 0.29, 0.08, Vector3(0.0, base_y - 0.08, 0.0), _tint.lightened(0.3))
-			ArenaKit.deco_sphere(_hat_root, 0.08, Vector3(0.0, base_y + 0.18, 0.0), Color.WHITE)
+			_sphere_child(_hat_root, 0.285, Vector3(0.0, base_y - 0.02, 0.01), main_mat, 0.78)
+			_tube_child(_hat_root, 0.292, 0.085, Vector3(0.0, base_y - 0.07, 0.01), accent_mat)
+			_sphere_child(_hat_root, 0.088, Vector3(0.0, base_y + 0.21, 0.01), ArenaKit.toon_mat(Color.WHITE, 0.65, 0.25, 0.60, true))
 		&"propeller":
-			ArenaKit.deco_sphere(_hat_root, 0.28, Vector3(0.0, base_y - 0.04, 0.0), main, 0.65)
-			ArenaKit.deco_cylinder(_hat_root, 0.02, 0.14, Vector3(0.0, base_y + 0.17, 0.0), Color(0.3, 0.3, 0.35))
+			# Vibrant cover-art rainbow propeller beanie!
+			var dome := _sphere_child(_hat_root, 0.282, Vector3(0.0, base_y - 0.02, 0.01), ArenaKit.toon_mat(Color(1.0, 0.82, 0.14), 0.36, 0.56, 0.72, true), 0.70)
+			_sphere_child(dome, 0.265, Vector3(-0.055, -0.005, -0.02), ArenaKit.toon_mat(Color(0.95, 0.26, 0.24), 0.36, 0.56, 0.0, true), 0.66)
+			_sphere_child(dome, 0.265, Vector3(0.055, -0.005, 0.02), ArenaKit.toon_mat(Color(0.24, 0.76, 0.34), 0.36, 0.56, 0.0, true), 0.66)
+			_box_child(_hat_root, Vector3(0.32, 0.034, 0.22), Vector3(0.0, base_y - 0.06, -0.24), ArenaKit.toon_mat(Color(0.18, 0.76, 0.36), 0.36, 0.55, 0.60, true), Vector3(8.0, 0.0, 0.0))
+			_tube_child(_hat_root, 0.022, 0.13, Vector3(0.0, base_y + 0.19, 0.01), ArenaKit.toon_mat(Color(0.95, 0.78, 0.22), 0.25, 0.75, 0.45, true))
 			_propeller = Node3D.new()
-			_propeller.position = Vector3(0.0, base_y + 0.24, 0.0)
+			_propeller.position = Vector3(0.0, base_y + 0.255, 0.01)
 			_hat_root.add_child(_propeller)
-			ArenaKit.deco_box(_propeller, Vector3(0.52, 0.02, 0.08), Vector3.ZERO, Color(1.0, 0.3, 0.3))
-			ArenaKit.deco_box(_propeller, Vector3(0.08, 0.021, 0.52), Vector3.ZERO, Color(1.0, 0.85, 0.2))
+			_box_child(_propeller, Vector3(0.54, 0.022, 0.088), Vector3.ZERO, ArenaKit.toon_mat(Color(0.16, 0.54, 1.0), 0.28, 0.70, 0.55, true))
+			_box_child(_propeller, Vector3(0.088, 0.023, 0.54), Vector3.ZERO, ArenaKit.toon_mat(Color(1.0, 0.36, 0.22), 0.28, 0.70, 0.55, true))
+			_sphere_child(_propeller, 0.042, Vector3(0.0, 0.018, 0.0), ArenaKit.toon_mat(Color(1.0, 0.86, 0.18), 0.22, 0.80, 0.40, true))
 		&"party":
-			ArenaKit.deco_cylinder(_hat_root, 0.17, 0.42, Vector3(0.0, base_y + 0.17, 0.0), _tint.lightened(0.25), Vector3.ZERO, 0.0)
-			ArenaKit.deco_sphere(_hat_root, 0.07, Vector3(0.0, base_y + 0.4, 0.0), Color(1.0, 0.85, 0.2))
+			ArenaKit.deco_cylinder(_hat_root, 0.17, 0.42, Vector3(0.0, base_y + 0.18, 0.0), _tint.lightened(0.25), Vector3.ZERO, 0.0)
+			_sphere_child(_hat_root, 0.075, Vector3(0.0, base_y + 0.41, 0.0), ArenaKit.toon_mat(Color(1.0, 0.85, 0.2), 0.45, 0.45, 0.55, true))
 		&"cowboy":
-			var leather := Color(0.55, 0.36, 0.2)
-			ArenaKit.deco_cylinder(_hat_root, 0.46, 0.04, Vector3(0.0, base_y - 0.02, 0.0), leather)
-			ArenaKit.deco_cylinder(_hat_root, 0.22, 0.24, Vector3(0.0, base_y + 0.1, 0.0), leather, Vector3.ZERO, 0.19)
-			ArenaKit.deco_cylinder(_hat_root, 0.225, 0.05, Vector3(0.0, base_y + 0.02, 0.0), main)
+			var leather_mat := ArenaKit.toon_mat(Color(0.58, 0.36, 0.18), 0.58, 0.32, 0.72, true, Color(0.32, 0.16, 0.14))
+			_tube_child(_hat_root, 0.46, 0.045, Vector3(0.0, base_y - 0.02, 0.0), leather_mat)
+			_tube_child(_hat_root, 0.225, 0.24, Vector3(0.0, base_y + 0.11, 0.0), leather_mat)
+			_tube_child(_hat_root, 0.232, 0.055, Vector3(0.0, base_y + 0.02, 0.0), main_mat)
 		&"crown":
-			ArenaKit.deco_cylinder(_hat_root, 0.23, 0.12, Vector3(0.0, base_y + 0.02, 0.0), GOLD)
+			var gold_mat := ArenaKit.toon_mat(GOLD, 0.22, 0.85, 0.65, true, Color(0.65, 0.38, 0.10))
+			_tube_child(_hat_root, 0.235, 0.125, Vector3(0.0, base_y + 0.03, 0.0), gold_mat)
 			for i in 5:
 				var angle := TAU * float(i) / 5.0
-				var spot := Vector3(cos(angle) * 0.19, base_y + 0.13, sin(angle) * 0.19)
-				ArenaKit.deco_cylinder(_hat_root, 0.06, 0.13, spot, GOLD, Vector3.ZERO, 0.0)
-			ArenaKit.deco_sphere(_hat_root, 0.04, Vector3(0.0, base_y + 0.03, -0.235), Color(0.9, 0.15, 0.3))
+				var spot := Vector3(cos(angle) * 0.19, base_y + 0.14, sin(angle) * 0.19)
+				var sp := ArenaKit.deco_cylinder(_hat_root, 0.06, 0.13, spot, GOLD, Vector3.ZERO, 0.0)
+				sp.material_override = gold_mat
+			_sphere_child(_hat_root, 0.044, Vector3(0.0, base_y + 0.04, -0.24), ArenaKit.toon_mat(Color(0.95, 0.18, 0.32), 0.14, 0.90, 0.45, true))
 		&"goggles":
-			# Ski goggles pushed up on the forehead.
-			ArenaKit.deco_cylinder(_hat_root, 0.265, 0.06, Vector3(0.0, base_y - 0.08, 0.0), NAVY)
+			# Cover-art aviator cap + oversized cyan-lens goggles pushed onto forehead!
+			_sphere_child(_hat_root, 0.278, Vector3(0.0, base_y - 0.015, 0.01), main_mat, 0.64)
+			_box_child(_hat_root, Vector3(0.34, 0.036, 0.22), Vector3(0.0, base_y - 0.055, -0.24), main_mat, Vector3(8.0, 0.0, 0.0))
+			var strap_mat := ArenaKit.toon_mat(Color(0.32, 0.22, 0.14), 0.55, 0.35, 0.55, true)
+			var lens_mat := ArenaKit.toon_mat(Color(0.42, 0.90, 1.0), 0.10, 0.95, 0.45, true, Color(0.14, 0.42, 0.72))
+			_tube_child(_hat_root, 0.282, 0.065, Vector3(0.0, base_y - 0.02, 0.01), strap_mat)
 			for side: float in [-1.0, 1.0]:
-				ArenaKit.deco_cylinder(_hat_root, 0.088, 0.06, Vector3(side * 0.1, base_y - 0.06, -0.235), main, Vector3(90.0, 0.0, 0.0))
-				ArenaKit.deco_cylinder(_hat_root, 0.066, 0.07, Vector3(side * 0.1, base_y - 0.06, -0.24), Color(0.45, 0.88, 1.0), Vector3(90.0, 0.0, 0.0))
+				_tube_child(_hat_root, 0.095, 0.065, Vector3(side * 0.102, base_y + 0.005, -0.235), strap_mat, Vector3(90.0, 0.0, 0.0))
+				_tube_child(_hat_root, 0.072, 0.075, Vector3(side * 0.102, base_y + 0.005, -0.242), lens_mat, Vector3(90.0, 0.0, 0.0))
 		&"bunny":
+			var white_mat := ArenaKit.toon_mat(Color(0.98, 0.98, 1.0), 0.52, 0.35, 0.65, true)
+			var pink_mat := ArenaKit.toon_mat(Color(1.0, 0.62, 0.76), 0.55, 0.30, 0.0, true)
 			for side: float in [-1.0, 1.0]:
-				var ear := ArenaKit.deco_sphere(_hat_root, 0.07, Vector3(side * 0.11, base_y + 0.2, 0.0), Color(0.97, 0.97, 1.0), 3.2)
+				var ear := _sphere_child(_hat_root, 0.072, Vector3(side * 0.115, base_y + 0.22, 0.0), white_mat, 3.2)
 				ear.rotation_degrees.z = -side * 14.0
-				var inner := ArenaKit.deco_sphere(_hat_root, 0.04, Vector3(side * 0.112, base_y + 0.2, -0.04), Color(1.0, 0.62, 0.75), 4.5)
+				var inner := _sphere_child(_hat_root, 0.042, Vector3(side * 0.117, base_y + 0.22, -0.042), pink_mat, 4.4)
 				inner.rotation_degrees.z = -side * 14.0
 		&"horns":
+			var horn_mat := ArenaKit.toon_mat(Color(0.96, 0.20, 0.24), 0.28, 0.65, 0.65, true)
 			for side: float in [-1.0, 1.0]:
-				ArenaKit.deco_cylinder(_hat_root, 0.065, 0.22, Vector3(side * 0.14, base_y + 0.06, -0.05), Color(0.92, 0.16, 0.22),
-						Vector3(0.0, 0.0, -side * 25.0), 0.0)
+				var h := ArenaKit.deco_cylinder(_hat_root, 0.068, 0.24, Vector3(side * 0.145, base_y + 0.08, -0.04), Color(0.96, 0.20, 0.24), Vector3(0.0, 0.0, -side * 25.0), 0.0)
+				h.material_override = horn_mat
 		&"spiky":
-			# Spiky cartoon hair, straight out of a comic.
-			var hair := Color(1.0, 0.74, 0.18)
-			ArenaKit.deco_sphere(_hat_root, 0.235, Vector3(0.0, base_y - 0.16, 0.02), hair, 0.85)
+			var hair_mat := ArenaKit.toon_mat(Color(1.0, 0.76, 0.18), 0.38, 0.52, 0.65, true, Color(0.70, 0.36, 0.12))
+			_sphere_child(_hat_root, 0.245, Vector3(0.0, base_y - 0.10, 0.02), hair_mat, 0.85)
 			for i in 7:
 				var direction := Vector3.UP
 				if i > 0:
 					var around := TAU * float(i - 1) / 6.0
 					direction = Vector3(sin(0.7) * cos(around), cos(0.7), sin(0.7) * sin(around))
-				var spike := ArenaKit.deco_cylinder(_hat_root, 0.075, 0.24, Vector3(0.0, base_y - 0.18, 0.02) + direction * 0.27, hair,
-						Vector3.ZERO, 0.0)
+				var spike := ArenaKit.deco_cylinder(_hat_root, 0.078, 0.25, Vector3(0.0, base_y - 0.12, 0.02) + direction * 0.27, Color(1.0, 0.76, 0.18), Vector3.ZERO, 0.0)
+				spike.material_override = hair_mat
 				spike.quaternion = Quaternion(Vector3.UP, direction)
 		_:
-			# No hat: a cheerful tuft of hair.
-			ArenaKit.deco_sphere(_hat_root, 0.2, Vector3(0.0, base_y - 0.06, 0.02), Color(0.4, 0.25, 0.12), 0.6)
+			# No hat: hero_base.glb already has full sculpted hair + bangs!
+			pass
 
 
 func _capsule(parent: Node3D, radius: float, height: float, pos: Vector3, material: Material) -> MeshInstance3D:

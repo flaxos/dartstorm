@@ -7,11 +7,28 @@
 
 | Milestone | State |
 |---|---|
-| **v1.0.0 Production Release (Full Polish, Hardening & Graphics Overhaul)** | ✅ Built and validated. ⏳ UAT |
+| **v2.0.0 Cover-Art Parity (Stylized Models, Chromatic Toon, FP Arms & Elemental VFX)** | ✅ Built & Validated (Sprints 0–6 complete) |
+| **v1.0.0 Production Release (Full Polish, Hardening, Foam Bat & Multi-Platform Releases)** | ✅ Shipped & Tagged (`v1.0.0`, 1,544 tests, Windows/Linux/Android/Web/Server) |
 | Phase 0–6 Core Game & Modes (v0.1.0–v0.9.2) | ✅ Done |
 | Local Split-Screen, Web/Android, Stylized Uplift, 9 Arenas & 10 Modes | ✅ Done |
 
-## v1.0.0: Production Release — Full-Stack Hardening, Unconstrained Graphics Overhaul & Tactical UI (this release)
+## v2.0.0: Cover-Art Parity — Stylized Art, Sculpted Models, FP Hands & Elemental Spectacle *(ready for release)*
+
+Goal: Elevate live in-game graphics, character/blaster model fidelity, animations, elemental flight trails, and living backyard/arena environments to match the vibrant Pixar/Splatoon cartoon fidelity of **`docs/media/cover_art.jpg`** and **`docs/CONCEPT_BRIEF.md`** — **with zero loss of v1.0.0 gameplay functionality** (all 10 modes, 9 arenas, 12 weapons, split-screen, LAN/online, Dedicated Server, bots, workbench, and 1,570+ tests stay 100% green).
+
+- [x] **Sprint 0 — Authoritative GDD & Visual Benchmark Harness:** Updated `docs/GDD.md` (§1.11, §4.3, §5.6, §6.28, §7, §8), `docs/ROADMAP.md`, `docs/DECISIONS.md` (D-050), `assets/models/README.md`, and `docs/UAT.md` (Section S); added `tools/visual_benchmark.gd` fixed-camera golden capture harness.
+- [x] **Sprint 1 — Chromatic Cel Master Shader, Warm-Navy Outlines & Sunlit Lighting:** Created `dartstorm_toon.gdshader` (3-band hue-shifted chromatic shadows, jelly-bean toy speculars, golden rim halo) + `toon_outline.gdshader` (distance-scaled `#0a183d` ink outlines gated by Graphics Quality Presets via `ArenaKit.should_use_outlines`); upgraded `toon_character.gdshader`, `blaster_skin.gdshader`, `toy_wood.gdshader`, and `Arena` sky/cloud/bounce lighting to eliminate muddy grey/black shadow undersides across all 9 arenas.
+- [x] **Sprint 2 — Continuous Smooth-Skinned Cartoon Heroes, Expressive Faces & Sculpted Hats:** Built pure-Python `tools/sculpt/` (`mesh_sculpt.py`, `sculpt_hero.py`, `pack_hero_scene.gd`) Catmull-Clark subdivided & smooth multi-bone weighted `.glb` pipeline; replaced disconnected capsule/sphere hero parts with unified smooth-skinned `hero_base.glb`/`.tscn` (hoodie collar, back hood, kangaroo pocket, drawstrings, continuous sleeves/pants with zero leg gap, chunky rounded sneakers, sculpted hair bangs & ears, blinking Pixar eyes, smiling/flinching mouth), upgraded hats (rainbow propeller beanie, aviator goggles, etc.), and all 7 animations.
+- [x] **Sprint 3 — Blow-Molded Toy Blasters, First-Person Cartoon Hands & Animated Chainstorm Belt:** Re-sculpted all 7 `.glb`/`.tscn` blaster chassis (`tools/sculpt/sculpt_blasters.py`, `pack_blaster_scenes.gd`) with beveled toy-plastic shells, ergonomic grips, flanged safety-orange tips, and preserved sockets/moving parts; upgraded First-Person Hoodie Sleeves & Cartoon Hands in `player.gd` with chromatic cel & fine FP ink outlines; added animated 14-link looping foam-dart belt & `"FLAX'S CHAINSTORM"` nameplate on `chainstorm`.
+- [x] **Sprint 4 — Cover-Art Elemental Trails, Comic Starburst Deflects, Glowing Mirrors & Wind Ribbons:** Built 5 iconic zero-allocation pooled 3D elemental flight trails in `DartProjectile` (Wind calligraphic helix ribbons, Fire star-comets, Water turquoise splash droplets, Lightning jagged comic zig-zag bolts, Ice spinning crystal snowflakes); added `CombatFx.spawn_comic_starburst` spiky bursts + world-space `"BONK!"`/`"DEFLECT!"`/`"RICOCHET!"`/`"HOME RUN!"` pops + local comfort-safe melee hit-stop; upgraded `ReflectiveSurface` (beveled glowing cyan neon mirrors with animated glass sheen & twin ripples) and `WindZone` (removed opaque box wall, added curved flowing sky-blue wind ribbons & outlined cartoon fan/windsock).
+- [x] **Sprint 5 — Living Backyard & 9-Arena Architectural/Foliage Uplift:** Created `cloth_flag.gdshader` + `ArenaKit.waving_flag` vertex-animated waving team banners; built `tools/sculpt/sculpt_props.py` & `pack_prop_scenes.gd` upgrading all 14 shared arena props (`cartoon_tree`, `inflatable_barrier`, `inflatable_bunker`, `tactical_crate`, `tactical_barrel`, `playground_slide`, `archway_curved`, `desert_urn`, `dog_house` with sculpted puppy, plus cel upgrades on the remaining 5 props) with exact `StaticBody3D` colliders preserved; uplifted Backyard Fortress with lush 14-cluster oak canopy, decorative rope ladder, picket finial caps, storybook windowed neighbour houses, and chromatic-cel sky clouds.
+- [x] **Sprint 6 — Regression Tests, Visual Audit & Media Refresh:** Added `_test_v2_cover_art_parity()` automated regression suite, verified side-by-side Forward+ benchmark shots against `cover_art.jpg`, refreshed showcase screenshots (`docs/media/shot_*.png`) & `CHANGELOG.md`, and passed full `./tools/validate.sh` with 0 warnings and 0 leaks.
+
+*Post-v2.0.0 (`v2.1.0`):* Original Concept Brief elemental arenas (`Prism Palace`, `Ember Workshop`, `Frost Factory`, `Thunder Playground`) authored natively in the v2.0.0 visual pipeline.
+
+---
+
+## v1.0.0: Production Release — Full-Stack Hardening, Unconstrained Graphics Overhaul & Tactical UI *(shipped)*
 
 Goal: Polish DARTSTORM from prototype/beta into a ship-ready 1.0 release with zero known gameplay bugs, zero geometry/navmesh defects across all 9 arenas, commercial-grade stylized Forward+ visuals (with clean Compatibility fallback), a Tactical Radar HUD, zero missing font glyphs, and strict release hygiene.
 

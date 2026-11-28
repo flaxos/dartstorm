@@ -23,10 +23,16 @@ const FOAM_RADIUS := 0.04
 static var _foam_mesh: CylinderMesh
 static var _tip_mesh: CylinderMesh
 static var _trail_mesh: CylinderMesh
+static var _elem_ribbon_mesh: ArrayMesh
+static var _elem_star_mesh: ArrayMesh
+static var _elem_drop_mesh: SphereMesh
+static var _elem_bolt_mesh: BoxMesh
+static var _elem_flake_mesh: ArrayMesh
 static var _tip_material: StandardMaterial3D
 static var _foam_shader: Shader = preload("res://assets/materials/foam_dart.gdshader")
 static var _foam_materials: Dictionary = {}
 static var _trail_materials: Dictionary = {}
+static var _elem_materials: Dictionary = {}
 
 var pool: DartPool
 var data: DartData
@@ -65,6 +71,10 @@ var _query: PhysicsRayQueryParameters3D
 var _visual: Node3D
 var _foam: MeshInstance3D
 var _trail: MeshInstance3D
+var _elem_fx: Node3D
+var _elem_parts: Array[MeshInstance3D] = []
+var _elem_phase: float = 0.0
+var _active_element: DartData.Element = DartData.Element.NONE
 
 
 func _ready() -> void:
@@ -91,6 +101,16 @@ func _ready() -> void:
 	_trail.rotation_degrees.x = 90.0
 	_trail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_trail)
+
+	_elem_fx = Node3D.new()
+	_elem_fx.visible = false
+	add_child(_elem_fx)
+	for _i in 4:
+		var part := MeshInstance3D.new()
+		part.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		part.visible = false
+		_elem_fx.add_child(part)
+		_elem_parts.append(part)
 
 	_query = PhysicsRayQueryParameters3D.new()
 	visible = false
@@ -137,6 +157,7 @@ func launch(p_data: DartData, origin: Vector3, direction: Vector3, p_shooter: Ac
 	_foam.material_override = _foam_material(dart_color)
 	_trail.material_override = _trail_material(dart_color)
 	_trail.visible = true
+	_configure_elemental_trail(data.element, dart_color)
 	global_position = origin
 	_face_velocity()
 	_stretch_trail()
@@ -152,6 +173,8 @@ func retire() -> void:
 		scavengeable = false
 	active = false
 	visible = false
+	if _elem_fx != null:
+		_elem_fx.visible = false
 	set_physics_process(false)
 	if pool != null:
 		pool.release(self)
@@ -252,6 +275,8 @@ func _physics_process(delta: float) -> void:
 	else:
 		_face_velocity()
 		_stretch_trail()
+		if _active_element != DartData.Element.NONE:
+			_update_elemental_trail(delta)
 
 
 func _sweep(from: Vector3, to: Vector3) -> Dictionary:
@@ -343,6 +368,8 @@ func _become_spent(point: Vector3, normal: Vector3) -> void:
 	_spent = true
 	_spent_left = SPENT_SECONDS
 	_trail.visible = false
+	if _elem_fx != null:
+		_elem_fx.visible = false
 	velocity = velocity.bounce(normal) * SPENT_BOUNCE + normal * 0.6
 	global_position = point + normal * 0.03
 
@@ -381,9 +408,94 @@ func _face_velocity() -> void:
 
 
 func _stretch_trail() -> void:
-	var length := clampf(velocity.length() * 0.038, 0.35, 2.0)
-	_trail.scale = Vector3(1.0, length, 1.0)
+	var is_elem := _active_element != DartData.Element.NONE
+	var length := clampf(velocity.length() * (0.068 if is_elem else 0.045), 0.75 if is_elem else 0.45, 3.2 if is_elem else 2.2)
+	var width := 1.65 if is_elem else 1.15
+	_trail.scale = Vector3(width, length, width)
 	_trail.position = Vector3(0.0, 0.0, FOAM_LENGTH * 0.5 + length * 0.5)
+
+
+func _configure_elemental_trail(elem: DartData.Element, dart_color: Color) -> void:
+	_active_element = elem
+	_elem_phase = randf() * TAU
+	if _elem_fx == null:
+		return
+	if elem == DartData.Element.NONE:
+		_elem_fx.visible = false
+		return
+	_elem_fx.visible = true
+	var mesh: Mesh = _elem_ribbon_mesh
+	var mat: StandardMaterial3D = _elem_material(elem, dart_color)
+	match elem:
+		DartData.Element.WIND:
+			mesh = _elem_ribbon_mesh
+		DartData.Element.FIRE:
+			mesh = _elem_star_mesh
+		DartData.Element.WATER:
+			mesh = _elem_drop_mesh
+		DartData.Element.LIGHTNING:
+			mesh = _elem_bolt_mesh
+		DartData.Element.ICE:
+			mesh = _elem_flake_mesh
+	for i in _elem_parts.size():
+		var part := _elem_parts[i]
+		part.mesh = mesh
+		part.material_override = mat
+		part.visible = true
+	_update_elemental_trail(0.0)
+
+
+func _update_elemental_trail(delta: float) -> void:
+	_elem_phase += delta
+	var trail_len := clampf(velocity.length() * 0.065, 0.9, 3.0)
+	var n := _elem_parts.size()
+	for i in n:
+		var part := _elem_parts[i]
+		var frac := (float(i) + 0.45) / float(n)
+		var z := FOAM_LENGTH * 0.5 + frac * trail_len
+		match _active_element:
+			DartData.Element.WIND:
+				# Swirling translucent sky-blue calligraphic wind ribbon helix
+				var ang := _elem_phase * 14.0 - frac * TAU * 1.35
+				var rad := 0.14 + frac * 0.16
+				part.position = Vector3(cos(ang) * rad, sin(ang) * rad, z)
+				part.rotation = Vector3(0.0, 0.0, ang)
+				var s := 1.05 - frac * 0.35
+				part.scale = Vector3(s, s, 0.9 + frac * 0.55)
+			DartData.Element.FIRE:
+				# Blazing comet core + orbiting tumbling 4-point cartoon golden starbursts
+				var ang := _elem_phase * 11.0 + float(i) * 1.7
+				var rad := 0.10 + frac * 0.16
+				part.position = Vector3(cos(ang) * rad, sin(ang) * rad, z)
+				part.rotation = Vector3(_elem_phase * 8.0 + float(i), _elem_phase * 10.0, ang)
+				var pulse := (1.15 - frac * 0.42) * (0.85 + 0.25 * sin(_elem_phase * 18.0 + float(i) * 2.1))
+				part.scale = Vector3.ONE * pulse
+			DartData.Element.WATER:
+				# Glossy electric-turquoise splash wake with bouncing water droplet beads
+				var wave := _elem_phase * 12.0 - float(i) * 1.4
+				var side := -1.0 if (i % 2 == 0) else 1.0
+				part.position = Vector3(side * (0.09 + frac * 0.14) * (0.7 + 0.3 * sin(wave)),
+						cos(wave) * (0.07 + frac * 0.09), z)
+				part.rotation = Vector3(0.0, 0.0, 0.0)
+				var s := 1.15 - frac * 0.45
+				part.scale = Vector3(s, s * 0.9, s * 1.45)
+			DartData.Element.LIGHTNING:
+				# Crackling bright-yellow jagged comic lightning zig-zag bolts
+				var step_t := floorf(_elem_phase * 22.0)
+				var side := 1.0 if ((i + int(step_t)) % 2 == 0) else -1.0
+				var jitter := 0.14 + 0.05 * sin(step_t * 3.7 + float(i) * 2.3)
+				var seg_len := trail_len / float(n) * 1.25
+				part.position = Vector3(side * jitter * 0.55, sin(step_t * 2.1 + float(i)) * 0.06, z)
+				part.rotation = Vector3(0.0, side * 0.48, side * 0.32)
+				part.scale = Vector3(0.065, 0.065, seg_len)
+			DartData.Element.ICE:
+				# Sparkling hexagonal cyan-white frost snowflakes spinning in the wake
+				var ang := _elem_phase * 7.5 + float(i) * 1.57
+				var rad := 0.11 + frac * 0.14
+				part.position = Vector3(cos(ang) * rad, sin(ang) * rad, z)
+				part.rotation = Vector3(0.4 * float(i), _elem_phase * 5.0, ang)
+				var s := 1.05 - frac * 0.35
+				part.scale = Vector3.ONE * s
 
 
 static func _ensure_shared_resources() -> void:
@@ -401,18 +513,132 @@ static func _ensure_shared_resources() -> void:
 	_tip_mesh.height = 0.07
 	_tip_mesh.radial_segments = 10
 	_tip_mesh.rings = 1
-	# Tapered needle-tail aerodynamic streak (thick at dart tail, needle-thin behind)
+	# Sweeping tapered aerodynamic ribbon-core streak (thick glowing wake behind dart)
 	_trail_mesh = CylinderMesh.new()
-	_trail_mesh.top_radius = 0.002
-	_trail_mesh.bottom_radius = 0.026
+	_trail_mesh.top_radius = 0.004
+	_trail_mesh.bottom_radius = 0.036
 	_trail_mesh.height = 1.0
-	_trail_mesh.radial_segments = 6
+	_trail_mesh.radial_segments = 8
 	_trail_mesh.rings = 1
 	_tip_material = StandardMaterial3D.new()
 	_tip_material.albedo_color = Color(1.0, 0.45, 0.05)
 	_tip_material.emission_enabled = true
 	_tip_material.emission = Color(1.0, 0.4, 0.0)
-	_tip_material.emission_energy_multiplier = 0.75
+	_tip_material.emission_energy_multiplier = 0.85
+
+	# 1. Wind calligraphic curved ribbon mesh
+	var st_r := SurfaceTool.new()
+	st_r.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var r_segs := 6
+	for s in r_segs:
+		var t0 := float(s) / float(r_segs)
+		var t1 := float(s + 1) / float(r_segs)
+		var z0 := (t0 - 0.5) * 0.72
+		var z1 := (t1 - 0.5) * 0.72
+		var y0 := sin(t0 * PI) * 0.08
+		var y1 := sin(t1 * PI) * 0.08
+		var w0 := sin(t0 * PI) * 0.085 + 0.012
+		var w1 := sin(t1 * PI) * 0.085 + 0.012
+		var a := Vector3(-w0, y0, z0)
+		var b := Vector3( w0, y0, z0)
+		var c := Vector3( w1, y1, z1)
+		var d := Vector3(-w1, y1, z1)
+		st_r.add_vertex(a); st_r.add_vertex(b); st_r.add_vertex(c)
+		st_r.add_vertex(a); st_r.add_vertex(c); st_r.add_vertex(d)
+	st_r.generate_normals()
+	_elem_ribbon_mesh = st_r.commit()
+
+	# 2. Fire 4-point cartoon starburst sparkle mesh (double-sided 3D octa-star)
+	var st_s := SurfaceTool.new()
+	st_s.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var outer := 0.145
+	var inner := 0.038
+	var thick := 0.028
+	var ring_pts: Array[Vector3] = []
+	for k in 8:
+		var ang := float(k) * TAU / 8.0
+		var rad := outer if (k % 2 == 0) else inner
+		ring_pts.append(Vector3(cos(ang) * rad, sin(ang) * rad, 0.0))
+	var front := Vector3(0.0, 0.0, thick)
+	var back := Vector3(0.0, 0.0, -thick)
+	for k in 8:
+		var p0 := ring_pts[k]
+		var p1 := ring_pts[(k + 1) % 8]
+		st_s.add_vertex(front); st_s.add_vertex(p0); st_s.add_vertex(p1)
+		st_s.add_vertex(back); st_s.add_vertex(p1); st_s.add_vertex(p0)
+	st_s.generate_normals()
+	_elem_star_mesh = st_s.commit()
+
+	# 3. Water glossy droplet bead
+	_elem_drop_mesh = SphereMesh.new()
+	_elem_drop_mesh.radius = 0.072
+	_elem_drop_mesh.height = 0.144
+	_elem_drop_mesh.radial_segments = 10
+	_elem_drop_mesh.rings = 6
+
+	# 4. Lightning jagged comic bolt segment
+	_elem_bolt_mesh = BoxMesh.new()
+	_elem_bolt_mesh.size = Vector3(1.0, 1.0, 1.0)
+
+	# 5. Ice spinning hexagonal crystal snowflake star
+	var st_f := SurfaceTool.new()
+	st_f.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var f_outer := 0.135
+	var f_inner := 0.048
+	var f_pts: Array[Vector3] = []
+	for k in 12:
+		var ang := float(k) * TAU / 12.0
+		var rad := f_outer if (k % 2 == 0) else f_inner
+		f_pts.append(Vector3(cos(ang) * rad, sin(ang) * rad, 0.0))
+	var f_front := Vector3(0.0, 0.0, 0.022)
+	var f_back := Vector3(0.0, 0.0, -0.022)
+	for k in 12:
+		var p0 := f_pts[k]
+		var p1 := f_pts[(k + 1) % 12]
+		st_f.add_vertex(f_front); st_f.add_vertex(p0); st_f.add_vertex(p1)
+		st_f.add_vertex(f_back); st_f.add_vertex(p1); st_f.add_vertex(p0)
+	st_f.generate_normals()
+	_elem_flake_mesh = st_f.commit()
+
+
+static func _elem_material(elem: DartData.Element, fallback_tint: Color) -> StandardMaterial3D:
+	var key := int(elem)
+	if _elem_materials.has(key):
+		return _elem_materials[key] as StandardMaterial3D
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.emission_enabled = true
+	match elem:
+		DartData.Element.WIND:
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			mat.albedo_color = Color(0.72, 0.96, 1.0, 0.78)
+			mat.emission = Color(0.55, 0.92, 1.0)
+			mat.emission_energy_multiplier = 1.6
+		DartData.Element.FIRE:
+			mat.albedo_color = Color(1.0, 0.86, 0.22, 1.0)
+			mat.emission = Color(1.0, 0.56, 0.10)
+			mat.emission_energy_multiplier = 2.4
+		DartData.Element.WATER:
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			mat.albedo_color = Color(0.28, 0.88, 1.0, 0.88)
+			mat.emission = Color(0.22, 0.82, 1.0)
+			mat.emission_energy_multiplier = 1.5
+		DartData.Element.LIGHTNING:
+			mat.albedo_color = Color(1.0, 0.98, 0.32, 1.0)
+			mat.emission = Color(1.0, 0.94, 0.18)
+			mat.emission_energy_multiplier = 2.8
+		DartData.Element.ICE:
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			mat.albedo_color = Color(0.84, 0.98, 1.0, 0.92)
+			mat.emission = Color(0.55, 0.92, 1.0)
+			mat.emission_energy_multiplier = 2.0
+		_:
+			mat.albedo_color = fallback_tint
+			mat.emission = fallback_tint
+			mat.emission_energy_multiplier = 1.4
+	_elem_materials[key] = mat
+	return mat
 
 
 static func _foam_material(tint: Color) -> Material:
@@ -433,6 +659,9 @@ static func _trail_material(tint: Color) -> StandardMaterial3D:
 		var material := StandardMaterial3D.new()
 		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		material.albedo_color = Color(tint.lightened(0.5), 0.52)
+		material.albedo_color = Color(tint.lightened(0.35), 0.76)
+		material.emission_enabled = true
+		material.emission = tint.lightened(0.25)
+		material.emission_energy_multiplier = 1.5
 		_trail_materials[key] = material
 	return _trail_materials[key]

@@ -75,8 +75,8 @@ var _fp_arms: Node3D
 var _fp_left_arm: Node3D
 var _fp_right_arm: Node3D
 var _fp_left_arm_rest_pos: Vector3 = Vector3.ZERO
-var _sleeve_mat: StandardMaterial3D
-var _skin_mat: StandardMaterial3D
+var _sleeve_mat: Material
+var _skin_mat: Material
 var _reloading: bool = false
 var _reload_time: float = 0.0
 var _reload_duration: float = 0.8
@@ -750,7 +750,10 @@ func _on_weapon_changed(state: WeaponState) -> void:
 		_build_fp_arms()
 	_fp_arms.visible = not is_tagged_out
 	if _sleeve_mat != null:
-		_sleeve_mat.albedo_color = color
+		if _sleeve_mat is ShaderMaterial:
+			(_sleeve_mat as ShaderMaterial).set_shader_parameter(&"albedo_color", Color(color.r, color.g, color.b, 1.0))
+		elif _sleeve_mat is StandardMaterial3D:
+			(_sleeve_mat as StandardMaterial3D).albedo_color = color
 	var skin: StringName = skin_id if skin_id != &"default" else (GameSettings.player2_skin if player_index == 1 else GameSettings.player_skin)
 	var atts: Dictionary = state.attachments if state != null else {}
 	_view_model = BlasterModel.create(state.data, true, skin, atts)
@@ -769,13 +772,21 @@ func _on_weapon_changed(state: WeaponState) -> void:
 		if _fp_left_arm != null:
 			if _view_model.foregrip_marker != null:
 				_fp_left_arm.visible = true
-				_fp_left_arm.position = _view_model.foregrip_marker.position - Vector3(0.0, -0.07, -0.22)
+				var fg := _view_model.foregrip_marker.position
+				if fg.y > 0.08:
+					# Top carry-handle grip (Chainstorm): compact left arm tucking cleanly beside receiver
+					_fp_left_arm.position = fg + Vector3(-0.085, -0.055, -0.05)
+					_fp_left_arm.rotation_degrees = Vector3(14.0, 20.0, -14.0)
+				else:
+					_fp_left_arm.position = fg - Vector3(0.0, -0.07, -0.22)
+					_fp_left_arm.rotation = Vector3.ZERO
 			elif _view_model.grip_marker != null:
 				_fp_left_arm.visible = false
+				_fp_left_arm.rotation = Vector3.ZERO
 			else:
 				_fp_left_arm.visible = true
 				_fp_left_arm.position = Vector3.ZERO
-			_fp_left_arm.rotation = Vector3.ZERO
+				_fp_left_arm.rotation = Vector3.ZERO
 			_fp_left_arm_rest_pos = _fp_left_arm.position
 	if body_model != null:
 		body_model.set_weapon(state.data, skin, atts)
@@ -811,6 +822,15 @@ func _on_landed_hit(_victim: Actor, was_tag: bool, _was_ricochet: bool) -> void:
 	Sfx.play(&"tag" if was_tag else &"hit_confirm", 1.0, -2.0 if was_tag else -6.0, 0.05)
 	if was_tag:
 		GameSettings.vibrate(0.5, 0.2, 0.15, player_index)
+
+
+func _on_melee_impact_juice() -> void:
+	if GameSettings.camera_shake <= 0.01:
+		return
+	add_trauma(0.28)
+	if _view_model != null:
+		_view_model.trigger_hit_stop(0.042)
+	GameSettings.vibrate(0.45, 0.35, 0.12, player_index)
 
 
 func _on_hit_received(_attacker: Actor) -> void:
@@ -899,36 +919,38 @@ func _build_fp_arms() -> void:
 	_fp_arms.name = "FirstPersonArms"
 	_view_root.add_child(_fp_arms)
 
-	_sleeve_mat = ArenaKit.mat(color, 0.7)
-	_skin_mat = ArenaKit.mat(Color(0.96, 0.78, 0.65), 0.55)
+	# Cover-Art stylized chromatic cel hoodie sleeves & cartoon hands with fine FP ink outlines
+	var sleeve_sm := ArenaKit.toon_mat(color, 0.62, 0.30, 0.22, true, Color(0.22, 0.26, 0.56)).duplicate() as ShaderMaterial
+	var cuff_sm := ArenaKit.toon_mat(color.darkened(0.16), 0.72, 0.20, 0.22, true, Color(0.18, 0.22, 0.48))
+	var skin_sm := ArenaKit.toon_mat(Color(1.0, 0.80, 0.64), 0.58, 0.35, 0.22, true, Color(0.72, 0.38, 0.36))
+	_sleeve_mat = sleeve_sm
+	_skin_mat = skin_sm
 
-	# Right Arm: reaches forward to grip handle and trigger
+	# Right Arm: chunky hoodie forearm, ribbed cuff & rounded cartoon gripping hand
 	_fp_right_arm = Node3D.new()
 	_fp_right_arm.name = "RightArm"
 	_fp_arms.add_child(_fp_right_arm)
-	# Forearm sleeve
-	var r_sleeve := _capsule_arm(_fp_right_arm, 0.048, 0.28, Vector3(0.12, -0.22, 0.16), _sleeve_mat)
-	r_sleeve.rotation_degrees = Vector3(48.0, -18.0, 15.0)
-	# Hand wrapping handle
-	var r_hand := ArenaKit.deco_box(_fp_right_arm, Vector3(0.065, 0.08, 0.065), Vector3(0.015, -0.11, 0.06), Color(0.96, 0.78, 0.65), Vector3(-14.0, 0.0, 0.0))
-	r_hand.material_override = _skin_mat
-	r_hand.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# Thumb over grip
-	var r_thumb := ArenaKit.deco_box(_fp_right_arm, Vector3(0.03, 0.04, 0.05), Vector3(-0.02, -0.09, 0.07), Color(0.96, 0.78, 0.65), Vector3(-14.0, 20.0, 0.0))
-	r_thumb.material_override = _skin_mat
-	r_thumb.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var r_sleeve := _capsule_arm(_fp_right_arm, 0.044, 0.28, Vector3(0.11, -0.22, 0.17), sleeve_sm)
+	r_sleeve.rotation_degrees = Vector3(50.0, -18.0, 14.0)
+	var r_cuff := _fp_cyl(_fp_right_arm, 0.042, 0.047, 0.044, Vector3(0.050, -0.148, 0.102), cuff_sm, Vector3(50.0, -18.0, 14.0))
+	r_cuff.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var r_palm := _fp_sphere(_fp_right_arm, 0.042, Vector3(0.012, -0.105, 0.062), skin_sm, Vector3(0.95, 1.10, 0.95))
+	r_palm.rotation_degrees = Vector3(-14.0, 0.0, 0.0)
+	var r_thumb := _fp_sphere(_fp_right_arm, 0.022, Vector3(-0.024, -0.082, 0.068), skin_sm, Vector3(0.85, 1.32, 0.95))
+	r_thumb.rotation_degrees = Vector3(-18.0, 24.0, 28.0)
 
-	# Left Arm: reaches forward to support barrel / under-barrel forend
+	# Left Arm: supporting hoodie forearm, ribbed cuff & rounded palm (seamless cuff-to-sleeve join!)
 	_fp_left_arm = Node3D.new()
 	_fp_left_arm.name = "LeftArm"
 	_fp_arms.add_child(_fp_left_arm)
-	# Forearm sleeve
-	var l_sleeve := _capsule_arm(_fp_left_arm, 0.046, 0.30, Vector3(-0.16, -0.24, 0.14), _sleeve_mat)
-	l_sleeve.rotation_degrees = Vector3(54.0, 32.0, -22.0)
-	# Hand supporting receiver / forend
-	var l_hand := ArenaKit.deco_box(_fp_left_arm, Vector3(0.075, 0.06, 0.07), Vector3(-0.03, -0.13, -0.12), Color(0.96, 0.78, 0.65), Vector3(10.0, 25.0, 0.0))
-	l_hand.material_override = _skin_mat
-	l_hand.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var l_sleeve := _capsule_arm(_fp_left_arm, 0.044, 0.30, Vector3(-0.128, -0.205, 0.062), sleeve_sm)
+	l_sleeve.rotation_degrees = Vector3(52.0, 26.0, -22.0)
+	var l_cuff := _fp_cyl(_fp_left_arm, 0.042, 0.047, 0.052, Vector3(-0.072, -0.152, -0.025), cuff_sm, Vector3(52.0, 26.0, -22.0))
+	l_cuff.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var l_palm := _fp_sphere(_fp_left_arm, 0.042, Vector3(-0.036, -0.122, -0.088), skin_sm, Vector3(1.10, 0.88, 1.04))
+	l_palm.rotation_degrees = Vector3(12.0, 24.0, 0.0)
+	var l_thumb := _fp_sphere(_fp_left_arm, 0.023, Vector3(0.008, -0.105, -0.085), skin_sm, Vector3(0.9, 1.25, 0.95))
+	l_thumb.rotation_degrees = Vector3(10.0, -20.0, -32.0)
 
 	if view_layer_mask != 1:
 		_set_model_layers(_fp_arms, view_layer_mask)
@@ -940,22 +962,54 @@ func _build_zombie_arms() -> void:
 	_zombie_arms = Node3D.new()
 	_zombie_arms.name = "ZombieArms"
 	_view_root.add_child(_zombie_arms)
-	var mat := ArenaKit.mat(Color(0.38, 0.78, 0.28), 0.7)
+	var z_sleeve := ArenaKit.toon_mat(Color(0.38, 0.78, 0.28), 0.65, 0.30, 0.24, true, Color(0.16, 0.42, 0.20))
+	var z_hand := ArenaKit.toon_mat(Color(0.48, 0.86, 0.38), 0.55, 0.38, 0.24, true, Color(0.20, 0.48, 0.22))
 	for side: float in [-1.0, 1.0]:
-		var arm := _capsule_arm(_zombie_arms, 0.065, 0.42, Vector3(side * 0.22, -0.16, -0.36), mat)
+		var arm := _capsule_arm(_zombie_arms, 0.066, 0.42, Vector3(side * 0.22, -0.16, -0.36), z_sleeve)
 		arm.rotation_degrees = Vector3(70.0, side * -12.0, 0.0)
-		var hand := ArenaKit.deco_sphere(_zombie_arms, 0.05, Vector3(side * 0.22, -0.06, -0.52), Color(0.48, 0.82, 0.38))
-		hand.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_fp_sphere(_zombie_arms, 0.056, Vector3(side * 0.22, -0.06, -0.52), z_hand, Vector3(1.0, 0.9, 1.15))
 	if view_layer_mask != 1:
 		_set_model_layers(_zombie_arms, view_layer_mask)
+
+
+func _fp_sphere(parent: Node3D, radius: float, pos: Vector3, material: Material, s: Vector3 = Vector3.ONE) -> MeshInstance3D:
+	var mesh := SphereMesh.new()
+	mesh.radius = radius
+	mesh.height = radius * 2.0
+	mesh.radial_segments = 16
+	mesh.rings = 10
+	var inst := MeshInstance3D.new()
+	inst.mesh = mesh
+	inst.material_override = material
+	inst.position = pos
+	inst.scale = s
+	inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(inst)
+	return inst
+
+
+func _fp_cyl(parent: Node3D, r_top: float, r_bot: float, height: float, pos: Vector3, material: Material, rot_deg: Vector3 = Vector3.ZERO) -> MeshInstance3D:
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = r_top
+	mesh.bottom_radius = r_bot
+	mesh.height = height
+	mesh.radial_segments = 16
+	var inst := MeshInstance3D.new()
+	inst.mesh = mesh
+	inst.material_override = material
+	inst.position = pos
+	inst.rotation_degrees = rot_deg
+	inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(inst)
+	return inst
 
 
 func _capsule_arm(parent: Node3D, radius: float, height: float, pos: Vector3, material: Material) -> MeshInstance3D:
 	var mesh := CapsuleMesh.new()
 	mesh.radius = radius
 	mesh.height = height
-	mesh.radial_segments = 10
-	mesh.rings = 3
+	mesh.radial_segments = 16
+	mesh.rings = 6
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh
 	instance.material_override = material

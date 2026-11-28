@@ -420,3 +420,18 @@ box in corners for bots, so walkways are at least 1.5 m (the dining chairs moved
    - Added `Windows Desktop` preset (`embed_pck=true`, single `DARTSTORM.exe`) in `export_presets.cfg`, `./tools/export_windows.sh`, `./tools/export_all.sh` (generates all 5 platform archives + `SHA256SUMS.txt`), and `.github/workflows/release.yml` for reproducible GitHub Releases.
 **Alternatives Considered:** Using trademarked toy-bat branding (violates kid-safe originality rule); shipping Linux/Android only without a Windows `.exe` for testers; leaving default Godot robot icons on Android/Windows.
 **Why:** Gives players a joyful, chaotic close-range & deflect melee toy right where it belongs across every mode, fixes the `Hud._process` reload regression cleanly, and lets Windows, Linux, Android, Web, and LAN server testers download and play v1.0.0 directly from GitHub Releases.
+
+### D-050: v2.0.0 Cover-Art Parity Art Pipeline, Chromatic Toon Shader & Zero-Regression Visual Architecture (v2.0.0)
+**Chosen:**
+1. **Pure-Python Parametric Sculptor (`tools/sculpt/`) Exporting Standard glTF 2.0 `.glb`:**
+   - Uses existing `python3` + `numpy` + `PIL` (zero external DCC installations or paid plugins, honoring `CONCEPT_BRIEF.md` §13) to generate Catmull-Clark subdivided, spline-lofted, beveled, UV-mapped, smooth-skinned `.glb` assets with baked curvature/AO textures directly into `assets/models/`.
+   - Preserves every existing bone/socket (`Socket_Hand_R`, `Socket_Hand_L`, `Socket_Head`, `Socket_Back`, `MuzzleMarker`, `GripMarker`, `ForegripMarker`, `Slide`, `Cylinder`, `PumpSlide`, `BarrelCluster`) and material slot (`chassis`, `hardware`, `safety`, `grip`, `clothing`, `pants`, `skin`, `shoes`) so all existing gameplay scripts, workbench attachments, skins, and split-screen camera masks stay 100% compatible.
+2. **Unified Chromatic Cel & Outline Shading (`dartstorm_toon.gdshader` + `toon_outline.gdshader`):**
+   - Shifts shadow bands into warm, saturated hues rather than dark grey/black, adds glossy toy-plastic specular highlights + golden rim light, and layers a distance-scaled warm-navy (`#0a183d`) inverted-hull ink outline controlled cleanly by `GameSettings.graphics_quality` (automatically disabled on `Low` and WebGL2/Android `gl_compatibility` for locked 60 FPS).
+3. **Presentation-Only Uplift & Zero Gameplay Loss:**
+   - Keeps all 10 game modes, 9 arena collision/navmesh footprints, 12 weapon/dart `.tres` balance numbers, bot AI, split-screen, LAN/online netcode, and 1,544+ automated tests completely intact while lifting all 9 arenas, heroes, FP hands, blasters, elemental flight trails, mirrors, wind streams, and props to Cover-Art Parity (`docs/media/cover_art.jpg`).
+   - Defers brand-new Concept Brief elemental arenas (`Prism Palace`, `Ember Workshop`, `Frost Factory`, `Thunder Playground`) to `v2.1.0` so v2.0.0 ships cleanly without scope creep.
+4. **Objective Visual Benchmark Gate (`tools/visual_benchmark.gd`):**
+   - Every sprint captures 6 fixed-camera Forward+ golden shots (`lobby_heroes`, `fp_blaster_hands`, `fp_bat_swing`, `backyard_fort_vista`, `elemental_trails_showcase`, `dust2_and_stadium`) alongside full `./tools/validate.sh`.
+**Alternatives Considered:** Requiring Blender installation on dev machines (adds heavy toolchain friction); buying third-party commercial asset packs (violates kid-safe original-art rules in Concept Brief §13); rebuilding arena colliders during art uplift (risks navmesh and spawn regressions).
+**Why:** Delivers authentic Pixar/Splatoon cover-art model fidelity, expressive animation, first-person cartoon hands, and elemental spectacle using deterministic, version-controlled scripts while guaranteeing zero regressions to v1.0.0 gameplay.

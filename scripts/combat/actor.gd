@@ -619,6 +619,9 @@ func _perform_melee_swing(state: WeaponState) -> void:
 	var min_dot := cos(deg_to_rad(weapon.melee_arc_degrees))
 	var space := get_world_3d().direct_space_state if is_inside_tree() and get_world_3d() != null else null
 
+	var fx_parent: Node = get_parent() if get_parent() != null else self
+	var landed_bonk_or_deflect := false
+
 	# 1. Bonk enemy actors inside melee arc & unobstructed line-of-sight
 	for node in get_tree().get_nodes_in_group(&"actors"):
 		var victim := node as Actor
@@ -640,6 +643,8 @@ func _perform_melee_swing(state: WeaponState) -> void:
 			if not space.intersect_ray(q).is_empty():
 				continue
 		victim.receive_melee_hit(self, weapon, aim)
+		CombatFx.spawn_comic_starburst(fx_parent, target_center + Vector3.UP * 0.45, "BONK!", Color(1.0, 0.85, 0.16), 1.05)
+		landed_bonk_or_deflect = true
 
 	# 2. Bonk bullseye wobble targets in reach
 	for tnode in get_tree().get_nodes_in_group(&"wobble_targets"):
@@ -650,7 +655,9 @@ func _perform_melee_swing(state: WeaponState) -> void:
 		var d := to_t.length()
 		if d <= max_range + 0.7 and (d < 0.4 or aim.dot(to_t / d) >= min_dot):
 			wt.on_melee_hit(self)
+			CombatFx.spawn_comic_starburst(fx_parent, wt.global_position + Vector3.UP * 0.35, "POW!", Color(1.0, 0.72, 0.14), 0.92)
 			Sfx.play_at(&"bat_bonk", wt.global_position, 1.2, -1.0)
+			landed_bonk_or_deflect = true
 
 	# 3. Baseball Deflect! Bat incoming enemy foam darts straight back for ricochet bonus!
 	if dart_pool != null and is_instance_valid(dart_pool):
@@ -664,8 +671,10 @@ func _perform_melee_swing(state: WeaponState) -> void:
 			var d := to_d.length()
 			if d <= max_range + 0.8 and (d < 0.4 or aim.dot(to_d / d) >= min_dot - 0.1):
 				dart.deflect(self, aim, 30.0)
+				CombatFx.spawn_comic_starburst(fx_parent, dart.global_position, "DEFLECT!", Color(0.24, 0.94, 1.0), 0.98)
 				Sfx.play_at(&"bat_bonk", dart.global_position, 1.3, 1.0)
 				Sfx.play_at(&"ricochet", dart.global_position, 1.15, -2.0)
+				landed_bonk_or_deflect = true
 
 	# 4. Bat live foam grenades straight back (and claim thrower credit!)
 	for gnode in get_tree().get_nodes_in_group(&"grenades"):
@@ -678,7 +687,12 @@ func _perform_melee_swing(state: WeaponState) -> void:
 			gren.linear_velocity = aim * 18.0 + Vector3.UP * 5.0
 			gren.thrower = self
 			gren.team_id = team_id
+			CombatFx.spawn_comic_starburst(fx_parent, gren.global_position, "HOME RUN!", Color(1.0, 0.54, 0.12), 1.15)
 			Sfx.play_at(&"bat_bonk", gren.global_position, 1.1, 1.0)
+			landed_bonk_or_deflect = true
+
+	if landed_bonk_or_deflect:
+		_on_melee_impact_juice()
 
 
 func _get_infused_dart_data(base_dart: DartData, elem: DartData.Element) -> DartData:
@@ -751,4 +765,8 @@ func _set_body_visible(_shown: bool) -> void:
 
 
 func _on_zombie_state_changed(_enabled: bool) -> void:
+	pass
+
+
+func _on_melee_impact_juice() -> void:
 	pass

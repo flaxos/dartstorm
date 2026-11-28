@@ -2,6 +2,24 @@
 
 All notable releases of **DARTSTORM: Elemental Arena** are documented in this file.
 
+## [2.0.0] - 2026-11-28 (Cover-Art Parity Visual & Model Uplift)
+
+### Added
+- **Chromatic Cel Master Shader & Warm-Navy Comic Ink Outlines:** Added `assets/materials/dartstorm_toon.gdshader` (3-band hue-shifted shadows with zero muddy grey/black undersides, glossy jelly-bean toy specular pills, golden sunlit rim, vertex-color AO, and live combat/elemental effects) and `assets/materials/toon_outline.gdshader` (distance-adaptive `#0a183d` inverted-hull silhouettes gated cleanly by Graphics Quality Presets & rendering backend via `ArenaKit.should_use_outlines`).
+- **Pure-Python Parametric 3D Sculpting Pipeline (`tools/sculpt/`):** Deterministic `numpy` Catmull-Clark subdivision, beveled extrusion, spline lofting, smooth capsule multi-bone skinning, and glTF 2.0 `.glb` exporter (`mesh_sculpt.py`, `sculpt_hero.py`, `sculpt_blasters.py`, `sculpt_props.py`, plus Godot `.tscn` packers).
+- **Continuous Smooth-Skinned Cartoon Heroes & Expressive Faces:** Replaced disconnected capsule/sphere hero parts with a unified 20-bone smooth-skinned `hero_base.glb`/`.tscn` featuring hoodie cowl, back hood, kangaroo pocket, cream drawstrings, continuous sleeves and trousers (zero leg gap), chunky white-midsole sneakers, sculpted ears & swept bangs, blinking Pixar eyes (`Mesh_Eyelids`), animated smile/flinch mouth swap (`Mesh_MouthSmile` / `Mesh_MouthFlinch`), and chromatic-cel sculpted hats (including cover-art rainbow propeller beanie & aviator goggles).
+- **Iconic 5-Element 3D Flight Trails & Comic Starburst Juice:** Upgraded pooled `DartProjectile` trails with zero-allocation 3D elemental signatures (Wind swirling sky-blue calligraphic ribbons, Fire tumbling 4-point cartoon starbursts, Water glossy turquoise droplet wakes, Lightning crackling jagged yellow bolts, Ice spinning hexagonal frost snowflakes); added `CombatFx.spawn_comic_starburst` spiky bursts + world-space `"BONK!"`, `"DEFLECT!"`, `"RICOCHET!"`, `"HOME RUN!"`, and `"TRICK SHOT!"` word pops + comfort-safe local melee hit-stop (`BlasterModel.trigger_hit_stop`).
+- **Vertex-Animated Waving Cloth Team Flags:** Added `assets/materials/cloth_flag.gdshader` and `ArenaKit.waving_flag` bringing Backyard Fortress team banners to life in the breeze.
+- **Visual Benchmark Harness:** Added `tools/visual_benchmark.gd` capturing 6 fixed-camera 1280×720 Forward+ showcase shots for reproducible visual regression reviews.
+
+### Changed
+- **Blow-Molded Sculpted Blasters, Chainstorm Belt & First-Person Cartoon Hands:** Re-sculpted all 7 modular `.glb`/`.tscn` blasters with rounded blow-molded toy housings, ergonomic grips, and flanged safety-orange tips while preserving all sockets, moving parts, and ADS iron-sight clearances; mounted an animated 14-link looping blue/orange foam-dart belt & `"FLAX'S CHAINSTORM"` nameplate on `chainstorm`; upgraded first-person hoodie sleeves & cartoon hands with chromatic cel shading and fine FP outlines; smoothed custom blaster skin speculars in `blaster_skin.gdshader` to eliminate micro-normal sparkle noise.
+- **Beveled Glowing Mirrors & Curved Flowing Wind Ribbons:** Upgraded `ReflectiveSurface` with glowing cyan neon border tubes, rounded corner bumpers, animated diagonal cartoon glass sheen streaks, and twin concentric ricochet shockwaves; replaced `WindZone`'s cloudy vertical box wall with a clean ground air-pad shimmer and 6 curved undulating sky-blue wind ribbons plus chromatic-cel outlined fan & windsock.
+- **Living Backyard & 14 Sculpted/Cel-Upgraded Shared Arena Props:** Re-sculpted `cartoon_tree`, `inflatable_barrier`, `inflatable_bunker`, `tactical_crate`, `tactical_barrel`, `playground_slide`, `archway_curved`, `desert_urn`, and `dog_house` (including sculpted puppy `_dog` & `_tail`) and upgraded the remaining 5 shared props to chromatic cel while keeping 100% invariant `StaticBody3D` colliders & navmesh footprints; uplifted Backyard Fortress with a 14-cluster oak treehouse canopy, decorative rope ladder, fence picket finial caps, storybook windowed neighbour houses, and chromatic-cel sky clouds.
+- **Zero Gameplay Loss:** All 10 game modes, 9 arena layouts/colliders, 12 weapons, split-screen, LAN/online multiplayer, Dedicated Server, bots, workbench, and progression remain 100% intact.
+
+---
+
 ## [1.0.0] - 2026-11-28
 
 ### Added

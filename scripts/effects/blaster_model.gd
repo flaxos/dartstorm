@@ -55,6 +55,7 @@ var _slide: Node3D = null
 var _recoil_z: float = 0.0
 var _recoil_pitch: float = 0.0
 var _swing_phase: float = -1.0
+var _hit_stop_left: float = 0.0
 var _pump_cycle: float = 0.0
 var _slide_cycle: float = 0.0
 var _belt: Array[Node3D] = []
@@ -93,6 +94,11 @@ func set_spin(ratio: float) -> void:
 ## Plays a snappy diagonal cartoon baseball swing animation on melee models.
 func swing() -> void:
 	_swing_phase = 0.0
+
+
+## Brief local view-model freeze-frame on comic melee bonks/deflects (safe for multiplayer & tests).
+func trigger_hit_stop(duration: float = 0.045) -> void:
+	_hit_stop_left = maxf(_hit_stop_left, duration)
 
 
 ## Shows the muzzle star burst + brief dynamic light for one shot (or swings for melee).
@@ -140,8 +146,10 @@ func _process(delta: float) -> void:
 			if _flash_light != null:
 				_flash_light.visible = false
 
-	# Diagonal cartoon foam-bat swing animation
-	if _swing_phase >= 0.0:
+	# Diagonal cartoon foam-bat swing animation (pauses cleanly during local comic hit-stop)
+	if _hit_stop_left > 0.0:
+		_hit_stop_left = maxf(_hit_stop_left - delta, 0.0)
+	elif _swing_phase >= 0.0:
 		_swing_phase += delta / 0.36
 		if _swing_phase >= 1.0:
 			_swing_phase = -1.0
@@ -557,12 +565,13 @@ func _build_from_model() -> bool:
 	model_root = model_node
 	add_child(model_node)
 
+	var out_scale := 0.24 if first_person else 0.65
 	var chassis_mat := get_chassis_material()
 	var mat_map := {
 		"chassis": chassis_mat,
-		"hardware": ArenaKit.mat_styled(data.accent_color, ArenaKit.SurfaceType.METAL),
-		"safety": ArenaKit.mat_styled(ORANGE_TIP, ArenaKit.SurfaceType.PLASTIC),
-		"grip": _grip_material()
+		"hardware": ArenaKit.toon_mat(data.accent_color, 0.28, 0.68, out_scale, true, Color(0.24, 0.28, 0.55), true),
+		"safety": ArenaKit.toon_mat(ORANGE_TIP, 0.30, 0.72, out_scale, true, Color(0.68, 0.20, 0.14), true),
+		"grip": ArenaKit.toon_mat(DARK, 0.78, 0.22, out_scale, true, Color(0.10, 0.14, 0.28), true)
 	}
 	ModelLoader.apply_materials_recursive(model_node, mat_map)
 
@@ -599,7 +608,34 @@ func _build_from_model() -> bool:
 	if found_slide is Node3D:
 		_slide = found_slide as Node3D
 
+	if _model_asset_id == &"chainstorm":
+		_attach_chainstorm_belt(model_node)
+
 	return true
+
+
+## Attaches the iconic cover-art looping animated foam-dart belt & nameplate to Flax's Chainstorm.
+func _attach_chainstorm_belt(rot_parent: Node3D) -> void:
+	_belt.clear()
+	for i in BELT_LINKS:
+		var link := Node3D.new()
+		rot_parent.add_child(link)
+		_tube(0.017, 0.088, Vector3.ZERO, Color(0.22, 0.62, 1.0), link)
+		_tube(0.022, 0.024, Vector3(0.0, 0.0, -0.052), ORANGE_TIP, link)
+		_belt.append(link)
+	_layout_belt()
+
+	var plate := Label3D.new()
+	plate.text = "FLAX'S\nCHAINSTORM"
+	plate.font = UiKit.font()
+	plate.font_size = 40
+	plate.pixel_size = 0.0011
+	plate.outline_size = 8
+	plate.outline_modulate = UiKit.NAVY_DARK
+	plate.modulate = UiKit.CREAM
+	plate.position = Vector3(-0.114, 0.005, 0.035)
+	plate.rotation_degrees.y = -90.0
+	rot_parent.add_child(plate)
 
 
 func _setup_shader_uniforms_recursive(node: Node, root: Node3D) -> void:
@@ -637,15 +673,18 @@ func get_chassis_material() -> Material:
 			skin_mat.set_shader_parameter("texture_normal", _body_normal)
 			skin_mat.set_shader_parameter("texture_orm", _body_orm)
 			skin_mat.set_shader_parameter("texture_detail_normal", _detail_normal)
-			skin_mat.set_shader_parameter("normal_scale", 1.0)
-			skin_mat.set_shader_parameter("detail_normal_scale", 20.0)
+			skin_mat.set_shader_parameter("normal_scale", 0.20)
+			skin_mat.set_shader_parameter("detail_normal_scale", 10.0)
+			skin_mat.set_shader_parameter("detail_normal_blend", 0.08)
 			var pattern_path: String = Cosmetics.skin_pattern(skin_id)
 			if ResourceLoader.exists(pattern_path):
 				skin_mat.set_shader_parameter("skin_pattern", load(pattern_path))
 			skin_mat.set_shader_parameter("finish_mode", Cosmetics.skin_finish(skin_id))
+			skin_mat.next_pass = ArenaKit.outline_mat(0.24 if first_person else 0.65, true)
 			_skin_materials[mat_key] = skin_mat
 		return skin_mat
-	return ArenaKit.mat_styled(b_col, ArenaKit.SurfaceType.PLASTIC, 0.32, 0.0)
+	var out_scale := 0.24 if first_person else 0.65
+	return ArenaKit.toon_mat(b_col, 0.30, 0.68, out_scale, true, Color(0.22, 0.26, 0.58), true)
 
 
 func _build_pistol(double_barrel: bool) -> void:
@@ -965,8 +1004,9 @@ func _part(mesh: Mesh, pos: Vector3, color: Color, rot_deg: Vector3, parent: Nod
 			skin_mat.set_shader_parameter("texture_normal", _body_normal)
 			skin_mat.set_shader_parameter("texture_orm", _body_orm)
 			skin_mat.set_shader_parameter("texture_detail_normal", _detail_normal)
-			skin_mat.set_shader_parameter("normal_scale", 1.0)
-			skin_mat.set_shader_parameter("detail_normal_scale", 20.0)
+			skin_mat.set_shader_parameter("normal_scale", 0.20)
+			skin_mat.set_shader_parameter("detail_normal_scale", 10.0)
+			skin_mat.set_shader_parameter("detail_normal_blend", 0.08)
 			var pattern_path: String = Cosmetics.skin_pattern(skin_id)
 			if ResourceLoader.exists(pattern_path):
 				skin_mat.set_shader_parameter("skin_pattern", load(pattern_path))
@@ -981,11 +1021,12 @@ func _part(mesh: Mesh, pos: Vector3, color: Color, rot_deg: Vector3, parent: Nod
 		instance.set_instance_shader_parameter("part_offset", part_offset)
 		instance.set_instance_shader_parameter("part_rot", part_rot)
 	elif color.is_equal_approx(DARK) and metallic < 0.2:
-		instance.material_override = _grip_material()
+		instance.material_override = ArenaKit.toon_mat(DARK, 0.78, 0.24, 0.22 if first_person else 0.60, true, Color(0.10, 0.14, 0.28))
 	elif metallic > 0.4:
-		instance.material_override = ArenaKit.mat_styled(color, ArenaKit.SurfaceType.METAL, 0.24, metallic)
+		instance.material_override = ArenaKit.toon_mat(color, 0.26, 0.78, 0.22 if first_person else 0.60, true)
 	else:
-		instance.material_override = ArenaKit.mat_styled(color, ArenaKit.SurfaceType.PLASTIC, 0.45, metallic)
+		var s_tint := Color(0.68, 0.20, 0.14) if color.is_equal_approx(ORANGE_TIP) else Color(0.24, 0.28, 0.58)
+		instance.material_override = ArenaKit.toon_mat(color, 0.32, 0.66, 0.22 if first_person else 0.60, true, s_tint)
 	instance.position = pos
 	instance.rotation_degrees = rot_deg
 	if first_person:

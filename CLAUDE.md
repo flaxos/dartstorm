@@ -42,7 +42,7 @@ Controllers must stay plug and play: every binding uses device -1, and every scr
 | `docs/TUNING.md` | A data field is added or renamed |
 | `docs/UAT.md` | A release needs a hands-on check (add rows, then log results) |
 | `docs/ARCHITECTURE.md` | Systems, ownership, safeguards (§10) or budgets (§11) change |
-| `docs/DECISIONS.md` | A non-obvious choice is made (latest is D-049) |
+| `docs/DECISIONS.md` | A non-obvious choice is made (latest is D-050) |
 | `docs/ROADMAP.md` | Always, at the end of a piece of work |
 | `CHANGELOG.md` | Whenever shipping a release milestone |
 
